@@ -716,7 +716,7 @@ namespace nanos {
                   NANOS_INSTRUMENT(static nanos_event_value_t val = SICOPYNOMASTERINIT_SELF;)
                   NANOS_INSTRUMENT(sys.getInstrumentation()->raisePointEvents( 1, &key, &val );)
 
-                  wd->_mcontrol.initialize( *(thread->runningOn()) );
+                  wd->_mcontrol.initialize( thread->runningOn()->getMemorySpaceId() );
                   bool result;
                   do {
                      result = wd->_mcontrol.allocateInputMemory();
@@ -919,7 +919,7 @@ namespace nanos {
                         NANOS_INSTRUMENT(static nanos_event_value_t val2 = SICOPYNOMASTERINIT_SELF;)
                         NANOS_INSTRUMENT(sys.getInstrumentation()->raisePointEvents( 1, &key, &val2 );)
 
-                        helpWD->_mcontrol.initialize( *(thread->runningOn()) );
+                        helpWD->_mcontrol.initialize( thread->runningOn()->getMemorySpaceId() );
                         bool result;
                         do {
                            result = helpWD->_mcontrol.allocateInputMemory();
@@ -934,7 +934,7 @@ namespace nanos {
                         NANOS_INSTRUMENT(static nanos_event_value_t val2 = SICOPYNOMASTERINIT_SELF;)
                         NANOS_INSTRUMENT(sys.getInstrumentation()->raisePointEvents( 1, &key, &val2 );)
 
-                        helpWD->_mcontrol.initialize( *(thread->runningOn()) );
+                        helpWD->_mcontrol.initialize( thread->runningOn()->getMemorySpaceId() );
                         bool result;
                         do {
                            result = helpWD->_mcontrol.allocateInputMemory();

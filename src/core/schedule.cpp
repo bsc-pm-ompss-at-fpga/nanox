@@ -119,7 +119,6 @@ void Scheduler::submit ( WD &wd, bool force_queue )
       }
       switchTo ( slice );
    }
-
 }
 
 void Scheduler::submit ( WD ** wds, size_t numElems )
@@ -1035,7 +1034,7 @@ void Scheduler::preOutlineWork ( WD *wd )
 void Scheduler::prePreOutlineWork ( WD *wd )
 {
    BaseThread *thread = getMyThreadSafe();
-   wd->_mcontrol.initialize( *(thread->runningOn()) );
+   wd->_mcontrol.initialize( thread->runningOn()->getMemorySpaceId() );
 }
 
 bool Scheduler::tryPreOutlineWork ( WD *wd )
@@ -1162,7 +1161,7 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
    // Initializing wd if necessary
    // It will be started later in inlineWorkDependent call
    
-   wd->_mcontrol.initialize( *(thread->runningOn()) );
+   wd->_mcontrol.initialize( thread->runningOn()->getMemorySpaceId() );
    bool result;
    do {
       result = wd->_mcontrol.allocateInputMemory();
@@ -1228,7 +1227,7 @@ void Scheduler::switchTo ( WD *to )
    if ( myThread->runningOn()->supportsUserLevelThreads() ) {
 
       if (!to->started()) {
-         to->_mcontrol.initialize( *(myThread->runningOn()) );
+         to->_mcontrol.initialize( myThread->runningOn()->getMemorySpaceId() );
          bool result;
          do {
             result = to->_mcontrol.allocateInputMemory();
@@ -1316,7 +1315,7 @@ void Scheduler::exitTo ( WD *to )
 //    WD *current = myThread->getCurrentWD();
 
     if (!to->started()) {
-       to->_mcontrol.initialize( *(myThread->runningOn()) );
+       to->_mcontrol.initialize( myThread->runningOn()->getMemorySpaceId() );
        bool result;
        do {
           result = to->_mcontrol.allocateInputMemory();

@@ -12,7 +12,7 @@
 
 namespace nanos {
 MemController::MemController( WD const &wd ) : _initialized( false ), _preinitialized(false), _wd( wd ), _memorySpaceId( 0 ), _inputDataReady(false), 
-      _provideLock(), _providedRegions(), _affinityScore( 0 ), _maxAffinityScore( 0 )  {
+      _provideLock(), _providedRegions(), _affinityScore( 0 ), _maxAffinityScore( 0 ), _inOps( NULL ), _outOps( NULL )  {
    if ( _wd.getNumCopies() > 0 ) {
       _memCacheCopies = NEW MemCacheCopy[ wd.getNumCopies() ];
    }
@@ -116,9 +116,9 @@ void MemController::preInit( ) {
    _preinitialized = true;
 }
 
-void MemController::initialize( ProcessingElement &pe ) {
+void MemController::initialize( unsigned int memorySpaceId ) {
    if ( !_initialized ) {
-      _memorySpaceId = pe.getMemorySpaceId();
+      _memorySpaceId = memorySpaceId;
       //NANOS_INSTRUMENT( InstrumentState inst2(NANOS_CC_CDIN); );
 
       if ( _memorySpaceId == 0 /* HOST_MEMSPACE_ID */) {

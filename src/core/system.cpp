@@ -60,6 +60,10 @@
 #include "openclprocessor.hpp"
 #endif
 
+#ifdef NANOS_RESILIENCY_ENABLED
+#include "backupmanager.hpp"
+#endif
+
 using namespace nanos;
 
 System nanos::sys;
@@ -516,7 +520,7 @@ void System::start ()
    WD &mainWD = *myThread->getCurrentWD();
 
    mainWD._mcontrol.preInit();
-   mainWD._mcontrol.initialize( *pe );
+   mainWD._mcontrol.initialize( pe->getMemorySpaceId() );
    
    if ( _pmInterface->getInternalDataSize() > 0 ) {
       char *data = NEW char[_pmInterface->getInternalDataSize()];
@@ -712,6 +716,10 @@ void System::start ()
    }
    
 #ifdef NANOS_RESILIENCY_ENABLED
+   // Insert a new separate memory address space to store input backups
+   memory_space_id_t mspace_id = getNewSeparateMemoryAddressSpaceId();
+   _separateAddressSpaces[mspace_id] = NEW SeparateMemoryAddressSpace(mspace_id, BackupManager("BackupMgr",65536), false/*allocFit*/);
+
    // Setup signal handlers
    myThread->setupSignalHandlers();
 #endif
@@ -1416,7 +1424,7 @@ void System::inlineWork ( WD &work )
    //! \todo choose actual (active) device...
    if ( Scheduler::checkBasicConstraints( work, *myThread ) ) {
       work._mcontrol.preInit();
-      work._mcontrol.initialize( *( myThread->runningOn() ) );
+      work._mcontrol.initialize( myThread->runningOn()->getMemorySpaceId() );
       bool result;
       do {
          result = work._mcontrol.allocateInputMemory();

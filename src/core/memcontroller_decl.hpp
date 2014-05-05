@@ -29,7 +29,7 @@ public:
    bool hasVersionInfoForRegion( global_reg_t reg, unsigned int &version, NewLocationInfoList &locations );
    void getInfoFromPredecessor( MemController const &predecessorController );
    void preInit();
-   void initialize( ProcessingElement &pe );
+   void initialize( unsigned int memorySpaceId );
    bool allocateInputMemory();
    void copyDataIn();
    void copyDataOut();

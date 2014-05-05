@@ -231,6 +231,9 @@ common_sources=\
 	taskexecutionexception_decl.hpp \
 	taskexecutionexception.hpp \
 	taskexecutionexception.cpp \
+	backupmanager_decl.hpp \
+	backupmanager.hpp \
+	backupmanager.cpp \
 	$(END)
 
 instr_sources = \
