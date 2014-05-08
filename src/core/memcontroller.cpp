@@ -11,8 +11,8 @@
 #endif
 
 namespace nanos {
-MemController::MemController( WD const &wd ) : _initialized( false ), _preinitialized(false), _wd( wd ), _memorySpaceId( 0 ), _inputDataReady(false), 
-      _provideLock(), _providedRegions(), _affinityScore( 0 ), _maxAffinityScore( 0 ), _inOps( NULL ), _outOps( NULL )  {
+MemController::MemController( WD const &wd ) : _initialized( false ), _preinitialized(false), _wd( wd ), _memorySpaceId( 0 ), _inputDataReady(false),
+      _provideLock(), _providedRegions(), _inOps( NULL ), _outOps( NULL ), _backupOps( NULL ), _affinityScore( 0 ), _maxAffinityScore( 0 )  {
    if ( _wd.getNumCopies() > 0 ) {
       _memCacheCopies = NEW MemCacheCopy[ wd.getNumCopies() ];
    }
@@ -116,15 +116,20 @@ void MemController::preInit( ) {
    _preinitialized = true;
 }
 
-void MemController::initialize( unsigned int memorySpaceId ) {
+void MemController::initialize( unsigned int memorySpaceId) {
    if ( !_initialized ) {
       _memorySpaceId = memorySpaceId;
+
       //NANOS_INSTRUMENT( InstrumentState inst2(NANOS_CC_CDIN); );
 
       if ( _memorySpaceId == 0 /* HOST_MEMSPACE_ID */) {
          _inOps = NEW HostAddressSpaceInOps( true );
       } else {
          _inOps = NEW SeparateAddressSpaceInOps( true, sys.getSeparateMemory( _memorySpaceId ) );
+      }
+
+      if( _wd.isRecoverable() ) {
+         _backupOps = NEW SeparateAddressSpaceInOps( true, sys.getBackupMemory() );
       }
       _initialized = true;
    }
@@ -140,6 +145,18 @@ bool MemController::allocateInputMemory() {
             _memCacheCopies[idx]._reg.setRooted();
          }
       }
+   }
+
+   if( _backupOps ) {
+      result &= _backupOps->prepareRegions( _memCacheCopies, _wd.getNumCopies(), _wd );
+         if ( result ) {
+            for ( unsigned int idx = 0; idx < _wd.getNumCopies(); idx += 1 ) {
+               if ( _memCacheCopies[idx]._reg.key->getKeepAtOrigin() ) {
+                  //std::cerr << "WD " << _wd.getId() << " rooting to memory space " << _memorySpaceId << std::endl;
+                  _memCacheCopies[idx]._reg.setRooted();
+               }
+            }
+         }
    }
    return result;
 }
@@ -165,8 +182,15 @@ void MemController::copyDataIn() {
       _memCacheCopies[ index ].generateInOps( *_inOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd );
    }
 
+   if( _backupOps ) {
+      for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
+            _memCacheCopies[ index ].generateInOps( *_backupOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd );
+      }
+   }
+
    //NANOS_INSTRUMENT( InstrumentState inst5(NANOS_CC_CDIN_DO_OP); );
    _inOps->issue( _wd );
+   _backupOps->issue( _wd );
    //NANOS_INSTRUMENT( inst5.close(); );
    if ( _VERBOSE_CACHE ) {
       if ( sys.getNetwork()->getNodeNum() == 0 ) {
@@ -232,14 +256,16 @@ bool MemController::isDataReady( WD const &wd ) {
    ensure( _preinitialized == true, "MemController not initialized!");
    if ( _initialized ) {
       if ( !_inputDataReady ) {
-         _inputDataReady = _inOps->isDataReady( wd );
+         _inputDataReady = _inOps->isDataReady( wd )
+                        && _backupOps->isDataReady( wd );
          if ( _inputDataReady ) {
             if ( _VERBOSE_CACHE ) { std::cerr << "Data is ready for wd " << _wd.getId() << " obj " << (void *)_inOps << std::endl; }
             _inOps->releaseLockedSourceChunks();
+            _backupOps->releaseLockedSourceChunks();
          }
       }
       return _inputDataReady;
-   } 
+   }
    return false;
 }
 
@@ -250,7 +276,6 @@ bool MemController::canAllocateMemory( memory_space_id_t memId, bool considerInv
       return true;
    }
 }
-
 
 void MemController::setAffinityScore( std::size_t score ) {
    _affinityScore = score;
@@ -269,7 +294,14 @@ std::size_t MemController::getMaxAffinityScore() const {
 }
 
 std::size_t MemController::getAmountOfTransferredData() const {
-   return ( _inOps != NULL ) ? _inOps->getAmountOfTransferredData() : 0 ;
+   size_t transferred = 0;
+   if ( _inOps != NULL )
+      transferred += _inOps->getAmountOfTransferredData();
+   /*
+   if ( _backupOps != NULL )
+      transferred += _backupOps->getAmountOfTransferredData();
+   */
+   return transferred;
 }
 
 std::size_t MemController::getTotalAmountOfData() const {

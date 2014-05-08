@@ -20,6 +20,67 @@
 #ifndef BACKUPMANAGER_HPP_
 #define BACKUPMANAGER_HPP_
 
-#include "backupmanager_decl.hpp"
+#include <boost/interprocess/managed_external_buffer.hpp>
+#include <boost/interprocess/indexes/null_index.hpp>
+
+#include "workdescriptor_decl.hpp"
+
+namespace boost {
+   namespace interprocess {
+
+      typedef boost::interprocess::basic_managed_external_buffer
+            <char
+            ,rbtree_best_fit<mutex_family,offset_ptr<void> >
+            ,null_index
+            > managed_buffer;
+   }
+}
+
+namespace nanos {
+
+   class BackupManager : public Device {
+      private:
+         size_t _memsize;
+         boost::interprocess::managed_buffer _managed_pool;
+
+      public:
+         BackupManager ( const char *n, size_t memsize );
+
+         //BackupManager ( const BackupManager &arch );
+
+         virtual ~BackupManager();
+
+         //debe ser privado
+         BackupManager & operator= ( BackupManager &arch );
+
+         //const bool operator== ( const BackupManager &arch );
+
+         void *memAllocate( size_t size, SeparateMemoryAddressSpace &mem, uint64_t targetHostAddr);
+
+         void memFree (uint64_t addr, SeparateMemoryAddressSpace &mem);
+
+         void _canAllocate( SeparateMemoryAddressSpace const &mem, size_t *sizes, uint numChunks, size_t *remainingSizes ) const;
+
+         std::size_t getMemCapacity( SeparateMemoryAddressSpace const &mem ) const;
+
+         void _copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId );
+
+         void _copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId );
+
+         bool _copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId );
+
+         void _copyInStrided1D( uint64_t devAddr, uint64_t hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const &mem, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId );
+
+         void _copyOutStrided1D( uint64_t hostAddr, uint64_t devAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const &mem, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId );
+
+         bool _copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const &memDest, SeparateMemoryAddressSpace const &memOrig, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId );
+
+         void _getFreeMemoryChunksList( SeparateMemoryAddressSpace const &mem, SimpleAllocator::ChunkList &list ) const;
+   };
+
+   namespace ext {
+      extern BackupManager Backup;
+   }
+} // namespace nanos
 
 #endif /* BACKUPMANAGER_HPP_ */

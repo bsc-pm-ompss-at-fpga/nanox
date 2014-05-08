@@ -20,6 +20,7 @@ class MemController {
    std::map< NewNewRegionDirectory::RegionDirectoryKey, std::map< reg_t, unsigned int > > _providedRegions;
    BaseAddressSpaceInOps      *_inOps;
    SeparateAddressSpaceOutOps *_outOps;
+   BaseAddressSpaceInOps   *_backupOps;//TODO this should be a SeparateAddressSpacInOps object instead
    std::size_t _affinityScore;
    std::size_t _maxAffinityScore;
 

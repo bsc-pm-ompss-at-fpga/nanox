@@ -754,7 +754,7 @@ namespace nanos {
                         NANOS_INSTRUMENT(sys.getInstrumentation()->raisePointEvents( 1, &key, &val );)
 
 
-                        wd->_mcontrol.initialize( sys.getSeparateMemory( (*tdata._nodeToMemSpace)[ selectedNode ] ).getPE() );
+                        wd->_mcontrol.initialize( sys.getSeparateMemory( (*tdata._nodeToMemSpace)[ selectedNode ] ).getPE().getMemorySpaceId() );
                         bool result;
                         do {
                            result = wd->_mcontrol.allocateInputMemory();
@@ -790,7 +790,7 @@ namespace nanos {
                      NANOS_INSTRUMENT(sys.getInstrumentation()->raisePointEvents( 1, &key, &val );)
 
 
-                     wd->_mcontrol.initialize( sys.getSeparateMemory( (*tdata._nodeToMemSpace)[ selectedNode ] ).getPE() );
+                     wd->_mcontrol.initialize( sys.getSeparateMemory( (*tdata._nodeToMemSpace)[ selectedNode ] ).getPE().getMemorySpaceId() );
                      bool result;
                      do {
                         result = wd->_mcontrol.allocateInputMemory();

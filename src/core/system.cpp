@@ -717,8 +717,7 @@ void System::start ()
    
 #ifdef NANOS_RESILIENCY_ENABLED
    // Insert a new separate memory address space to store input backups
-   memory_space_id_t mspace_id = getNewSeparateMemoryAddressSpaceId();
-   _separateAddressSpaces[mspace_id] = NEW SeparateMemoryAddressSpace(mspace_id, BackupManager("BackupMgr",65536), false/*allocFit*/);
+   _backupMemory = NEW SeparateMemoryAddressSpace(getMemorySpaceId(), ext::Backup, false/*allocFit*/);
 
    // Setup signal handlers
    myThread->setupSignalHandlers();

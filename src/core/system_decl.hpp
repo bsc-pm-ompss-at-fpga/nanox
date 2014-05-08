@@ -199,6 +199,8 @@ namespace nanos
          unsigned int _separateMemorySpacesCount;
          std::vector< SeparateMemoryAddressSpace * > _separateAddressSpaces;
          HostMemoryAddressSpace                      _hostMemory;
+         SeparateMemoryAddressSpace                 *_backupMemory;
+
          //LocationDirectory _locations;
          
          //! CPU id binding list
@@ -675,6 +677,8 @@ namespace nanos
          unsigned int getNumMemorySpaces();
 
          HostMemoryAddressSpace &getHostMemory() { return _hostMemory; }
+
+         SeparateMemoryAddressSpace &getBackupMemory() { return *_backupMemory; }
           
          SeparateMemoryAddressSpace &getSeparateMemory( memory_space_id_t id ) { 
             //std::cerr << "Requested object " << _separateAddressSpaces[ id ] <<std::endl;
