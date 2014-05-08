@@ -95,9 +95,6 @@ devinclude_HEADERS = \
 	networkapi.hpp  \
 	network_decl.hpp  \
 	bitcounter.hpp \
-	dataaccess_fwd.hpp \
-	dataaccess_decl.hpp \
-	dataaccess.hpp \
 	regiondict_decl.hpp  \
 	regiondict.hpp  \
 	newregiondirectory.hpp  \
@@ -132,6 +129,9 @@ devinclude_HEADERS = \
 	graphentry_decl.hpp \
 	taskexecutionexception_decl.hpp \
 	taskexecutionexception.hpp \
+	trackableobject_fwd.hpp \
+	trackableobject_decl.hpp \
+        trackableobject.hpp \
 	$(END)
 
 common_sources=\
