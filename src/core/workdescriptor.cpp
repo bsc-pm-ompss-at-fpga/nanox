@@ -211,15 +211,15 @@ DeviceData & WorkDescriptor::activateDevice ( unsigned int deviceIdx )
    return *_devices[_activeDeviceIdx];
 }
 
-bool WorkDescriptor::canRunIn( const Device &device ) const
+bool WorkDescriptor::canRunIn( const Device &device , const ProcessingElement * pe) const
 {
-   if ( _activeDeviceIdx != _numDevices ) return _devices[_activeDeviceIdx]->isCompatible( device );
+   if ( _activeDeviceIdx != _numDevices ) return _devices[_activeDeviceIdx]->isCompatible( device , pe);
 
    unsigned int i;
    for ( i = 0; i < _numDevices; i++ ) {
-      if ( _devices[i]->isCompatible( device ) ) {
-         return true;
-      }
+       if (_devices[i]->isCompatible( device , pe)){
+            return true;           
+       }
    }
 
    return false;
@@ -230,10 +230,10 @@ bool WorkDescriptor::canRunIn ( const ProcessingElement &pe ) const
    bool result;
    if ( started() && !pe.supportsUserLevelThreads() ) return false;
 
-   if ( pe.getDeviceType() == NULL )  result = canRunIn( *pe.getSubDeviceType() );
-   else result = canRunIn( *pe.getDeviceType() ) ;
+   if ( pe.getDeviceType() == NULL )  result = canRunIn( *pe.getSubDeviceType(), &pe );
+   else result = canRunIn( *pe.getDeviceType(), &pe ) ;
 
-   return result;
+   return result;   
    //return ( canRunIn( pe.getDeviceType() )  || ( pe.getSubDeviceType() != NULL && canRunIn( *pe.getSubDeviceType() ) ));
 }
 
@@ -261,7 +261,7 @@ void WorkDescriptor::finish ()
 {
    // At that point we are ready to copy data out
    if ( getNumCopies() > 0 )
-      _mcontrol.copyDataOut();
+      _mcontrol.copyDataOut( MemController::WRITE_BACK );
 
    // Getting execution time
    _executionTime = ( _numDevices == 1 ? 0.0 : OS::getMonotonicTimeUs() - _executionTime );
@@ -462,7 +462,9 @@ void WorkDescriptor::setCopies(size_t numCopies, CopyData * copies)
 void WorkDescriptor::waitCompletion( bool avoidFlush )
 {
    _componentsSyncCond.waitConditionAndSignalers();
-   sys.getHostMemory().synchronize( !avoidFlush, *this );
+   if ( !avoidFlush ) {
+      _mcontrol.synchronize();
+   }
 }
 
 void WorkDescriptor::exitWork ( WorkDescriptor &work )

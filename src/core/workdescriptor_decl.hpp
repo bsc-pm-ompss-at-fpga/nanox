@@ -98,7 +98,7 @@ namespace nanos
    */
    class DeviceData
    {
-      private:
+      protected:
          /**Use pointers for this as is this fastest way to compare architecture compatibility */
          const Device *_architecture; /**< Related Device (architecture). */
 
@@ -136,7 +136,15 @@ namespace nanos
           *  \param[in] arch is the Device which we have to compare to.
           *  \return a boolean indicating if both elements (DeviceData and Device) are compatible.
           */
-         bool isCompatible ( const Device &arch );
+         bool isCompatible ( const Device &arch, const ProcessingElement *pe=NULL) ;
+         
+         /*! \brief Indicates if DeviceData is compatible with a given ProcessingElement
+          * **REQUERIMENT** If pe == NULL, this function must return true
+          *
+          *  \param[pe] pe is the ProcessingElement which we have to compare to.
+          *  \return a boolean indicating if both elements (DeviceData and Device) are compatible.
+          */
+         virtual bool isCompatibleWithPE ( const ProcessingElement *pe ) ;
 
          /*! \brief FIXME: (#170) documentation needed
           */
@@ -204,6 +212,7 @@ namespace nanos
          typedef SingleSyncCond<EqualConditionChecker<int> >  components_sync_cond_t;
       private: /* data members */
          int                           _id;                     //!< Work descriptor identifier
+         int                           _hostId;                 //!< Work descriptor identifier @ host
          Atomic<int>                   _components;             //!< Number of components (children, direct descendants)
          components_sync_cond_t        _componentsSyncCond;     //!< Synchronize condition on components
          WorkDescriptor               *_parent;                 //!< Parent WD in task hierarchy
@@ -317,6 +326,8 @@ namespace nanos
          }
 
          int getId() const { return _id; }
+         int getHostId() const { return _hostId; }
+         void setHostId( int id ) { _hostId = id; }
          /*! \brief Has this WorkDescriptor ever run?
           */
          bool started ( void ) const;
@@ -419,7 +430,7 @@ namespace nanos
          unsigned getDepth() const;
 
          /* device related methods */
-         bool canRunIn ( const Device &device ) const;
+         bool canRunIn ( const Device &device , const ProcessingElement * pe = NULL) const;
          bool canRunIn ( const ProcessingElement &pe ) const;
          DeviceData & activateDevice ( const Device &device );
          DeviceData & activateDevice ( unsigned int deviceIdx );

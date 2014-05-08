@@ -33,7 +33,8 @@ EXTRA_DIST=\
 	$(END)
 
 dist_bin_SCRIPTS=\
-	extrae_post_process.sh\
+	extrae_post_process.sh \
+    ompss_mpi_launch.sh \
 	nanox\
 	$(END)
 

@@ -568,8 +568,37 @@ namespace nanos {
             /* 46 */ registerEventKey("cache-copy-data-out","WD id that is copying data in");
             /* 47 */ registerEventKey("sched-affinity-constraint","Constraint used by affinity scheduler");
 
-            /* 44 */ registerEventKey("wd-ready", "Work descriptor becomes ready", false);
-            /* 45 */ registerEventKey("wd-blocked", "Work descriptor becomes blocked", false);
+                     
+            /* 48*/ registerEventKey("in-mpi-runtime","Inside MPI runtime", true);
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_ALLOC_EVENT", "malloc()" );                                     /* 1 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_FREE_EVENT", "free()" );                                         /* 2 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_DEEP_BOOSTER_ALLOC_EVENT", "deep_booster_alloc(...)" );                            /* 3 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_COPYIN_SYNC_EVENT", "MPI Copy data to remote node" );                                /* 4 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_COPYOUT_SYNC_EVENT", "MPI copy data from remote node" );                      /* 5 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_COPYDEV2DEV_SYNC_EVENT", "MPI copy data between two nodes" );                      /* 6 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_DEEP_BOOSTER_FREE_EVENT", "deep_booster_free(...)" );                      /* 7 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_INIT_EVENT", "nanos_mpi_init()" );                      /* 8 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_FINALIZE_EVENT", "nanos_mpi_finalize()" );                      /* 9 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_SEND_EVENT", "nanos mpi_send()" );                      /* 10 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_RECV_EVENT", "nanos mpi_recv()" );                      /* 11 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_SSEND_EVENT", "nanos mpi_ssend()" );                      /* 12 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_COPYLOCAL_SYNC_EVENT", "MPI Copy local inside node" );                      /* 13 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_REALLOC_EVENT", "MPI Realloc data inside node" );                      /* 14 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_WAIT_FOR_COPIES_EVENT", "MPI remote node task waiting for copyIns before starting" );   /* 15 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_RNODE_COPYIN_EVENT", "MPI remote node cache doing copy in" );  /* 16 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_RNODE_COPYOUT_EVENT", "MPI remote node cache doing copy out" );            /* 17 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_RNODE_DEV2DEV_IN_EVENT", "MPI remote node cache doing device to device copy in" );   /* 18 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_RNODE_DEV2DEV_OUT_EVENT", "MPI remote node cache doing device to device copy outg" );  /* 19 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_RNODE_ALLOC_EVENT", "MPI remote node cache doing allocation" );   /* 20 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_RNODE_REALLOC_EVENT", "MPI remote node cache doing reallocation" );  /* 21 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_RNODE_FREE_EVENT", "MPI remote node cache doing free of previous allocated chunk" ); /* 22 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_RNODE_COPYLOCAL_EVENT", "MPI remote node cache doing copy local" );  /* 23 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_IRECV_EVENT", "Async recv" ); /* 24 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_ISEND_EVENT", "Async send" );  /* 25 */
+            registerEventValue("in-mpi-runtime", "NANOS_MPI_GENERIC_EVENT", "MPI generic event" );                /* 26 */
+
+            /* 49 */ registerEventKey("wd-ready", "Work descriptor becomes ready", false);
+            /* 50 */ registerEventKey("wd-blocked", "Work descriptor becomes blocked", false);
 
             /* ** */ registerEventKey("debug","Debug Key", true); /* Keep this key as the last one */
          }
