@@ -29,8 +29,24 @@
 #include "gpuconfig.hpp"
 #endif
 
+#if defined(__SIZEOF_SIZE_T__) 
+   #if  __SIZEOF_SIZE_T__ == 8
+
 #define DEFAULT_NODE_MEM (0x542000000ULL) 
 #define MAX_NODE_MEM     (0x542000000ULL) 
+
+   #elif __SIZEOF_SIZE_T__ == 4
+
+#define DEFAULT_NODE_MEM (0x40000000UL) 
+#define MAX_NODE_MEM     (0x40000000UL) 
+
+   #else
+      #error "Weird"
+   #endif
+#else
+   #error "I need to know the size of a size_t"
+#endif
+
 
 namespace nanos {
 namespace ext {
@@ -39,7 +55,7 @@ ClusterPlugin::ClusterPlugin() : ArchPlugin( "Cluster PE Plugin", 1 ), _gasnetAp
 _numPinnedSegments ( 0 ),
 _pinnedSegmentAddrList ( NULL ), _pinnedSegmentLenList ( NULL ), _extraPEsCount ( 0 ), _conduit (""),
 _nodeMem ( DEFAULT_NODE_MEM ), _allocWide ( false ), _gpuPresend ( 1 ), _smpPresend ( 1 ),
-_cachePolicy ( System::DEFAULT ), _nodes( NULL ), _clusterThread( NULL )
+_cachePolicy ( System::DEFAULT ), _nodes( NULL ), _cpu( NULL ), _clusterThread( NULL )
 {}
 
 void ClusterPlugin::config( Config& cfg )
@@ -72,7 +88,7 @@ void ClusterPlugin::init()
          (*_nodes)[ node->getNodeNum() ] = node;
       }
    }
-
+   _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
 }
 
 void ClusterPlugin::addPinnedSegments( unsigned int numSegments, void **segmentAddr, std::size_t *segmentSize ) {
@@ -188,18 +204,13 @@ unsigned ClusterPlugin::getNumThreads() const {
    return 1;
 }
 
-unsigned ClusterPlugin::getNumPEs() const {
-   return _gasnetApi.getNumNodes() - 1;
-}
-
 void ClusterPlugin::startSupportThreads() {
    if ( _gasnetApi.getNumNodes() > 1 )
    {
-      SMPProcessor *core = sys.getSMPPlugin()->getLastFreeSMPProcessor();
       if ( _gasnetApi.getNodeNum() == 0 ) {
-         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &core->startMultiWorker( _gasnetApi.getNumNodes() - 1, (ProcessingElement **) &(*_nodes)[1] ) );
+         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker( _gasnetApi.getNumNodes() - 1, (ProcessingElement **) &(*_nodes)[1] ) );
       } else {
-         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &core->startMultiWorker( 0, NULL ) );
+         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker( 0, NULL ) );
          if ( sys.getPMInterface().getInternalDataSize() > 0 )
             _clusterThread->getThreadWD().setInternalData(NEW char[sys.getPMInterface().getInternalDataSize()]);
          //_pmInterface->setupWD( smpRepThd->getThreadWD() );
@@ -213,21 +224,23 @@ void ClusterPlugin::startSupportThreads() {
    }
 }
 
-void ClusterPlugin::startWorkerThreads( std::vector<BaseThread *> &workers ) {
+void ClusterPlugin::startWorkerThreads( std::map<unsigned int, BaseThread *> &workers ) {
    if ( _gasnetApi.getNodeNum() == 0 )
    {
       if ( _clusterThread ) {
          for ( unsigned int thdIndex = 0; thdIndex < _clusterThread->getNumThreads(); thdIndex += 1 )
          {
-            workers.push_back( _clusterThread->getThreadVector()[ thdIndex ] );
+            BaseThread *thd = _clusterThread->getThreadVector()[ thdIndex ];
+            workers.insert( std::make_pair( thd->getId(), thd ) );
          }
       }
    } else {
-      workers.push_back( _clusterThread ); 
+      workers.insert( std::make_pair( _clusterThread->getId(), _clusterThread ) ); 
    }
 }
 
 void ClusterPlugin::finalize() {
+#if 0
    if ( _gasnetApi.getNodeNum() == 0 ) {
       //message0("Master: Created " << createdWds << " WDs.");
       message0("Master: Failed to correctly schedule " << sys.getAffinityFailureCount() << " WDs.");
@@ -250,17 +263,34 @@ void ClusterPlugin::finalize() {
       //   message0("Cluster Balance: " << balance );
       //}
    }
+#endif
 }
 
 
-void ClusterPlugin::addPEs( std::vector<ProcessingElement *> &pes ) const {
+void ClusterPlugin::addPEs( std::map<unsigned int, ProcessingElement *> &pes ) const {
    if ( _nodes ) {
       std::vector<ClusterNode *>::const_iterator it = _nodes->begin();
       it++; //position 0 is null, node 0 does not have a ClusterNode object
       for (; it != _nodes->end(); it++ ) {
-         pes.push_back( *it );
+         pes.insert( std::make_pair( (*it)->getId(), *it ) );
       }
    }
+}
+
+unsigned int ClusterPlugin::getNumPEs() const {
+   return _nodes->size() - 1;
+}
+
+unsigned int ClusterPlugin::getMaxPEs() const {
+   return _nodes->size() - 1;
+}
+
+unsigned int ClusterPlugin::getNumWorkers() const {
+   return _nodes->size() - 1;
+}
+
+unsigned int ClusterPlugin::getMaxWorkers() const {
+   return _nodes->size() - 1;
 }
 
 }

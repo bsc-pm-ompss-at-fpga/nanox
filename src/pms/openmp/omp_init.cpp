@@ -44,7 +44,10 @@ namespace nanos
          cfg.setOptionsSection("OpenMP specific","OpenMP related options");
 
          // OMP_NUM_THREADS
-         cfg.registerAlias("num_threads","omp-threads","Configures the number of OpenMP Threads to use");
+         _numThreads = -1;
+         _numThreadsOMP = -1;
+         cfg.registerConfigOption( "omp-threads", NEW Config::PositiveVar( _numThreadsOMP ),
+                             "Configures the number of OpenMP Threads to use" );
          cfg.registerEnvOption("omp-threads","OMP_NUM_THREADS");
 
          // OMP_SCHEDULE
@@ -76,7 +79,11 @@ namespace nanos
 
          TaskICVs & icvs = globalState->getICVs();
          icvs.setSchedule(LoopSchedule(omp_sched_static));
-         icvs.setNumThreads(sys.getNumThreads());
+
+         _numThreads = _numThreadsOMP == -1 ? sys.getSMPPlugin()->getNumPEs() : _numThreadsOMP;
+
+         icvs.setNumThreads(_numThreads);
+         sys.getSMPPlugin()->setRequestedWorkers( _numThreads );
 
          _description = std::string("OpenMP");
          _malleable = false;
@@ -202,6 +209,23 @@ namespace nanos
          // Base class start()
          OpenMPInterface::start();
 
+         int num_threads = sys.getSMPPlugin()->getRequestedWorkersOMPSS();
+         if ( _numThreadsOMP != -1 ) {
+            std::cerr << "Using OMP_NUM_THREADS in an OmpSs applications is discouraged, the recomended way to set the number of worker smp threads is using the flag --smp-workers." << std::endl;
+            if ( num_threads == -1 ) {
+               std::cerr << "Option --smp-workers not set, will use OMP_NUM_THREADS instead, value: " << _numThreads << "." << std::endl;
+               num_threads = _numThreadsOMP;
+            } else if ( num_threads != _numThreadsOMP ) {
+               std::cerr << "Option --smp-workers set (value: " << num_threads << "), and OMP_NUM_THREADS is also set (value: " << _numThreads << "), will use the value of --smp-workers." << std::endl;
+            }
+            
+         }
+         _numThreads = num_threads;
+
+         TaskICVs & icvs = globalState->getICVs();
+         icvs.setNumThreads( _numThreads );
+         sys.getSMPPlugin()->setRequestedWorkers( _numThreads );
+
          // Overwrite custom values
          _description = std::string("OmpSs");
          _malleable = true;
@@ -258,6 +282,12 @@ namespace nanos
          data->icvs()->setNumThreads( nthreads );
 
          sys.getSMPPlugin()->updateActiveWorkers( nthreads );
+      }
+
+      void OmpSsInterface::setNumThreads_globalState ( int nthreads )
+      {
+         TaskICVs & icvs = globalState->getICVs();
+         icvs.setNumThreads( nthreads );
       }
 
       /*!

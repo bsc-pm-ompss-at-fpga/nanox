@@ -72,18 +72,18 @@ System nanos::sys;
 // default system values go here
 System::System () :
       _atomicWDSeed( 1 ), _threadIdSeed( 0 ), _peIdSeed( 0 ),
-      /*jb _numPEs( INT_MAX ),*/ _numThreads( 0 ), _deviceStackSize( 0 ), _profile( false ),
+      /*jb _numPEs( INT_MAX ), _numThreads( 0 ),*/ _deviceStackSize( 0 ), _profile( false ),
       _instrument( false ), _verboseMode( false ), _summary( false ), _executionMode( DEDICATED ), _initialMode( POOL ),
       _untieMaster( true ), _delayedStart( false ), _synchronizedStart( true ),
       _enableDLB( false ), _throttlePolicy ( NULL ),
       _schedStats(), _schedConf(), _defSchedule( "bf" ), _defThrottlePolicy( "hysteresis" ), 
       _defBarr( "centralized" ), _defInstr ( "empty_trace" ), _defDepsManager( "plain" ), _defArch( "smp" ),
-      _initializedThreads ( 0 ), _targetThreads ( 0 ), _pausedThreads( 0 ),
+      _initializedThreads ( 0 ), /*_targetThreads ( 0 ),*/ _pausedThreads( 0 ),
       _pausedThreadsCond(), _unpausedThreadsCond(),
       _net(), _usingCluster( false ), _usingNode2Node( true ), _usingPacking( true ), _conduit( "udp" ),
       _instrumentation ( NULL ), _defSchedulePolicy( NULL ), _dependenciesManager( NULL ),
-      _pmInterface( NULL ), _masterGpuThd( NULL ), _separateMemorySpacesCount(1), _separateAddressSpaces(1024), _hostMemory( ext::SMP )
-
+      _pmInterface( NULL ), _masterGpuThd( NULL ), _separateMemorySpacesCount(1), _separateAddressSpaces(1024), _hostMemory( ext::SMP ),
+      _regionCachePolicy( RegionCache::WRITE_BACK ), _regionCachePolicyStr("")
 #ifdef GPU_DEV
       , _pinnedMemoryCUDA( NEW CUDAPinnedMemoryManager() )
 #endif
@@ -91,16 +91,9 @@ System::System () :
       , _enableEvents(), _disableEvents(), _instrumentDefault("default"), _enableCpuidEvent( false )
 #endif
       , _lockPoolSize(37), _lockPool( NULL ), _mainTeam (NULL), _simulator(false),  _task_max_retries(1), _atomicSeedMemorySpace( 1 ), _affinityFailureCount( 0 )
-//#ifdef CLUSTER_DEV
-//      , _nodes( NULL )
-//#endif
-//#ifdef GPU_DEV
-//      , _gpus( NULL )
-//#endif
-#ifdef OpenCL_DEV
-      , _opencls( NULL )
-#endif
       , _createLocalTasks( false )
+      , _verboseDevOps( false )
+      , _splitOutputForThreads( false )
 {
    verbose0 ( "NANOS++ initializing... start" );
 
@@ -108,62 +101,6 @@ System::System () :
    // to locate the program arguments at that point
    OS::init();
    config();
-
-#if 0
-   OS::getProcessAffinity( &_cpuSet );
-
-   _maxCpus = OS::getMaxProcessors();
-   int cpu_count = getCpuCount();
-
-   std::vector<int> cpu_affinity;
-   cpu_affinity.reserve( cpu_count );
-   std::ostringstream oss_cpu_idx;
-   oss_cpu_idx << "[";
-   for ( int i=0; i<CPU_SETSIZE; i++ ) {
-      if ( CPU_ISSET(i, &_cpuSet) ) {
-         cpu_affinity.push_back(i);
-         oss_cpu_idx << i << ", ";
-      }
-   }
-   oss_cpu_idx << "]";
-   
-   verbose0("PID[" << getpid() << "]. CPU affinity " << oss_cpu_idx.str());
-   
-   // Ensure everything is properly configured
-   if( getNumPEs() == INT_MAX && _numThreads == 0 )
-      // If no parameter specified, use all available CPUs
-      setNumPEs( cpu_count );
-   
-   if ( _numThreads == 0 )
-      // No threads specified? Use as many as PEs
-      _numThreads = _numPEs;
-   else if ( getNumPEs() == INT_MAX ){
-      // No number of PEs given? Use 1 thread per PE
-      setNumPEs(  _numThreads );
-   }
-
-   // Set _bindings structure once we have the system mask and the binding info
-   _bindings.reserve( cpu_count );
-   for ( int i=0, collisions = 0; i < cpu_count; ) {
-
-      // The cast over cpu_affinity is needed because std::vector::size() returns a size_t type
-      int pos = (_bindingStart + _bindingStride*i + collisions) % (int)cpu_affinity.size();
-
-      // 'pos' may be negative if either bindingStart or bindingStride were negative
-      // this loop fixes that % operator is the remainder, not the modulo operation
-      while ( pos < 0 ) pos+=cpu_affinity.size();
-
-      if ( std::find( _bindings.begin(), _bindings.end(), cpu_affinity[pos] ) != _bindings.end() ) {
-         collisions++;
-         ensure( collisions != cpu_count, "Reached limit of collisions. We should never get here." );
-         continue;
-      }
-      _bindings.push_back( cpu_affinity[pos] );
-      i++;
-   }
-
-   CPU_ZERO( &_cpuActiveSet );
-#endif
 
    _lockPool = NEW Lock[_lockPoolSize];
 
@@ -227,6 +164,20 @@ void System::loadModules ()
    }
 #endif
 
+   verbose0( "Architectures loaded, stating PM interface.");
+   _pmInterface->start();
+
+   if ( !loadPlugin( "instrumentation-"+getDefaultInstrumentation() ) )
+      fatal0( "Could not load " + getDefaultInstrumentation() + " instrumentation" );
+
+   // load default dependencies plugin
+   verbose0( "loading " << getDefaultDependenciesManager() << " dependencies manager support" );
+
+   if ( !loadPlugin( "deps-"+getDefaultDependenciesManager() ) )
+      fatal0 ( "Couldn't load main dependencies manager" );
+
+   ensure0( _dependenciesManager,"No default dependencies manager" );
+
    // load default schedule plugin
    verbose0( "loading " << getDefaultSchedule() << " scheduling policy support" );
 
@@ -247,18 +198,8 @@ void System::loadModules ()
    if ( !loadPlugin( "barrier-"+getDefaultBarrier() ) )
       fatal0( "Could not load main barrier algorithm" );
 
-   if ( !loadPlugin( "instrumentation-"+getDefaultInstrumentation() ) )
-      fatal0( "Could not load " + getDefaultInstrumentation() + " instrumentation" );
-
    ensure0( _defBarrFactory,"No default system barrier factory" );
    
-   // load default dependencies plugin
-   verbose0( "loading " << getDefaultDependenciesManager() << " dependencies manager support" );
-
-   if ( !loadPlugin( "deps-"+getDefaultDependenciesManager() ) )
-      fatal0 ( "Couldn't load main dependencies manager" );
-
-   ensure0( _dependenciesManager,"No default dependencies manager" );
 
 }
 
@@ -304,15 +245,10 @@ void System::config ()
 
    cfg.setOptionsSection( "Core", "Core options of the core of Nanos++ runtime" );
 
-   //cfg.registerConfigOption( "num_pes", NEW Config::UintVar( _numPEs ),
-   //                          "Defines the number of processing elements" );
-   //cfg.registerArgOption( "num_pes", "pes" );
-   //cfg.registerEnvOption( "num_pes", "NX_PES" );
-
-   cfg.registerConfigOption( "num_threads", NEW Config::PositiveVar( _numThreads ),
-                             "Defines the number of threads. Note that OMP_NUM_THREADS is an alias to this." );
-   cfg.registerArgOption( "num_threads", "threads" );
-   cfg.registerEnvOption( "num_threads", "NX_THREADS" );
+//   cfg.registerConfigOption( "num_threads", NEW Config::PositiveVar( _numThreads ),
+//                             "Defines the number of threads. Note that OMP_NUM_THREADS is an alias to this." );
+//   cfg.registerArgOption( "num_threads", "threads" );
+//   cfg.registerEnvOption( "num_threads", "NX_THREADS" );
    
    cfg.registerConfigOption( "stack-size", NEW Config::PositiveVar( _deviceStackSize ),
                              "Defines the default stack size for all devices" );
@@ -419,6 +355,17 @@ void System::config ()
    cfg.registerArgOption( "task_retries", "task-retries" );
    cfg.registerEnvOption( "task_retries", "NX_TASK_RETRIES" );
 
+
+   cfg.registerConfigOption ( "verbose-devops", NEW Config::FlagOption ( _verboseDevOps, true ), "Verbose cache ops" );
+   cfg.registerArgOption ( "verbose-devops", "verbose-devops" );
+
+   cfg.registerConfigOption ( "thd-output", NEW Config::FlagOption ( _splitOutputForThreads, true ), "Create separate files for each thread" );
+   cfg.registerArgOption ( "thd-output", "thd-output" );
+
+   cfg.registerConfigOption ( "regioncache-policy", NEW Config::StringVar ( _regionCachePolicyStr ), "Region cache policy, accepted values are : nocache, writethrough, writeback. Default is writeback." );
+   cfg.registerArgOption ( "regioncache-policy", "cache-policy" );
+   cfg.registerEnvOption ( "regioncache-policy", "NX_CACHE_POLICY" );
+
    _schedConf.config( cfg );
    _pmInterface->config( cfg );
 
@@ -427,34 +374,10 @@ void System::config ()
    cfg.init();
 }
 
-PE * System::createPE ( std::string pe_type, int pid, int uid )
-{
-   //! \todo lookup table for PE factories, in the mean time assume only one factory
-   return _hostFactory( pid, uid );
-}
-
 void System::start ()
 {
-//   //! Load hwloc first, in order to make it available for modules
-//   if ( isHwlocAvailable() )
-//      loadHwloc();
-
-   // loadNUMAInfo needs _targetThreads when hwloc is not available.
-   // Note that it is not its final value!
-   _targetThreads = _numThreads;
-   
-//   // Load & check NUMA config
-//   loadNUMAInfo();
-
    // Modules can be loaded now
    loadModules();
-
-   // Increase targetThreads, ask the architecture plugins
-   for ( ArchitecturePlugins::const_iterator it = _archs.begin();
-        it != _archs.end(); ++it )
-   {
-      _targetThreads += (*it)->getNumThreads();
-   }
 
    // Instrumentation startup
    NANOS_INSTRUMENT ( sys.getInstrumentation()->filterEvents( _instrumentDefault, _enableEvents, _disableEvents ) );
@@ -462,25 +385,23 @@ void System::start ()
 
    verbose0 ( "Starting runtime" );
 
-   _pmInterface->start();
+   if ( _regionCachePolicyStr.compare("") != 0 ) {
+      //value is set
+      if ( _regionCachePolicyStr.compare("nocache") == 0 ) {
+         _regionCachePolicy = RegionCache::NO_CACHE;
+      } else if ( _regionCachePolicyStr.compare("writethrough") == 0 ) {
+         _regionCachePolicy = RegionCache::WRITE_THROUGH;
+      } else if ( _regionCachePolicyStr.compare("writeback") == 0 ) {
+         _regionCachePolicy = RegionCache::WRITE_BACK;
+      } else {
+         warning0("Invalid option for region cache policy '" << _regionCachePolicyStr << "', using default value.");
+      }
+   }
 
-   _pes.reserve ( _peIdSeed.value() );
-
-#if 0
-   PE *pe = createPE ( _defArch, getBindingId( 0 ), 0 );
-   pe->setNUMANode( getNodeOfPE( pe->getId() ) );
-   _pes.push_back ( pe );
-   _workers.push_back( &pe->associateThisThread ( getUntieMaster() ) );
-   CPU_SET( getBindingId( 0 ), &_cpuActiveSet );
-#endif
-
-   _workers.push_back( &( _smpPlugin->getFirstSMPProcessor()->associateThisThread( sys.getUntieMaster() ) ) );
-
+   _smpPlugin->associateThisThread( getUntieMaster() );
    //Setup MainWD
    WD &mainWD = *myThread->getCurrentWD();
-   mainWD._mcontrol.preInit();
    mainWD._mcontrol.setMainWD();
-   mainWD._mcontrol.initialize( *(_smpPlugin->getFirstSMPProcessor()) );
 
    if ( _pmInterface->getInternalDataSize() > 0 ) {
       char *data = NEW char[_pmInterface->getInternalDataSize()];
@@ -491,16 +412,14 @@ void System::start ()
 
    /* Renaming currend thread as Master */
    myThread->rename("Master");
-
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenStateEvent (NANOS_STARTUP) );
+
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
    {
+      verbose0("addPEs for arch: " << (*it)->getName()); 
       (*it)->addPEs( _pes );
    }   
-
-   //// FIXME (855): do this before thread creation, after PE creation
-   //completeNUMAInfo();
 
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
@@ -520,44 +439,13 @@ void System::start ()
    {
       (*it)->createBindingList();
    }   
-   // Right now, _bindings should only store SMP PEs ids
 
-   // Create PEs
-#if 0
-   int p;
-   for ( p = 1; p < numPes ; p++ ) {
-      pe = createPE ( "smp", getBindingId( p ), p );
-      pe->setNUMANode( getNodeOfPE( pe->getId() ) );
-      _pes.push_back ( pe );
-
-      CPU_SET( getBindingId( p ), &_cpuActiveSet );
-   }
-   // Create threads
-   for ( int ths = 1; ths < _numThreads; ths++ ) {
-      pe = _pes[ ths % numPes ];
-      _workers.push_back( &pe->startWorker() );
-   }
-#endif
-   
-//   for ( ArchitecturePlugins::const_iterator it = _archs.begin();
-//        it != _archs.end(); ++it )
-//   {
-//      for ( unsigned archPE = 0; archPE < (*it)->getNumPEs(); ++archPE )
-//      {
-//         PE * processor = (*it)->createPE( archPE, p );
-//         fatal_cond0( processor == NULL, "ArchPlugin::createPE returned NULL" );
-//         _pes.push_back( processor );
-//         _workers.push_back( &processor->startWorker() );
-//         CPU_SET( processor->getId(), &_cpuActiveSet );
-//         ++p;
-//      }
-//   }
+   _targetThreads = _smpPlugin->getNumThreads();
 
    // Set up internal data for each worker
-#if 0
    for ( ThreadList::const_iterator it = _workers.begin(); it != _workers.end(); it++ ) {
 
-      WD & threadWD = (*it)->getThreadWD();
+      WD & threadWD = it->second->getThreadWD();
       if ( _pmInterface->getInternalDataSize() > 0 ) {
          char *data = NEW char[_pmInterface->getInternalDataSize()];
          _pmInterface->initInternalData( data );
@@ -565,57 +453,13 @@ void System::start ()
       }
       _pmInterface->setupWD( threadWD );
    }
-#endif
-      
-//#ifdef GPU_DEV
-//   int gpuC;
-//   //for ( gpuC = 0; gpuC < ( ( usingCluster() && sys.getNetwork()->getNodeNum() == 0 && sys.getNetwork()->getNumNodes() > 1 ) ? 0 : nanos::ext::GPUConfig::getGPUCount() ); gpuC++ ) {
-//   for ( gpuC = 0; gpuC < nanos::ext::GPUConfig::getGPUCount() ; gpuC++ ) {
-//      _gpus = (_gpus == NULL) ? NEW std::vector<nanos::ext::GPUProcessor *>(nanos::ext::GPUConfig::getGPUCount(), (nanos::ext::GPUProcessor *) NULL) : _gpus; 
-//      memory_space_id_t id = getNewSeparateMemoryAddressSpaceId();
-//      SeparateMemoryAddressSpace *gpuMemory = NEW SeparateMemoryAddressSpace( id, ext::GPU, nanos::ext::GPUConfig::getAllocWide());
-//      gpuMemory->setNodeNumber( 0 );
-//      ext::GPUMemorySpace *gpuMemSpace = NEW ext::GPUMemorySpace();
-//      gpuMemory->setSpecificData( gpuMemSpace );
-//      std::cerr << "Memory space " << id << " is a gpu" << std::endl;
-//      _separateAddressSpaces[ id ] = gpuMemory;
-//      int peid = p++;
-//      nanos::ext::GPUProcessor *gpuPE = NEW nanos::ext::GPUProcessor( peid, gpuC, peid, id, *gpuMemSpace );
-//      (*_gpus)[gpuC] = gpuPE;
-//      _pes.push_back( gpuPE );
-//      BaseThread *gpuThd = &gpuPE->startWorker();
-//      _workers.push_back( gpuThd );
-//      _masterGpuThd = ( _masterGpuThd == NULL ) ? gpuThd : _masterGpuThd;
-//   }
-//#endif
-   
-//#ifdef OpenCL_DEV
-//   unsigned openclC;
-//   //for ( gpuC = 0; gpuC < ( ( usingCluster() && sys.getNetwork()->getNodeNum() == 0 && sys.getNetwork()->getNumNodes() > 1 ) ? 0 : nanos::ext::GPUConfig::getGPUCount() ); gpuC++ ) {
-//   for ( openclC = 0; openclC < nanos::ext::OpenCLConfig::getOpenCLDevicesCount() ; openclC++ ) {
-//      _opencls = (_opencls == NULL) ? NEW std::vector<nanos::ext::OpenCLProcessor *>(nanos::ext::OpenCLConfig::getOpenCLDevicesCount(), (nanos::ext::OpenCLProcessor *) NULL) : _opencls; 
-//      memory_space_id_t id = getNewSeparateMemoryAddressSpaceId();
-//      SeparateMemoryAddressSpace *oclmemory = NEW SeparateMemoryAddressSpace( id, ext::OpenCLDev, nanos::ext::OpenCLConfig::getAllocWide());
-//      oclmemory->setNodeNumber( 0 );
-//      //ext::OpenCLMemorySpace *oclmemspace = NEW ext::OpenCLMemorySpace();
-//      //oclmemory->setSpecificData( oclmemspace );
-//      _separateAddressSpaces[ id ] = oclmemory;
-//      int peid = p++;
-//      nanos::ext::OpenCLProcessor *openclPE = NEW nanos::ext::OpenCLProcessor( peid, openclC, peid, id, *oclmemory );
-//      (*_opencls)[openclC] = openclPE;
-//      _pes.push_back( openclPE );
-//      BaseThread *oclThd = &openclPE->startWorker();
-//      _workers.push_back( oclThd );
-//      //_masterGpuThd = ( _masterGpuThd == NULL ) ? gpuThd : _masterGpuThd;
-//   }
-//#endif
-      
+
    if ( !_defDeviceName.empty() ) 
    {
        PEList::iterator it;
        for ( it = _pes.begin() ; it != _pes.end(); it++ )
        {
-           PE *pe = *it;
+           PE *pe = it->second;
            if ( pe->getDeviceType()->getName() != NULL)
               if ( _defDeviceName == pe->getDeviceType()->getName()  )
                  _defDevice = pe->getDeviceType();
@@ -676,10 +520,6 @@ void System::start ()
       warning( "Unrecognised arguments: " << unrecog );
    Config::deleteOrphanOptions();
       
-   // // hwloc can be now unloaded
-   // if ( isHwlocAvailable() )
-   //    unloadHwloc();
-
    if ( _summary )
       environmentSummary();
 }
@@ -689,7 +529,6 @@ System::~System ()
    if ( !_delayedStart ) finish();
 }
 
-int createdWds=0;
 void System::finish ()
 {
    //! \note Instrumentation: first removing RUNNING state from top of the state statck
@@ -921,7 +760,6 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    size_t total_size;
 
    // WD doesn't need to compute offset, it will always be the chunk allocated address
-   createdWds++;
 
    // Computing Data info
    size_Data = (data != NULL && *data == NULL)? data_size:0;
@@ -1263,7 +1101,7 @@ void System::inlineWork ( WD &work )
       work._mcontrol.initialize( myThread->runningOn()->getMemorySpaceId() );
       bool result;
       do {
-         result = work._mcontrol.allocateInputMemory();
+         result = work._mcontrol.allocateTaskMemory();
       } while( result == false );
       Scheduler::inlineWork( &work );
    }
@@ -1296,8 +1134,8 @@ BaseThread * System::getUnassignedWorker ( void )
 {
    BaseThread *thread;
 
-   for ( unsigned i = 0; i < _workers.size(); i++ ) {
-      thread = _workers[i];
+   for ( ThreadList::iterator it = _workers.begin(); it != _workers.end(); it++ ) {
+      thread = it->second;
       if ( !thread->hasTeam() && !thread->isSleeping() ) {
 
          // skip if the thread is not in the mask
@@ -1324,57 +1162,14 @@ BaseThread * System::getUnassignedWorker ( void )
    return NULL;
 }
 
-//BaseThread * System::getInactiveWorker ( void )
-//{
-//   BaseThread *thread;
-//
-//   for ( unsigned i = 0; i < _workers.size(); i++ ) {
-//      thread = _workers[i];
-//      if ( thread->tryWakeUp() ) {
-//         return thread;
-//      }
-//      //if ( !thread->hasTeam() && thread->isWaiting() ) {
-//      //   // recheck availability with exclusive access
-//      //   thread->lock();
-//      //   if ( thread->hasTeam() || !thread->isWaiting() ) {
-//      //      // we lost it
-//      //      thread->unlock();
-//      //      continue;
-//      //   }
-//      //   thread->reserve(); // set team flag only
-//      //   thread->wakeup();
-//      //   thread->unlock();
-//
-//      //   return thread;
-//      //}
-//   }
-//   return NULL;
-//}
-
-//BaseThread * System::getAssignedWorker ( ThreadTeam *team )
-//{
-//   BaseThread *thread;
-//
-//   ThreadList::reverse_iterator rit;
-//   for ( rit = _workers.rbegin(); rit != _workers.rend(); ++rit ) {
-//      thread = *rit;
-//      thread->lock();
-//      //! \note Checking thread availabitity.
-//      if ( (thread->getTeam() == team) && !thread->isSleeping() && !thread->isTeamCreator() ) {
-//         //! \note return this thread LOCKED!!!
-//         return thread;
-//      }
-//      thread->unlock();
-//   }
-//
-//   //! \note If no thread has found, return NULL.
-//   return NULL;
-//}
-
 BaseThread * System::getWorker ( unsigned int n )
 {
-   if ( n < _workers.size() ) return _workers[n];
-   else return NULL;
+   BaseThread *worker = NULL;
+   ThreadList::iterator elem = _workers.find( n );
+   if ( elem != _workers.end() ) {
+      worker = elem->second;
+   } 
+   return worker;
 }
 
 void System::acquireWorker ( ThreadTeam * team, BaseThread * thread, bool enter, bool star, bool creator )
@@ -1420,7 +1215,7 @@ int System::getNumWorkers( DeviceData *arch )
    int n = 0;
 
    for ( ThreadList::iterator it = _workers.begin(); it != _workers.end(); it++ ) {
-      if ( arch->isCompatible( *(( *it )->runningOn()->getDeviceType()), ( *it )->runningOn() ) ) n++;
+      if ( arch->isCompatible( *(it->second->runningOn()->getDeviceType() ) ), it->second->runningOn() ) n++;
    }
    return n;
 }
@@ -1479,149 +1274,6 @@ void System::endTeam ( ThreadTeam *team )
    delete team;
 }
 
-//void System::updateActiveWorkers ( int nthreads )
-//{
-//   NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
-//   NANOS_INSTRUMENT ( static nanos_event_key_t num_threads_key = ID->getEventKey("set-num-threads"); )
-//   NANOS_INSTRUMENT ( nanos_event_value_t num_threads_val = (nanos_event_value_t) nthreads; )
-//   NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &num_threads_key, &num_threads_val); )
-//
-//   BaseThread *thread;
-//   //! \bug Team variable must be received as a function parameter
-//   ThreadTeam *team = myThread->getTeam();
-//
-//   int num_threads = nthreads - team->getFinalSize();
-//
-//   while ( !(team->isStable()) ) memoryFence();
-//
-//   if ( num_threads < 0 ) team->setStable(false);
-//
-//   team->setFinalSize(nthreads);
-//
-//   //! \bug We need to consider not only numThreads < nthreads but num_threads < availables?
-//   while (  _numThreads < nthreads ) {
-//      createWorker( _pes.size() );
-//      _numThreads++;
-//      //jb _numPEs++;
-//   }
-//
-//   //! \note If requested threads are more than current increase number of threads
-//   while ( num_threads > 0 ) {
-//      thread = getUnassignedWorker();
-//      if (!thread) thread = getInactiveWorker();
-//      if (thread) {
-//         acquireWorker( team, thread, /* enterOthers */ true, /* starringOthers */ false, /* creator */ false );
-//         num_threads--;
-//      }
-//   }
-//
-//   //! \note If requested threads are less than current decrease number of threads
-//   while ( num_threads < 0 ) {
-//      thread = getAssignedWorker( team );
-//      if ( thread ) {
-//         thread->sleep();
-//         thread->unlock();
-//         num_threads++;
-//      }
-//   }
-//
-//
-//}
-
-// Not thread-safe
-//inline void System::applyCpuMask()
-//{
-//   NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
-//   NANOS_INSTRUMENT ( static nanos_event_key_t num_threads_key = ID->getEventKey("set-num-threads"); )
-//   NANOS_INSTRUMENT ( nanos_event_value_t num_threads_val = (nanos_event_value_t ) CPU_COUNT(&_smpPlugin->getActiveSet() ) )
-//   NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &num_threads_key, &num_threads_val); )
-//
-//   BaseThread *thread;
-//   ThreadTeam *team = myThread->getTeam();
-//   unsigned int _activePEs = 0;
-//
-//   for ( unsigned pe_id = 0; pe_id < _pes.size() || _activePEs < (size_t)CPU_COUNT(&_smpPlugin->getActiveSet() ); pe_id++ ) {
-//
-//      // Create PE & Worker if it does not exist
-//      if ( pe_id == _pes.size() ) {
-//         createWorker( pe_id );
-//         _numThreads++;
-//         //jb _numPEs++;
-//      }
-//
-//      int pe_binding = getBindingId( pe_id );
-//      if ( CPU_ISSET( pe_binding, &_smpPlugin->getActiveSet() ) ) {
-//         _activePEs++;
-//         // This PE should be running
-//         while ( (thread = _pes[pe_id]->getUnassignedThread()) != NULL ) {
-//            acquireWorker( team, thread, /* enterOthers */ true, /* starringOthers */ false, /* creator */ false );
-//            team->increaseFinalSize();
-//         }
-//      } else {
-//         // This PE should not
-//         while ( (thread = _pes[pe_id]->getActiveThread()) != NULL ) {
-//            thread->lock();
-//            thread->sleep();
-//            thread->unlock();
-//            team->decreaseFinalSize();
-//         }
-//      }
-//   }
-//}
-
-//void System::getCpuMask ( cpu_set_t *mask ) const
-//{
-//   memcpy( mask, &_smpPlugin->getActiveSet() , sizeof(cpu_set_t) );
-//}
-//
-//void System::setCpuMask ( const cpu_set_t *mask )
-//{
-//   memcpy( &_smpPlugin->getActiveSet() , mask, sizeof(cpu_set_t) );
-//   sys.processCpuMask();
-//}
-//
-//void System::addCpuMask ( const cpu_set_t *mask )
-//{
-//   CPU_OR( &_smpPlugin->getActiveSet() , &_smpPlugin->getActiveSet() , mask );
-//   sys.processCpuMask();
-//}
-
-//inline void System::processCpuMask( void )
-//{
-//
-//   // if _bindThreads is enabled, update _bindings adding new elements of _cpuActiveSet
-//   if ( sys.getBinding() ) {
-//      std::ostringstream oss_cpu_idx;
-//      oss_cpu_idx << "[";
-//      for ( int cpu=0; cpu<CPU_SETSIZE; cpu++) {
-//         if ( cpu > _maxCpus-1 && !_simulator ) {
-//            CPU_CLR( cpu, &_smpPlugin->getActiveSet() );
-//            debug("Trying to use more cpus than available is not allowed (do you forget --simulator option?)");
-//            continue;
-//         }
-//         if ( CPU_ISSET( cpu, &_smpPlugin->getActiveSet()  ) ) {
-//
-//            if ( std::find( _bindings.begin(), _bindings.end(), cpu ) == _bindings.end() ) {
-//               _bindings.push_back( cpu );
-//            }
-//
-//            oss_cpu_idx << cpu << ", ";
-//         }
-//      }
-//      oss_cpu_idx << "]";
-//      verbose0( "PID[" << getpid() << "]. CPU affinity " << oss_cpu_idx.str() );
-//      if ( _pmInterface->isMalleable() ) {
-//         sys.applyCpuMask();
-//      }
-//   }
-//   else {
-//      verbose0( "PID[" << getpid() << "]. Changing number of threads: " << (int) myThread->getTeam()->getFinalSize() << " to " << (int) CPU_COUNT( &_smpPlugin->getActiveSet()  ) );
-//      if ( _pmInterface->isMalleable() ) {
-//         sys.updateActiveWorkers( CPU_COUNT( &_smpPlugin->getActiveSet()  ) );
-//      }
-//   }
-//}
-
 void System::waitUntilThreadsPaused ()
 {
    // Wait until all threads are paused
@@ -1633,56 +1285,16 @@ void System::waitUntilThreadsUnpaused ()
    // Wait until all threads are paused
    _unpausedThreadsCond.wait();
 }
-
-//unsigned System::reservePE ( bool reserveNode, unsigned node, bool & reserved )
-//{
-//   // For each available PE
-//   for ( Bindings::reverse_iterator it = _bindings.rbegin(); it != _bindings.rend(); ++it )
-//   {
-//      unsigned pe = *it;
-//      unsigned currentNode = getNodeOfPE( pe );
-//      
-//      // If this PE is in the requested node or we don't need to reserve in
-//      // a certain node
-//      if ( currentNode == node || !reserveNode )
-//      {
-//         // Ensure there is at least one PE for smp
-//         if ( _bindings.size() == 1 )
-//         {
-//            reserved = false;
-//            warning( "Cannot reserve PE " << pe << ", there is just one PE left. It will be shared." );
-//         }
-//         else
-//         {
-//            // Take this pe out of the available bindings list.
-//            _bindings.erase( --( it.base() ) );
-//            reserved = true;
-//         }
-//         return pe;
-//      }
-//   }
-//   // If we reach this point, there are no PEs available for that node.
-//   verbose( "reservePE failed for node " << node );
-//   fatal( "There are no available PEs for the requested node" );
-//}
-
-//void * System::getHwlocTopology ()
-//{
-//   return _hwlocTopology;
-//}
  
-void System::addOffloadPEsToTeam(PE **pes, int num_pes, int num_threads, BaseThread** out_threads) {  
+void System::addPEsAndThreadsToTeam(PE **pes, int num_pes, BaseThread** threads, int num_threads) {  
+    //Insert PEs to the team
     for (int i=0; i<num_pes; i++){
-        _pes.push_back ( pes[i] );
-        //CPU_SET( pes[rank]->getId(), &_cpu_active_set );
+        _pes.insert( std::make_pair( pes[i]->getId(), pes[i] ) );
     }
-    NANOS_INSTRUMENT( sys.getInstrumentation()->incrementMaxThreads(); )
-    //Create the workers (which will run in all the PEs of pes) and return them
+    //Insert the workers to the team
     for (int i=0; i<num_threads; i++){
-        BaseThread* bt= &pes[i]->startWorker();
-        _workers.push_back( bt );
-        acquireWorker( _mainTeam , bt);
-        out_threads[i]=bt;
+        _workers.insert( std::make_pair( threads[i]->getId(), threads[i] ) );
+        acquireWorker( _mainTeam , threads[i] );
     }
 }
 
@@ -1694,21 +1306,14 @@ void System::admitCurrentThread ( void )
 void System::expelCurrentThread ( void )
 {
    int pe_id =  myThread->runningOn()->getId();
-   _pes.erase( _pes.begin() + pe_id );
-   _workers.erase ( _workers.begin() + myThread->getId() );
+   _pes.erase( pe_id );
+   _workers.erase ( myThread->getId() );
 }
 
 void System::environmentSummary( void )
 {
-   /* Get Specific Mask String (depending on _bindThreads) */
-   //cpu_set_t *cpu_set = _bindThreads ? &_smpPlugin->getActiveSet()  : &_cpuSet;
    std::ostringstream mask;
-   mask << "[ ";
-   //for ( int i=0; i<CPU_SETSIZE; i++ ) {
-   //   if ( CPU_ISSET(i, cpu_set) )
-   //      mask << i << ", ";
-   //}
-   mask << "]";
+   _smpPlugin->getBindingMaskString( mask );
 
    /* Get Prog. Model string */
    std::string prog_model;
@@ -1726,21 +1331,20 @@ void System::environmentSummary( void )
    }
 
    message0( "========== Nanos++ Initial Environment Summary ==========" );
-   message0( "=== PID:            " << getpid() );
-   message0( "=== Num. threads:   " << _numThreads );
-   message0( "=== Active CPUs:    " << mask.str() );
-   //message0( "=== Binding:        " << std::boolalpha << _bindThreads );
-   message0( "=== Prog. Model:    " << prog_model );
+   message0( "=== PID:                 " << getpid() );
+   //message0( "=== Num. SMP threads:        " << _smpPlugin->getNumThreads() );
+   //message0( "=== Num. SMP worker threads: " << _smpPlugin->getNumWorkers() );
+   message0( "=== Num. worker threads: " << _workers.size() );
+   message0( "=== System CPUs:         " << mask.str() );
+   message0( "=== Binding:             " << std::boolalpha << _smpPlugin->getBinding() );
+   message0( "=== Prog. Model:         " << prog_model );
 
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it ) {
-
-      // Temporarily hide SMP plugin because it has empty information
-      if ( strcmp( (*it)->getName(), "SMP PE Plugin" ) == 0 )
-         continue;
-
-      message0( "=== Plugin:         " << (*it)->getName() );
-      message0( "===  | Threads:     " << (*it)->getNumThreads() );
+      message0( "=== Plugin:              " << (*it)->getName() );
+      message0( "===  | PEs:              " << (*it)->getNumPEs() );
+      message0( "===  | Threads:          " << (*it)->getNumThreads() );
+      message0( "===  | Worker Threads:   " << (*it)->getNumWorkers() );
    }
 
    message0( "=========================================================" );
@@ -1767,10 +1371,13 @@ void System::ompss_nanox_main(){
         sys.loadPlugin("arch-mpi");
     }
     #endif
+    #ifdef CLUSTER_DEV
+    nanos::ext::ClusterNode::clusterWorker();
+    #endif
     
-#ifdef NANOS_RESILIENCY_ENABLED
-    getMyThreadSafe()->setupSignalHandlers();
-#endif
+    #ifdef NANOS_RESILIENCY_ENABLED
+        getMyThreadSafe()->setupSignalHandlers();
+    #endif
 }
 
 void System::registerNodeOwnedMemory(unsigned int node, void *addr, std::size_t len) {

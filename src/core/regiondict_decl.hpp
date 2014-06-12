@@ -98,6 +98,7 @@ typedef unsigned int reg_t;
    class ContainerSparse {
       std::map< reg_t, T > _container;
       //ContainerDense< T > &_orig;
+      protected:
       RegionDictionary< ContainerDense > &_orig;
       public:
       bool sparse;
@@ -128,7 +129,7 @@ typedef unsigned int reg_t;
    typedef RegionDictionary<ContainerSparse> CacheRegionDictionary;
 
    template< template <class> class Sparsity >
-   class RegionDictionary : public Sparsity< RegionVectorEntry > {
+   class RegionDictionary : public Sparsity< RegionVectorEntry >, public Version {
       std::vector< MemoryMap< std::set< reg_t > > > _intersects;
       uint64_t _keyBaseAddress;
       uint64_t _realBaseAddress;
@@ -156,7 +157,7 @@ typedef unsigned int reg_t;
       uint64_t getKeyBaseAddress() const;
       uint64_t getRealBaseAddress() const;
 
-      void printRegion( reg_t ) const;
+      void printRegion( std::ostream &o, reg_t ) const;
 
       bool checkIntersect( reg_t baseRegionId, reg_t targetRegionId ) const;
       reg_t computeTestIntersect( reg_t regionIdA, reg_t regionIdB ) ;

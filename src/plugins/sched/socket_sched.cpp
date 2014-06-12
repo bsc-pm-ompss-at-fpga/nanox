@@ -724,8 +724,6 @@ namespace nanos {
       class SocketSchedPlugin : public Plugin
       {
          private:
-            int _numSockets;
-            int _coresPerSocket;
             
             bool _steal;
             bool _stealParents;
@@ -739,8 +737,6 @@ namespace nanos {
             
             void loadDefaultValues()
             {
-               _numSockets = sys.getSMPPlugin()->getNumSockets();
-               _coresPerSocket = sys.getSMPPlugin()->getCoresPerSocket();
             }
          public:
             SocketSchedPlugin() : Plugin( "Socket-aware scheduling Plugin",1 ),
@@ -749,8 +745,6 @@ namespace nanos {
                _spins( 200 ), _random( false ) {}
 
             virtual void config( Config& cfg ) {
-               // Read hwloc's info before reading user parameters
-               loadDefaultValues();
                
                cfg.setOptionsSection( "Sockets module", "Socket-aware scheduling module" );
                cfg.registerConfigOption( "socket-steal", NEW Config::FlagOption( _steal ), "Enable work stealing from other sockets' inner tasks queues (default)." );
@@ -777,9 +771,8 @@ namespace nanos {
             }
 
             virtual void init() {
-               //fprintf(stderr, "Setting numSockets to %d and coresPerSocket to %d\n", _numSockets, _coresPerSocket );
-               sys.getSMPPlugin()->setNumSockets( _numSockets );
-               sys.getSMPPlugin()->setCoresPerSocket( _coresPerSocket );
+               // Read hwloc's info before reading user parameters
+               loadDefaultValues();
                
                sys.setDefaultSchedulePolicy( NEW SocketSchedPolicy( _steal, _stealParents, _stealLowPriority, _immediate, _smart, _spins, _random ) );
             }

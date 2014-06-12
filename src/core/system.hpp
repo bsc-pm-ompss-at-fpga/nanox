@@ -38,15 +38,15 @@
 using namespace nanos;
 
 // methods to access configuration variable         
-inline void System::setNumPEs ( int npes ) { _numPEs = npes; }
-
-inline int System::getNumPEs () const { return _numPEs; }
-
-inline unsigned System::getMaxThreads () const { return _targetThreads; } 
-
-inline void System::setNumThreads ( int nthreads ) { _numThreads = nthreads; }
-
-inline int System::getNumThreads () const { return _numThreads; }
+//inline void System::setNumPEs ( int npes ) { _numPEs = npes; }
+//
+//inline int System::getNumPEs () const { return _numPEs; }
+//
+//inline unsigned System::getMaxThreads () const { return _targetThreads; } 
+//
+//inline void System::setNumThreads ( int nthreads ) { _numThreads = nthreads; }
+//
+//inline int System::getNumThreads () const { return _numThreads; }
 
 //inline int System::getCpuCount () const { return CPU_COUNT( &_cpuSet ) ; };
 
@@ -459,8 +459,8 @@ inline ProcessingElement &System::getPEWithMemorySpaceId( memory_space_id_t id )
    bool found = false;
    PE *target = NULL;
    for ( PEList::iterator it = _pes.begin(); it != _pes.end() && !found; it++ ) {
-      if ( (*it)->getMemorySpaceId() == id ) {
-         target = *it;
+      if ( it->second->getMemorySpaceId() == id ) {
+         target = it->second;
          found = true;
       }
    }
@@ -525,6 +525,18 @@ inline bool System::isSimulator() const {
 
 inline ThreadTeam *System::getMainTeam() {
    return _mainTeam;
+}
+
+inline bool System::getVerboseDevOps() const {
+   return _verboseDevOps;
+}
+
+inline bool System::getSplitOutputForThreads() const {
+   return _splitOutputForThreads;
+}
+
+inline RegionCache::CachePolicy System::getRegionCachePolicy() const {
+   return _regionCachePolicy;
 }
 
 #endif

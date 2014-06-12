@@ -104,7 +104,12 @@ BaseThread& ProcessingElement::startMultiWorker ( unsigned int numPEs, Processin
 
 BaseThread & ProcessingElement::startThread ( WD &work, ext::SMPMultiThread *parent )
 {
-   BaseThread &thread = createThread( work, parent );
+   return startThread( *this, work, parent );
+}
+
+BaseThread & ProcessingElement::startThread ( ProcessingElement &representedPE, WD &work, ext::SMPMultiThread *parent )
+{
+   BaseThread &thread = representedPE.createThread( work, parent );
 
    thread.start();
 
@@ -124,26 +129,26 @@ BaseThread & ProcessingElement::startMultiThread ( WD &work, unsigned int numPEs
    return thread;
 }
 
-BaseThread & ProcessingElement::associateThisThread ( bool untieMain )
-{
-   WD & worker = getMasterWD();
-   NANOS_INSTRUMENT (sys.getInstrumentation()->raiseOpenPtPEvent ( NANOS_WD_DOMAIN, (nanos_event_id_t) worker.getId(), 0, 0 ); )
-   NANOS_INSTRUMENT (InstrumentationContextData *icd = worker.getInstrumentationContextData() );
-   NANOS_INSTRUMENT (icd->setStartingWD(true) );
-   
-   BaseThread &thread = createThread( worker );
-
-   thread.setMainThread();
-   thread.associate();
-
-   _threads.push_back( &thread );
-
-   if ( !untieMain ) {
-      worker.tieTo(thread);
-   }
-
-   return thread;
-}
+//BaseThread & ProcessingElement::associateThisThread ( bool untieMain )
+//{
+//   WD & worker = getMasterWD();
+//   NANOS_INSTRUMENT (sys.getInstrumentation()->raiseOpenPtPEvent ( NANOS_WD_DOMAIN, (nanos_event_id_t) worker.getId(), 0, 0 ); )
+//   NANOS_INSTRUMENT (InstrumentationContextData *icd = worker.getInstrumentationContextData() );
+//   NANOS_INSTRUMENT (icd->setStartingWD(true) );
+//   
+//   BaseThread &thread = createThread( worker );
+//
+//   thread.setMainThread();
+//   thread.associate();
+//
+//   _threads.push_back( &thread );
+//
+//   if ( !untieMain ) {
+//      worker.tieTo(thread);
+//   }
+//
+//   return thread;
+//}
 
 void ProcessingElement::stopAllThreads ()
 {

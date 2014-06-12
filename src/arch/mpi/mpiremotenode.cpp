@@ -127,13 +127,6 @@ void MPIRemoteNode::nanosMPIInit(int *argc, char ***argv, int userRequired, int*
         MPI_Query_thread(userProvided);        
     }
     
-    if ((*userProvided) < MPI_THREAD_MULTIPLE ) {
-         std::cerr << "MPI_Query_Thread returned multithread support less than MPI_THREAD_MULTIPLE, your application may hang, check your MPI "
-            "implementation and try to configure it so it can support this multithread level. Configure your PATH so the mpi compiler"
-            " points to a multithread implementation of MPI";
-         //Some implementations seem to catch fatal0 and continue... make sure we die
-         exit(-1);
-    }
     if (_bufferDefaultSize != 0 && _bufferPtr != 0) {
         _bufferPtr = new char[_bufferDefaultSize];
         MPI_Buffer_attach(_bufferPtr, _bufferDefaultSize);
@@ -162,14 +155,15 @@ void MPIRemoteNode::nanosMPIFinalize() {
     }
     int resul;
     MPI_Finalized(&resul);
+    NANOS_MPI_CLOSE_IN_MPI_RUNTIME_EVENT;
     if (!resul){
       //Free every node before finalizing
       DEEP_Booster_free(NULL,-1);
       MPI_Finalize();
     }
-    NANOS_MPI_CLOSE_IN_MPI_RUNTIME_EVENT;
 }
 
+//TODO: Finish implementing shared memory
 #define N_FREE_SLOTS 10
 void MPIRemoteNode::unifiedMemoryMallocHost(size_t size, MPI_Comm communicator) {    
 //    int comm_size;
@@ -414,6 +408,19 @@ void MPIRemoteNode::DEEPBoosterAlloc(MPI_Comm comm, int number_of_hosts, int pro
     //IF nanos MPI not initialized, do it
     if (!_initialized)
         nanosMPIInit(0,0,MPI_THREAD_MULTIPLE,0);
+    
+        
+    if (!MPIDD::getSpawnDone()) {
+        int userProvided;
+        MPI_Query_thread(&userProvided);        
+        if (userProvided < MPI_THREAD_MULTIPLE ) {
+             std::cerr << "MPI_Query_Thread returned multithread support less than MPI_THREAD_MULTIPLE, your application may hang when offloading, check your MPI "
+                "implementation and try to configure it so it can support this multithread level. Configure your PATH so the mpi compiler"
+                " points to a multithread implementation of MPI";
+             //Some implementations seem to catch fatal0 and continue... make sure we die
+             exit(-1);
+        }
+    }
     
     std::vector<std::string> tokensParams;
     std::vector<std::string> tokensHost;   
@@ -683,20 +690,18 @@ void MPIRemoteNode::createNanoxStructures(MPI_Comm comm, MPI_Comm* intercomm, in
     }
     
     PE* pes[totalNumberOfSpawns];
-    SeparateMemoryAddressSpace* memspaces[totalNumberOfSpawns];
     int uid=sys.getNumCreatedPEs();
     int arrSize;
     for (arrSize=0;ompss_mpi_masks[arrSize]==MASK_TASK_NUMBER;arrSize++){};
     int rank=spawn_start; //Balance spawn order so each process starts with his owned processes
     //Now they are spawned, send source ordering array so both master and workers have function pointers at the same position
-    ext::SMPProcessor *core = sys.getSMPPlugin()->getLastFreeSMPProcessor();
+    ext::SMPProcessor *core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
     if (core==NULL) {
-        core = sys.getSMPPlugin()->getFreeSMPProcessorByNUMAnode(0);
+        core = sys.getSMPPlugin()->getSMPProcessorByNUMAnode(0,getCurrentProcessor());
     }
     for ( int rankCounter=0; rankCounter<totalNumberOfSpawns; rankCounter++ ){  
         memory_space_id_t id = sys.getNewSeparateMemoryAddressSpaceId();
         SeparateMemoryAddressSpace *mpiMem = NEW SeparateMemoryAddressSpace( id, nanos::ext::MPI, nanos::ext::MPIProcessor::getAllocWide());
-        memspaces[rank]=mpiMem;
         mpiMem->setNodeNumber( 0 );
         sys.addSeparateMemory(id,mpiMem);
         //Each process will have access to every remote node, but only one master will sync each child
@@ -726,7 +731,14 @@ void MPIRemoteNode::createNanoxStructures(MPI_Comm comm, MPI_Comm* intercomm, in
     if (numberOfThreads<1) numberOfThreads=1;
     if (numberOfThreads>(int)maxWorkers) numberOfThreads=maxWorkers;
     BaseThread* threads[numberOfThreads];
-    sys.addOffloadPEsToTeam(pes, totalNumberOfSpawns, numberOfThreads, threads); 
+    //start the threads...
+    for (int i=0; i < numberOfThreads; ++i) {
+        NANOS_INSTRUMENT( sys.getInstrumentation()->incrementMaxThreads(); )
+        threads[i]=&((MPIProcessor*)pes[i])->startMPIThread(NULL);
+    }
+    sys.addPEsAndThreadsToTeam(pes, totalNumberOfSpawns, threads, numberOfThreads); 
+    nanos::ext::MPIPlugin::addPECount(totalNumberOfSpawns);
+    nanos::ext::MPIPlugin::addWorkerCount(numberOfThreads);    
     //Add all the PEs to the thread
     Lock* gLock=NULL;
     Atomic<int>* gCounter=NULL;

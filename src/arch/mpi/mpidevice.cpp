@@ -202,6 +202,7 @@ bool MPIDevice::_copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::
     MPI_Comm_compare(src->getCommunicator(),dst->getCommunicator(),&res);
     //If both devices are in the same comunicator, they can do a dev2dev communication, otherwise go through host
     if (res == MPI_IDENT){
+        ops->addOp();
         cacheOrder order;
         //if PE is executing something, this means an extra cache-thread could be usefull, send creation signal
         if (src->getCurrExecutingWd()!=NULL && !src->getHasWorkerThread()) {        
@@ -258,15 +259,15 @@ void MPIDevice::taskPostFinish(MPI_Comm& comm){
 static void createExtraCacheThread(){    
     //Create extra worker thread
     MPI_Comm mworld= MPI_COMM_WORLD;
-    ext::SMPProcessor *core = sys.getSMPPlugin()->getLastFreeSMPProcessor();
+    ext::SMPProcessor *core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
     if (core==NULL) {
-        core = sys.getSMPPlugin()->getFreeSMPProcessorByNUMAnode(0);
+        core = sys.getSMPPlugin()->getSMPProcessorByNUMAnode(0,nanos::ext::MPIRemoteNode::getCurrentProcessor());
     }
-    PE *mpi = NEW nanos::ext::MPIProcessor(&mworld, CACHETHREADRANK,-1, false, false, /* Dummy*/ MPI_COMM_SELF, core, /* Dummmy memspace */ 0);
+    MPIProcessor *mpi = NEW nanos::ext::MPIProcessor(&mworld, CACHETHREADRANK,-1, false, false, /* Dummy*/ MPI_COMM_SELF, core, /* Dummmy memspace */ 0);
     nanos::ext::MPIDD * dd = NEW nanos::ext::MPIDD((nanos::ext::MPIDD::work_fct) MPIDevice::remoteNodeCacheWorker);
-    WD *wd = NEW WD(dd);
+    WD* wd = NEW WD(dd);
     NANOS_INSTRUMENT( sys.getInstrumentation()->incrementMaxThreads(); )
-    mpi->startThread(*wd);
+    mpi->startMPIThread(wd);
 }
 
 void MPIDevice::remoteNodeCacheWorker() {                            

@@ -25,6 +25,7 @@
 #include "plugin.hpp"
 #include "archplugin.hpp"
 #include "openclprocessor.hpp"
+#include "openclthread_decl.hpp"
 
 #include <dlfcn.h>
 
@@ -43,18 +44,21 @@ private:
   // All found devices.
    static std::map<cl_device_id, cl_context> _devices;
    std::vector<ext::OpenCLProcessor *> *_opencls;
+   std::vector<ext::OpenCLThread *>    *_openclThreads;
 
    friend class OpenCLConfig;
    
 public:
    OpenCLPlugin() : ArchPlugin( "OpenCL PE Plugin", 1 )
       , _opencls( NULL )
+      , _openclThreads( NULL )
    { }
 
    ~OpenCLPlugin() { }
 
    void config( Config &cfg )
    {
+      cfg.setOptionsSection( "OpenCL Arch", "OpenCL specific options" );
       // Select the device to use.
       cfg.registerConfigOption( "opencl-device-type",
                                 NEW Config::StringVar( _devTy ),
@@ -70,17 +74,19 @@ public:
    {
       OpenCLConfig::apply(_devTy,_devices);
       _opencls = NEW std::vector<nanos::ext::OpenCLProcessor *>(nanos::ext::OpenCLConfig::getOpenCLDevicesCount(), (nanos::ext::OpenCLProcessor *) NULL); 
+      _openclThreads = NEW std::vector<nanos::ext::OpenCLThread *>(nanos::ext::OpenCLConfig::getOpenCLDevicesCount(), (nanos::ext::OpenCLThread *) NULL); 
       for ( unsigned int openclC = 0; openclC < nanos::ext::OpenCLConfig::getOpenCLDevicesCount() ; openclC++ ) {
          memory_space_id_t id = sys.addSeparateMemoryAddressSpace( ext::OpenCLDev, nanos::ext::OpenCLConfig::getAllocWide() );
          SeparateMemoryAddressSpace &oclmemory = sys.getSeparateMemory( id );
          oclmemory.setNodeNumber( 0 );
 
-         ext::SMPProcessor *core = sys.getSMPPlugin()->getLastFreeSMPProcessor();
+         ext::SMPProcessor *core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
          if ( core == NULL ) {
             fatal0("Unable to get a core to run the GPU thread.");
          }
 
-         (*_opencls)[openclC] =  NEW nanos::ext::OpenCLProcessor( openclC, id, core, oclmemory );
+         OpenCLProcessor *ocl = NEW nanos::ext::OpenCLProcessor( openclC, id, core, oclmemory );
+         (*_opencls)[openclC] = ocl;
       }
    }
    
@@ -96,10 +102,10 @@ public:
       return OpenCLConfig::getOpenCLDevicesCount();
    }
 
-   virtual unsigned getNumPEs() const
-   {
-      return OpenCLConfig::getOpenCLDevicesCount();
-   }
+//   virtual unsigned getNumPEs() const
+//   {
+//      return OpenCLConfig::getOpenCLDevicesCount();
+//   }
    
    virtual unsigned getNumThreads() const
    {
@@ -140,22 +146,38 @@ public:
       return NULL;
    }
 
-virtual void addPEs( std::vector<ProcessingElement *> &pes ) const {
+virtual void addPEs( std::map<unsigned int, ProcessingElement *> &pes ) const {
    for ( std::vector<OpenCLProcessor *>::const_iterator it = _opencls->begin(); it != _opencls->end(); it++ ) {
-      pes.push_back( *it );
+      pes.insert( std::make_pair( (*it)->getId(), *it ) );
    }
 }
 
 
 virtual void startSupportThreads() {
-}
-
-virtual void startWorkerThreads( std::vector<BaseThread *> &workers ) {
-   for ( std::vector<OpenCLProcessor *>::iterator it = _opencls->begin(); it != _opencls->end(); it++ ) {
-      workers.push_back( &(*it)->startWorker() );
+   for ( unsigned int openclC = 0; openclC < _opencls->size(); openclC += 1 ) {
+      OpenCLProcessor *ocl = (*_opencls)[openclC];
+      (*_openclThreads)[openclC] = (ext::OpenCLThread *) &ocl->startOpenCLThread();
    }
 }
 
+virtual void startWorkerThreads( std::map<unsigned int, BaseThread *> &workers ) {
+   for ( std::vector<OpenCLThread *>::iterator it = _openclThreads->begin(); it != _openclThreads->end(); it++ ) {
+      workers.insert( std::make_pair( (*it)->getId(), *it ) );
+   }
+}
+
+virtual unsigned int getNumPEs() const {
+   return _opencls->size();
+}
+virtual unsigned int getMaxPEs() const {
+   return _opencls->size();
+}
+virtual unsigned int getNumWorkers() const {
+   return _opencls->size();
+}
+virtual unsigned int getMaxWorkers() const {
+   return _opencls->size();
+}
 
 };
 

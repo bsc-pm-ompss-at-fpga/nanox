@@ -176,7 +176,9 @@ void Scheduler::updateExitStats ( WD &wd )
 
 struct TestInputs {
    static void call( ProcessingElement *pe, WorkDescriptor *wd ) {
-      pe->testInputs( *wd );
+      if ( wd->_mcontrol.isMemoryAllocated() ) {
+         pe->testInputs( *wd );
+      }
    }
 };
 
@@ -1042,7 +1044,7 @@ bool Scheduler::tryPreOutlineWork ( WD *wd )
    bool result = false;
    BaseThread *thread = getMyThreadSafe();
 
-   if ( wd->_mcontrol.allocateInputMemory() ) {
+   if ( wd->_mcontrol.allocateTaskMemory() ) {
       //NANOS_INSTRUMENT( InstrumentState inst2(NANOS_PRE_OUTLINE_WORK); );
       NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
       NANOS_INSTRUMENT ( static nanos_event_key_t copy_data_in_key = ID->getEventKey("copy-data-in"); )
@@ -1161,13 +1163,16 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
    // Initializing wd if necessary
    // It will be started later in inlineWorkDependent call
    
-   wd->_mcontrol.initialize( thread->runningOn()->getMemorySpaceId() );
-   bool result;
-   do {
-      result = wd->_mcontrol.allocateInputMemory();
-   } while( result == false );
-
-   if ( !wd->started() ) wd->init();
+   if ( !wd->started() ) { 
+      if ( !wd->_mcontrol.isMemoryAllocated() ) {
+         wd->_mcontrol.initialize( *(thread->runningOn()) );
+         bool result;
+         do {
+            result = wd->_mcontrol.allocateTaskMemory();
+         } while( result == false );
+      }
+      wd->init();
+   }
 
    // This ensures that when we return from the inlining is still the same thread
    // and we don't violate rules about tied WD
@@ -1230,7 +1235,7 @@ void Scheduler::switchTo ( WD *to )
          to->_mcontrol.initialize( myThread->runningOn()->getMemorySpaceId() );
          bool result;
          do {
-            result = to->_mcontrol.allocateInputMemory();
+            result = to->_mcontrol.allocateTaskMemory();
          } while( result == false );
 
          to->init();
@@ -1318,7 +1323,7 @@ void Scheduler::exitTo ( WD *to )
        to->_mcontrol.initialize( myThread->runningOn()->getMemorySpaceId() );
        bool result;
        do {
-          result = to->_mcontrol.allocateInputMemory();
+          result = to->_mcontrol.allocateTaskMemory();
        } while( result == false );
 
        to->init();

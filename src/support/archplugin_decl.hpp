@@ -24,6 +24,7 @@
 #include "processingelement_fwd.hpp"
 #include "basethread_fwd.hpp"
 #include <vector>
+#include <map>
 #include <iostream>
 
 namespace nanos
@@ -104,20 +105,31 @@ namespace nanos
          virtual void finalize() {
             std::cerr << "Generic " << __FUNCTION__ << std::endl;
          }
-         virtual void addPEs( std::vector<ProcessingElement *> &pes ) const {
+         virtual void addPEs( std::map<unsigned int, ProcessingElement *> &pes ) const {
             std::cerr << "Generic " << __FUNCTION__ << std::endl;
          }
          virtual void startSupportThreads() {
             std::cerr << "Generic " << __FUNCTION__ << std::endl;
          }
-         virtual void startWorkerThreads( std::vector<BaseThread *> &workers ) {
+         virtual void startWorkerThreads( std::map<unsigned int, BaseThread *> &workers ) {
             std::cerr << "Generic " << __FUNCTION__ << std::endl;
          }
-
-virtual bool isHwlocAvailable () const {
+         virtual unsigned int getMaxPEs() const {
             std::cerr << "Generic " << __FUNCTION__ << std::endl;
-      return false;
-}
+            return 0;
+         }
+         virtual unsigned int getNumWorkers() const {
+            std::cerr << "Generic " << __FUNCTION__ << std::endl;
+            return 0;
+         }
+         virtual unsigned int getMaxWorkers() const {
+            std::cerr << "Generic " << __FUNCTION__ << std::endl;
+            return 0;
+         }
+         virtual bool isHwlocAvailable () const {
+            std::cerr << "Generic " << __FUNCTION__ << std::endl;
+            return false;
+         }
 
    };
 }

@@ -20,8 +20,10 @@
 #ifndef _NANOS_SMPBASEPLUGIN_DECL
 #define _NANOS_SMPBASEPLUGIN_DECL
 
+#include <fstream>
 #include <sched.h>
 #include "smpprocessor_fwd.hpp"
+#include "smpthread_fwd.hpp"
 #include "archplugin_decl.hpp"
 
 namespace nanos {
@@ -31,11 +33,12 @@ class SMPBasePlugin : public ArchPlugin {
       SMPBasePlugin( const char *name, int version ) : ArchPlugin( name, version ) {}
       virtual ext::SMPProcessor *getFirstSMPProcessor() const = 0;
       virtual cpu_set_t &getActiveSet() = 0;
-      virtual ext::SMPProcessor *getLastFreeSMPProcessor() const = 0;
-      virtual ext::SMPProcessor *getFreeSMPProcessorByNUMAnode(int node) const = 0;
+      virtual ext::SMPProcessor *getLastFreeSMPProcessorAndReserve() = 0;
+      virtual ext::SMPProcessor *getFreeSMPProcessorByNUMAnodeAndReserve(int node) = 0;
+      virtual ext::SMPProcessor *getSMPProcessorByNUMAnode(int node, unsigned int idx) const = 0;
       virtual bool getBinding() const = 0;
       virtual int getCpuCount() const = 0;
-      virtual void admitCurrentThread( std::vector<BaseThread *> &workers ) = 0;
+      virtual void admitCurrentThread( std::map<unsigned int, BaseThread *> &workers ) = 0;
       virtual int getNumSockets() const = 0;
       virtual int getCurrentSocket() const = 0;
       virtual void setCurrentSocket( int socket ) = 0;
@@ -49,6 +52,10 @@ class SMPBasePlugin : public ArchPlugin {
       virtual void setCpuMask ( const cpu_set_t *mask ) = 0;
       virtual void getCpuMask ( cpu_set_t *mask ) const = 0;
       virtual void addCpuMask ( const cpu_set_t *mask ) = 0;
+      virtual ext::SMPThread &associateThisThread( bool untie ) = 0;
+      virtual void setRequestedWorkers( int workers ) = 0;
+      virtual int getRequestedWorkersOMPSS() const = 0;
+      virtual void getBindingMaskString( std::ostream &o ) const = 0;
 };
 
 }

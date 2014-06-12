@@ -39,10 +39,12 @@ namespace ext {
 
 class GPUPlugin : public ArchPlugin
 {
-         std::vector<ext::GPUProcessor *> *_gpus;
+   std::vector<ext::GPUProcessor *> *_gpus;
+   std::vector<ext::GPUThread *>    *_gpuThreads;
    public:
       GPUPlugin() : ArchPlugin( "GPU PE Plugin", 1 )
          , _gpus( NULL )
+         , _gpuThreads( NULL )
       {}
 
       void config( Config& cfg )
@@ -54,6 +56,7 @@ class GPUPlugin : public ArchPlugin
       {
          GPUConfig::apply();
          _gpus = NEW std::vector<nanos::ext::GPUProcessor *>(nanos::ext::GPUConfig::getGPUCount(), (nanos::ext::GPUProcessor *) NULL); 
+         _gpuThreads = NEW std::vector<nanos::ext::GPUThread *>(nanos::ext::GPUConfig::getGPUCount(), (nanos::ext::GPUThread *) NULL); 
          for ( int gpuC = 0; gpuC < nanos::ext::GPUConfig::getGPUCount() ; gpuC++ ) {
             memory_space_id_t id = sys.addSeparateMemoryAddressSpace( ext::GPU, nanos::ext::GPUConfig::getAllocWide() );
             SeparateMemoryAddressSpace &gpuMemory = sys.getSeparateMemory( id );
@@ -113,7 +116,7 @@ class GPUPlugin : public ArchPlugin
                //numa = false;
             }
 
-            ext::SMPProcessor *core = sys.getSMPPlugin()->getFreeSMPProcessorByNUMAnode(node);
+            ext::SMPProcessor *core = sys.getSMPPlugin()->getFreeSMPProcessorByNUMAnodeAndReserve(node);
             if ( core == NULL ) {
                fatal0("Unable to get a core to run the GPU thread.");
             }
@@ -128,16 +131,12 @@ class GPUPlugin : public ArchPlugin
             //   verbose( "Reserving for GPU " << i << ", returned pe " << pe << ( reserved ? " (exclusive)" : " (shared)") );
             //}
 
-            (*_gpus)[gpuC] = NEW nanos::ext::GPUProcessor( gpuC, id, core, *gpuMemSpace );
+            ext::GPUProcessor *gpu = NEW nanos::ext::GPUProcessor( gpuC, id, core, *gpuMemSpace );
+            (*_gpus)[gpuC] = gpu;
          }
       }
       
       virtual unsigned getNumHelperPEs() const
-      {
-         return GPUConfig::getGPUCount();
-      }
-
-      virtual unsigned getNumPEs() const
       {
          return GPUConfig::getGPUCount();
       }
@@ -263,20 +262,38 @@ class GPUPlugin : public ArchPlugin
 //         
 //      }
 
-virtual void addPEs( std::vector<ProcessingElement *> &pes ) const {
+virtual void addPEs( std::map<unsigned int, ProcessingElement *> &pes ) const {
    for ( std::vector<GPUProcessor *>::const_iterator it = _gpus->begin(); it != _gpus->end(); it++ ) {
-      pes.push_back( *it );
+      pes.insert( std::make_pair( (*it)->getId(), *it ) );
    }
 }
 
 virtual void startSupportThreads() {
-}
-
-virtual void startWorkerThreads( std::vector<BaseThread *> &workers ) {
-   for ( std::vector<GPUProcessor *>::iterator it = _gpus->begin(); it != _gpus->end(); it++ ) {
-      workers.push_back( &(*it)->startWorker() );
+   for ( unsigned int gpuC = 0; gpuC < _gpus->size(); gpuC += 1 ) {
+      GPUProcessor *gpu = (*_gpus)[gpuC];
+      (*_gpuThreads)[gpuC] = (ext::GPUThread *) &gpu->startGPUThread();
    }
 }
+
+virtual void startWorkerThreads( std::map<unsigned int, BaseThread *> &workers ) {
+   for ( std::vector<GPUThread *>::iterator it = _gpuThreads->begin(); it != _gpuThreads->end(); it++ ) {
+      workers.insert( std::make_pair( (*it)->getId(), *it ) );
+   }
+}
+
+virtual unsigned int getNumPEs() const {
+   return _gpus->size();
+}
+virtual unsigned int getMaxPEs() const {
+   return _gpus->size();
+}
+virtual unsigned int getNumWorkers() const {
+   return _gpus->size();
+}
+virtual unsigned int getMaxWorkers() const {
+   return _gpus->size();
+}
+
 
 };
 

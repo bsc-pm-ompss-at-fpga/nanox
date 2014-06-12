@@ -48,6 +48,7 @@ devinclude_HEADERS = \
 	simpleallocator.hpp \
 	list_decl.hpp \
 	list.hpp \
+	hashfunction_decl.hpp \
 	hashmap.hpp \
 	hashmap_decl.hpp \
 	copydescriptor.hpp \
@@ -86,6 +87,7 @@ devinclude_HEADERS = \
 	requestqueue.hpp \
 	printbt_decl.hpp \
         smpbaseplugin_decl.hpp \
+	pinnedallocator_decl.hpp \
 	$(END) 
 
 support_sources = \

@@ -1,4 +1,4 @@
-AC_INIT([nanox], [0.8a], [pmtools@bsc.es])
+AC_INIT([nanox], [0.8a], [pm-tools@bsc.es])
 AC_CONFIG_SRCDIR([src/core/system.cpp])
 
 configure_orig_arguments="$@"
@@ -85,18 +85,18 @@ fi
 # Memtracker support
 AC_MSG_CHECKING([if Nanos++ Memtracker has been disabled])
 AC_ARG_ENABLE([memtracker],
-  AS_HELP_STRING([--disable-memtracker], [Disables Memtracker module]),
+  AS_HELP_STRING([--enable-memtracker], [Enables Memtracker module]),
   [
-    memtracker_disabled=yes
-    AC_MSG_RESULT([yes])
+    memtracker_enabled=$enableval
+    AC_MSG_RESULT([$enableval])
   ],
   [
-    memtracker_disabled=no
+    memtracker_enabled=no
     AC_MSG_RESULT([no])
   ]
 )
 
-if test x$memtracker_disabled = xno; then
+if test x$memtracker_enabled = xyes; then
 	CFLAGS="$CFLAGS -DNANOS_MEMTRACKER_ENABLED"
 	CXXFLAGS="$CXXFLAGS -DNANOS_MEMTRACKER_ENABLED"
 fi
@@ -254,7 +254,7 @@ AC_ARG_ENABLE([mpi],
         fi
     ],
     [
-        mpi_enabled="no"
+        mpi_enabled="yes"
         AC_MSG_RESULT([yes])
     ]
 )
@@ -824,6 +824,7 @@ AM_CONDITIONAL([SMP_SUPPORTS_ULT],[test $smp_ult = yes])
 AC_MSG_RESULT([$ARCHITECTURES/$OS])
 
 USED_VERSION=""
+VERSIONS=""
 
 # Enable instrumentation-debug version
 instrumentation_debug_disabled="yes"
@@ -836,6 +837,7 @@ AC_ARG_ENABLE([instrumentation-debug],
         instrumentation_debug_disabled="no"
         AC_MSG_RESULT([yes])
         USED_VERSION="instrumentation-debug"
+        VERSIONS+=" instrumentation-debug"
     else if test x$enableval = xno;
          then
             AC_MSG_RESULT([no])
@@ -860,15 +862,16 @@ AC_MSG_CHECKING([if instrumentation version was disabled])
 AC_ARG_ENABLE([instrumentation],
   AS_HELP_STRING([--disable-instrumentation], [Disables generation of instrumentation version]),
   [
-    if test x$disableval = xyes -o x$disableval = x;
+    if test x$disableval = xyes -o x$enableval = xno;
     then
         instrumentation_disabled="yes"
         AC_MSG_RESULT([yes])
-    else if test x$disableval = xno;
+    else if test x$disableval = xno -o x$disableval = x;
          then
             AC_MSG_RESULT([no])
             instrumentation_disabled="no"
             USED_VERSION="instrumentation"
+            VERSIONS+=" instrumentation"
          else
             AC_MSG_ERROR([This option can only be given 'yes' or 'no' values])
          fi
@@ -878,6 +881,7 @@ AC_ARG_ENABLE([instrumentation],
       AC_MSG_RESULT([no])
       instrumentation_disabled="no"
       USED_VERSION="instrumentation"
+      VERSIONS+=" instrumentation"
   ]
 )
 
@@ -890,15 +894,16 @@ AC_MSG_CHECKING([if debug version was disabled])
 AC_ARG_ENABLE([debug],
   AS_HELP_STRING([--disable-debug], [Disables generation of debug version]),
   [
-    if test x$disableval = xyes -o x$disableval = x;
+    if test x$disableval = xyes -o x$enableval = xno;
     then
         debug_disabled="yes"
         AC_MSG_RESULT([yes])
-    else if test x$disableval = xno;
+    else if test x$disableval = xno -o x$disableval = x;
          then
             AC_MSG_RESULT([no])
             debug_disabled="no"
             USED_VERSION="debug"
+            VERSIONS+=" debug"
          else
             AC_MSG_ERROR([This option can only be given 'yes' or 'no' values])
          fi
@@ -908,6 +913,7 @@ AC_ARG_ENABLE([debug],
       AC_MSG_RESULT([no])
       debug_disabled="no"
       USED_VERSION="debug"
+      VERSIONS+=" debug"
   ]
 )
 
@@ -920,15 +926,16 @@ AC_MSG_CHECKING([if performance version was disabled])
 AC_ARG_ENABLE([performance],
   AS_HELP_STRING([--disable-performance], [Disables generation of performance version]),
   [
-    if test x$disableval = xyes -o x$disableval = x;
+    if test x$disableval = xyes -o x$enableval = xno;
     then
         performance_disabled="yes"
         AC_MSG_RESULT([yes])
-    else if test x$disableval = xno;
+    else if test x$disableval = xno -o x$disableval = x;
          then
             AC_MSG_RESULT([no])
             performance_disabled="no"
             USED_VERSION="performance"
+            VERSIONS+=" performance"
          else
             AC_MSG_ERROR([This option can only be given 'yes' or 'no' values])
          fi
@@ -938,6 +945,7 @@ AC_ARG_ENABLE([performance],
       AC_MSG_RESULT([no])
       performance_disabled="no"
       USED_VERSION="performance"
+      VERSIONS+=" performance"
   ]
 )
 
@@ -1096,7 +1104,7 @@ AC_ARG_ENABLE([resiliency],
   ],
   [
     AC_MSG_RESULT([yes])
-    AX_CHECK_COMPILE_FLAG(-fnon-call-exceptions,[resiliency=yes],[resiliency=no],[-Werror])
+    AX_CHECK_COMPILE_FLAG([-fnon-call-exceptions],[resiliency=yes],[resiliency=no],[-Werror])
     if test "x$resiliency" = "xno";
     then
         AC_MSG_ERROR([resiliency mechanism depends on using compiler flag -fnon-call-exceptions])
@@ -1145,6 +1153,17 @@ echo ""
 echo "Host arch:" $SMP_ARCH
 echo "User level threading:    " $smp_ult
 echo "Configured architectures:" $ARCHITECTURES
+echo "Configured versions:" $VERSIONS
+if test x$memtracker_enabled = xyes ; then
+   echo "Memory tracker: enabled"
+else
+   echo "Memory tracker: disabled"
+fi
+if test x$allocator_disabled = xno ; then
+   echo "Memory allocator: enabled"
+else
+   echo "Memory allocator: disabled"
+fi
 if test x$cluster_enabled = xyes ; then
    echo "With cluster/gasnet conduits:" $CONDUITS
    if test x$have_C_mpi = xyes ; then
