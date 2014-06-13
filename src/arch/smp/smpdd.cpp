@@ -24,8 +24,14 @@
 #include "system.hpp"
 #include "smp_ult.hpp"
 #include "instrumentation.hpp"
-#include "taskexecutionexception.hpp"
 #include <string>
+
+#ifdef NANOS_RESILIENCY_ENABLED
+
+#include "taskexecutionexception.hpp"
+#include "memcontroller_decl.hpp"
+
+#endif
 
 using namespace nanos;
 using namespace nanos::ext;
@@ -178,7 +184,12 @@ void SMPDD::recover( WD & wd ) {
    // Wait for successors to finish.
    wd.waitCompletion();
 
-   // Do anything ...
+   // Restore the data
+   wd._mcontrol.restoreBackupData();
+
+   while ( !wd._mcontrol.isDataRestored( wd ) ) {
+      myThread->idle();
+   }
 
    // Reset invalid state
    wd.setInvalid(false);

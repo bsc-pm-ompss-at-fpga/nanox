@@ -193,7 +193,6 @@ int
 main(int argc, char **argv)
 {
   int n = 20;
-
   if (fib0(n) != 6765)
     return 1;
   return 0;

@@ -1165,7 +1165,7 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
    
    if ( !wd->started() ) { 
       if ( !wd->_mcontrol.isMemoryAllocated() ) {
-         wd->_mcontrol.initialize( *(thread->runningOn()) );
+         wd->_mcontrol.initialize( thread->runningOn()->getMemorySpaceId() );
          bool result;
          do {
             result = wd->_mcontrol.allocateTaskMemory();

@@ -20,15 +20,17 @@
 #include "backupmanager.hpp"
 #include "deviceops.hpp"
 
-BackupManager nanos::ext::Backup( "BackupMgr", 65536 );
+BackupManager nanos::ext::Backup( "BackupMgr", 20000000 );
 
-BackupManager::BackupManager ( const char *n, size_t size ): Device ( n ), _memsize(size), _managed_pool(boost::interprocess::create_only, malloc(size), size) {}
+BackupManager::BackupManager ( const char *n, size_t size ): Device ( n ), _memsize(size), _pool_addr(malloc(size)), _managed_pool(boost::interprocess::create_only, _pool_addr, size) {}
 
 /*BackupManager::BackupManager ( const BackupManager &arch ) : Device ( arch ), _memsize(arch._memsize){
    _managed_pool = arch._managed_pool;
 }*/
 
-BackupManager::~BackupManager(){}
+BackupManager::~BackupManager(){
+   free(_pool_addr);
+}
 
 //debe ser privado
 BackupManager & BackupManager::operator= ( BackupManager &arch ){
@@ -65,7 +67,7 @@ std::size_t BackupManager::getMemCapacity ( SeparateMemoryAddressSpace const &me
 void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
                SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f,
                WorkDescriptor const &wd, void *hostObject,
-               reg_t hostRegionId ) {
+               reg_t hostRegionId ) const {
    ops->addOp();
    //devAddr es un offset?
    //hostAddr es un offset?
@@ -77,7 +79,7 @@ void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr, std::size_t l
 void BackupManager::_copyOut ( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
                 SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f,
                 WorkDescriptor const &wd, void *hostObject,
-                reg_t hostRegionId ) {
+                reg_t hostRegionId ) const {
    // Atm this does nothing, as we only have to care when functions is called, not when function exits.
    // This could be the place to invalidate/free backups that are no longer useful (i.e. backup data that will not be needed any more).
    std::cerr << "wrong copyOut" << std::endl;
@@ -87,7 +89,7 @@ bool BackupManager::_copyDevToDev ( uint64_t devDestAddr, uint64_t devOrigAddr,
                      std::size_t len, SeparateMemoryAddressSpace &memDest,
                      SeparateMemoryAddressSpace &memorig, DeviceOps *ops,
                      Functor *f, WorkDescriptor const &wd, void *hostObject,
-                     reg_t hostRegionId ) {
+                     reg_t hostRegionId ) const {
    //ops->addOp();
    //ops->completeOp();
    std::cerr << "wrong copyDevToDev" << std::endl;

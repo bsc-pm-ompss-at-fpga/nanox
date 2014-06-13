@@ -15,6 +15,7 @@ class MemController {
    bool                        _preinitialized;
    bool                        _inputDataReady;
    bool                        _outputDataReady;
+   bool                        _dataRestored;
    bool                        _memoryAllocated;
    bool                        _mainWd;
    WD const                   &_wd;
@@ -23,7 +24,10 @@ class MemController {
    std::map< NewNewRegionDirectory::RegionDirectoryKey, std::map< reg_t, unsigned int > > _providedRegions;
    BaseAddressSpaceInOps      *_inOps;
    SeparateAddressSpaceOutOps *_outOps;
-   BaseAddressSpaceInOps   *_backupOps;//TODO this should be a SeparateAddressSpacInOps object instead
+   SeparateAddressSpaceInOps  *_backupOps;
+   SeparateAddressSpaceOutOps *_restoreOps;
+   MemCacheCopy               *_backupCacheCopies;
+
    std::size_t                 _affinityScore;
    std::size_t                 _maxAffinityScore;
 
@@ -41,9 +45,11 @@ public:
    void initialize( unsigned int memorySpaceId );
    bool allocateTaskMemory();
    void copyDataIn();
+   void restoreBackupData(); /* Restores a previously backed up input data */
    void copyDataOut( MemControllerPolicy policy );
    bool isDataReady( WD const &wd );
    bool isOutputDataReady( WD const &wd );
+   bool isDataRestored( WD const &wd );
    uint64_t getAddress( unsigned int index ) const;
    bool canAllocateMemory( memory_space_id_t memId, bool considerInvalidations ) const;
    void setAffinityScore( std::size_t score );

@@ -1094,6 +1094,15 @@ AC_CHECK_LIB([mkl_sequential],[mkl_blas_dgemm],[MKL_LIBS="-lm -lmkl_core -lmkl_s
 AM_CONDITIONAL([MKL_SUPPORT], test "$MKL_LIBS"x != x )
 AC_SUBST([MKL_LIBS])
 
+# Boost C++ library
+AX_BOOST_BASE([1.38],
+   [
+      use_boost = yes
+   ],
+   [
+      use_boost = no
+   ])
+
 # Task-level resiliency support
 AC_MSG_CHECKING([if task resiliency is enabled])
 AC_ARG_ENABLE([resiliency],
@@ -1109,9 +1118,13 @@ AC_ARG_ENABLE([resiliency],
     then
         AC_MSG_ERROR([resiliency mechanism depends on using compiler flag -fnon-call-exceptions])
     fi
+    if test "x$use_boost" = "xno";
+    then
+        AC_MSG_ERROR([resiliency mechanism requires Boost C++ library])
+        resiliency=no
+    fi
   ]
 )
-
 
 AM_CONDITIONAL([RESILIENCY], [test "x$resiliency" = "xyes"])
 AC_SUBST([resiliency])
