@@ -19,8 +19,7 @@ MemController::MemController ( WD const &wd ) :
 {
    if (_wd.getNumCopies() > 0) {
       _memCacheCopies = NEW MemCacheCopy[wd.getNumCopies()];
-      if (wd.isRecoverable())
-         _backupCacheCopies = NEW MemCacheCopy[wd.getNumCopies()];
+      // We can't initialize _backupCacheCopies array until the compiler sets the workdescriptor flags (is_recoverable flag required).
    }
 }
 
@@ -148,7 +147,9 @@ void MemController::preInit ( )
       }
    }
 
-   if (_wd.isRecoverable())
+   if (_wd.isRecoverable()) {
+      _backupCacheCopies = NEW MemCacheCopy[_wd.getNumCopies()];
+
       for (index = 0; index < _wd.getNumCopies(); index += 1) {
          new (&_backupCacheCopies[index]) MemCacheCopy(_wd, index);
 
@@ -163,6 +164,7 @@ void MemController::preInit ( )
             _backupCacheCopies[index].getVersionInfo();
          }
       }
+   }
 
    if ( _VERBOSE_CACHE) {
       *(myThread->_file)
@@ -283,7 +285,7 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
    if ( _memorySpaceId == 0 /* HOST_MEMSPACE_ID */) {
       _outputDataReady = true;
    } else {
-      _outOps = NEW SeparateAddressSpaceOutOps( false, true );
+      _outOps = NEW SeparateAddressSpaceOutOps( false, false );
 
       for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
          _memCacheCopies[ index ].generateOutOps( &sys.getSeparateMemory( _memorySpaceId ), *_outOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd, index );
@@ -300,7 +302,7 @@ void MemController::restoreBackupData ( )
    ensure( _preinitialized == true, "MemController not initialized!");
    ensure( _initialized == true, "MemController not initialized!");
    ensure( _wd.isRecoverable(), "Cannot restore data of an unrecoverable task!" );
-   ensure( _backupCacheCopies, "There isn't any backup copy defined for this task." );
+   ensure( !_wd.getNumCopies() || _backupCacheCopies, "There isn't any backup copy defined for this task." );
 
    if (_backupCacheCopies) {
       _restoreOps = NEW SeparateAddressSpaceOutOps( false, true);
@@ -311,7 +313,7 @@ void MemController::restoreBackupData ( )
                   _backupCacheCopies[index].getVersion(), _wd, index);
          }
       }
-      _backupOps->issue(_wd);
+      _restoreOps->issue(_wd);
    }
 }
 
