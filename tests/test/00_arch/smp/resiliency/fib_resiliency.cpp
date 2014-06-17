@@ -21,7 +21,7 @@
  <testinfo>
  test_generator='gens/resiliency-generator -a --task-retries=4'
  </testinfo>
- */
+*/
 
 #include <iostream>
 #include "system.hpp"

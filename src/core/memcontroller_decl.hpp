@@ -24,10 +24,11 @@ class MemController {
    std::map< NewNewRegionDirectory::RegionDirectoryKey, std::map< reg_t, unsigned int > > _providedRegions;
    BaseAddressSpaceInOps      *_inOps;
    SeparateAddressSpaceOutOps *_outOps;
+#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
    SeparateAddressSpaceInOps  *_backupOps;
    SeparateAddressSpaceOutOps *_restoreOps;
    MemCacheCopy               *_backupCacheCopies;
-
+#endif
    std::size_t                 _affinityScore;
    std::size_t                 _maxAffinityScore;
 
@@ -45,11 +46,13 @@ public:
    void initialize( unsigned int memorySpaceId );
    bool allocateTaskMemory();
    void copyDataIn();
-   void restoreBackupData(); /* Restores a previously backed up input data */
    void copyDataOut( MemControllerPolicy policy );
+#ifdef NANOS_RESILIENCY_ENABLED
+   void restoreBackupData(); /* Restores a previously backed up input data */
+   bool isDataRestored( WD const &wd );
+#endif
    bool isDataReady( WD const &wd );
    bool isOutputDataReady( WD const &wd );
-   bool isDataRestored( WD const &wd );
    uint64_t getAddress( unsigned int index ) const;
    bool canAllocateMemory( memory_space_id_t memId, bool considerInvalidations ) const;
    void setAffinityScore( std::size_t score );

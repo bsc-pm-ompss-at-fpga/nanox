@@ -358,7 +358,7 @@ void System::config ()
 
 #ifdef NANOS_RESILIENCY_ENABLED
    cfg.registerConfigOption("disable_resiliency",
-         NEW Config::FlagVar(_resiliency_disabled, true),
+         NEW Config::FlagOption(_resiliency_disabled, true),
          "Disables all resiliency mechanisms. ");
    cfg.registerArgOption("disable_resiliency", "disable-resiliency");
    cfg.registerEnvOption("disable_resiliency", "NX_DISABLE_RESILIENCY");

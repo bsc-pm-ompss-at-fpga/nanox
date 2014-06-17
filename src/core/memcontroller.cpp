@@ -146,8 +146,9 @@ void MemController::preInit ( )
          *(myThread->_file) << std::endl;
       }
    }
+#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
 
-   if (_wd.isRecoverable()) {
+   if (sys.isResiliencyEnabled() && _wd.isRecoverable()) {
       _backupCacheCopies = NEW MemCacheCopy[_wd.getNumCopies()];
 
       for (index = 0; index < _wd.getNumCopies(); index += 1) {
@@ -165,7 +166,7 @@ void MemController::preInit ( )
          }
       }
    }
-
+#endif
    if ( _VERBOSE_CACHE) {
       *(myThread->_file)
             << " (preinit)END OF INITIALIZING MEMCONTROLLER for WD "
@@ -187,10 +188,12 @@ void MemController::initialize( unsigned int memorySpaceId) {
       } else {
          _inOps = NEW SeparateAddressSpaceInOps( true, sys.getSeparateMemory( _memorySpaceId ) );
       }
+#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
 
       if( _wd.isRecoverable() ) {
          _backupOps = NEW SeparateAddressSpaceInOps( true, sys.getBackupMemory() );
       }
+#endif
       _initialized = true;
    } else {
       ensure(_memorySpaceId == memorySpaceId, " MemController, called initialize twice with different PE!");
@@ -212,10 +215,11 @@ bool MemController::allocateTaskMemory() {
       }
    }
    _memoryAllocated = result;
-   
+#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
    if( result && _backupOps ) {
       result &= sys.getBackupMemory().prepareRegions( _backupCacheCopies, _wd.getNumCopies(), _wd );
    }
+#endif
    return result;
 }
 
@@ -249,7 +253,7 @@ void MemController::copyDataIn() {
    for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
       _memCacheCopies[ index ].generateInOps( *_inOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd, index );
    }
-
+#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
    if (_backupOps) {
       for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
          if (_wd.getCopies()[index].isInput()) {
@@ -258,6 +262,7 @@ void MemController::copyDataIn() {
       }
       _backupOps->issue(_wd);
    }
+#endif
 
    //NANOS_INSTRUMENT( InstrumentState inst5(NANOS_CC_CDIN_DO_OP); );
    _inOps->issue( _wd );
@@ -297,6 +302,8 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
    }
 }
 
+#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
+
 void MemController::restoreBackupData ( )
 {
    ensure( _preinitialized == true, "MemController not initialized!");
@@ -316,6 +323,7 @@ void MemController::restoreBackupData ( )
       _restoreOps->issue(_wd);
    }
 }
+#endif
 
 uint64_t MemController::getAddress( unsigned int index ) const {
    ensure( _preinitialized == true, "MemController not initialized!");
@@ -388,6 +396,8 @@ bool MemController::isOutputDataReady( WD const &wd ) {
    return false;
 }
 
+#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
+
 bool MemController::isDataRestored( WD const &wd ) {
    ensure( _preinitialized == true, "MemController not initialized!");
    ensure( _wd.isRecoverable(), "Task is not recoverable. There wasn't any data to be restored. ")
@@ -397,7 +407,7 @@ bool MemController::isDataRestored( WD const &wd ) {
          if ( _dataRestored ) {
             if ( _VERBOSE_CACHE ) { *(myThread->_file) << "Restored data is ready for wd " << _wd.getId() << " obj " << (void *)_restoreOps << std::endl; }
 
-            /* FIXME is this the data invalidation?
+            /* Is this the data invalidation? I don't think so
             for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
                sys.getBackupMemory().releaseRegion( _backupCacheCopies[ index ]._reg, _wd, index, _backupCacheCopies[ index ]._policy ) ;
             }*/
@@ -407,6 +417,7 @@ bool MemController::isDataRestored( WD const &wd ) {
    }
    return false;
 }
+#endif
 
 bool MemController::canAllocateMemory( memory_space_id_t memId, bool considerInvalidations ) const {
    if ( memId > 0 ) {
