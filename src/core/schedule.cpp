@@ -228,8 +228,8 @@ inline void Scheduler::idleLoop ()
    NANOS_INSTRUMENT ( unsigned long time_scheds = 0; ) /* Time of yields by idle phase */
 
    WD *current = myThread->getCurrentWD();
-   current->setIdle();
    sys.getSchedulerStats()._idleThreads++;
+   myThread->setIdle( true );
 
    for ( ; ; ) {
       BaseThread *thread = getMyThreadSafe();
@@ -267,7 +267,6 @@ inline void Scheduler::idleLoop ()
       } 
 
       if ( next ) {
-         sys.getSchedulerStats()._idleThreads--;
 
          NANOS_INSTRUMENT (total_spins+= (init_spins - spins); )
 
@@ -288,10 +287,16 @@ inline void Scheduler::idleLoop ()
 
          NANOS_INSTRUMENT( sys.getInstrumentation()->raisePointEvents(event_num, &Keys[event_start], &Values[event_start]); )
 
+         myThread->setIdle( false );
+         sys.getSchedulerStats()._idleThreads--;
+
          behaviour::switchWD(thread, current, next);
 
          thread = getMyThreadSafe();
+         thread->step();
+
          sys.getSchedulerStats()._idleThreads++;
+         myThread->setIdle( true );
 
          NANOS_INSTRUMENT (total_spins = 0; )
          NANOS_INSTRUMENT (total_blocks = 0; )
@@ -349,8 +354,8 @@ inline void Scheduler::idleLoop ()
          spins = init_spins;
       }
    }
+   myThread->setIdle(false);
    sys.getSchedulerStats()._idleThreads--;
-   current->setReady();
    //current->~WorkDescriptor();
 
    //// This is actually a free(current) but dressed up as C++
@@ -411,9 +416,9 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
 
    WD * current = myThread->getCurrentWD();
 
-   sys.getSchedulerStats()._idleThreads++;
    current->setSyncCond( condition );
-   current->setIdle();
+   sys.getSchedulerStats()._idleThreads++;
+   myThread->setIdle( true );
    
    BaseThread *thread = getMyThreadSafe();
 
@@ -453,7 +458,6 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
             }
 
             if ( next ) {
-               sys.getSchedulerStats()._idleThreads--;
 
                NANOS_INSTRUMENT ( nanos_event_value_t Values[7]; )
 
@@ -474,8 +478,13 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
 
                NANOS_INSTRUMENT( sys.getInstrumentation()->raisePointEvents(event_num, &Keys[event_start], &Values[event_start]); )
 
+               myThread->setIdle( false );
+               sys.getSchedulerStats()._idleThreads--;
+
                switchTo ( next );
+
                thread = getMyThreadSafe();
+               thread->step();
 
                NANOS_INSTRUMENT ( total_spins = 0; )
 
@@ -488,6 +497,7 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
                NANOS_INSTRUMENT ( time_scheds = 0; )
 
                sys.getSchedulerStats()._idleThreads++;
+               myThread->setIdle( true );
 
                spins = init_spins;
             }
@@ -561,6 +571,7 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
    }
 
    current->setSyncCond( NULL );
+   myThread->setIdle( false );
    sys.getSchedulerStats()._idleThreads--;
    if ( !current->isReady() ) {
       current->setReady();
