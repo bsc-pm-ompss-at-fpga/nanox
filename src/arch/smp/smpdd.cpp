@@ -110,7 +110,7 @@ void SMPDD::execute ( WD &wd ) throw ()
 {
 #ifdef NANOS_RESILIENCY_ENABLED
    bool retry = false;
-   int num_tries = 0;
+   unsigned num_tries = 0;
    if (wd.isInvalid() || (wd.getParent() != NULL && wd.getParent()->isInvalid())) {
       /*
        *  TODO Optimization?

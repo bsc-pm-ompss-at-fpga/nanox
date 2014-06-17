@@ -200,8 +200,12 @@ namespace nanos
          ThreadTeam               *_mainTeam;
          bool                      _simulator;
 
+         //! Disables resiliency mechanism at runtime
+         bool                      _resiliency_disabled;
          //! Specifies the maximum number of times a recoverable task can re-execute (avoids infinite recursion).
-         int                       _task_max_retries;
+         unsigned                  _task_max_retries;
+         //! Specifies the size of the memory pool used to store task input data backups.
+         size_t                    _backup_pool_size;
 
          // disable copy constructor & assignment operation
          System( const System &sys );
@@ -345,10 +349,22 @@ namespace nanos
           */
          bool dlbEnabled() const;
 
+#ifdef NANOS_RESILIENCY_ENABLED
+         /*!
+          * \brief Returns whether DLB is enabled or not
+          */
+         bool isResiliencyEnabled ( ) const;
+
          /*!
           * \brief Returns the maximum number of times a task can try to recover from an error by re-executing itself.
           */
-         int getTaskMaxRetries() const;
+         unsigned getTaskMaxRetries() const;
+
+         /*!
+          * \brief Returns the maximum size for the memory pool used to store task input data backups.
+          */
+         size_t getBackupPoolSize() const;
+#endif
 
          // team related methods
          /*!

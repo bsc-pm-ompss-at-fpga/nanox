@@ -45,16 +45,14 @@ namespace nanos {
          boost::interprocess::managed_buffer _managed_pool;
 
       public:
-         BackupManager ( const char *n, size_t memsize );
+         BackupManager ( );
 
-         //BackupManager ( const BackupManager &arch );
+         BackupManager ( const char *n, size_t memsize );
 
          virtual ~BackupManager();
 
-         //debe ser privado
-         BackupManager & operator= ( BackupManager &arch );
-
-         //const bool operator== ( const BackupManager &arch );
+         // Warning: cannot reuse the source object because its _managed_pool object is invalidated
+         BackupManager & operator= ( BackupManager& arch );
 
          virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, uint64_t targetHostAddr);
 
@@ -78,10 +76,6 @@ namespace nanos {
 
          virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace const &mem, SimpleAllocator::ChunkList &list ) const;
    };
-
-   namespace ext {
-      extern BackupManager Backup;
-   }
 } // namespace nanos
 
 #endif /* BACKUPMANAGER_HPP_ */

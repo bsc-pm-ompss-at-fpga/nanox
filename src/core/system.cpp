@@ -90,7 +90,13 @@ System::System () :
 #ifdef NANOS_INSTRUMENTATION_ENABLED
       , _enableEvents(), _disableEvents(), _instrumentDefault("default"), _enableCpuidEvent( false )
 #endif
-      , _lockPoolSize(37), _lockPool( NULL ), _mainTeam (NULL), _simulator(false),  _task_max_retries(1), _atomicSeedMemorySpace( 1 ), _affinityFailureCount( 0 )
+      , _lockPoolSize(37), _lockPool( NULL ), _mainTeam (NULL), _simulator(false)
+#ifdef NANOS_RESILIENCY_ENABLED
+      , _resiliency_disabled(false)
+      , _task_max_retries(1)
+      , _backup_pool_size(200000)
+#endif
+      , _atomicSeedMemorySpace( 1 ), _affinityFailureCount( 0 )
       , _createLocalTasks( false )
       , _verboseDevOps( false )
       , _splitOutputForThreads( false )
@@ -350,11 +356,25 @@ void System::config ()
                              "Nanos++ will be executed by a simulator (disabled as default)" );
    cfg.registerArgOption( "simulator", "simulator" );
 
-   cfg.registerConfigOption( "task_retries", NEW Config::PositiveVar( _task_max_retries ),
-                             "Defines the number of times a restartable task can be re-executed (default: 1). ");
-   cfg.registerArgOption( "task_retries", "task-retries" );
-   cfg.registerEnvOption( "task_retries", "NX_TASK_RETRIES" );
+#ifdef NANOS_RESILIENCY_ENABLED
+   cfg.registerConfigOption("disable_resiliency",
+         NEW Config::FlagVar(_resiliency_disabled, true),
+         "Disables all resiliency mechanisms. ");
+   cfg.registerArgOption("disable_resiliency", "disable-resiliency");
+   cfg.registerEnvOption("disable_resiliency", "NX_DISABLE_RESILIENCY");
 
+   cfg.registerConfigOption("task_retries",
+         NEW Config::UintVar(_task_max_retries),
+         "Defines the number of times a restartable task can be re-executed (default: 1). ");
+   cfg.registerArgOption("task_retries", "task-retries");
+   cfg.registerEnvOption("task_retries", "NX_TASK_RETRIES");
+
+   cfg.registerConfigOption("backup_pool_size",
+         NEW Config::SizeVar(_backup_pool_size),
+         "Sets the memory pool maximum size (dedicated to store task backups) in bytes. ");
+   cfg.registerArgOption("backup_pool_size", "backup-pool-size");
+   cfg.registerEnvOption("backup_pool_size", "NX_BACKUP_POOL_SIZE");
+#endif
 
    cfg.registerConfigOption ( "verbose-devops", NEW Config::FlagOption ( _verboseDevOps, true ), "Verbose cache ops" );
    cfg.registerArgOption ( "verbose-devops", "verbose-devops" );
@@ -466,17 +486,21 @@ void System::start ()
        }
    }
 
-#ifdef NANOS_RESILIENCY_ENABLED
-   // Insert a new separate memory address space to store input backups
-   memory_space_id_t backup_id = addSeparateMemoryAddressSpace( ext::Backup, false /*allocFit*/);
-   _backupMemory = &getSeparateMemory( backup_id );
-   // Setup signal handlers
-   myThread->setupSignalHandlers();
+#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
+   if(sys.isResiliencyEnabled()){// runtime disable
+      // Insert a new separate memory address space to store input backups
+     BackupManager* mgr = new BackupManager("BackupMgr", sys.getBackupPoolSize());
+
+      memory_space_id_t backup_id = addSeparateMemoryAddressSpace( *mgr, false /*allocFit*/);
+      _backupMemory = &getSeparateMemory( backup_id );
+
+      // Setup signal handlers
+      myThread->setupSignalHandlers();
+   }
 #endif
 
    if ( getSynchronizedStart() )
       threadReady();
-
 
    switch ( getInitialMode() )
    {
@@ -1376,7 +1400,9 @@ void System::ompss_nanox_main(){
     #endif
     
     #ifdef NANOS_RESILIENCY_ENABLED
-        getMyThreadSafe()->setupSignalHandlers();
+    if(sys.isResiliencyEnabled()) {   // runtime disable
+       getMyThreadSafe()->setupSignalHandlers();// Needed if the language runtime overloads our handler on initialization (e.g. Fortran)
+    }
     #endif
 }
 

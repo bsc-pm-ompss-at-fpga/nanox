@@ -42,7 +42,8 @@ void * smp_bootthread ( void *arg )
 {
    SMPThread *self = static_cast<SMPThread *>( arg );
 #ifdef NANOS_RESILIENCY_ENABLED
-   self->setupSignalHandlers();
+   if(sys.isResiliencyEnabled())
+      self->setupSignalHandlers();
 #endif
 
    self->run();

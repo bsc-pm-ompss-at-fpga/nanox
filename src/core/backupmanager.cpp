@@ -20,7 +20,8 @@
 #include "backupmanager.hpp"
 #include "deviceops.hpp"
 
-BackupManager nanos::ext::Backup("BackupMgr", 20000000);
+BackupManager::BackupManager ( ) :
+      Device("BackupMgr"), _memsize(0), _pool_addr(), _managed_pool() {}
 
 BackupManager::BackupManager ( const char *n, size_t size ) :
       Device(n), _memsize(size), _pool_addr(malloc(size)), _managed_pool(
@@ -33,8 +34,7 @@ BackupManager::~BackupManager ( )
    free(_pool_addr);
 }
 
-// should this be private?
-BackupManager & BackupManager::operator= ( BackupManager &arch )
+BackupManager & BackupManager::operator= ( BackupManager & arch )
 {
    if (this != &arch) {
       Device::operator=(arch);
