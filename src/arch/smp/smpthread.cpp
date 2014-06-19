@@ -41,10 +41,6 @@ pthread_mutex_t SMPThread::_mutexWait = PTHREAD_MUTEX_INITIALIZER;
 void * smp_bootthread ( void *arg )
 {
    SMPThread *self = static_cast<SMPThread *>( arg );
-#ifdef NANOS_RESILIENCY_ENABLED
-   if(sys.isResiliencyEnabled())
-      self->setupSignalHandlers();
-#endif
 
    self->run();
 
@@ -65,6 +61,14 @@ void * smp_bootthread ( void *arg )
 #ifndef PTHREAD_STACK_MIN
 #define PTHREAD_STACK_MIN 16384
 #endif
+
+void SMPThread::initializeDependent ()
+{
+#ifdef NANOS_RESILIENCY_ENABLED
+   if(sys.isResiliencyEnabled())
+      self->setupSignalHandlers();
+#endif
+}
 
 void SMPThread::start ()
 {
