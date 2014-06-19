@@ -181,6 +181,7 @@ void SMPDD::execute ( WD &wd ) throw ()
 
 #ifdef NANOS_RESILIENCY_ENABLED
 void SMPDD::recover( WD & wd ) {
+   debug ( "Task " << wd.getId() << " is being recovered to be re-executed further on.");
    // Wait for successors to finish.
    wd.waitCompletion();
 
@@ -191,6 +192,7 @@ void SMPDD::recover( WD & wd ) {
       myThread->idle();
    }
 
+   debug ( "Task " << wd.getId() << " recovery complete.");
    // Reset invalid state
    wd.setInvalid(false);
 }
