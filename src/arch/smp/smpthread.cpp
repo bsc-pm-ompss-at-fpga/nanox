@@ -66,7 +66,7 @@ void SMPThread::initializeDependent ()
 {
 #ifdef NANOS_RESILIENCY_ENABLED
    if(sys.isResiliencyEnabled())
-      self->setupSignalHandlers();
+      setupSignalHandlers();
 #endif
 }
 

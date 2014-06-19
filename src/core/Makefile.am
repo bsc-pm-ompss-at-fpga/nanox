@@ -260,7 +260,6 @@ common_sources=\
 	graphentry_decl.hpp \
 	taskexecutionexception_decl.hpp \
 	taskexecutionexception.hpp \
-	taskexecutionexception.cpp \
 	backupmanager.hpp \
 	backupmanager.cpp \
 	$(END)

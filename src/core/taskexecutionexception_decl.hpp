@@ -32,9 +32,10 @@ namespace nanos {
     * \class TaskExecutionException
     * \brief Contains usefull information about a runtime error generated in a task execution.
     */
-   class TaskExecutionException: public std::runtime_error
+   class TaskExecutionException: public std::exception
    {
       private:
+         std::string error_msg; /*!< Description of the error that created this exception */
          const WD* task;/*!< Pointer to the affected task */
          const siginfo_t signal_info;/*!< Detailed description after the member */
          const ucontext_t task_context;/*!< Detailed description after the member */
@@ -62,7 +63,7 @@ namespace nanos {
          /*!
           * Returns some information about the error in text format.
           */
-         virtual const char* what ( ) const throw ();
+         virtual const char* what ( ) const throw () { return error_msg.c_str(); };
 
          /*!
           * \return the raised signal number
