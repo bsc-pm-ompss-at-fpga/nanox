@@ -19,19 +19,21 @@
 
 #include "backupmanager.hpp"
 #include "deviceops.hpp"
+#include <sys/mman.h>
 
 BackupManager::BackupManager ( ) :
       Device("BackupMgr"), _memsize(0), _pool_addr(), _managed_pool() {}
 
 BackupManager::BackupManager ( const char *n, size_t size ) :
-      Device(n), _memsize(size), _pool_addr(malloc(size)), _managed_pool(
-            boost::interprocess::create_only, _pool_addr, size)
+      Device(n), _memsize(size),
+      _pool_addr(mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0)),
+      _managed_pool(boost::interprocess::create_only, _pool_addr, size)
 {
 }
 
 BackupManager::~BackupManager ( )
 {
-   free(_pool_addr);
+   munmap(_pool_addr, _memsize);
 }
 
 BackupManager & BackupManager::operator= ( BackupManager & arch )
