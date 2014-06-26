@@ -27,7 +27,8 @@
 #include <string>
 
 #ifdef NANOS_RESILIENCY_ENABLED
-
+#include <unistd.h>
+#include <sys/mman.h>
 #include "taskexecutionexception.hpp"
 #include "memcontroller_decl.hpp"
 
@@ -35,6 +36,8 @@
 
 using namespace nanos;
 using namespace nanos::ext;
+
+static unsigned long page_size = sysconf(_SC_PAGESIZE);
 
 SMPDevice nanos::ext::SMP("SMP");
 
@@ -143,6 +146,12 @@ void SMPDD::execute ( WD &wd ) throw ()
                std::terminate();
             } else { // The error is recoverable. However, print a message for debugging purposes (do not make the error silent).
                debug( e.what() );
+               // Try to recover the system from the failure (so we can continue with the execution)
+               if(!recover( e )) {// If we couldn't recover the system, we can't go on with the execution
+                  message(e.what());
+                  // Unrecoverable error: terminate execution
+                  std::terminate();
+               }
             }
          } catch (std::exception& e) {
             std::string s = "Uncaught exception ";
@@ -170,7 +179,7 @@ void SMPDD::execute ( WD &wd ) throw ()
 
          // This is exceuted only on re-execution
          num_tries++;
-         recover(wd);
+         restore(wd);
       }
    }
 #else
@@ -180,7 +189,24 @@ void SMPDD::execute ( WD &wd ) throw ()
 }
 
 #ifdef NANOS_RESILIENCY_ENABLED
-void SMPDD::recover( WD & wd ) {
+bool SMPDD::recover( TaskExecutionException& err ) {
+   uintptr_t page_addr = 0;
+   switch(err.getSignal()){
+      case SIGSEGV:// FIXME This is only an example of recovery
+         page_addr = (uintptr_t)err.getSignalInfo().si_addr;
+         // Align faulting address with virtual page address
+         page_addr &= ~(page_size - 1);
+         // Recover system from failures
+         mprotect((void*)page_addr, page_size, PROT_READ | PROT_WRITE );
+         break;
+      default:
+         break;
+   }
+   return true;
+}
+
+
+void SMPDD::restore( WD & wd ) {
    debug ( "Task " << wd.getId() << " is being recovered to be re-executed further on.");
    // Wait for successors to finish.
    wd.waitCompletion();

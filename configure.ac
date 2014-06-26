@@ -1097,10 +1097,10 @@ AC_SUBST([MKL_LIBS])
 # Boost C++ library
 AX_BOOST_BASE([1.38],
    [
-      use_boost = yes
+      use_boost=yes
    ],
    [
-      use_boost = no
+      use_boost=no
    ])
 
 # Task-level resiliency support
@@ -1114,11 +1114,15 @@ AC_ARG_ENABLE([resiliency],
   [
     AC_MSG_RESULT([yes])
     AX_CHECK_COMPILE_FLAG([-fnon-call-exceptions],[resiliency=yes],[resiliency=no],[-Werror])
-    if test "x$resiliency" = "xno";
+    if test "x$resiliency" != "xyes";
     then
         AC_MSG_ERROR([resiliency mechanism depends on using compiler flag -fnon-call-exceptions])
     fi
-    if test "x$use_boost" = "xno";
+
+    # Compiler support for C++ 2011 standard is required
+    AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+
+    if test "x$use_boost" != "xyes";
     then
         AC_MSG_ERROR([resiliency mechanism requires Boost C++ library])
         resiliency=no

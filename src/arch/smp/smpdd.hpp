@@ -95,11 +95,13 @@ namespace ext
             void execute ( WD &wd ) throw();
 
 #ifdef NANOS_RESILIENCY_ENABLED
+            bool recover ( TaskExecutionException& err );
+
             /*! \brief Restores the workdescriptor to its original state.
              * Leaving the recovery dependent to the arch allows more
              * accurate recovery for each kind of device.
              */
-            void recover ( WD &wd );
+            void restore ( WD& wd );
 #endif
    };
 
