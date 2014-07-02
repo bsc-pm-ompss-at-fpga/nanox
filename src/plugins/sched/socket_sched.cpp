@@ -215,9 +215,9 @@ namespace nanos {
                   //if ( dynamic_cast<GPUDevice*>( worker->runningOn()->getDeviceType() ) == 0 )
                   if ( &nanos::ext::GPU == worker->runningOn()->getDeviceType() )
                   {
-                     int node = worker->runningOn()->getNUMANode();
+                     int node = worker->runningOn()->getNumaNode();
                      // Convert to virtual
-                     int vNode = sys.getSMPPlugin()->getVirtualNUMANode( node );
+                     int vNode = sys.getVirtualNUMANode( node );
                      _gpuNodes.insert( vNode );
                      verbose0( "Found GPU Worker in node " << node << " (virtual " << vNode << ")" );
                   }
@@ -343,7 +343,7 @@ namespace nanos {
                computeDistanceInfo();
                
                // Create 2 queues per socket plus one for the global queue.
-               return NEW TeamData( sys.getSMPPlugin()->getNumAvailSockets() );
+               return NEW TeamData( sys.getNumNumaNodes() );
             }
 
             virtual ScheduleThreadData * createThreadData ()
@@ -420,7 +420,7 @@ namespace nanos {
                   warning0( "WD already has a queue (" << wd.getWakeUpQueue() << ")" );
                
                unsigned index;
-               int node;
+               unsigned node;
                
                switch( wd.getDepth() ) {
                   case 0:
@@ -429,19 +429,19 @@ namespace nanos {
                      tdata._readyQueues[0].push_back ( &wd );
                      break;
                   case 1:
-                     node = wd.getSocket();
+                     node = wd.getNUMANode();
                      // If the node cannot execute this WD
                      if ( !canRunInNode( wd, node ) )
                         node = findBetterNode( wd, node );
                      
                      //index = (tdata._next++ ) % sys.getNumSockets() + 1;
                      // 2 queues per socket, the first one is for level 1 tasks
-                     fatal_cond( node >= sys.getSMPPlugin()->getNumAvailSockets(), "Invalid node selected" );
+                     fatal_cond( node >= sys.getNumNumaNodes(), "Invalid node selected" );
                      //index = (node % sys.getNumSockets())*2 + 1;
                      index = nodeToQueue( node, true );
                      wd.setWakeUpQueue( index );
                      
-                     //fprintf( stderr, "Depth 1, inserting WD %d in queue number %d (curr socket %d)\n", wd.getId(), index, wd.runningOn()->getNUMANode() );
+                     //fprintf( stderr, "Depth 1, inserting WD %d in queue number %d (curr socket %d)\n", wd.getId(), index, wd.runningOn()->getNumaNode() );
                      
                      // Insert at the front (these will have higher priority)
                      tdata._readyQueues[index].push_back ( &wd );
@@ -458,7 +458,7 @@ namespace nanos {
                      // If this wd cannot run in this node
                      if ( !canRunInNode( wd, node ) ) {
                         node = findBetterNode( wd, node );
-                        fatal_cond( node >= sys.getSMPPlugin()->getNumAvailSockets(), "Invalid node selected" );
+                        fatal_cond( node >= sys.getNumNumaNodes(), "Invalid node selected" );
                         // If index is not even
                         // Means its parent is level 1, small tasks go in even queues
                         index = nodeToQueue( node, index % 2 != 0);
@@ -497,9 +497,9 @@ namespace nanos {
                WD* wd = NULL;
                
                // Get the physical node of this thread
-               unsigned node = thread->runningOn()->getNUMANode();
+               unsigned node = thread->runningOn()->getNumaNode();
                // Convert to virtual
-               unsigned vNode = sys.getSMPPlugin()->getVirtualNUMANode( node );
+               unsigned vNode = sys.getVirtualNUMANode( node );
                
                //fprintf( stderr, "atIdle socket %d\n", socket );
                
@@ -565,7 +565,7 @@ namespace nanos {
                   }
                   else if ( _randomSteal )
                   {
-                     unsigned random = std::rand() % sys.getSMPPlugin()->getNumAvailSockets();
+                     unsigned random = std::rand() % sys.getNumNumaNodes();
                      //index = random * 2 + offset;
                      index = nodeToQueue( random, _stealParents );
                   }
@@ -573,7 +573,7 @@ namespace nanos {
                   else {
                      // getStealNext returns a physical node, we must convert it
                      int close = _nearSockets[node].getStealNext();
-                     int vClose = sys.getSMPPlugin()->getVirtualNUMANode( close );
+                     int vClose = sys.getVirtualNUMANode( close );
                      
                      // 2 queues per socket + 1 master queue + 1 (offset of the inner tasks)
                      index = nodeToQueue( vClose, _stealParents );

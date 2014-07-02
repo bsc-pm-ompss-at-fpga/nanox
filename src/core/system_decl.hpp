@@ -40,6 +40,7 @@
 #include "location.hpp"
 #include "addressspace_decl.hpp"
 #include "smpbaseplugin_decl.hpp"
+#include "hwloc_decl.hpp"
 
 #include "newregiondirectory_decl.hpp"
 
@@ -50,10 +51,6 @@
 
 #ifdef OpenCL_DEV
 #include "openclprocessor_fwd.hpp"
-#endif
-
-#ifdef CLUSTER_DEV
-//#include "clusternode_fwd.hpp"
 #endif
 
 namespace nanos
@@ -183,6 +180,11 @@ namespace nanos
          SeparateMemoryAddressSpace                   *_backupMemory;
          RegionCache::CachePolicy                      _regionCachePolicy;
          std::string                                   _regionCachePolicyStr;
+
+         std::set<unsigned int>                        _clusterNodes;
+         std::set<unsigned int>                        _numaNodes;
+         //! Maps from a physical NUMA node to a user-selectable node
+         std::vector<int>                              _numaNodeMap;
          
 #ifdef GPU_DEV
          //! Keep record of the data that's directly allocated on pinned memory
@@ -234,15 +236,17 @@ namespace nanos
           */
          void processCpuMask( void );
          
-         void loadHwloc();
-         void unloadHwloc();
-         
          Atomic<int> _atomicSeedWg;
          Atomic<int> _atomicSeedMemorySpace;
          Atomic<unsigned int> _affinityFailureCount;
          bool                      _createLocalTasks;
          bool _verboseDevOps;
          bool _splitOutputForThreads;
+         int _userDefinedNUMANode;
+      public:
+         Hwloc _hwloc;
+
+      private:
          PE * createPE ( std::string pe_type, int pid, int uid );
 
          //* \brief Prints the Environment Summary (resources, plugins, prog. model, etc.) before the execution
@@ -626,6 +630,14 @@ namespace nanos
          bool getVerboseDevOps() const;
          bool getSplitOutputForThreads() const;
          RegionCache::CachePolicy getRegionCachePolicy() const;
+
+         unsigned int getNumClusterNodes() const;
+         unsigned int getNumNumaNodes() const;
+         int getVirtualNUMANode( int physicalNode ) const;
+         std::set<unsigned int> const &getClusterNodeSet() const;
+         memory_space_id_t getMemorySpaceIdOfClusterNode( unsigned int node ) const;
+         int getUserDefinedNUMANode() const;
+         void setUserDefinedNUMANode( int nodeId );
    };
 
    extern System sys;
