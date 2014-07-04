@@ -39,7 +39,8 @@
 #include "mempage.hpp"
 #include "mpoison.hpp"
 
-using namespace nanos;
+namespace nanos {
+namespace vm {
 
 size_t collect( );
 bool specific_block( void* );
@@ -189,5 +190,8 @@ void mpoison_run(void *arg)
       success = random_block(mem_size);
     }
   }
+}
+
+}
 }
 

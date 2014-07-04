@@ -202,12 +202,18 @@ namespace nanos
          ThreadTeam               *_mainTeam;
          bool                      _simulator;
 
-         //! Disables resiliency mechanism at runtime
+#ifdef NANOS_RESILIENCY_ENABLED
+         //! Disables resiliency mechanism at runtime.
          bool                      _resiliency_disabled;
          //! Specifies the maximum number of times a recoverable task can re-execute (avoids infinite recursion).
          unsigned                  _task_max_retries;
          //! Specifies the size of the memory pool used to store task input data backups.
          size_t                    _backup_pool_size;
+#ifdef HAVE_CXX11
+         //! Enables random memory page poisoning for resiliency testing.
+         bool                      _memory_poison_enabled;
+#endif
+#endif
 
          // disable copy constructor & assignment operation
          System( const System &sys );
@@ -355,7 +361,7 @@ namespace nanos
 
 #ifdef NANOS_RESILIENCY_ENABLED
          /*!
-          * \brief Returns whether DLB is enabled or not
+          * \brief Returns whether resiliency features are enabled or not
           */
          bool isResiliencyEnabled ( ) const;
 
@@ -368,6 +374,13 @@ namespace nanos
           * \brief Returns the maximum size for the memory pool used to store task input data backups.
           */
          size_t getBackupPoolSize() const;
+
+#ifdef HAVE_CXX11
+         /*!
+          * \brief Returns whether memory pages poisoning is enabled or not (used for testing).
+          */
+         bool isPoisoningEnabled() const;
+#endif
 #endif
 
          // team related methods

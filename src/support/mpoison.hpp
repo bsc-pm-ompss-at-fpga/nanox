@@ -17,12 +17,18 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
+namespace nanos {
+namespace vm {
+
 void mpoison_run ( void* );
 
-void mpoison_init ();
+void mpoison_init ( );
 
-void mpoison_wait ();
+void mpoison_wait ( );
 
-void mpoison_stop ();
+void mpoison_stop ( );
 
-void mpoison_continue ();
+void mpoison_continue ( );
+
+}
+}

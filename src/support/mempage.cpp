@@ -20,6 +20,7 @@
 #include "mempage.hpp"
 #include <iostream>
 
+namespace nanos {
 namespace vm
 {
   MemPage::MemPage() :
@@ -109,4 +110,5 @@ namespace vm
       }
     return s;
   }
+}
 }

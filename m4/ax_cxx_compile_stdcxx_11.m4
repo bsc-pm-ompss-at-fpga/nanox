@@ -96,7 +96,10 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX_11], [dnl
           [eval $cachevar=no])
          CXXFLAGS="$ac_save_CXXFLAGS"])
       if eval test x\$$cachevar = xyes; then
-        CXXFLAGS="$CXXFLAGS $switch"
+# I want to avoid using this flag in the whole library
+#        CXXFLAGS="$CXXFLAGS $switch"
+        CXXFLAGS_CXX11="$switch"
+        AC_SUBST(CXXFLAGS_CXX11)
         ac_success=yes
         break
       fi
@@ -116,7 +119,10 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX_11], [dnl
           [eval $cachevar=no])
          CXXFLAGS="$ac_save_CXXFLAGS"])
       if eval test x\$$cachevar = xyes; then
-        CXXFLAGS="$CXXFLAGS $switch"
+# I want to avoid using this flag in the whole library
+#        CXXFLAGS="$CXXFLAGS $switch"
+        CXXFLAGS_CXX11="$switch"
+	AC_SUBST(CXXFLAGS_CXX11)
         ac_success=yes
         break
       fi
@@ -139,4 +145,6 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX_11], [dnl
 
     AC_SUBST(HAVE_CXX11)
   fi
+# Conditional compilation of mpoison
+  AM_CONDITIONAL([HAVE_CXX11],[test "x$HAVE_CXX11" = "x1"])
 ])

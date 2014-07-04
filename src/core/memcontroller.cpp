@@ -14,8 +14,11 @@ namespace nanos {
 MemController::MemController ( WD const &wd ) :
       _initialized( false), _preinitialized(false), _inputDataReady(false), _outputDataReady(
       false), _memoryAllocated( false), _mainWd( false), _wd(wd), _memorySpaceId(
-            0), _provideLock(), _providedRegions(), _backupOps(NULL), _restoreOps(
-      NULL), _affinityScore(0), _maxAffinityScore(0)
+            0), _provideLock(), _providedRegions(), 
+#ifdef NANOS_RESILIENCY_ENABLED
+_backupOps(NULL), _restoreOps(NULL), 
+#endif
+_affinityScore(0), _maxAffinityScore(0)
 {
    if (_wd.getNumCopies() > 0) {
       _memCacheCopies = NEW MemCacheCopy[wd.getNumCopies()];
@@ -363,6 +366,7 @@ bool MemController::isDataReady ( WD const &wd )
    ensure( _preinitialized == true, "MemController not initialized!");
    if (_initialized) {
       if (!_inputDataReady) {
+#if NANOS_RESILIENCY_ENABLED
          if (_backupOps) {
             _inputDataReady = _inOps->isDataReady(wd)
                   && _backupOps->isDataReady(wd);
@@ -371,6 +375,9 @@ bool MemController::isDataReady ( WD const &wd )
          }
          if (_backupOps)
             _backupOps->releaseLockedSourceChunks(wd);
+#else
+          _inputDataReady = _inOps->isDataReady(wd);
+#endif
       }
       return _inputDataReady;
    }
@@ -447,10 +454,6 @@ std::size_t MemController::getAmountOfTransferredData() const {
    size_t transferred = 0;
    if ( _inOps != NULL )
       transferred += _inOps->getAmountOfTransferredData();
-   /*
-   if ( _backupOps != NULL )
-      transferred += _backupOps->getAmountOfTransferredData();
-   */
    return transferred;
 }
 

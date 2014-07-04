@@ -1119,8 +1119,8 @@ AC_ARG_ENABLE([resiliency],
         AC_MSG_ERROR([resiliency mechanism depends on using compiler flag -fnon-call-exceptions])
     fi
 
-    # Compiler support for C++ 2011 standard is required
-    AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+    # Compiler support for C++ 2011 standard
+    AX_CXX_COMPILE_STDCXX_11([noext],[optional])
 
     if test "x$use_boost" != "xyes";
     then
@@ -1131,8 +1131,7 @@ AC_ARG_ENABLE([resiliency],
 )
 
 AM_CONDITIONAL([RESILIENCY], [test "x$resiliency" = "xyes"])
-AC_SUBST([resiliency])
-
+AC_SUBST([resiliency]) # for test generator
 
 # Output files
 AC_CONFIG_HEADERS([config.h])
@@ -1144,7 +1143,7 @@ AC_CONFIG_FILES([Makefile
 		 src/plugins/Makefile
 		 src/apis/Makefile
 		 src/pms/Makefile
-       src/arch/Makefile
+		 src/arch/Makefile
 		 src/arch/unix-os/Makefile
 		 src/arch/smp/Makefile
 		 src/arch/fpga/Makefile
@@ -1158,7 +1157,7 @@ AC_CONFIG_FILES([Makefile
 		 tests/Makefile
 		 tests/gens/Makefile
 		 doc/Makefile
-       doc/doxy-nanox
+		 doc/doxy-nanox
        ])
 
 AC_OUTPUT

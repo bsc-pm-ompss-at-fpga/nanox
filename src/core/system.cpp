@@ -65,6 +65,10 @@
 
 #ifdef NANOS_RESILIENCY_ENABLED
 #include "backupmanager.hpp"
+
+#ifdef HAVE_CXX11
+#include "../support/mpoison.hpp"
+#endif
 #endif
 
 using namespace nanos;
@@ -97,6 +101,9 @@ System::System () :
       , _resiliency_disabled(false)
       , _task_max_retries(1)
       , _backup_pool_size(0)
+#ifdef HAVE_CXX11
+      , _memory_poison_enabled(0)
+#endif
 #endif
       , _atomicSeedMemorySpace( 1 ), _affinityFailureCount( 0 )
       , _createLocalTasks( false )
@@ -378,6 +385,14 @@ void System::config ()
          "Sets the memory pool maximum size (dedicated to store task backups) in bytes. ");
    cfg.registerArgOption("backup_pool_size", "backup-pool-size");
    cfg.registerEnvOption("backup_pool_size", "NX_BACKUP_POOL_SIZE");
+
+#ifdef HAVE_CXX11
+   cfg.registerConfigOption("memory_poisoning",
+         NEW Config::FlagOption(_memory_poison_enabled, true),
+         "Enables random memory page poisoning (resiliency testing)");
+   cfg.registerArgOption("memory_poisoning", "memory-poisoning");
+   cfg.registerEnvOption("memory_poisoning", "NX_ENABLE_POISONING");
+#endif
 #endif
 
    cfg.registerConfigOption ( "verbose-devops", NEW Config::FlagOption ( _verboseDevOps, true ), "Verbose cache ops" );
@@ -491,6 +506,31 @@ void System::start ()
       (*it)->startSupportThreads();
    }   
    
+#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
+   if(sys.isResiliencyEnabled()){// runtime disable
+      size_t pool_size = sys.getBackupPoolSize();
+      if(pool_size == 0) { // no user defined pool size? Use half the total amount of memory we can make use of
+         pool_size =  sysconf(_SC_PAGESIZE ) * sysconf(_SC_PHYS_PAGES) / 2; // Only available pages? Use: sysconf (_SC_AVPHYS_PAGES)
+      }
+      // Insert a new separate memory address space to store input backups
+      BackupManager* mgr = new BackupManager("BackupMgr", pool_size);
+
+      memory_space_id_t backup_id = addSeparateMemoryAddressSpace( *mgr, false /*allocFit*/);
+      _backupMemory = &getSeparateMemory( backup_id );
+
+      // Setup signal handlers
+      myThread->setupSignalHandlers();
+#ifdef HAVE_CXX11
+      if(sys.isPoisoningEnabled()) {
+         ext::SMPProcessor* smp_proc = _smpPlugin->getLastFreeSMPProcessorAndReserve();
+         ext::SMPDD *mpoison_dd = new ext::SMPDD(vm::mpoison_run);
+         WD *worker = new WD(mpoison_dd, sizeof(void*), __alignof__(void*), NULL);
+         smp_proc->startThread(*smp_proc, *worker, NULL);
+      }
+#endif
+   }
+#endif
+
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
    {
@@ -529,23 +569,6 @@ void System::start ()
                  _defDevice = pe->getDeviceType();
        }
    }
-
-#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
-   if(sys.isResiliencyEnabled()){// runtime disable
-      size_t pool_size = sys.getBackupPoolSize();
-      if(pool_size == 0) { // no user defined pool size? Use half the total amount of memory we can make use of
-         pool_size =  sysconf(_SC_PAGESIZE ) * sysconf(_SC_PHYS_PAGES) / 2; // Only available pages? Use: sysconf (_SC_AVPHYS_PAGES)
-      }
-      // Insert a new separate memory address space to store input backups
-     BackupManager* mgr = new BackupManager("BackupMgr", pool_size);
-
-      memory_space_id_t backup_id = addSeparateMemoryAddressSpace( *mgr, false /*allocFit*/);
-      _backupMemory = &getSeparateMemory( backup_id );
-
-      // Setup signal handlers
-      myThread->setupSignalHandlers();
-   }
-#endif
 
    if ( getSynchronizedStart() )
       threadReady();
@@ -1420,6 +1443,7 @@ void System::ompss_nanox_main(){
        getMyThreadSafe()->setupSignalHandlers();// Needed if the language runtime overloads our handler on initialization (e.g. Fortran)
     }
     #endif
+
 }
 
 void System::registerNodeOwnedMemory(unsigned int node, void *addr, std::size_t len) {

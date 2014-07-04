@@ -64,6 +64,8 @@
 #define PM_PRESENT          PM_STATUS(4LL)
 #define PM_SWAP             PM_STATUS(2LL)
 
+namespace nanos
+{
 namespace vm
 {
   typedef uint64_t pm_entry_t;
@@ -150,5 +152,6 @@ namespace vm
       return _present;
     }
   };
+}
 }
 #endif /* MEM_PAGE_HPP_ */

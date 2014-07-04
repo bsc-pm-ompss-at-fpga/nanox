@@ -32,8 +32,8 @@ devinclude_HEADERS = \
 	barrier_fwd.hpp \
 	barrier_decl.hpp \
 	barrier.hpp \
-   cachedaccelerator_decl.hpp \
-   cachedaccelerator.hpp \
+	cachedaccelerator_decl.hpp \
+	cachedaccelerator.hpp \
 	threadteam_fwd.hpp \
 	threadteam_decl.hpp \
 	threadteam.hpp \
@@ -131,7 +131,7 @@ devinclude_HEADERS = \
 	taskexecutionexception.hpp \
 	trackableobject_fwd.hpp \
 	trackableobject_decl.hpp \
-   trackableobject.hpp \
+	trackableobject.hpp \
 	hwloc_decl.hpp \
 	$(END)
 
@@ -141,8 +141,8 @@ common_sources=\
 	barrier_fwd.hpp \
 	barrier_decl.hpp \
 	barrier.hpp \
-   cachedaccelerator_decl.hpp \
-   cachedaccelerator.hpp \
+	cachedaccelerator_decl.hpp \
+	cachedaccelerator.hpp \
 	threadteam_fwd.hpp \
 	threadteam_decl.hpp \
 	threadteam.hpp \

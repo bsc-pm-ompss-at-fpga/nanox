@@ -34,7 +34,6 @@
 #include "regioncache.hpp"
 #include <cmath>
 
-
 using namespace nanos;
 
 // methods to access configuration variable         
@@ -514,6 +513,9 @@ inline bool System::isResiliencyEnabled() const { return !_resiliency_disabled; 
 inline unsigned System::getTaskMaxRetries() const { return _task_max_retries; }
 
 inline size_t System::getBackupPoolSize() const { return _backup_pool_size; }
+#ifdef HAVE_CXX11
+inline bool System::isPoisoningEnabled() const { return _memory_poison_enabled; }
+#endif
 #endif
 
 inline void System::setSMPPlugin(SMPBasePlugin *p) {

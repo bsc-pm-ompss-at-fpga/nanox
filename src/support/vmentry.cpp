@@ -25,6 +25,8 @@
 #include "vmentry.hpp"
 #include "mempage.hpp"
 
+namespace nanos
+{
 namespace vm
 {
   VMEntry::VMEntry() :
@@ -179,4 +181,5 @@ namespace vm
       }
     return input;
   }
+}
 }

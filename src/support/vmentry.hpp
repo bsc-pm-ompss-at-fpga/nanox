@@ -28,6 +28,8 @@
 
 #include "mempage.hpp"
 
+namespace nanos
+{
 namespace vm
 {
   typedef struct
@@ -191,5 +193,5 @@ namespace vm
     }
   };
 }
-
+}
 #endif /* VMENTRY_HPP_ */
