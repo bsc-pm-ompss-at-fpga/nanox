@@ -71,7 +71,7 @@ void BaseThread::associate ()
    if ( sys.getSMPPlugin()->getBinding() ) bind();
 
    _threadWD._mcontrol.preInit();
-   _threadWD._mcontrol.initialize( runningOn()->getMemorySpaceId() );
+   _threadWD._mcontrol.initialize( *runningOn() );
    _threadWD.init();
    _threadWD.start(WD::IsNotAUserLevelThread);
 

@@ -70,6 +70,7 @@ class GPUPlugin : public ArchPlugin
                }
                warning0("Unable to get a cpu on numa node " << node << " to run the CPU thread. Will run on numa node "<< core->getNumaNode());
             }
+            core->setNumFutureThreads( 1 );
             
             //bool reserved;
             //unsigned pe = sys.reservePE( numa, node, reserved );
@@ -99,7 +100,8 @@ class GPUPlugin : public ArchPlugin
       int getNumaNodeOfGPU( int gpuId ) {
          // Is NUMA info is available
          int node = -1;
-         bool numa = true;
+         // Avoid "declared but not used" warning
+         //bool numa = true;
          if ( sys._hwloc.isHwlocAvailable() )
          {
             node = sys._hwloc.getNumaNodeOfGpu( gpuId );
@@ -135,7 +137,8 @@ class GPUPlugin : public ArchPlugin
          if ( node < 0 || sys.getSMPPlugin()->getNumSockets() == 1 ) {
             node = 0;
             // As we don't have NUMA info, don't request an specific node
-            numa = false;
+            // Avoid "declared but not used" warning
+            //numa = false;
          }
          return node;
       }

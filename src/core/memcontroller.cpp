@@ -13,12 +13,12 @@
 namespace nanos {
 MemController::MemController ( WD const &wd ) :
       _initialized( false), _preinitialized(false), _inputDataReady(false), _outputDataReady(
-      false), _memoryAllocated( false), _mainWd( false), _wd(wd), _memorySpaceId(
-            0), _provideLock(), _providedRegions(), 
+      false), _memoryAllocated( false), _mainWd( false), _wd(wd), _pe( NULL ), 
+      _provideLock(), _providedRegions(), 
 #ifdef NANOS_RESILIENCY_ENABLED
 _backupOps(NULL), _restoreOps(NULL), 
 #endif
-_affinityScore(0), _maxAffinityScore(0)
+_affinityScore(0), _maxAffinityScore(0), _ownedRegions(), _parentRegions()
 {
    if (_wd.getNumCopies() > 0) {
       _memCacheCopies = NEW MemCacheCopy[wd.getNumCopies()];
@@ -26,6 +26,7 @@ _affinityScore(0), _maxAffinityScore(0)
    }
 }
 
+#if 0
 bool MemController::hasVersionInfoForRegion( global_reg_t reg, unsigned int &version, NewLocationInfoList &locations ) {
    bool resultHIT = false;
    bool resultSUBR = false;
@@ -96,44 +97,65 @@ bool MemController::hasVersionInfoForRegion( global_reg_t reg, unsigned int &ver
    }
    return (resultSUBR || resultSUPER || resultHIT) ;
 }
+#endif
+
+bool MemController::ownsRegion( global_reg_t const &reg ) {
+   bool i_has_it = _ownedRegions.hasObjectOfRegion( reg );
+   bool parent_has_it  = _parentRegions.hasObjectOfRegion( reg );
+   //std::cerr << " wd: " << _wd.getId() << " i has it? " << (i_has_it ? "yes" : "no") << " " << &_ownedRegions << ", parent has it? " << (parent_has_it ? "yes" : "no") << " " << &_parentRegions << std::endl;
+   return i_has_it || parent_has_it;
+}
 
 void MemController::preInit ( )
 {
    unsigned int index;
    if (_preinitialized)
       return;
-   if ( _VERBOSE_CACHE) {
+   if ( _VERBOSE_CACHE ) {
       *(myThread->_file) << " (preinit)INITIALIZING MEMCONTROLLER for WD "
             << _wd.getId() << " "
             << (_wd.getDescription() != NULL ? _wd.getDescription() : "n/a")
             << " NUM COPIES " << _wd.getNumCopies() << std::endl;
    }
 
+   //std::ostream &o = (*myThread->_file);
+   //o << "### preInit wd " << _wd.getId() << std::endl;
    for (index = 0; index < _wd.getNumCopies(); index += 1) {
       //std::cerr << "WD "<< _wd.getId() << " Depth: "<< _wd.getDepth() <<" Creating copy "<< index << std::endl;
       //std::cerr << _wd.getCopies()[ index ];
-      new (&_memCacheCopies[index]) MemCacheCopy(_wd, index);
-      unsigned int predecessorsVersion;
-      if (hasVersionInfoForRegion(_memCacheCopies[index]._reg,
-            predecessorsVersion, _memCacheCopies[index]._locations))
-         _memCacheCopies[index].setVersion(predecessorsVersion);
-      if (_memCacheCopies[index].getVersion() != 0) {
-         if ( _VERBOSE_CACHE) {
-            *(myThread->_file) << "WD " << _wd.getId() << " copy " << index
-                  << " got location info from predecessor "
-                  << _memCacheCopies[index]._reg.id << " got version "
-                  << _memCacheCopies[index].getVersion() << " ";
+      //
+      //
+      //
+
+   uint64_t host_copy_addr = 0;
+   if ( _wd.getParent() != NULL /* && !_wd.getParent()->_mcontrol._mainWd */ ) {
+      for ( unsigned int parent_idx = 0; parent_idx < _wd.getParent()->getNumCopies(); parent_idx += 1 ) {
+         if ( _wd.getParent()->_mcontrol.getAddress( parent_idx ) == (uint64_t) _wd.getCopies()[ index ].getBaseAddress() ) {
+            host_copy_addr = (uint64_t) _wd.getParent()->getCopies()[ parent_idx ].getBaseAddress();
+            //std::cerr << "TADAAAA this comes from a father's copy "<< std::hex << host_copy_addr << std::endl;
+            _wd.getCopies()[ index ].setHostBaseAddress( host_copy_addr );
          }
-         _memCacheCopies[index]._locationDataReady = true;
+      }
+   }
+      new (&_memCacheCopies[index]) MemCacheCopy(_wd, index);
+
+      // o << "## " << (_wd.getCopies()[index].isInput() ? "in" : "") << (_wd.getCopies()[index].isOutput() ? "out" : "") << " " <<  _wd.getCopies()[index] << std::endl; 
+
+      unsigned int predecessorsVersion;
+      if ( _providedRegions.hasVersionInfoForRegion( _memCacheCopies[ index ]._reg, predecessorsVersion, _memCacheCopies[ index ]._locations ) )
+         _memCacheCopies[ index ].setVersion( predecessorsVersion );
+      if ( _memCacheCopies[ index ].getVersion() != 0 ) {
+         if ( _VERBOSE_CACHE ) { *(myThread->_file) << "WD " << _wd.getId() << " copy "<< index <<" got location info from predecessor "<<  _memCacheCopies[ index ]._reg.id << " got version " << _memCacheCopies[ index ].getVersion()<< " "; }
+         _memCacheCopies[ index ]._locationDataReady = true;
       } else {
-         if ( _VERBOSE_CACHE) {
+         if ( _VERBOSE_CACHE ) {
             *(myThread->_file) << "WD " << _wd.getId() << " copy " << index
                   << " got requesting location info to global directory for region "
                   << _memCacheCopies[index]._reg.id << " ";
          }
          _memCacheCopies[index].getVersionInfo();
       }
-      if ( _VERBOSE_CACHE) {
+      if ( _VERBOSE_CACHE ) {
          for (NewLocationInfoList::const_iterator it =
                _memCacheCopies[index]._locations.begin();
                it != _memCacheCopies[index]._locations.end(); it++) {
@@ -147,6 +169,19 @@ void MemController::preInit ( )
                   << it->second << " : [" << *dsentry << "] > ";
          }
          *(myThread->_file) << std::endl;
+      }
+
+      if ( _wd.getParent() != NULL && _wd.getParent()->_mcontrol.ownsRegion( _memCacheCopies[ index ]._reg ) ) {
+         /* do nothing, maybe here we can add a correctness check,
+          * to ensure that the region is a subset of the Parent regions
+          */
+         //std::cerr << "I am " << _wd.getId() << " parent: " <<  _wd.getParent()->getId() << " NOT ADDING THIS OBJECT "; _memCacheCopies[ index ]._reg.key->printRegion(std::cerr, 1); std::cerr << " adding it to " << &_parentRegions << std::endl;
+         _parentRegions.addRegion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() );
+      } else {
+         if ( _wd.getParent() != NULL ) {
+         //std::cerr << "I am " << _wd.getId() << " parent: " << _wd.getParent()->getId() << " ++++++ ADDING THIS OBJECT "; _memCacheCopies[ index ]._reg.key->printRegion(std::cerr, 1); std::cerr << std::endl;
+            _wd.getParent()->_mcontrol._ownedRegions.addRegion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() );
+         }
       }
    }
 #ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
@@ -170,7 +205,7 @@ void MemController::preInit ( )
       }
    }
 #endif
-   if ( _VERBOSE_CACHE) {
+   if ( _VERBOSE_CACHE ) { 
       *(myThread->_file)
             << " (preinit)END OF INITIALIZING MEMCONTROLLER for WD "
             << _wd.getId() << " "
@@ -182,14 +217,14 @@ void MemController::preInit ( )
 
 void MemController::initialize( unsigned int memorySpaceId) {
    if ( !_initialized ) {
-      _memorySpaceId = memorySpaceId;
+      _pe = &pe;
 
       //NANOS_INSTRUMENT( InstrumentState inst2(NANOS_CC_CDIN); );
 
-      if ( _memorySpaceId == 0 /* HOST_MEMSPACE_ID */) {
-         _inOps = NEW HostAddressSpaceInOps( true );
+      if ( _pe->getMemorySpaceId() == 0 /* HOST_MEMSPACE_ID */) {
+         _inOps = NEW HostAddressSpaceInOps( _pe, true );
       } else {
-         _inOps = NEW SeparateAddressSpaceInOps( true, sys.getSeparateMemory( _memorySpaceId ) );
+         _inOps = NEW SeparateAddressSpaceInOps( _pe, true, sys.getSeparateMemory( _pe->getMemorySpaceId() ) );
       }
 #ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
 
@@ -199,20 +234,20 @@ void MemController::initialize( unsigned int memorySpaceId) {
 #endif
       _initialized = true;
    } else {
-      ensure(_memorySpaceId == memorySpaceId, " MemController, called initialize twice with different PE!");
+      ensure(_pe == &pe, " MemController, called initialize twice with different PE!");
    }
 }
 
 bool MemController::allocateTaskMemory() {
    bool result = true;
-   if ( _memorySpaceId != 0 ) {
-      result = sys.getSeparateMemory( _memorySpaceId ).prepareRegions( _memCacheCopies, _wd.getNumCopies(), _wd );
+   if ( _pe->getMemorySpaceId() != 0 ) {
+      result = sys.getSeparateMemory( _pe->getMemorySpaceId() ).prepareRegions( _memCacheCopies, _wd.getNumCopies(), _wd );
    }
    if ( result ) {
       //*(myThread->_file) << "++++ Succeeded allocation for wd " << _wd.getId() << std::endl;
       for ( unsigned int idx = 0; idx < _wd.getNumCopies(); idx += 1 ) {
          if ( _memCacheCopies[idx]._reg.key->getKeepAtOrigin() ) {
-            //std::cerr << "WD " << _wd.getId() << " rooting to memory space " << _memorySpaceId << std::endl;
+            //std::cerr << "WD " << _wd.getId() << " rooting to memory space " << _pe->getMemorySpaceId() << std::endl;
             _memCacheCopies[idx]._reg.setRooted();
          }
       }
@@ -230,10 +265,10 @@ void MemController::copyDataIn() {
    ensure( _preinitialized == true, "MemController not initialized!");
    ensure( _initialized == true, "MemController not initialized!");
   
-   if ( _VERBOSE_CACHE ) {
+   if ( _VERBOSE_CACHE || sys.getVerboseCopies() ) {
       //if ( sys.getNetwork()->getNodeNum() == 0 ) {
          std::ostream &o = (*myThread->_file);
-         o << "### copyDataIn wd " << _wd.getId() << " running on " << _memorySpaceId << " ops: "<< (void *) _inOps << std::endl;
+         o << "### copyDataIn wd " << std::dec << _wd.getId() << " running on " << std::dec << _pe->getMemorySpaceId() << " ops: "<< (void *) _inOps << std::endl;
          for (unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
             NewNewDirectoryEntryData *d =
                   NewNewRegionDirectory::getDirectoryEntry(
@@ -271,9 +306,9 @@ void MemController::copyDataIn() {
    _inOps->issue( _wd );
 
    //NANOS_INSTRUMENT( inst5.close(); );
-   if ( _VERBOSE_CACHE ) {
+   if ( _VERBOSE_CACHE || sys.getVerboseCopies() ) {
       if ( sys.getNetwork()->getNodeNum() == 0 ) {
-         std::cerr << "### copyDataIn wd " << _wd.getId() << " done" << std::endl;
+         std::cerr << "### copyDataIn wd " << std::dec << _wd.getId() << " done" << std::endl;
       }
    }
    //NANOS_INSTRUMENT( inst2.close(); );
@@ -285,23 +320,22 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
 
    //for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
    //   if ( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
-   //      _memCacheCopies[ index ]._reg.setLocationAndVersion( _memorySpaceId, _memCacheCopies[ index ].getVersion() + 1 );
+   //      _memCacheCopies[ index ]._reg.setLocationAndVersion( _pe->getMemorySpaceId(), _memCacheCopies[ index ].getVersion() + 1 );
    //   }
    //}
-   if ( _VERBOSE_CACHE ) { std::cerr << "### copyDataOut wd " << _wd.getId() << " metadata set, not released yet" << std::endl; }
+   if ( _VERBOSE_CACHE || sys.getVerboseCopies() ) { *(myThread->_file) << "### copyDataOut wd " << std::dec << _wd.getId() << " metadata set, not released yet" << std::endl; }
 
-   if ( _memorySpaceId == 0 /* HOST_MEMSPACE_ID */) {
+   if ( _pe->getMemorySpaceId() == 0 /* HOST_MEMSPACE_ID */) {
       _outputDataReady = true;
    } else {
-      _outOps = NEW SeparateAddressSpaceOutOps( false, false );
+      _outOps = NEW SeparateAddressSpaceOutOps( _pe, false, true );
 
       for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
-         _memCacheCopies[ index ].generateOutOps( &sys.getSeparateMemory( _memorySpaceId ), *_outOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd, index );
+         _memCacheCopies[ index ].generateOutOps( &sys.getSeparateMemory( _pe->getMemorySpaceId() ), *_outOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd, index );
       }
 
       //if( sys.getNetwork()->getNodeNum()== 0)std::cerr << "MemController::copyDataOut for wd " << _wd.getId() << std::endl;
       _outOps->issue( _wd );
-
    }
 }
 
@@ -329,19 +363,28 @@ void MemController::restoreBackupData ( )
 #endif
 
 uint64_t MemController::getAddress( unsigned int index ) const {
-   ensure( _preinitialized == true, "MemController not initialized!");
+   ensure( _preinitialized == true, "MemController not preinitialized!");
    ensure( _initialized == true, "MemController not initialized!");
    uint64_t addr = 0;
    //std::cerr << " _getAddress, reg: " << index << " key: " << (void *)_memCacheCopies[ index ]._reg.key << " id: " << _memCacheCopies[ index ]._reg.id << std::endl;
-   if ( _memorySpaceId == 0 ) {
+   if ( _pe->getMemorySpaceId() == 0 ) {
       addr = ((uint64_t) _wd.getCopies()[ index ].getBaseAddress());
    } else {
-      addr = sys.getSeparateMemory( _memorySpaceId ).getDeviceAddress( _memCacheCopies[ index ]._reg, (uint64_t) _wd.getCopies()[ index ].getBaseAddress(), _memCacheCopies[ index ]._chunk );
+      if ( _wd.getCopies()[ index ].isRemoteHost() || _wd.getCopies()[ index ].getHostBaseAddress() == 0 ) {
+         addr = sys.getSeparateMemory( _pe->getMemorySpaceId() ).getDeviceAddress( _memCacheCopies[ index ]._reg, (uint64_t) _wd.getCopies()[ index ].getBaseAddress(), _memCacheCopies[ index ]._chunk );
+      } else {
+         addr = sys.getSeparateMemory( _pe->getMemorySpaceId() ).getDeviceAddress( _memCacheCopies[ index ]._reg, (uint64_t) _wd.getCopies()[ index ].getHostBaseAddress(), _memCacheCopies[ index ]._chunk );
+      }
    }
    return addr;
 }
 
 void MemController::getInfoFromPredecessor( MemController const &predecessorController ) {
+   for( unsigned int index = 0; index < predecessorController._wd.getNumCopies(); index += 1) {
+      unsigned int version = predecessorController._memCacheCopies[ index ].getVersion() + ( predecessorController._wd.getCopies()[index].isOutput() ? 1 : 0 );
+      _providedRegions.addRegion( predecessorController._memCacheCopies[ index ]._reg, version );
+   }
+#if 0
    _provideLock.acquire();
    for( unsigned int index = 0; index < predecessorController._wd.getNumCopies(); index += 1) {
       std::map< reg_t, unsigned int > &regs = _providedRegions[ predecessorController._memCacheCopies[ index ]._reg.key ];
@@ -359,6 +402,7 @@ void MemController::getInfoFromPredecessor( MemController const &predecessorCont
       //std::cerr << "from wd " << predecessorController._wd.getId() << " to wd " << _wd.getId()  << " provided data for copy " << index << " reg ("<<predecessorController._memCacheCopies[ index ]._reg.key<<"," << predecessorController._memCacheCopies[ index ]._reg.id << ") with version " << ( ( predecessorController._wd.getCopies()[index].isOutput() ) ? predecessorController._memCacheCopies[ index ].getVersion() + 1 : predecessorController._memCacheCopies[ index ].getVersion() ) << " isOut "<< predecessorController._wd.getCopies()[index].isOutput()<< " isIn "<< predecessorController._wd.getCopies()[index].isInput() << std::endl;
    }
    _provideLock.release();
+#endif
 }
 
 bool MemController::isDataReady ( WD const &wd )
@@ -392,9 +436,9 @@ bool MemController::isOutputDataReady( WD const &wd ) {
          if ( _outputDataReady ) {
             if ( _VERBOSE_CACHE ) { *(myThread->_file) << "Output data is ready for wd " << _wd.getId() << " obj " << (void *)_outOps << std::endl; }
 
-            sys.getSeparateMemory( _memorySpaceId ).releaseRegions( _memCacheCopies, _wd.getNumCopies(), _wd ) ;
+            sys.getSeparateMemory( _pe->getMemorySpaceId() ).releaseRegions( _memCacheCopies, _wd.getNumCopies(), _wd ) ;
             //for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
-            //   sys.getSeparateMemory( _memorySpaceId ).releaseRegions( _memCacheCopies, _wd.getNumCopies(), _wd ) ;
+            //   sys.getSeparateMemory( _pe->getMemorySpaceId() ).releaseRegions( _memCacheCopies, _wd.getNumCopies(), _wd ) ;
             //}
          }
       }
@@ -485,11 +529,7 @@ void MemController::setMainWD() {
 }
 
 void MemController::synchronize() {
-   if ( _mainWd ) {
-      sys.getHostMemory().synchronize( _wd );
-   } else {
- //     std::cerr << "Synchronize on a non main WD!, it will be considered as 'noflush'." << std::endl;
-   }
+   sys.getHostMemory().synchronize( _wd );
 }
 
 bool MemController::isMemoryAllocated() const {
@@ -499,12 +539,16 @@ bool MemController::isMemoryAllocated() const {
 void MemController::setCacheMetaData() {
    for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
       if ( _wd.getCopies()[index].isOutput() ) {
-         _memCacheCopies[ index ]._reg.setLocationAndVersion( _memorySpaceId, _memCacheCopies[ index ].getVersion() + 1 );
-         if ( _memorySpaceId != 0 /* HOST_MEMSPACE_ID */) {
-            sys.getSeparateMemory( _memorySpaceId ).setRegionVersion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() + 1, _wd, index );
+         _memCacheCopies[ index ]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), _memCacheCopies[ index ].getVersion() + 1 );
+         if ( _pe->getMemorySpaceId() != 0 /* HOST_MEMSPACE_ID */) {
+            sys.getSeparateMemory( _pe->getMemorySpaceId() ).setRegionVersion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() + 1, _wd, index );
          }
       }
    }
+}
+
+bool MemController::hasObjectOfRegion( global_reg_t const &reg ) {
+   return _ownedRegions.hasObjectOfRegion( reg );
 }
 
 }

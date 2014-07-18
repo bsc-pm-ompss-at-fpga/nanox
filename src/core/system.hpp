@@ -538,12 +538,23 @@ inline bool System::getVerboseDevOps() const {
    return _verboseDevOps;
 }
 
+inline bool System::getVerboseCopies() const {
+   return _verboseCopies;
+}
+
 inline bool System::getSplitOutputForThreads() const {
    return _splitOutputForThreads;
 }
 
 inline RegionCache::CachePolicy System::getRegionCachePolicy() const {
    return _regionCachePolicy;
+}
+
+inline void System::createDependence( WD* pred, WD* succ)
+{
+   DOSubmit *pred_do = pred->getDOSubmit(), *succ_do = succ->getDOSubmit();
+   pred_do->addSuccessor(*succ_do);
+   succ_do->increasePredecessors();
 }
 
 inline unsigned int System::getNumClusterNodes() const {

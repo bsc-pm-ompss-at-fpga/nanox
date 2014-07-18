@@ -1047,7 +1047,7 @@ void Scheduler::preOutlineWork ( WD *wd )
 void Scheduler::prePreOutlineWork ( WD *wd )
 {
    BaseThread *thread = getMyThreadSafe();
-   wd->_mcontrol.initialize( thread->runningOn()->getMemorySpaceId() );
+   wd->_mcontrol.initialize( *thread->runningOn() );
 }
 
 bool Scheduler::tryPreOutlineWork ( WD *wd )
@@ -1176,7 +1176,7 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
    
    if ( !wd->started() ) { 
       if ( !wd->_mcontrol.isMemoryAllocated() ) {
-         wd->_mcontrol.initialize( thread->runningOn()->getMemorySpaceId() );
+         wd->_mcontrol.initialize( *thread->runningOn() );
          bool result;
          do {
             result = wd->_mcontrol.allocateTaskMemory();
@@ -1243,7 +1243,7 @@ void Scheduler::switchTo ( WD *to )
    if ( myThread->runningOn()->supportsUserLevelThreads() ) {
 
       if (!to->started()) {
-         to->_mcontrol.initialize( myThread->runningOn()->getMemorySpaceId() );
+         to->_mcontrol.initialize( *myThread->runningOn() );
          bool result;
          do {
             result = to->_mcontrol.allocateTaskMemory();
@@ -1331,7 +1331,7 @@ void Scheduler::exitTo ( WD *to )
 //    WD *current = myThread->getCurrentWD();
 
     if (!to->started()) {
-       to->_mcontrol.initialize( myThread->runningOn()->getMemorySpaceId() );
+       to->_mcontrol.initialize( *myThread->runningOn() );
        bool result;
        do {
           result = to->_mcontrol.allocateTaskMemory();

@@ -247,6 +247,7 @@ namespace nanos
          Atomic<unsigned int> _affinityFailureCount;
          bool                      _createLocalTasks;
          bool _verboseDevOps;
+         bool _verboseCopies;
          bool _splitOutputForThreads;
          int _userDefinedNUMANode;
       public:
@@ -641,9 +642,10 @@ namespace nanos
          bool isSimulator() const;
          ThreadTeam *getMainTeam();
          bool getVerboseDevOps() const;
+         bool getVerboseCopies() const;
          bool getSplitOutputForThreads() const;
          RegionCache::CachePolicy getRegionCachePolicy() const;
-
+         void createDependence( WD* pred, WD* succ);
          unsigned int getNumClusterNodes() const;
          unsigned int getNumNumaNodes() const;
          int getVirtualNUMANode( int physicalNode ) const;

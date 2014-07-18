@@ -40,6 +40,7 @@ extern "C" {
    ompt_thread_type_callback_t   ompt_nanos_event_thread_end = NULL;
    ompt_control_callback_t       ompt_nanos_event_control = NULL;
    ompt_callback_t               ompt_nanos_event_shutdown = NULL;
+   ompt_task_switch_callback_t   ompt_nanos_event_task_switch = NULL;
 
    int ompt_nanos_set_callback( ompt_event_t event, ompt_callback_t callback );
    int ompt_nanos_set_callback( ompt_event_t event, ompt_callback_t callback )
@@ -94,7 +95,10 @@ extern "C" {
          case ompt_event_implicit_task_end:
          case ompt_event_initial_task_begin:
          case ompt_event_initial_task_end:
+            return 1;
          case ompt_event_task_switch:
+            ompt_nanos_event_task_switch = (ompt_task_switch_callback_t) callback;
+            return 4;
          case ompt_event_loop_begin:
          case ompt_event_loop_end:
          case ompt_event_sections_begin:
@@ -256,14 +260,32 @@ namespace nanos
 {
    class InstrumentationOMPT: public Instrumentation 
    {
+      private:
+         ompt_task_id_t * _previousTask;
       public:
-         InstrumentationOMPT( ) : Instrumentation( *NEW InstrumentationContextDisabled() ) {}
+         InstrumentationOMPT( ) : Instrumentation( *NEW InstrumentationContextDisabled()), _previousTask(NULL) {}
          ~InstrumentationOMPT() { }
          void initialize( void )
          {
             ompt_initialize ( ompt_nanos_lookup, "Nanos++ 0.8a", 1);
+            int nthreads = sys.getSMPPlugin()->getNumThreads();
+            _previousTask = ( ompt_task_id_t *) malloc ( nthreads * sizeof(ompt_task_id_t) );
+            for ( int i = 0; i < nthreads; i++ )
+               _previousTask[i] = (ompt_task_id_t) 0;
+
+            // initialize() cannot reference myThead object
+            if (ompt_nanos_event_thread_begin) {
+               ompt_nanos_event_thread_begin( (ompt_thread_type_t) ompt_thread_initial, (ompt_thread_id_t) 0);
+            }
          }
-         void finalize( void ) { if ( ompt_nanos_event_shutdown ) ompt_nanos_event_shutdown(); }
+         void finalize( void )
+         {
+            if (ompt_nanos_event_thread_end) {
+               ompt_nanos_event_thread_end((ompt_thread_type_t) ompt_thread_initial, (ompt_thread_id_t) nanos::myThread->getId());
+            }
+            if ( ompt_nanos_event_shutdown ) ompt_nanos_event_shutdown();
+            if ( _previousTask ) free ( _previousTask );
+         }
          void disable( void ) {}
          void enable( void ) {}
          void addEventList ( unsigned int count, Event *events )
@@ -274,11 +296,12 @@ namespace nanos
             static const nanos_event_key_t set_num_threads = iD->getEventKey("set-num-threads");
             static const nanos_event_value_t api_create_team = iD->getEventValue("api","create_team");
             static const nanos_event_value_t api_end_team = iD->getEventValue("api","end_team");
+            static const nanos_event_key_t parallel_outline = iD->getEventKey("parallel-outline-fct");
 
             unsigned int i;
             for( i=0; i<count; i++) {
                Event &e = events[i];
-// DEBUG INFO
+/*FIXME: debug information */
 #if 0
                int thid = nanos::myThread? nanos::myThread->getId():0; 
                fprintf(stderr,"NANOS++ [%d]: (%d/%d) event %ld value %lu\n",
@@ -287,7 +310,7 @@ namespace nanos
                      (int)count,
                      (long) e.getKey(),
                      (unsigned long) e.getValue()
-                     ); // FIXME: debug information
+                     ); 
 #endif
                switch ( e.getType() ) {
                   case NANOS_POINT:
@@ -306,13 +329,16 @@ namespace nanos
                      {
                         nanos_event_value_t val = e.getValue();
 
-                        if ( val == api_create_team && ompt_nanos_event_parallel_begin )
-                        {
+                        if ( val == api_create_team && ompt_nanos_event_parallel_begin ) {
                            uint32_t team_size = 0;
+                           void *parallel_fct = NULL;
                            while ( i < count ) {
                               Event &e1 = events[++i];
                               if ( e1.getKey() == set_num_threads ) {
                                  team_size = (uint32_t) e1.getValue();
+                              }
+                              else if ( e1.getKey() == parallel_outline ) {
+                                 parallel_fct = (void *) e1.getValue();
                                  break;
                               }
                            }
@@ -322,11 +348,9 @@ namespace nanos
                                  (ompt_frame_t) NULL,    // FIXME: frame data of parent task
                                  (ompt_parallel_id_t) 0, // FIXME: parallel_id
                                  (uint32_t) team_size,
-                                 (void *) NULL           // FIXME: outlined function
+                                 (void *) parallel_fct   // FIXME: outlined function
                                  );
-                        }
-                        else if ( val == api_end_team && ompt_nanos_event_parallel_end )
-                        {
+                        } else if ( val == api_end_team && ompt_nanos_event_parallel_end ) {
                            ompt_nanos_event_parallel_end (
                                  (ompt_parallel_id_t) 0, // FIXME: parallel_id
                                  (ompt_task_id_t) nanos::myThread->getCurrentWD()->getId() );
@@ -348,10 +372,25 @@ namespace nanos
                }
             }
          }
-         void addResumeTask( WorkDescriptor &w ) {}
+         void addResumeTask( WorkDescriptor &w )
+         {
+            if ( !ompt_nanos_event_task_switch ) return;
+
+            ompt_task_id_t post = (ompt_task_id_t) w.getId();
+
+            int thid = (int) nanos::myThread->getId();
+            ompt_task_id_t pre = (ompt_task_id_t) _previousTask[thid];
+
+            if ( pre ) ompt_nanos_event_task_switch ( pre, post );
+         }
          void addSuspendTask( WorkDescriptor &w, bool last )
          {
-            if (ompt_nanos_event_task_end && last) ompt_nanos_event_task_end((ompt_task_id_t) w.getId());
+            int thid = (int) nanos::myThread->getId();
+            _previousTask[thid] = (ompt_task_id_t) w.getId();
+
+            if (ompt_nanos_event_task_end && last) {
+               ompt_nanos_event_task_end((ompt_task_id_t) w.getId());
+            }
          }
          void threadStart( BaseThread &thread ) 
          {

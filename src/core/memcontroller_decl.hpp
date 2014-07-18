@@ -7,6 +7,7 @@
 #include "addressspace_decl.hpp"
 #include "memoryops_decl.hpp"
 #include "memcachecopy_decl.hpp"
+#include "regionset_decl.hpp"
 
 namespace nanos {
 
@@ -18,10 +19,11 @@ class MemController {
    bool                        _dataRestored;
    bool                        _memoryAllocated;
    bool                        _mainWd;
-   WD const                   &_wd;
-   memory_space_id_t           _memorySpaceId;
+   WD                         &_wd;
+   ProcessingElement          *_pe;
    Lock                        _provideLock;
-   std::map< NewNewRegionDirectory::RegionDirectoryKey, std::map< reg_t, unsigned int > > _providedRegions;
+   //std::map< NewNewRegionDirectory::RegionDirectoryKey, std::map< reg_t, unsigned int > > _providedRegions;
+   RegionSet _providedRegions;
    BaseAddressSpaceInOps      *_inOps;
    SeparateAddressSpaceOutOps *_outOps;
 #ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
@@ -31,6 +33,8 @@ class MemController {
 #endif
    std::size_t                 _affinityScore;
    std::size_t                 _maxAffinityScore;
+   RegionSet _ownedRegions;
+   RegionSet _parentRegions;
 
 public:
    enum MemControllerPolicy {
@@ -39,7 +43,7 @@ public:
       NO_CACHE
    };
    MemCacheCopy *_memCacheCopies;
-   MemController( WD const &wd );
+   MemController( WD &wd );
    bool hasVersionInfoForRegion( global_reg_t reg, unsigned int &version, NewLocationInfoList &locations );
    void getInfoFromPredecessor( MemController const &predecessorController );
    void preInit();
@@ -66,6 +70,8 @@ public:
    void synchronize();
    bool isMemoryAllocated() const;
    void setCacheMetaData();
+   bool ownsRegion( global_reg_t const &reg );
+   bool hasObjectOfRegion( global_reg_t const &reg );
 };
 
 }

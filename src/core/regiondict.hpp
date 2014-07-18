@@ -826,12 +826,20 @@ reg_t RegionDictionary< Sparsity >::tryObtainRegionId( CopyData const &cd ) {
 }
 
 template < template <class> class Sparsity>
-reg_t RegionDictionary< Sparsity >::obtainRegionId( CopyData const &cd ) {
+reg_t RegionDictionary< Sparsity >::obtainRegionId( CopyData const &cd, WD const &wd, unsigned int idx ) {
    reg_t id = 0;
+   if ( cd.getNumDimensions() != this->getNumDimensions() ) {
+      std::cerr << "Error: cd.getNumDimensions() returns " << cd.getNumDimensions() << " but I already have the object registered with " << this->getNumDimensions() << " dimensions. WD is : " << ( wd.getDescription() != NULL ? wd.getDescription() : "n/a" ) << " copy index: " << idx << std::endl;
+   }
    ensure( cd.getNumDimensions() == this->getNumDimensions(), "ERROR" );
    if ( cd.getNumDimensions() != this->getNumDimensions() ) {
       std::cerr << "Error, invalid numDimensions" << std::endl;
    } else {
+      for ( unsigned int cidx = 0; cidx < cd.getNumDimensions(); cidx += 1 ) {
+         if ( this->getDimensionSizes()[ cidx ] != cd.getDimensions()[ cidx ].size ) {
+            fatal("Object with base address " << (void *)cd.getBaseAddress() << " was previously registered with a different size in dimension " << std::dec << cidx << " (previously was " << std::dec << this->getDimensionSizes()[ cidx ] << " now received size " << std::dec << cd.getDimensions()[ cidx ].size << ")." );
+         }
+      }
       id = this->addRegion( cd.getDimensions() );
    }
    return id;
@@ -842,37 +850,37 @@ reg_t RegionDictionary< Sparsity >::obtainRegionId( nanos_region_dimension_inter
    return this->addRegion( region );
 }
 
-template < template <class> class Sparsity>
-reg_t RegionDictionary< Sparsity >::registerRegion( CopyData const &cd, std::list< std::pair< reg_t, reg_t > > &missingParts, unsigned int &version ) {
-   reg_t id = 0;
-   //unsigned int currentLeafCount = 0;
-   //bool newlyCreatedRegion = false;
-   //std::cerr << "=== RegionDictionary::addRegion ====================================================" << std::endl;
-   //std::cerr << cd ;
-   //{
-   //double tini = OS::getMonotonicTime();
-
-   //currentLeafCount = this->getRegionNodeCount();
-   id = obtainRegionId( cd );
-   //newlyCreatedRegion = ( this->getRegionNodeCount() > currentLeafCount );
-
-   //double tfini = OS::getMonotonicTime();
-   //std::cerr << __FUNCTION__ << " Insert region into node time " << (tfini-tini) << std::endl;
-   //}
-   //std::cerr << cd << std::endl;
-   //std::cerr << "got id "<< id << std::endl;
-   //if ( newlyCreatedRegion ) { std::cerr << __FUNCTION__ << ": just created region " << id << std::endl; }
-
-   //{
-   //double tini = OS::getMonotonicTime();
-   this->addRegionAndComputeIntersects( id, missingParts, version );
-   //double tfini = OS::getMonotonicTime();
-   //std::cerr << __FUNCTION__ << " add and compute intersects time " << (tfini-tini) << std::endl;
-   //}
-
-   //std::cerr << "===== reg " << id << " ====================================================" << std::endl;
-   return id;
-}
+// template < template <class> class Sparsity>
+// reg_t RegionDictionary< Sparsity >::registerRegion( CopyData const &cd, std::list< std::pair< reg_t, reg_t > > &missingParts, unsigned int &version, WD const &wd, unsigned int idx ) {
+//    reg_t id = 0;
+//    //unsigned int currentLeafCount = 0;
+//    //bool newlyCreatedRegion = false;
+//    //std::cerr << "=== RegionDictionary::addRegion ====================================================" << std::endl;
+//    //std::cerr << cd ;
+//    //{
+//    //double tini = OS::getMonotonicTime();
+// 
+//    //currentLeafCount = this->getRegionNodeCount();
+//    id = obtainRegionId( cd, wd, idx );
+//    //newlyCreatedRegion = ( this->getRegionNodeCount() > currentLeafCount );
+// 
+//    //double tfini = OS::getMonotonicTime();
+//    //std::cerr << __FUNCTION__ << " Insert region into node time " << (tfini-tini) << std::endl;
+//    //}
+//    //std::cerr << cd << std::endl;
+//    //std::cerr << "got id "<< id << std::endl;
+//    //if ( newlyCreatedRegion ) { std::cerr << __FUNCTION__ << ": just created region " << id << std::endl; }
+// 
+//    //{
+//    //double tini = OS::getMonotonicTime();
+//    this->addRegionAndComputeIntersects( id, missingParts, version );
+//    //double tfini = OS::getMonotonicTime();
+//    //std::cerr << __FUNCTION__ << " add and compute intersects time " << (tfini-tini) << std::endl;
+//    //}
+// 
+//    //std::cerr << "===== reg " << id << " ====================================================" << std::endl;
+//    return id;
+// }
 
 template < template <class> class Sparsity>
 reg_t RegionDictionary< Sparsity >::registerRegion( reg_t id, std::list< std::pair< reg_t, reg_t > > &missingParts, unsigned int &version, bool superPrecise ) {

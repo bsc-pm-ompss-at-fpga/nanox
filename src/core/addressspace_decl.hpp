@@ -73,10 +73,10 @@ class HostAddressSpace {
 
    void doOp( MemSpace<SeparateAddressSpace> &from, global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx, DeviceOps *ops, AllocatedChunk *chunk, bool inval );
    void getVersionInfo( global_reg_t const &reg, unsigned int &version, NewLocationInfoList &locations );
-   void getRegionId( CopyData const &cd, global_reg_t &reg );
+   void getRegionId( CopyData const &cd, global_reg_t &reg, WD const &wd, unsigned int idx );
    void failToLock( MemSpace< SeparateAddressSpace > &from, global_reg_t const &reg, unsigned int version );
 
-   void synchronize( WD const &wd );
+   void synchronize( WD &wd );
    memory_space_id_t getMemorySpaceId() const;
    reg_t getLocalRegionId( void *hostObject, reg_t hostRegionId ) const;
    NewNewRegionDirectory::RegionDirectoryKey getRegionDirectoryKey( uint64_t addr ) const;
@@ -112,7 +112,7 @@ class SeparateAddressSpace {
    void setSpecificData( void *data );
 
 
-   void allocateOutputMemory( global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx );
+   void allocateOutputMemory( global_reg_t const &reg, ProcessingElement *pe, unsigned int version, WD const &wd, unsigned int copyIdx );
    void copyInputData( BaseAddressSpaceInOps &ops, global_reg_t const &reg, unsigned int version, NewLocationInfoList const &locations, AllocatedChunk *chunk, WD const &wd, unsigned int copyIdx );
    void copyOutputData( SeparateAddressSpaceOutOps &ops, global_reg_t const &reg, unsigned int version, bool output, enum RegionCache::CachePolicy policy, AllocatedChunk *chunk, WD const &wd, unsigned int copyIdx );
 
