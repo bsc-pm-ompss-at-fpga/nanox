@@ -67,8 +67,12 @@
 #include "backupmanager.hpp"
 
 #ifdef HAVE_CXX11
-#include "../support/mpoison.hpp"
+#include "mpoison.h"
 #endif
+#endif
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
 #endif
 
 using namespace nanos;
@@ -102,7 +106,9 @@ System::System () :
       , _task_max_retries(1)
       , _backup_pool_size(0)
 #ifdef HAVE_CXX11
-      , _memory_poison_enabled(0)
+      , _memory_poison_enabled(false)
+      , _memory_poison_seed(time(0))
+      , _memory_poison_rate(1000000)
 #endif
 #endif
       , _atomicSeedMemorySpace( 1 ), _affinityFailureCount( 0 )
@@ -389,10 +395,22 @@ void System::config ()
 
 #ifdef HAVE_CXX11
    cfg.registerConfigOption("memory_poisoning",
-         NEW Config::FlagOption(_memory_poison_enabled, true),
+         NEW Config::FlagOption(_memory_poison_enabled, false),
          "Enables random memory page poisoning (resiliency testing)");
    cfg.registerArgOption("memory_poisoning", "memory-poisoning");
    cfg.registerEnvOption("memory_poisoning", "NX_ENABLE_POISONING");
+
+   cfg.registerConfigOption("mp_seed",
+         NEW Config::IntegerVar(_memory_poison_seed),
+         "Seed used by memory page poisoning RNG (default: 'time(0)')");
+   cfg.registerArgOption("mp_seed", "mpoison-seed");
+   cfg.registerEnvOption("mp_seed", "NX_MPOISON_SEED");
+
+   cfg.registerConfigOption("mp_rate",
+         NEW Config::UintVar(_memory_poison_rate),
+         "Memory poisoning rate (time in micro seconds between two faults). Default: '1s')");
+   cfg.registerArgOption("mp_rate", "mpoison-rate");
+   cfg.registerEnvOption("mp_rate", "NX_MPOISON_RATE");
 #endif
 #endif
 
@@ -525,12 +543,11 @@ void System::start ()
 
       // Setup signal handlers
       myThread->setupSignalHandlers();
+
 #ifdef HAVE_CXX11
-      if(sys.isPoisoningEnabled()) {
-         ext::SMPProcessor* smp_proc = _smpPlugin->getLastFreeSMPProcessorAndReserve();
-         ext::SMPDD *mpoison_dd = new ext::SMPDD(vm::mpoison_run);
-         WD *worker = new WD(mpoison_dd, sizeof(void*), __alignof__(void*), NULL);
-         smp_proc->startThread(*smp_proc, *worker, NULL);
+      if(sys.isPoisoningEnabled()){
+         debug0("Resiliency: Mpoison random seed: " << sys.getMPoisonSeed() );
+         debug0("Resiliency: Mpoison rate set to: " << sys.getMPoisonRate() << " us");
       }
 #endif
    }

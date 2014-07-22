@@ -23,7 +23,6 @@
 #include <fstream>
 
 #include "vmentry.hpp"
-#include "mempage.hpp"
 
 namespace nanos
 {
@@ -44,7 +43,7 @@ namespace vm
   }
 
   VMEntry::VMEntry(uint64_t start, uint64_t end, prot_t prot, vmflags_t flags) :
-      _start(start), _end(end), _offset(0), _inode(0), _major(0), _minor(0), _pages(), _path(), _prot(
+      _start(start), _end(end), _offset(0), _inode(0), _major(0), _minor(0), _path(), _prot(
           prot), _flags(flags)
   {
   }
@@ -53,15 +52,14 @@ namespace vm
       uint64_t offset, uint64_t inode, uint8_t major, uint8_t minor,
       std::string path) :
       _start(start), _end(end), _offset(offset), _inode(inode), _major(major), _minor(
-          minor), _pages(), _path(path), _prot(prot), _flags(flags)
+          minor), _path(path), _prot(prot), _flags(flags)
   {
   }
 
   VMEntry::VMEntry(const VMEntry &other) :
       _start(other._start), _end(other._end), _offset(other._offset), _inode(
-          other._inode), _major(other._major), _minor(other._minor), _pages(
-          other._pages), _path(other._path), _prot(other._prot), _flags(
-          other._flags)
+          other._inode), _major(other._major), _minor(other._minor), _path(
+          other._path), _prot(other._prot), _flags(other._flags)
   {
   }
 
@@ -78,26 +76,11 @@ namespace vm
     _inode = other._inode;
     _major = other._major;
     _minor = other._minor;
-    _pages = other._pages;
     _path = other._path;
     _prot = other._prot;
     _flags = other._flags;
 
     return *this;
-  }
-
-  const MemPage&
-  VMEntry::addPage(MemPage const &p)
-  {
-    std::pair<std::map<uint64_t, MemPage>::iterator, bool> it = _pages.insert(
-        std::pair<uint64_t, MemPage>(p.getPN(), p));
-    return it.first->second;
-  }
-
-  const MemPage&
-  VMEntry::getPage(uint64_t pn) const
-  {
-    return _pages.find(pn)->second;
   }
 
   std::ostream&

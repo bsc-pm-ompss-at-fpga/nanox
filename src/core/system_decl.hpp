@@ -53,6 +53,16 @@
 #include "openclprocessor_fwd.hpp"
 #endif
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#ifdef NANOS_RESILIENCY_ENABLED
+#ifdef HAVE_CXX11
+#include <unistd.h>
+#endif
+#endif
+
 namespace nanos
 {
 
@@ -212,6 +222,10 @@ namespace nanos
 #ifdef HAVE_CXX11
          //! Enables random memory page poisoning for resiliency testing.
          bool                      _memory_poison_enabled;
+         //! Seed used for mpoison RNG
+         int                       _memory_poison_seed;
+         //! Time between page blocks in us.
+         useconds_t                _memory_poison_rate;
 #endif
 #endif
 
@@ -381,6 +395,14 @@ namespace nanos
           * \brief Returns whether memory pages poisoning is enabled or not (used for testing).
           */
          bool isPoisoningEnabled() const;
+         /*!
+          * \brief Returns the seed used for random number generation
+          */
+         int getMPoisonSeed() const;
+         /*!
+          * \brief Returns the time between two page blocks in us.
+          */
+         useconds_t getMPoisonRate() const;
 #endif
 #endif
 

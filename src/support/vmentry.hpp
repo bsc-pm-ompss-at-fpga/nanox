@@ -23,10 +23,7 @@
 #include <string>
 #include <iostream>
 #include <ostream>
-#include <map>
 #include <cstdint>
-
-#include "mempage.hpp"
 
 namespace nanos
 {
@@ -66,8 +63,6 @@ namespace vm
     uint16_t _major; // Major device number
     uint16_t _minor; // Minor device number
 
-    std::map<uint64_t, MemPage> _pages;
-
     std::string _path; // Mapped file path
 
     prot_t _prot;         // Access rights
@@ -95,12 +90,6 @@ namespace vm
 
     VMEntry&
     operator=(const VMEntry &other);
-
-    const MemPage&
-    addPage(MemPage const &p);
-
-    const MemPage&
-    getPage(uint64_t pn) const;
 
     inline prot_t
     getAccessRights() const

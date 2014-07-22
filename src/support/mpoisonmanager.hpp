@@ -16,25 +16,54 @@
 /*      You should have received a copy of the GNU Lesser General Public License     */
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
-#ifndef MPOISON_HPP
-#include "mpoison.h"
-#include "mpoisonmanager.hpp"
+#ifndef MPOISON_MANAGER_HPP
+#define MPOISON_MANAGER_HPP
 
-#define MPOISON_SCAN_MODE 0
-#define MPOISON_TRACK_MODE 1
+#include <deque>
+#include <set>
+#include <random>
+#include <cstdint>
+#include <unistd.h>
+
 namespace nanos {
 namespace vm {
 
-/* Grants access to the object that controls allocated memory
- * and poisoned memory
- */
-MPoisonManager* getMPoisonManager();
+extern uint64_t page_size;
+extern uint64_t pn_mask;
 
+class MPoisonManager {
 
-/* Function executed by mpoison thread */
-void *mpoison_run( void*);
+public:
+  MPoisonManager( int seed );
+
+  virtual ~MPoisonManager();
+
+  void addAllocation( uintptr_t addr, size_t size );
+
+  void deleteAllocation( uintptr_t addr );
+
+  void clearAllocations ( );
+
+  uintptr_t getRandomPage( );
+
+  void blockPage( );
+
+  int unblockPage( uintptr_t page_addr );
+
+private: 
+  typedef struct {
+    uintptr_t addr;
+    std::size_t size;
+  } alloc_t;
+
+  std::deque<alloc_t> alloc_list; //!< List that contains all the allocations made by the user.
+  std::set<uintptr_t> blocked_pages; //!< Set of addresses that which address has been unauthorised randomly.
+  size_t total_size;//!< Indicates the total amount of memory allocated by the user.
+
+  std::mt19937 generator;//!< RNG engine
+};
 
 }// namespace vm
 }// namespace nanos
 
-#endif // MPOISON_HPP
+#endif // MPOISON_MANAGER_HPP

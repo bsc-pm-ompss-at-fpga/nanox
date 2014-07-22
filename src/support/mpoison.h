@@ -16,25 +16,36 @@
 /*      You should have received a copy of the GNU Lesser General Public License     */
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
-#ifndef MPOISON_HPP
-#include "mpoison.h"
-#include "mpoisonmanager.hpp"
 
-#define MPOISON_SCAN_MODE 0
-#define MPOISON_TRACK_MODE 1
-namespace nanos {
-namespace vm {
+#ifndef MPOISON_H
+#define MPOISON_H
 
-/* Grants access to the object that controls allocated memory
- * and poisoned memory
- */
-MPoisonManager* getMPoisonManager();
+#include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/* Function executed by mpoison thread */
-void *mpoison_run( void*);
+//! Initialize data structures used by mpoison
+void mpoison_init ( void );
 
-}// namespace vm
-}// namespace nanos
+//! Clears data structures used by mpoison and waits the dedicated thread to finish
+void mpoison_finalize ( void );
 
-#endif // MPOISON_HPP
+//! \brief Looks through /proc/pid/maps file to look for memory regions that can hold application data
+void mpoison_scan ( void );
+
+//! \brief Unblocks the page starting at address page_addr. Returns 0 if no errors were found
+int mpoison_unblock_page ( uintptr_t page_addr );
+
+//! Makes the mpoison dedicated thread to stop randomized page blocking
+void mpoison_stop ( void );
+
+//! Makes the poison dedicated thread to resume randomized page blocking
+void mpoison_continue ( void );
+
+#ifdef __cplusplus
+}//extern C
+#endif
+
+#endif // MPOISON_H

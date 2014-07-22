@@ -185,15 +185,23 @@ gpu_support_sources = \
 	$(END)
 	
 
+if RESILIENCY
+if HAVE_CXX11
+devinclude_HEADERS = \
+	mpoison.h
+endif
+endif
+
 noinst_LTLIBRARIES =
 
 libmpoison_sources = \
 	vmentry.hpp \
 	vmentry.cpp \
-	mempage.hpp \
-	mempage.cpp \
+        mpoison.h \
 	mpoison.hpp \
-	mpoison.cpp
+	mpoison.cpp \
+	mpoisonmanager.hpp \
+	mpoisonmanager.cpp
 
 
 if DEBUG_VERSION

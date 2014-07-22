@@ -27,12 +27,13 @@
 #include <string>
 
 #ifdef NANOS_RESILIENCY_ENABLED
-#include <errno.h>
-#include <unistd.h>
-#include <sys/mman.h>
+#include <stdint.h>
 #include "taskexecutionexception.hpp"
 #include "memcontroller_decl.hpp"
 
+#ifdef HAVE_CXX11
+#include "mpoison.h"
+#endif
 #endif
 
 using namespace nanos;
@@ -149,7 +150,7 @@ void SMPDD::execute ( WD &wd ) throw ()
                //debug( e.what() );
                // Try to recover the system from the failure (so we can continue with the execution)
                if(!recover( e )) {// If we couldn't recover the system, we can't go on with the execution
-                  message(e.what());
+                  message("Resiliency: Unrecoverable error found. " << e.what());
                   // Unrecoverable error: terminate execution
                   std::terminate();
                }
@@ -191,27 +192,38 @@ void SMPDD::execute ( WD &wd ) throw ()
 
 #ifdef NANOS_RESILIENCY_ENABLED
 bool SMPDD::recover( TaskExecutionException& err ) {
-   static unsigned long page_size = sysconf(_SC_PAGESIZE);
-
-   uintptr_t page_addr = 0;
+   static size_t page_size = sysconf(_SC_PAGESIZE);
 
    // Recover system from failures
    switch(err.getSignal()){
       case SIGSEGV:
-         page_addr = (uintptr_t)err.getSignalInfo().si_addr;
-         // Align faulting address with virtual page address
-         page_addr &= ~(page_size - 1);
 
          switch(err.getSignalInfo().si_code) {
             case SEGV_MAPERR: /* Address not mapped to object.  */
                debug("Resiliency: SEGV_MAPERR error recovery is still not supported.")
                break;
             case SEGV_ACCERR: /* Invalid permissions for mapped object.  */
-               if( mprotect((void*)page_addr, page_size, PROT_READ | PROT_WRITE ) == 0 ) {
+               bool restored = false;
+               uintptr_t page_addr = (uintptr_t)err.getSignalInfo().si_addr;
+               // Align faulting address with virtual page address
+               page_addr &= ~(page_size - 1);
+#ifdef HAVE_CXX11
+               if( sys.isPoisoningEnabled() ) {
+
+                  if( mpoison_unblock_page(page_addr) == 0 )
+                     restored = true;
+                  else
+                     restored = false;
+               } else
+                 restored = true;// It makes no sense to mprotect a faulting page to make it useful again.
+#else
+               restored = true;
+#endif
+               if( restored ) {
                   debug("Resiliency: Page restored! Address: 0x" << std::hex << page_addr);
                   return true;
                } else {
-                  debug("Resiliency: Error while restoring page: " << strerror(errno));
+                  debug("Resiliency: Error while restoring page. Address: 0x" << std::hex << page_addr);
                   return false;
                }
                break;

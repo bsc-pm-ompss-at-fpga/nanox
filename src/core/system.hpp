@@ -34,6 +34,10 @@
 #include "regioncache.hpp"
 #include <cmath>
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 using namespace nanos;
 
 // methods to access configuration variable         
@@ -515,6 +519,10 @@ inline unsigned System::getTaskMaxRetries() const { return _task_max_retries; }
 inline size_t System::getBackupPoolSize() const { return _backup_pool_size; }
 #ifdef HAVE_CXX11
 inline bool System::isPoisoningEnabled() const { return _memory_poison_enabled; }
+
+inline int System::getMPoisonSeed() const { return _memory_poison_seed; }
+
+inline useconds_t System::getMPoisonRate() const { return _memory_poison_rate; }
 #endif
 #endif
 
