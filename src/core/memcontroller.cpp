@@ -11,7 +11,7 @@
 #endif
 
 namespace nanos {
-MemController::MemController ( WD const &wd ) :
+MemController::MemController ( WD &wd ) :
       _initialized( false), _preinitialized(false), _inputDataReady(false), _outputDataReady(
       false), _memoryAllocated( false), _mainWd( false), _wd(wd), _pe( NULL ), 
       _provideLock(), _providedRegions(), 
@@ -184,7 +184,7 @@ void MemController::preInit ( )
          }
       }
    }
-#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
+//#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
 
    if (sys.isResiliencyEnabled() && _wd.isRecoverable()) {
       _backupCacheCopies = NEW MemCacheCopy[_wd.getNumCopies()];
@@ -192,19 +192,17 @@ void MemController::preInit ( )
       for (index = 0; index < _wd.getNumCopies(); index += 1) {
          new (&_backupCacheCopies[index]) MemCacheCopy(_wd, index);
 
-         unsigned int predecessorsVersion;
-         if (hasVersionInfoForRegion(_backupCacheCopies[index]._reg,
-               predecessorsVersion, _backupCacheCopies[index]._locations))
-            _backupCacheCopies[index].setVersion(predecessorsVersion);
+         _backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getVersion() );
+         _backupCacheCopies[index]._locations.insert(
+                                               _backupCacheCopies[index]._locations.end(),
+                                               _memCacheCopies[ index ]._locations.begin(),
+                                               _memCacheCopies[ index ]._locations.end()
+                                             );
 
-         if (_backupCacheCopies[index].getVersion() != 0) {
-            _backupCacheCopies[index]._locationDataReady = true;
-         } else {
-            _backupCacheCopies[index].getVersionInfo();
-         }
+         _backupCacheCopies[index]._locationDataReady = true;
       }
    }
-#endif
+//#endif
    if ( _VERBOSE_CACHE ) { 
       *(myThread->_file)
             << " (preinit)END OF INITIALIZING MEMCONTROLLER for WD "
@@ -215,7 +213,7 @@ void MemController::preInit ( )
    _preinitialized = true;
 }
 
-void MemController::initialize( unsigned int memorySpaceId) {
+void MemController::initialize( ProcessingElement &pe ) {
    if ( !_initialized ) {
       _pe = &pe;
 
@@ -229,7 +227,7 @@ void MemController::initialize( unsigned int memorySpaceId) {
 #ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
 
       if( _wd.isRecoverable() ) {
-         _backupOps = NEW SeparateAddressSpaceInOps( true, sys.getBackupMemory() );
+         _backupOps = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
       }
 #endif
       _initialized = true;
@@ -349,7 +347,7 @@ void MemController::restoreBackupData ( )
    ensure( !_wd.getNumCopies() || _backupCacheCopies, "There isn't any backup copy defined for this task." );
 
    if (_backupCacheCopies) {
-      _restoreOps = NEW SeparateAddressSpaceOutOps( false, true);
+      _restoreOps = NEW SeparateAddressSpaceOutOps( _pe, false, true);
       for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
          if (_wd.getCopies()[index].isInput()) {
             _backupCacheCopies[index]._chunk->copyRegionToHost( *_restoreOps,

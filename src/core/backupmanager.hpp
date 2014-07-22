@@ -54,27 +54,27 @@ namespace nanos {
          // Warning: cannot reuse the source object because its _managed_pool object is invalidated
          BackupManager & operator= ( BackupManager& arch );
 
-         virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, uint64_t targetHostAddr);
+         virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd, unsigned int copyIdx);
 
          virtual void memFree (uint64_t addr, SeparateMemoryAddressSpace &mem);
 
-         virtual void _canAllocate( SeparateMemoryAddressSpace const &mem, size_t *sizes, uint numChunks, size_t *remainingSizes ) const;
+         virtual void _canAllocate( SeparateMemoryAddressSpace const& mem, size_t *sizes, uint numChunks, size_t *remainingSizes ) const;
 
-         virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace const &mem ) const;
+         virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace const& mem ) const;
 
-         virtual void _copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId ) const;
+         virtual void _copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) const;
 
-         virtual void _copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId ) const;
+         virtual void _copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) const;
 
-         virtual bool _copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId ) const;
+         virtual bool _copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) const;
 
-         virtual void _copyInStrided1D( uint64_t devAddr, uint64_t hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const &mem, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId );
+         virtual void _copyInStrided1D( uint64_t devAddr, uint64_t hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const& mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId );
 
-         virtual void _copyOutStrided1D( uint64_t hostAddr, uint64_t devAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const &mem, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId );
+         virtual void _copyOutStrided1D( uint64_t hostAddr, uint64_t devAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const& mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId );
 
-         virtual bool _copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const &memDest, SeparateMemoryAddressSpace const &memOrig, DeviceOps *ops, Functor *f, WorkDescriptor const &wd, void *hostObject, reg_t hostRegionId );
+         virtual bool _copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const& memDest, SeparateMemoryAddressSpace const& memOrig, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) const;
 
-         virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace const &mem, SimpleAllocator::ChunkList &list ) const;
+         virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace const& mem, SimpleAllocator::ChunkList &list ) const;
    };
 } // namespace nanos
 

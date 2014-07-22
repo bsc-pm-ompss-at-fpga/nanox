@@ -44,10 +44,10 @@ public:
    };
    MemCacheCopy *_memCacheCopies;
    MemController( WD &wd );
-   bool hasVersionInfoForRegion( global_reg_t reg, unsigned int &version, NewLocationInfoList &locations );
+   //bool hasVersionInfoForRegion( global_reg_t reg, unsigned int &version, NewLocationInfoList &locations );
    void getInfoFromPredecessor( MemController const &predecessorController );
    void preInit();
-   void initialize( unsigned int memorySpaceId );
+   void initialize( ProcessingElement &pe );
    bool allocateTaskMemory();
    void copyDataIn();
    void copyDataOut( MemControllerPolicy policy );
