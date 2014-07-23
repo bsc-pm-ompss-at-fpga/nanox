@@ -42,6 +42,9 @@ nanos::vm::MPoisonManager *nanos::vm::getMPoisonManager() {
 
 void *nanos::vm::mpoison_run(void *arg)
 {
+   useconds_t *delay_start = (useconds_t*) arg;
+   usleep( *delay_start );
+
    while( run ) {
       while(stop && run) {}// wait until the other thread indicates 
                            // to continue the poisoning
@@ -58,12 +61,22 @@ void mpoison_stop(){
    stop = true;
 }
 
-void mpoison_continue() {
-   stop= false;
+void mpoison_continue(){
+   stop = false;
 }
 
 int mpoison_unblock_page( uintptr_t page_addr ) {
    return mp_mgr->unblockPage(page_addr);
+}
+
+void mpoison_delay_start ( useconds_t *useconds ) {
+   debug("Resiliency: MPoison: Creating mpoison thread");
+   pthread_create(&tid, NULL, nanos::vm::mpoison_run, (void*)useconds);
+}
+
+void mpoison_start ( ) {
+   static useconds_t delay = 0;
+   mpoison_delay_start(&delay);
 }
 
 void mpoison_init ( )
@@ -72,11 +85,8 @@ void mpoison_init ( )
 
    mp_mgr = new MPoisonManager( sys.getMPoisonSeed());
 
-   stop = true;
+   stop = false;
    run = true;
-
-   debug("Resiliency: MPoison: Creating mpoison thread");
-   pthread_create(&tid, NULL, mpoison_run, NULL);
 }
 
 void
@@ -109,7 +119,7 @@ void mpoison_scan ()
            !access.x && //only look for the frame if is R+W, not X 
            !vme.isSyscallArea()) 
        {
-           uintptr_t addr = vme.getStart() / page_size;
+           uintptr_t addr = vme.getStart() & ~(page_size-1);
            size_t region_size = vme.getEnd() - vme.getStart();
  
            mp_mgr->addAllocation( addr, region_size );

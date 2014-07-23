@@ -395,7 +395,7 @@ void System::config ()
 
 #ifdef HAVE_CXX11
    cfg.registerConfigOption("memory_poisoning",
-         NEW Config::FlagOption(_memory_poison_enabled, false),
+         NEW Config::FlagOption(_memory_poison_enabled, true),
          "Enables random memory page poisoning (resiliency testing)");
    cfg.registerArgOption("memory_poisoning", "memory-poisoning");
    cfg.registerEnvOption("memory_poisoning", "NX_ENABLE_POISONING");

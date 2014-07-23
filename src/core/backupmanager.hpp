@@ -20,8 +20,12 @@
 #ifndef BACKUPMANAGER_HPP_
 #define BACKUPMANAGER_HPP_
 
+#pragma warning disable 1418
+#pragma warning disable 1599
 #include <boost/interprocess/managed_external_buffer.hpp>
 #include <boost/interprocess/indexes/null_index.hpp>
+#pragma warning enable 1418
+#pragma warning enable 1599
 
 #include "workdescriptor_decl.hpp"
 

@@ -21,6 +21,7 @@
 #define MPOISON_H
 
 #include <stdint.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,8 +42,13 @@ int mpoison_unblock_page ( uintptr_t page_addr );
 //! Makes the mpoison dedicated thread to stop randomized page blocking
 void mpoison_stop ( void );
 
-//! Makes the poison dedicated thread to resume randomized page blocking
+//! Makes the mpoison dedicated thread to stop randomized page blocking
 void mpoison_continue ( void );
+
+//! Makes the poison dedicated thread to begin randomized page blocking
+void mpoison_start ( void );
+
+void mpoison_delay_start ( useconds_t* );
 
 #ifdef __cplusplus
 }//extern C

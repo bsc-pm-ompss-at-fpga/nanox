@@ -94,7 +94,7 @@ uintptr_t MPoisonManager::getRandomPage(){
   size_t pos = distribution(generator);
 
   std::deque<alloc_t>::iterator it;
-  for( it = alloc_list.begin(); it != alloc_list.end() && pos > 0; it++ ) {
+  for( it = alloc_list.begin(); it != alloc_list.end() && pos >= it->size; it++ ) {
      pos -= it->size;
   }
 
@@ -106,16 +106,18 @@ uintptr_t MPoisonManager::getRandomPage(){
   }
 }
 
-void MPoisonManager::blockPage() {
+int MPoisonManager::blockPage() {
   uintptr_t addr = getRandomPage();
   if( addr ) {
     // data races: accessing concurrently different elements is safe
     // it is not possible to insert and delete an entry at the same time since
     // an entry is not deleted until an invalid access has been made (i.e., after
     // the mprotect) and at that time insert operation has already been completed.
+    debug0( "Mpoison: blocking memory page. Addr: " << std::hex << addr );
     blocked_pages.insert( addr );
-    mprotect( (void*)addr, page_size, PROT_NONE );
+    return mprotect( (void*)addr, page_size, PROT_NONE );
   }
+  return -1;
 }
 
 int MPoisonManager::unblockPage( uintptr_t page_addr ) {

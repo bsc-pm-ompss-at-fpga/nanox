@@ -32,7 +32,7 @@ MPoisonManager* getMPoisonManager();
 
 
 /* Function executed by mpoison thread */
-void *mpoison_run( void*);
+void *mpoison_run( void* );
 
 }// namespace vm
 }// namespace nanos

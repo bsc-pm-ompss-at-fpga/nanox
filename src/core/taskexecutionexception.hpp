@@ -30,8 +30,10 @@ TaskExecutionException::TaskExecutionException (
       ucontext_t const &context ) throw () :
       task(task_wd), signal_info(info), task_context(context)
 {
-   std::stringstream ss("Signal raised during the execution of task ");
-   ss << task_wd->getId() << std::endl;
+   std::stringstream ss;
+   ss << "Signal raised during the execution of task "
+      << task_wd->getId() 
+      << std::endl;
 
    const char* sig_desc;
    if (signal_info.si_signo >= 0 && signal_info.si_signo < NSIG && (sig_desc =

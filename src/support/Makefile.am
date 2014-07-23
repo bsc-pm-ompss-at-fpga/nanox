@@ -90,6 +90,13 @@ devinclude_HEADERS = \
 	pinnedallocator_decl.hpp \
 	$(END) 
 
+if RESILIENCY
+if HAVE_CXX11
+devinclude_HEADERS += \
+	mpoison.h
+endif
+endif
+
 support_sources = \
 	dlb.hpp\
 	new_decl.hpp\
@@ -184,13 +191,6 @@ gpu_support_sources = \
 	pinnedallocator.cpp \
 	$(END)
 	
-
-if RESILIENCY
-if HAVE_CXX11
-devinclude_HEADERS = \
-	mpoison.h
-endif
-endif
 
 noinst_LTLIBRARIES =
 

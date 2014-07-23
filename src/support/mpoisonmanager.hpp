@@ -46,7 +46,7 @@ public:
 
   uintptr_t getRandomPage( );
 
-  void blockPage( );
+  int blockPage( );
 
   int unblockPage( uintptr_t page_addr );
 
