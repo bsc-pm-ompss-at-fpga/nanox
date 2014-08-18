@@ -219,6 +219,8 @@ namespace nanos
          unsigned                  _task_max_retries;
          //! Specifies the size of the memory pool used to store task input data backups.
          size_t                    _backup_pool_size;
+         //! Keeps the count of the number of error events that appear during the execution
+         TaskExceptionStats        _resiliencyStats;
 #ifdef HAVE_CXX11
          //! Enables random memory page poisoning for resiliency testing.
          bool                      _memory_poison_enabled;
@@ -383,12 +385,37 @@ namespace nanos
          /*!
           * \brief Returns the maximum number of times a task can try to recover from an error by re-executing itself.
           */
-         unsigned getTaskMaxRetries() const;
+         unsigned getTaskMaxRetries ( ) const;
 
          /*!
           * \brief Returns the maximum size for the memory pool used to store task input data backups.
           */
-         size_t getBackupPoolSize() const;
+         size_t getBackupPoolSize ( ) const;
+
+         /*!
+          * \brief Returns current task execution error count.
+          */
+         int getExecutionErrors ( ) const;
+                                 
+         /*!
+          * \brief Returns current task initialization error count.
+          */
+         int getInitializationErrors ( ) const;
+                                 
+         /*!
+          * \brief Returns current recovered task count.
+          */
+         int getRecoveredTasks ( ) const;
+                                 
+         /*!
+          * \brief Returns current skipped task count.
+          */
+         int getDiscardedTasks ( ) const;
+         
+         /*!
+          * \brief Returns a reference to the object that keeps the count for task exception events.
+          */
+         TaskExceptionStats& getExceptionStats ( );
 
 #ifdef HAVE_CXX11
          /*!

@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2014 Barcelona Supercomputing Center                               */
+/*      Copyright 2009 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -16,41 +16,13 @@
 /*      You should have received a copy of the GNU Lesser General Public License     */
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
+#ifndef _NANOS_TASKEXECUTIONEXCEPTION_FWD_H
+#define _NANOS_TASKEXECUTIONEXCEPTION_FWD_H
 
-#ifndef MPOISON_H
-#define MPOISON_H
+namespace nanos
+{
+   class TaskExecutionException;
+};
 
-#include <stdint.h>
+#endif // _NANOS_TASKEXECUTIONEXCEPTION_FWD_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//! Initialize data structures used by mpoison
-void mpoison_init ( void );
-
-//! Clears data structures used by mpoison and waits the dedicated thread to finish
-void mpoison_finalize ( void );
-
-//! \brief Looks through /proc/pid/maps file to look for memory regions that can hold application data
-void mpoison_scan ( void );
-
-//! \brief Unblocks the page starting at address page_addr. Returns 0 if no errors were found
-int mpoison_unblock_page ( uintptr_t );
-
-//! Makes the mpoison dedicated thread to stop randomized page blocking
-void mpoison_stop ( void );
-
-//! Makes the mpoison dedicated thread to stop randomized page blocking
-void mpoison_continue ( void );
-
-//! Makes the poison dedicated thread to begin randomized page blocking
-void mpoison_start ( void );
-
-void mpoison_delay_start ( long* );
-
-#ifdef __cplusplus
-}//extern C
-#endif
-
-#endif // MPOISON_H

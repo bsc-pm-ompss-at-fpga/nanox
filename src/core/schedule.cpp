@@ -40,6 +40,10 @@
 
 #include <iostream>
 
+#ifdef NANOS_RESILIENCY_ENABLED
+#include "taskexecutionexception.hpp"
+#endif
+
 using namespace nanos;
 
 void SchedulerConf::config (Config &cfg)
@@ -1240,32 +1244,35 @@ void Scheduler::switchHelper (WD *oldWD, WD *newWD, void *arg)
 
 void Scheduler::switchTo ( WD *to )
 {
-   if ( myThread->runningOn()->supportsUserLevelThreads() ) {
-
-      if (!to->started()) {
-         to->_mcontrol.initialize( *myThread->runningOn() );
-         bool result;
-         do {
-            result = to->_mcontrol.allocateTaskMemory();
-         } while( result == false );
-
-         to->init();
-         to->start(WD::IsAUserLevelThread);
-      }
-
-      debug( "switching from task " << myThread->getCurrentWD() << ":" << myThread->getCurrentWD()->getId() <<
-            " to " << to << ":" << to->getId() );
-
-      NANOS_INSTRUMENT( WD *oldWD = myThread->getCurrentWD(); )
-         NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, to, false ) );
-
-      myThread->switchTo( to, switchHelper );
-
+   if( to->isInvalid() ) {
+      finishWork( to, true );
+      to->~WorkDescriptor();
+      delete[] (char *)to;
    } else {
-      if (inlineWork(to)) {
-         to->~WorkDescriptor();
-         delete[] (char *)to;
-      }
+     if ( myThread->runningOn()->supportsUserLevelThreads() ) {
+        if (!to->started()) {
+           to->_mcontrol.initialize( *myThread->runningOn() );
+           bool result;
+           do {
+              result = to->_mcontrol.allocateTaskMemory();
+           } while( result == false );
+           to->init();
+           to->start(WD::IsAUserLevelThread);
+        }
+   
+        debug( "switching from task " << myThread->getCurrentWD() << ":" << myThread->getCurrentWD()->getId() <<
+              " to " << to << ":" << to->getId() );
+   
+        NANOS_INSTRUMENT( WD *oldWD = myThread->getCurrentWD(); )
+           NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, to, false ) );
+   
+        myThread->switchTo( to, switchHelper );
+     } else {
+        if (inlineWork(to)) {
+           to->~WorkDescriptor();
+           delete[] (char *)to;
+        }
+     }
    }
 }
 
@@ -1329,25 +1336,25 @@ void Scheduler::exitTo ( WD *to )
  {
 //! \bug FIXME: stack reusing was wrongly implementd and it's disabled (see #374)
 //    WD *current = myThread->getCurrentWD();
+   if (!to->started()) {
+      to->_mcontrol.initialize( *myThread->runningOn() );
+      bool result;
+      do {
+         result = to->_mcontrol.allocateTaskMemory();
+      } while( result == false );
 
-    if (!to->started()) {
-       to->_mcontrol.initialize( *myThread->runningOn() );
-       bool result;
-       do {
-          result = to->_mcontrol.allocateTaskMemory();
-       } while( result == false );
+      to->init();
+      //       to->start(true,current);
+      to->start(WD::IsAUserLevelThread,NULL);
+   }
 
-       to->init();
-       //       to->start(true,current);
-       to->start(WD::IsAUserLevelThread,NULL);
-    }
+   debug( "exiting task " << myThread->getCurrentWD() << ":" << myThread->getCurrentWD()->getId() <<
+         " to " << to << ":" << to->getId() );
 
-    debug( "exiting task " << myThread->getCurrentWD() << ":" << myThread->getCurrentWD()->getId() <<
-          " to " << to << ":" << to->getId() );
+   NANOS_INSTRUMENT( WD *oldWD = myThread->getCurrentWD(); )
+   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, to, true ) );
 
-    NANOS_INSTRUMENT( WD *oldWD = myThread->getCurrentWD(); )
-    NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, to, true ) );
-    myThread->exitTo( to, Scheduler::exitHelper );
+   myThread->exitTo( to, Scheduler::exitHelper );
 }
 
 void Scheduler::exit ( void )
@@ -1378,10 +1385,15 @@ void Scheduler::exit ( void )
       if ( !next ) thread->pause();
    }
 
-   if ( !next ) idleLoop<ExitBehaviour>();
-   else Scheduler::exitTo(next);
+   if ( next && !next->isInvalid() ) {
+      Scheduler::exitTo(next);
+   }
 
-   fatal("A thread should never return from Scheduler::exit");
+   if ( next && next->isInvalid() ) {
+      idleLoop<WorkerBehaviour>();// discard next workdescriptor and look for more work
+   } else {
+      idleLoop<ExitBehaviour>();
+   }
 }
 
 int SchedulerStats::getCreatedTasks() { return _createdTasks.value(); }

@@ -675,7 +675,11 @@ void System::finish ()
    ensure( _schedStats._readyTasks == 0, "Ready task counter has an invalid value!");
 
    verbose ( "NANOS++ statistics");
-   verbose ( std::dec << (unsigned int) getCreatedTasks() << " tasks has been executed" );
+   verbose ( std::dec << (unsigned int) getCreatedTasks() << " tasks have been executed" );
+   verbose ( std::dec << (unsigned int) getInitializationErrors() << " tasks could not be initialized (backup failed)" );
+   verbose ( std::dec << (unsigned int) getExecutionErrors() << " task executions failed" );
+   verbose ( std::dec << (unsigned int) getRecoveredTasks() << " tasks have been reexecuted" );
+   verbose ( std::dec << (unsigned int) getDiscardedTasks() << " tasks have been discarded (initialization, parent or sibling(s) failed" );
 
    sys.getNetwork()->nodeBarrier();
 

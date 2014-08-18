@@ -30,7 +30,8 @@
 #include <set>
 #include <fstream>
 #include "wddeque_decl.hpp"
-#include "taskexecutionexception_decl.hpp"
+
+#include "taskexecutionexception.hpp"
 
 namespace nanos
 {

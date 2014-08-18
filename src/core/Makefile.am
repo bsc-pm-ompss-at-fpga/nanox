@@ -127,8 +127,6 @@ devinclude_HEADERS = \
 	basedependency_fwd.hpp \
 	basedependency_decl.hpp \
 	graphentry_decl.hpp \
-	taskexecutionexception_decl.hpp \
-	taskexecutionexception.hpp \
 	trackableobject_fwd.hpp \
 	trackableobject_decl.hpp \
 	trackableobject.hpp \
@@ -260,8 +258,9 @@ common_sources=\
 	basedependency_fwd.hpp \
 	basedependency_decl.hpp \
 	graphentry_decl.hpp \
-	taskexecutionexception_decl.hpp \
+	taskexecutionexception_fwd.hpp \
 	taskexecutionexception.hpp \
+	taskexecutionexception.cpp \
 	backupmanager.hpp \
 	backupmanager.cpp \
 	hwloc_decl.hpp \

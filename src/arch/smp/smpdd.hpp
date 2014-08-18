@@ -95,13 +95,19 @@ namespace ext
             void execute ( WD &wd ) throw();
 
 #ifdef NANOS_RESILIENCY_ENABLED
-            bool recover ( TaskExecutionException& err );
+            /*! \brief Recovers the system from an error.
+             * When a task fails due to a system problem, recover function tries to
+             * circumvent the cause of the error and to establish a workaround, so the
+             * execution can continue (e.g. use a different memory page if we find one
+             * corrupted/invalid.
+             */
+            virtual bool recover ( TaskExecutionException const& err );
 
             /*! \brief Restores the workdescriptor to its original state.
              * Leaving the recovery dependent to the arch allows more
              * accurate recovery for each kind of device.
              */
-            void restore ( WD& wd );
+            virtual void restore ( WD& wd );
 #endif
    };
 

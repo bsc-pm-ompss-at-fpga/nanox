@@ -42,7 +42,7 @@ nanos::vm::MPoisonManager *nanos::vm::getMPoisonManager() {
 
 void *nanos::vm::mpoison_run(void *arg)
 {
-   useconds_t *delay_start = (useconds_t*) arg;
+   long *delay_start = (long*) arg;
    usleep( *delay_start );
 
    while( run ) {
@@ -69,13 +69,13 @@ int mpoison_unblock_page( uintptr_t page_addr ) {
    return mp_mgr->unblockPage(page_addr);
 }
 
-void mpoison_delay_start ( useconds_t *useconds ) {
+void mpoison_delay_start ( long *useconds ) {
    debug("Resiliency: MPoison: Creating mpoison thread");
    pthread_create(&tid, NULL, nanos::vm::mpoison_run, (void*)useconds);
 }
 
 void mpoison_start ( ) {
-   static useconds_t delay = 0;
+   static long delay = 0;
    mpoison_delay_start(&delay);
 }
 

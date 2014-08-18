@@ -123,38 +123,16 @@ void SMPDD::execute ( WD &wd ) throw ()
        *  skip data copies of dependences.
        */
       wd.setInvalid(true);
-      debug ( "Resiliency: Task " << wd.getId() << " is flagged as invalid.");
+      debug ( "Resiliency: Task " << wd.getId() << " is flagged as invalid. Skipping it.");
+
+      sys.getExceptionStats().incrDiscardedTasks();
    } else {
       while (true) {
          try {
             // Call to the user function
             getWorkFct()( wd.getData() );
-         } catch (TaskExecutionException& e) {
-            /*
-             * When a signal handler is executing, the delivery of the same signal
-             * is blocked, and it does not become unblocked until the handler returns.
-             * In this case, it will not become unblocked since the handler is exited
-             * through an exception: it should be explicitly unblocked.
-             */
-            sigset_t sigs;
-            sigemptyset(&sigs);
-            sigaddset(&sigs, e.getSignal());
-            pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
-
-            if(!wd.setInvalid(true)) { // If the error isn't recoverable (i.e., no recoverable ancestor exists)
-               message(e.what());
-               // Unrecoverable error: terminate execution
-               std::terminate();
-            } else { // The error is recoverable. However, print a message for debugging purposes (do not make the error silent).
-               debug("Resiliency: Trying to recover the system from the error.");
-               //debug( e.what() );
-               // Try to recover the system from the failure (so we can continue with the execution)
-               if(!recover( e )) {// If we couldn't recover the system, we can't go on with the execution
-                  message("Resiliency: Unrecoverable error found. " << e.what());
-                  // Unrecoverable error: terminate execution
-                  std::terminate();
-               }
-            }
+         } catch (nanos::TaskExecutionException& e) {
+            e.handle();
          } catch (std::exception& e) {
             std::string s = "Error: Uncaught exception ";
             s += typeid(e).name();
@@ -162,19 +140,17 @@ void SMPDD::execute ( WD &wd ) throw ()
             s += wd.getId();
             s += ". \n";
             s += e.what();
-            message(s);
             // Unexpected error: terminate execution
-            std::terminate();
+            fatal(s);
          } catch (...) {
-            message("Error: Uncaught exception (unknown type). Thrown in task " << wd.getId() << ". ");
             // Unexpected error: terminate execution
-            std::terminate();
+            fatal("Error: Uncaught exception (unknown type). Thrown in task " << wd.getId() << ". ");
          }
          // Only retry when ...
          retry = wd.isInvalid()// ... the execution failed,
-         && wd.isRecoverable()// and the task is able to recover (pragma),
+         && wd.isRecoverable()//  ... the task is able to recover (pragma)
          && (wd.getParent() == NULL || !wd.getParent()->isInvalid())// and there is not an invalid parent.
-         && num_tries < sys.getTaskMaxRetries();// This last condition avoids unbounded re-execution.
+         && num_tries < sys.getTaskMaxRetries();// This last condition avoids unlimited re-execution.
 
          if (!retry)
          break;
@@ -182,6 +158,8 @@ void SMPDD::execute ( WD &wd ) throw ()
          // This is exceuted only on re-execution
          num_tries++;
          restore(wd);
+
+         sys.getExceptionStats().incrRecoveredTasks();
       }
    }
 #else
@@ -191,7 +169,9 @@ void SMPDD::execute ( WD &wd ) throw ()
 }
 
 #ifdef NANOS_RESILIENCY_ENABLED
-bool SMPDD::recover( TaskExecutionException& err ) {
+bool SMPDD::recover( TaskExecutionException const& err ) {
+   bool result = true;
+
    static size_t page_size = sysconf(_SC_PAGESIZE);
 
    // Recover system from failures
@@ -201,7 +181,7 @@ bool SMPDD::recover( TaskExecutionException& err ) {
          switch(err.getSignalInfo().si_code) {
             case SEGV_MAPERR: /* Address not mapped to object.  */
                debug("Resiliency: SEGV_MAPERR error recovery is still not supported.")
-               break;
+               break;// case SEGV_MAPERR
             case SEGV_ACCERR: /* Invalid permissions for mapped object.  */
                bool restored = false;
                uintptr_t page_addr = (uintptr_t)err.getSignalInfo().si_addr;
@@ -210,29 +190,26 @@ bool SMPDD::recover( TaskExecutionException& err ) {
 #ifdef HAVE_CXX11
                if( sys.isPoisoningEnabled() ) {
 
-                  if( mpoison_unblock_page(page_addr) == 0 )
-                     restored = true;
-                  else
-                     restored = false;
-               } else
-                 restored = true;// It makes no sense to mprotect a faulting page to make it useful again.
-#else
-               restored = true;
-#endif
-               if( restored ) {
-                  debug("Resiliency: Page restored! Address: 0x" << std::hex << page_addr);
-                  return true;
+                  if( mpoison_unblock_page(page_addr) == 0 ) {
+                     debug("Resiliency: Page restored! Address: 0x" << std::hex << page_addr);
+                     result = true;
+                  } else {
+                     debug("Resiliency: Error while restoring page. Address: 0x" << std::hex << page_addr);
+                     result = false;
+                  }
                } else {
-                  debug("Resiliency: Error while restoring page. Address: 0x" << std::hex << page_addr);
-                  return false;
+                 result = false;// TODO Page unimplemented for real errors (not simulations)
                }
-               break;
+#else
+               result = false;
+#endif
+               break;// case SEGV_ACCERR
          }
          break;
       default:
          break;
    }
-   return true;
+   return result;
 }
 
 

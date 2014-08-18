@@ -161,6 +161,22 @@ namespace nanos
 
          virtual DeviceData *clone () const = 0;
 
+#ifdef NANOS_RESILIENCY_ENABLED
+            /*! \brief Recovers the system from an error.
+            * When a task fails due to a system problem, recover function tries to
+            * circumvent the cause of the error and to establish a workaround, so the
+            * execution can continue (e.g. use a different memory page if we find one
+            * corrupted/invalid.
+            */
+            virtual bool recover ( TaskExecutionException const& err ) { return false; }
+
+            /*! \brief Restores the workdescriptor to its original state.
+             * Leaving the recovery dependent to the arch allows more
+             * accurate recovery for each kind of device.
+             */
+            virtual void restore ( WD& wd ) { return false; }
+#endif
+
     };
 
 /*! \brief This class identifies a single unit of work

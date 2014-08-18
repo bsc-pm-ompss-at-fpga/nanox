@@ -18,182 +18,111 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.  */
 /**************************************************************************/
 
-#ifndef _NANOS_TASKEXECUTIONEXCEPTION
-#define _NANOS_TASKEXECUTIONEXCEPTION
+#ifndef _NANOS_TASKEXECUTIONEXCEPTION_H
+#define _NANOS_TASKEXECUTIONEXCEPTION_H
 
-#include "taskexecutionexception_decl.hpp"
+#include "taskexecutionexception_fwd.hpp"
+
+#include "workdescriptor_fwd.hpp"
+#include <exception>
+#include <signal.h>
+#include <ucontext.h>
+
+#include "atomic_decl.hpp"
 #include "xstring.hpp"
 
 namespace nanos {
-TaskExecutionException::TaskExecutionException (
-      WD const *task_wd, siginfo_t const &info,
-      ucontext_t const &context ) throw () :
-      task(task_wd), signal_info(info), task_context(context)
-{
-   std::stringstream ss;
-   ss << "Signal raised during the execution of task "
-      << task_wd->getId() 
-      << std::endl;
+   class TaskExceptionStats
+   {
+      private:
+         Atomic<int> _errors_in_execution;
+         Atomic<int> _errors_in_initialization;
+         Atomic<int> _recovered_tasks;
+         Atomic<int> _discarded_tasks;
 
-   const char* sig_desc;
-   if (signal_info.si_signo >= 0 && signal_info.si_signo < NSIG && (sig_desc =
-         _sys_siglist[signal_info.si_signo]) != NULL) {
+         TaskExceptionStats ( TaskExceptionStats &tes );
 
-      ss << sig_desc;
-      switch (signal_info.si_signo) {
-         // Check {glibc_include_path}/bits/{siginfo.h, signum.h}
-         case SIGILL:
-            switch (signal_info.si_code) {
-               case ILL_ILLOPC:
-                  ss << " Illegal opcode.";
-                  break;
-               case ILL_ILLOPN:
-                  ss << " Illegal operand.";
-                  break;
-               case ILL_ILLADR:
-                  ss << " Illegal addressing mode.";
-                  break;
-               case ILL_ILLTRP:
-                  ss << " Illegal trap.";
-                  break;
-               case ILL_PRVOPC:
-                  ss << " Privileged opcode.";
-                  break;
-               case ILL_PRVREG:
-                  ss << " Privileged register.";
-                  break;
-               case ILL_COPROC:
-                  ss << " Coprocessor error.";
-                  break;
-               case ILL_BADSTK:
-                  ss << " Internal stack error.";
-                  break;
-            }
+         TaskExceptionStats& operator= ( TaskExceptionStats &tes );
 
-            break;
-         case SIGFPE:
-            switch (signal_info.si_code) {
+      public:
+         TaskExceptionStats () : _errors_in_execution(0), _errors_in_initialization(0), _recovered_tasks(0), _discarded_tasks(0) {}
 
-               case FPE_INTDIV:
-                  ss << " Integer divide by zero.";
-                  break;
-               case FPE_INTOVF:
-                  ss << " Integer overflow.";
-                  break;
-               case FPE_FLTDIV:
-                  ss << " Floating-point divide by zero.";
-                  break;
-               case FPE_FLTOVF:
-                  ss << " Floating-point overflow.";
-                  break;
-               case FPE_FLTUND:
-                  ss << " Floating-point underflow.";
-                  break;
-               case FPE_FLTRES:
-                  ss << " Floating-poing inexact result.";
-                  break;
-               case FPE_FLTINV:
-                  ss << " Invalid floating-point operation.";
-                  break;
-               case FPE_FLTSUB:
-                  ss << " Subscript out of range.";
-                  break;
-            }
-            break;
-         case SIGSEGV:
-            switch (signal_info.si_code) {
+         ~TaskExceptionStats () {}
 
-               case SEGV_MAPERR:
-                  ss << " Address not mapped to object.";
-                  break;
-               case SEGV_ACCERR:
-                  ss << " Invalid permissions for mapped object.";
-                  break;
-            }
-            break;
-         case SIGBUS:
-            switch (signal_info.si_code) {
+         int getExecutionErrors() const { return _errors_in_execution.value(); }
+         void incrExecutionErrors() { _errors_in_execution++; }
 
-               case BUS_ADRALN:
-                  ss << " Invalid address alignment.";
-                  break;
-               case BUS_ADRERR:
-                  ss << " Nonexisting physical address.";
-                  break;
-               case BUS_OBJERR:
-                  ss << " Object-specific hardware error.";
-                  break;
-#ifdef BUS_MCEERR_AR
-                  case BUS_MCEERR_AR: //(since Linux 2.6.32)
-                  ss << " Hardware memory error consumed on a machine check; action required.";
-                  break;
-#endif
-#ifdef BUS_MCEERR_AO
-                  case BUS_MCEERR_AO: //(since Linux 2.6.32)
-                  ss << " Hardware memory error detected in process but not consumed; action optional.";
-                  break;
-#endif
-            }
-            break;
-         case SIGTRAP:
-            switch (signal_info.si_code) {
+         int getInitializationErrors() const { return _errors_in_initialization.value(); }
+         void incrInitializationErrors() { _errors_in_initialization++; }
 
-               case TRAP_BRKPT:
-                  ss << " Process breakpoint.";
-                  break;
-               case TRAP_TRACE:
-                  ss << " Process trace trap.";
-                  break;
-            }
-            break;
+         int getRecoveredTasks() const { return _recovered_tasks.value(); }
+         void incrRecoveredTasks() { _recovered_tasks++; }
 
-            //default:
-            /*
-             * note #1: since this exception is going to be thrown by the signal handler
-             * only synchronous signals information will be printed, as the remaining
-             * are unsupported by -fnon-call-exceptions
-             */
-      }
-   } else {
-      /*
-       * See note #1
-       */
-      ss << " Unsupported signal (" << signal_info.si_signo << " )";
-   }
-   error_msg = ss.str();
-}
+         int getDiscardedTasks() const { return _discarded_tasks.value(); }
+         void incrDiscardedTasks() { _discarded_tasks++; }
+   };
 
-TaskExecutionException::TaskExecutionException (
-      TaskExecutionException const &tee ) throw () :
-      error_msg(tee.error_msg), task(tee.task), signal_info(tee.signal_info), task_context(
-            tee.task_context)
-{
-
-}
-
-TaskExecutionException::~TaskExecutionException ( ) throw ()
-{
-   /*
-    * Note that this destructor does not delete the WorkDescriptor object pointed by 'task'.
-    * This is because that object's life does not finish at this point and,
-    * thus, it will be accessed later.
+   /*!
+    * \class TaskExecutionException
+    * \brief Contains usefull information about a runtime error generated in a task execution.
     */
+   class TaskExecutionException: public std::exception
+   {
+      private:
+         std::string error_msg; /*!< Description of the error that created this exception */
+         WD* task;/*!< Pointer to the affected task */
+         const siginfo_t signal_info;/*!< Detailed description after the member */
+         const ucontext_t task_context;/*!< Detailed description after the member */
+
+      public:
+         /*!
+          * Constructor for class TaskExecutionException
+          * \param task a pointer to the task where the error appeared
+          * \param info information about the signal raised
+          * \param context contains the state of execution when the error appeared
+          */
+         TaskExecutionException ( WD *t, siginfo_t const &info,
+                                  ucontext_t const &context ) throw ();
+
+         /*!
+          * Copy constructor for class TaskExecutionException
+          */
+         TaskExecutionException ( TaskExecutionException const &tee ) throw ();
+
+         /*!
+          * Destructor for class TaskExecutionException
+          */
+         virtual ~TaskExecutionException ( ) throw ();
+
+         /*!
+          * Returns some information about the error in text format.
+          */
+         virtual const char* what ( ) const throw () { return error_msg.c_str(); };
+
+         /*!
+          * \return a pointer to the affected WorkDescriptor.
+          */
+         const WD* getFailedTask ( ) const;
+
+         /*!
+          * \return the raised signal number
+          */
+         int getSignal ( ) const;
+
+         /*!
+          * \return the structure containing the signal information.
+          * \see siginfo_t
+          */
+         const siginfo_t getSignalInfo ( ) const;
+
+         /*!
+          * \return the structure conteining the execution status when the error appeared
+          * \see ucontext_t
+          */
+         const ucontext_t getExceptionContext ( ) const;
+
+         void handle ( ) const;
+   };
 }
 
-inline int TaskExecutionException::getSignal ( )
-{
-   return signal_info.si_signo;
-}
-
-inline const siginfo_t TaskExecutionException::getSignalInfo ( ) const
-{
-   return signal_info;
-}
-
-inline const ucontext_t TaskExecutionException::getExceptionContext ( ) const
-{
-   return task_context;
-}
-}
-
-#endif /* _NANOS_TASKEXECUTIONEXCEPTION */
+#endif /* _NANOS_TASKEXECUTIONEXCEPTION_H */

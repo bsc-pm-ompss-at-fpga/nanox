@@ -19,6 +19,8 @@
 
 #include "backupmanager.hpp"
 #include "deviceops.hpp"
+#include "taskexecutionexception.hpp"
+#include <signal.h>
 #include <sys/mman.h>
 
 BackupManager::BackupManager ( ) :
@@ -80,7 +82,11 @@ void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
 {
    // Called on backup operations
    ops->addOp();
-   memcpy((void*) devAddr, (void*) hostAddr, len);
+   try {
+      memcpy((void*) devAddr, (void*) hostAddr, len);
+   } catch ( TaskExecutionException &e ) {
+      e.handle( );
+   }
    ops->completeOp();
 }
 
@@ -92,7 +98,12 @@ void BackupManager::_copyOut ( uint64_t hostAddr, uint64_t devAddr,
 {
    // This is called on restore operations
    ops->addOp();
-   memcpy((void*) hostAddr, (void*) devAddr, len);
+   try {
+      memcpy((void*) hostAddr, (void*) devAddr, len);
+   } catch ( TaskExecutionException &e ) {
+      e.handle( );
+   }
+
    ops->completeOp();
 }
 
@@ -122,12 +133,14 @@ void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
    char* deviceAddresses = (char*) devAddr;
 
    ops->addOp();
-
-   for (unsigned int i = 0; i < numChunks; i += 1) {
-      memcpy(&deviceAddresses[i * ld], &hostAddresses[i * ld], len);
+   try {
+      for (unsigned int i = 0; i < numChunks; i += 1) {
+         memcpy(&deviceAddresses[i * ld], &hostAddresses[i * ld], len);
+      }
+   } catch ( TaskExecutionException &e ) {
+      e.handle( );
    }
    ops->completeOp();
-
 }
 
 void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
@@ -142,9 +155,12 @@ void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
    char* deviceAddresses = (char*) devAddr;
 
    ops->addOp();
-
-   for (unsigned int i = 0; i < numChunks; i += 1) {
-      memcpy(&hostAddresses[i * ld], &deviceAddresses[i * ld], len);
+   try {
+      for (unsigned int i = 0; i < numChunks; i += 1) {
+         memcpy(&hostAddresses[i * ld], &deviceAddresses[i * ld], len);
+      }
+   } catch ( TaskExecutionException &e ) {
+      e.handle( );
    }
    ops->completeOp();
 }

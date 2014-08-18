@@ -38,6 +38,10 @@
 #include <config.h>
 #endif
 
+#ifdef NANOS_RESILIENCY_ENABLED
+#include "taskexecutionexception.hpp"
+#endif
+
 using namespace nanos;
 
 // methods to access configuration variable         
@@ -517,6 +521,16 @@ inline bool System::isResiliencyEnabled() const { return !_resiliency_disabled; 
 inline unsigned System::getTaskMaxRetries() const { return _task_max_retries; }
 
 inline size_t System::getBackupPoolSize() const { return _backup_pool_size; }
+
+inline int System::getExecutionErrors() const { return _resiliencyStats.getExecutionErrors(); }
+
+inline int System::getInitializationErrors() const { return _resiliencyStats.getInitializationErrors(); }
+
+inline int System::getRecoveredTasks() const { return _resiliencyStats.getRecoveredTasks(); }
+
+inline int System::getDiscardedTasks() const { return _resiliencyStats.getDiscardedTasks(); }
+
+inline TaskExceptionStats& System::getExceptionStats() { return _resiliencyStats; }
 #ifdef HAVE_CXX11
 inline bool System::isPoisoningEnabled() const { return _memory_poison_enabled; }
 
