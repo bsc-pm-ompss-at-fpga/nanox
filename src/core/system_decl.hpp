@@ -272,13 +272,13 @@ namespace nanos
       private:
          PE * createPE ( std::string pe_type, int pid, int uid );
 
+      public:
          //* \brief Prints the Environment Summary (resources, plugins, prog. model, etc.) before the execution
          void environmentSummary( void );
 
          //* \brief Prints the Execution Summary (time, completed tasks, etc.) at the end of the execution
          void executionSummary( void );
 
-      public:
          /*! \brief System default constructor
           */
          System ();
@@ -370,6 +370,8 @@ namespace nanos
 
          int nextThreadId ();
          unsigned int nextPEId ();
+
+         bool summaryEnabled() const;
 
          /*!
           * \brief Returns whether DLB is enabled or not

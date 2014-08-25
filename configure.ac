@@ -1108,7 +1108,6 @@ AC_ARG_ENABLE([resiliency],
   AS_HELP_STRING([--disable-resiliency], [Disables task-level resiliency]),
   [
     resiliency=no
-    AC_MSG_RESULT([no])
   ],
   [
     AC_MSG_RESULT([yes])
@@ -1119,7 +1118,13 @@ AC_ARG_ENABLE([resiliency],
     fi
 
     # Compiler support for C++ 2011 standard
-    AX_CXX_COMPILE_STDCXX_11([noext],[optional])
+    AX_CXX_COMPILE_STDCXX_11([noext],[optional],
+        [
+            cxx11=yes
+        ],
+        [
+            cxx11=no
+        ])
 
     if test "x$use_boost" != "xyes";
     then
@@ -1128,9 +1133,12 @@ AC_ARG_ENABLE([resiliency],
     fi
   ]
 )
-
+# Conditional compilation of mpoison
+AC_SUBST([HAVE_CXX11])
+AM_CONDITIONAL([HAVE_CXX11],[test "x$resiliency$cxx11" = "xyesyes"])
+# for test generator
+AC_SUBST([resiliency])
 AM_CONDITIONAL([RESILIENCY], [test "x$resiliency" = "xyes"])
-AC_SUBST([resiliency]) # for test generator
 
 # Output files
 AC_CONFIG_HEADERS([config.h])

@@ -509,6 +509,8 @@ inline unsigned int System::nextPEId () { return _peIdSeed++; }
 
 inline Lock * System::getLockAddress ( void *addr ) const { return &_lockPool[((((uintptr_t)addr)>>8)%_lockPoolSize)];} ;
 
+inline bool System::summaryEnabled() const { return _summary; }
+
 inline bool System::dlbEnabled() const { return _enableDLB; }
 
 inline bool System::haveDependencePendantWrites ( void *addr ) const

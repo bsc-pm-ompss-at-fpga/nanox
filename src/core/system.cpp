@@ -676,11 +676,12 @@ void System::finish ()
 
    verbose ( "NANOS++ statistics");
    verbose ( std::dec << (unsigned int) getCreatedTasks() << " tasks have been executed" );
+#ifdef NANOS_RESILIENCY_ENABLED
    verbose ( std::dec << (unsigned int) getInitializationErrors() << " tasks could not be initialized (backup failed)" );
    verbose ( std::dec << (unsigned int) getExecutionErrors() << " task executions failed" );
    verbose ( std::dec << (unsigned int) getRecoveredTasks() << " tasks have been reexecuted" );
    verbose ( std::dec << (unsigned int) getDiscardedTasks() << " tasks have been discarded (initialization, parent or sibling(s) failed" );
-
+#endif // NANOS_RESILIENCY_ENABLED
    sys.getNetwork()->nodeBarrier();
 
    for ( unsigned int nodeCount = 0; nodeCount < sys.getNetwork()->getNumNodes(); nodeCount += 1 ) {
@@ -1445,10 +1446,16 @@ void System::environmentSummary( void )
 void System::executionSummary( void )
 {
    time_t seconds = time(NULL) -_summaryStartTime;
-   message0( "============ Nanos++ Final Execution Summary ============" );
+   message0( "============ Nanos++ Final Execution Summary ==================" );
    message0( "=== Application ended in " << seconds << " seconds" );
-   message0( "=== " << getCreatedTasks() << " tasks have been executed" );
-   message0( "=========================================================" );
+   message0( "=== " << getCreatedTasks()            << " tasks have been executed" );
+#ifdef NANOS_RESILIENCY_ENABLED
+   message0( "=== " << getInitializationErrors()    << " tasks could not be initialized (backup failed)" );
+   message0( "=== " << getExecutionErrors()         << " task executions failed" );
+   message0( "=== " << getRecoveredTasks()          << " tasks have been reexecuted" );
+   message0( "=== " << getDiscardedTasks()          << " tasks have been discarded (initialization, parent or sibling(s) failed" );
+#endif // NANOS_RESILIENCY_ENABLED
+   message0( "===============================================================" );
 }
 
 //If someone needs argc and argv, it may be possible, but then a fortran 

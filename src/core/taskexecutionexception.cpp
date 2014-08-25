@@ -230,20 +230,20 @@ void TaskExecutionException::handle ( ) const
 
    if( !recoverable_error )  
    {
-       message("An error was found, but there isn't any recoverable ancestor.");
-       message( what() );
-       // Unrecoverable error: terminate execution
-       std::terminate();
+      if( sys.summaryEnabled() )
+         sys.executionSummary();
+      // Unrecoverable error: terminate execution
+      fatal("An error was found, but there isn't any recoverable ancestor." << std::endl << what());
    } else {
       debug( what() );
    }
 
    // Try to recover the system from the failure (so we can continue with the execution)
    if(!task->getActiveDevice().recover( *this )) {
+      if( sys.summaryEnabled() )
+         sys.executionSummary();
       // If we couldn't recover the system, we can't go on with the execution
-      message("Resiliency: Unrecoverable error found. ");
-      message( what() );
-      std::terminate();
+      fatal("Resiliency: Unrecoverable error found." << std::endl << what());
    }
 }
 

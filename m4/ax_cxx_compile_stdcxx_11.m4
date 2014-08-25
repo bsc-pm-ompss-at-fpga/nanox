@@ -4,7 +4,7 @@
 #
 # SYNOPSIS
 #
-#   AX_CXX_COMPILE_STDCXX_11([ext|noext],[mandatory|optional])
+#   AX_CXX_COMPILE_STDCXX_11([ext|noext],[mandatory|optional],[ACTION-IF-FOUND],[ACTION-IF-NOT-FOUND])
 #
 # DESCRIPTION
 #
@@ -137,14 +137,16 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX_11], [dnl
     if test x$ac_success = xno; then
       HAVE_CXX11=0
       AC_MSG_NOTICE([No compiler with C++11 support was found])
+      # execute ACTION-IF-NOT-FOUND (if present):
+      ifelse([$4], , :, [$4])
     else
       HAVE_CXX11=1
       AC_DEFINE(HAVE_CXX11,1,
                 [define if the compiler supports basic C++11 syntax])
+      # execute ACTION-IF-FOUND (if present):
+      ifelse([$3], , :, [$3])
     fi
 
     AC_SUBST(HAVE_CXX11)
   fi
-# Conditional compilation of mpoison
-  AM_CONDITIONAL([HAVE_CXX11],[test "x$HAVE_CXX11" = "x1"])
 ])

@@ -184,8 +184,7 @@ void MemController::preInit ( )
          }
       }
    }
-//#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
-
+#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
    if (sys.isResiliencyEnabled() && _wd.isRecoverable()) {
       _backupCacheCopies = NEW MemCacheCopy[_wd.getNumCopies()];
 
@@ -202,7 +201,7 @@ void MemController::preInit ( )
          _backupCacheCopies[index]._locationDataReady = true;
       }
    }
-//#endif
+#endif
    if ( _VERBOSE_CACHE ) { 
       *(myThread->_file)
             << " (preinit)END OF INITIALIZING MEMCONTROLLER for WD "

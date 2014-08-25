@@ -41,6 +41,9 @@
 #include "dependenciesdomain_decl.hpp"
 #include "simpleallocator_decl.hpp"
 
+#include "taskexecutionexception_fwd.hpp"
+#include "debug.hpp"
+
 namespace nanos
 {
 
@@ -168,13 +171,18 @@ namespace nanos
             * execution can continue (e.g. use a different memory page if we find one
             * corrupted/invalid.
             */
-            virtual bool recover ( TaskExecutionException const& err ) { return false; }
+            virtual bool recover ( TaskExecutionException const& err ) {
+               fatal0(__PRETTY_FUNCTION__ << "is not implemented."); 
+               return false;
+            }
 
             /*! \brief Restores the workdescriptor to its original state.
              * Leaving the recovery dependent to the arch allows more
              * accurate recovery for each kind of device.
              */
-            virtual void restore ( WD& wd ) { return false; }
+            virtual void restore ( WD& wd ) {
+               fatal0(__PRETTY_FUNCTION__ << "is not implemented."); 
+            }
 #endif
 
     };

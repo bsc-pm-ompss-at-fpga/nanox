@@ -258,16 +258,22 @@ common_sources=\
 	basedependency_fwd.hpp \
 	basedependency_decl.hpp \
 	graphentry_decl.hpp \
+	hwloc_decl.hpp \
+	hwloc.cpp \
+	regionset_decl.hpp \
+	regionset.cpp
+if RESILIENCY
+common_sources+=\
 	taskexecutionexception_fwd.hpp \
 	taskexecutionexception.hpp \
 	taskexecutionexception.cpp \
 	backupmanager.hpp \
 	backupmanager.cpp \
-	hwloc_decl.hpp \
-	hwloc.cpp \
-	regionset_decl.hpp \
-	regionset.cpp \
-	$(END)
+        $(END)
+else
+common_sources+=\
+        $(END)
+endif
 
 instr_sources = \
 	instrumentation.cpp \
