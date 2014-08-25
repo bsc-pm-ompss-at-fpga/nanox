@@ -183,7 +183,6 @@ bool SMPDD::recover( TaskExecutionException const& err ) {
                debug("Resiliency: SEGV_MAPERR error recovery is still not supported.")
                break;// case SEGV_MAPERR
             case SEGV_ACCERR: /* Invalid permissions for mapped object.  */
-               bool restored = false;
                uintptr_t page_addr = (uintptr_t)err.getSignalInfo().si_addr;
                // Align faulting address with virtual page address
                page_addr &= ~(page_size - 1);

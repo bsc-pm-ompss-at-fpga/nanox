@@ -1107,6 +1107,7 @@ AC_MSG_CHECKING([if task resiliency is enabled])
 AC_ARG_ENABLE([resiliency],
   AS_HELP_STRING([--disable-resiliency], [Disables task-level resiliency]),
   [
+    AC_MSG_RESULT([no])
     resiliency=no
   ],
   [
@@ -1121,6 +1122,7 @@ AC_ARG_ENABLE([resiliency],
     AX_CXX_COMPILE_STDCXX_11([noext],[optional],
         [
             cxx11=yes
+            HAVE_CXX11=1
         ],
         [
             cxx11=no
@@ -1131,10 +1133,15 @@ AC_ARG_ENABLE([resiliency],
         AC_MSG_ERROR([resiliency mechanism requires Boost C++ library])
         resiliency=no
     fi
+
+    if test "x$cxx11" = "xno";
+    then
+        AC_MSG_NOTICE([C++11 compiler support not found. User will not be able to use fault injection module.])
+    fi
   ]
 )
 # Conditional compilation of mpoison
-AC_SUBST([HAVE_CXX11])
+AC_SUBST([cxx11])
 AM_CONDITIONAL([HAVE_CXX11],[test "x$resiliency$cxx11" = "xyesyes"])
 # for test generator
 AC_SUBST([resiliency])
