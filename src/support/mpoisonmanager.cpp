@@ -83,9 +83,9 @@ void MPoisonManager::clearAllocations( )
    std::set<uintptr_t>::iterator it;
    for( it = blocked_pages.begin(); it != blocked_pages.end(); it++ ) {
       uintptr_t addr = *it;
-      blocked_pages.erase(it);
       mprotect( (void*)addr, page_size, PROT_READ | PROT_WRITE );
    }
+   blocked_pages.clear();
 }
 
 uintptr_t MPoisonManager::getRandomPage(){
