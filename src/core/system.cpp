@@ -65,10 +65,10 @@
 
 #ifdef NANOS_RESILIENCY_ENABLED
 #include "backupmanager.hpp"
-
-#ifdef HAVE_CXX11
-#include "mpoison.h"
 #endif
+
+#ifdef NANOS_FAULT_INJECTION
+#include "mpoison.h"
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -105,11 +105,11 @@ System::System () :
       , _resiliency_disabled(false)
       , _task_max_retries(1)
       , _backup_pool_size(0)
-#ifdef HAVE_CXX11
+#endif
+#ifdef NANOS_FAULT_INJECTION
       , _memory_poison_enabled(false)
       , _memory_poison_seed(time(0))
       , _memory_poison_rate(1000000)
-#endif
 #endif
       , _atomicSeedMemorySpace( 1 ), _affinityFailureCount( 0 )
       , _createLocalTasks( false )
@@ -393,7 +393,8 @@ void System::config ()
    cfg.registerArgOption("backup_pool_size", "backup-pool-size");
    cfg.registerEnvOption("backup_pool_size", "NX_BACKUP_POOL_SIZE");
 
-#ifdef HAVE_CXX11
+#endif
+#ifdef NANOS_FAULT_INJECTION
    cfg.registerConfigOption("memory_poisoning",
          NEW Config::FlagOption(_memory_poison_enabled, true),
          "Enables random memory page poisoning (resiliency testing)");
@@ -411,7 +412,6 @@ void System::config ()
          "Memory poisoning rate (time in micro seconds between two faults). Default: '1s')");
    cfg.registerArgOption("mp_rate", "mpoison-rate");
    cfg.registerEnvOption("mp_rate", "NX_MPOISON_RATE");
-#endif
 #endif
 
    cfg.registerConfigOption ( "verbose-devops", NEW Config::FlagOption ( _verboseDevOps, true ), "Verbose cache ops" );
@@ -543,13 +543,13 @@ void System::start ()
 
       // Setup signal handlers
       myThread->setupSignalHandlers();
-
-#ifdef HAVE_CXX11
-      if(sys.isPoisoningEnabled()){
-         debug0("Resiliency: Mpoison random seed: " << sys.getMPoisonSeed() );
-         debug0("Resiliency: Mpoison rate set to: " << sys.getMPoisonRate() << " us");
-      }
+   }
 #endif
+
+#ifdef NANOS_FAULT_INJECTION
+   if(sys.isPoisoningEnabled()){
+      debug0("Resiliency: Mpoison random seed: " << sys.getMPoisonSeed() );
+      debug0("Resiliency: Mpoison rate set to: " << sys.getMPoisonRate() << " us");
    }
 #endif
 

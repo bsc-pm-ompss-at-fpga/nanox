@@ -1105,47 +1105,61 @@ AX_BOOST_BASE([1.38],
 # Task-level resiliency support
 AC_MSG_CHECKING([if task resiliency is enabled])
 AC_ARG_ENABLE([resiliency],
-  AS_HELP_STRING([--disable-resiliency], [Disables task-level resiliency]),
   [
-    AC_MSG_RESULT([no])
-    resiliency=no
+    AS_HELP_STRING([--disable-resiliency], [Disables task-level resiliency])
   ],
   [
-    AC_MSG_RESULT([yes])
-    AX_CHECK_COMPILE_FLAG([-fnon-call-exceptions],[resiliency=yes],[resiliency=no],[-Werror])
-    if test "x$resiliency" != "xyes";
-    then
-        AC_MSG_ERROR([resiliency mechanism depends on using compiler flag -fnon-call-exceptions])
-    fi
+    resiliency=$enableval
+  ],
+  [
+    resiliency=yes
+  ])
+AC_MSG_RESULT([$resiliency])
 
-    # Compiler support for C++ 2011 standard
-    AX_CXX_COMPILE_STDCXX_11([noext],[optional],
-        [
-            cxx11=yes
-            HAVE_CXX11=1
+if test "x$resiliency" = "xyes"; then
+    AX_CHECK_COMPILE_FLAG([-fnon-call-exceptions],
+        [],#nothing to do if it pass the test
+        [#if not pass print error
+            AC_MSG_ERROR([resiliency mechanism depends on using compiler flag -fnon-call-exceptions])
         ],
-        [
-            cxx11=no
-        ])
+        [-Werror])#enable warnings as errors on compile test
 
     if test "x$use_boost" != "xyes";
     then
         AC_MSG_ERROR([resiliency mechanism requires Boost C++ library])
-        resiliency=no
     fi
+fi
 
-    if test "x$cxx11" = "xno";
-    then
-        AC_MSG_NOTICE([C++11 compiler support not found. User will not be able to use fault injection module.])
-    fi
-  ]
-)
-# Conditional compilation of mpoison
-AC_SUBST([cxx11])
-AM_CONDITIONAL([HAVE_CXX11],[test "x$resiliency$cxx11" = "xyesyes"])
-# for test generator
-AC_SUBST([resiliency])
+AC_SUBST([resiliency])#used for test generator
 AM_CONDITIONAL([RESILIENCY], [test "x$resiliency" = "xyes"])
+
+# Fault injection
+# Compiler support for C++ 2011 standard (required for fault injection)
+AX_CXX_COMPILE_STDCXX_11([noext],[optional],
+   [
+       cxx11=yes
+   ],
+   [
+       cxx11=no
+   ])
+
+AC_MSG_CHECKING([if fault injection is enabled])
+AC_ARG_ENABLE([fault-injection],
+   AS_HELP_STRING([--enable-fault-injection], [Enables page corruption injection module.]),
+   [
+      fault_injection=$enableval
+   ],
+   [
+      fault_injection=no
+   ])
+AC_MSG_RESULT([$fault_injection])
+if test "x$fault_injection" = "xyes"; then
+    if test "x$cxx11" = "xno"; then
+        AC_MSG_ERROR([C++11 compiler support is mandatory to enable page corruption injection module.])
+    fi
+    AC_DEFINE([NANOS_FAULT_INJECTION],[1],[Defined when page corruption injection module is enabled by the user.])
+fi
+AM_CONDITIONAL([fault_injection_enabled],[test "x$fault_injection" = "xyes"])
 
 # Output files
 AC_CONFIG_HEADERS([config.h])

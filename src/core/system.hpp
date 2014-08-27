@@ -533,13 +533,13 @@ inline int System::getRecoveredTasks() const { return _resiliencyStats.getRecove
 inline int System::getDiscardedTasks() const { return _resiliencyStats.getDiscardedTasks(); }
 
 inline TaskExceptionStats& System::getExceptionStats() { return _resiliencyStats; }
-#ifdef HAVE_CXX11
+#endif
+#ifdef NANOS_FAULT_INJECTION
 inline bool System::isPoisoningEnabled() const { return _memory_poison_enabled; }
 
 inline int System::getMPoisonSeed() const { return _memory_poison_seed; }
 
 inline useconds_t System::getMPoisonRate() const { return _memory_poison_rate; }
-#endif
 #endif
 
 inline void System::setSMPPlugin(SMPBasePlugin *p) {

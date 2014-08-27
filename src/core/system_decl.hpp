@@ -57,10 +57,8 @@
 #include <config.h>
 #endif
 
-#ifdef NANOS_RESILIENCY_ENABLED
-#ifdef HAVE_CXX11
+#ifdef NANOS_FAULT_INJECTION
 #include <unistd.h>
-#endif
 #endif
 
 namespace nanos
@@ -221,14 +219,14 @@ namespace nanos
          size_t                    _backup_pool_size;
          //! Keeps the count of the number of error events that appear during the execution
          TaskExceptionStats        _resiliencyStats;
-#ifdef HAVE_CXX11
+#endif
+#ifdef NANOS_FAULT_INJECTION
          //! Enables random memory page poisoning for resiliency testing.
          bool                      _memory_poison_enabled;
          //! Seed used for mpoison RNG
          int                       _memory_poison_seed;
          //! Time between page blocks in us.
          useconds_t                _memory_poison_rate;
-#endif
 #endif
 
          // disable copy constructor & assignment operation
@@ -418,8 +416,9 @@ namespace nanos
           * \brief Returns a reference to the object that keeps the count for task exception events.
           */
          TaskExceptionStats& getExceptionStats ( );
+#endif
 
-#ifdef HAVE_CXX11
+#ifdef NANOS_FAULT_INJECTION
          /*!
           * \brief Returns whether memory pages poisoning is enabled or not (used for testing).
           */
@@ -432,7 +431,6 @@ namespace nanos
           * \brief Returns the time between two page blocks in us.
           */
          useconds_t getMPoisonRate() const;
-#endif
 #endif
 
          // team related methods

@@ -31,7 +31,7 @@
 #include "taskexecutionexception.hpp"
 #include "memcontroller_decl.hpp"
 
-#ifdef HAVE_CXX11
+#ifdef NANOS_FAULT_INJECTION
 #include "mpoison.h"
 #endif
 #endif
