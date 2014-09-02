@@ -38,10 +38,6 @@
 #include <config.h>
 #endif
 
-#ifdef NANOS_RESILIENCY_ENABLED
-#include "taskexecutionexception.hpp"
-#endif
-
 using namespace nanos;
 
 // methods to access configuration variable         
@@ -66,6 +62,8 @@ inline System::ExecutionMode System::getExecutionMode () const { return _executi
 inline bool System::getVerbose () const { return _verboseMode; }
 
 inline void System::setVerbose ( bool value ) { _verboseMode = value; }
+
+inline bool System::isSummaryEnabled() const{ return _summary; }
 
 inline void System::setInitialMode ( System::InitialMode mode ) { _initialMode = mode; }
 
@@ -107,7 +105,7 @@ inline int System::getNumWorkers() const { return _workers.size(); }
 //
 inline int System::getVirtualNUMANode( int physicalNode ) const
 {
-   return _numaNodeMap[ physicalNode ];
+   return ( physicalNode < (int)_numaNodeMap.size() ) ? _numaNodeMap[ physicalNode ] : INT_MIN;
 }
 //
 //inline int System::getCurrentSocket() const { return _currentSocket; }
@@ -508,8 +506,6 @@ inline int System::nextThreadId () { return _threadIdSeed++; }
 inline unsigned int System::nextPEId () { return _peIdSeed++; }
 
 inline Lock * System::getLockAddress ( void *addr ) const { return &_lockPool[((((uintptr_t)addr)>>8)%_lockPoolSize)];} ;
-
-inline bool System::summaryEnabled() const { return _summary; }
 
 inline bool System::dlbEnabled() const { return _enableDLB; }
 
