@@ -25,6 +25,7 @@
 #include "smp_ult.hpp"
 #include "instrumentation.hpp"
 #include <string>
+#include <unistd.h>
 
 #ifdef NANOS_RESILIENCY_ENABLED
 #include <stdint.h>
@@ -186,7 +187,7 @@ bool SMPDD::recover( TaskExecutionException const& err ) {
                uintptr_t page_addr = (uintptr_t)err.getSignalInfo().si_addr;
                // Align faulting address with virtual page address
                page_addr &= ~(page_size - 1);
-#ifdef HAVE_CXX11
+#ifdef NANOS_FAULT_INJECTION
                if( sys.isPoisoningEnabled() ) {
 
                   if( mpoison_unblock_page(page_addr) == 0 ) {
