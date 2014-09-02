@@ -70,8 +70,10 @@ int mpoison_unblock_page( uintptr_t page_addr ) {
 }
 
 void mpoison_delay_start ( long *useconds ) {
-   debug("Resiliency: MPoison: Creating mpoison thread");
-   pthread_create(&tid, NULL, nanos::vm::mpoison_run, (void*)useconds);
+   if( sys.isPoisoningEnabled() ) {
+      debug("Resiliency: MPoison: Creating mpoison thread");
+      pthread_create(&tid, NULL, nanos::vm::mpoison_run, (void*)useconds);
+   }
 }
 
 void mpoison_start ( ) {
@@ -83,47 +85,58 @@ void mpoison_init ( )
 {
    using namespace nanos::vm;
 
-   mp_mgr = new MPoisonManager( sys.getMPoisonSeed());
+   if ( sys.isPoisoningEnabled() ) {
+      mp_mgr = new MPoisonManager( sys.getMPoisonSeed());
 
-   stop = false;
-   run = true;
+      stop = false;
+      run = true;
+   }
 }
 
 void
 mpoison_finalize ( )
 {
-   run = false;
-   void *ret;
-   pthread_join(tid, &ret);
+   if ( sys.isPoisoningEnabled() ) {
+      run = false;
+      void *ret;
 
-   delete mp_mgr;
+      if( tid == 0 ) {
+         pthread_join(tid, &ret);
+         delete mp_mgr;
+
+         tid = 0;
+         mp_mgr = NULL;
+      }
+   }
 }
 
 void mpoison_scan ()
 {
    using namespace nanos::vm;
 
-   std::string path;
+   if ( sys.isPoisoningEnabled() ) {
+      std::string path;
  
-   std::ifstream maps("/proc/self/maps");
-   if (!maps)
-     fatal("Mpoison: Can't open 'maps' file");
+      std::ifstream maps("/proc/self/maps");
+      if (!maps)
+        fatal("Mpoison: Can't open 'maps' file");
  
-   nanos::vm::VMEntry vme; // entry in maps file
-   while (maps >> vme)
-   {
-       // if a valid map entry was read...
-       vm::prot_t access = vme.getAccessRights();
-       if ( access.r && 
-            access.w && 
-           !access.x && //only look for the frame if is R+W, not X 
-           !vme.isSyscallArea()) 
-       {
-           uintptr_t addr = vme.getStart() & ~(page_size-1);
-           size_t region_size = vme.getEnd() - vme.getStart();
+      nanos::vm::VMEntry vme; // entry in maps file
+      while (maps >> vme)
+      {
+          // if a valid map entry was read...
+          vm::prot_t access = vme.getAccessRights();
+          if ( access.r && 
+               access.w && 
+              !access.x && //only look for the frame if is R+W, not X 
+              !vme.isSyscallArea()) 
+          {
+              uintptr_t addr = vme.getStart() & ~(page_size-1);
+              size_t region_size = vme.getEnd() - vme.getStart();
  
-           mp_mgr->addAllocation( addr, region_size );
-       }
+              mp_mgr->addAllocation( addr, region_size );
+          }
+      }
    }
 }
 
