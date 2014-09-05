@@ -270,6 +270,11 @@ common_sources+=\
 	backupmanager.hpp \
 	backupmanager.cpp \
         $(END)
+# Workaround for Wshadow compiler warning with boost headers
+# Source files that include (directly or indirectly) boost headers
+# have this warning disabled.
+%backupmanager.lo: CXXFLAGS+=$(BOOST_WARNINGS_WORKAROUND_FLAGS)
+%system.lo: CXXFLAGS+=$(BOOST_WARNINGS_WORKAROUND_FLAGS)
 else
 common_sources+=\
         $(END)

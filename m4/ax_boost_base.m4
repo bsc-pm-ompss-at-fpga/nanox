@@ -18,6 +18,7 @@
 #   This macro calls:
 #
 #     AC_SUBST(BOOST_CPPFLAGS) / AC_SUBST(BOOST_LDFLAGS)
+#     (additional) AC_SUBST(BOOST_WARNINGS_WORKAROUND_FLAGS)
 #
 #   And sets:
 #
@@ -258,6 +259,8 @@ if test "x$want_boost" = "xyes"; then
         # execute ACTION-IF-NOT-FOUND (if present):
         ifelse([$3], , :, [$3])
     else
+        BOOST_WARNINGS_WORKAROUND_FLAGS=-Wno-shadow
+        AC_SUBST(BOOST_WARNINGS_WORKAROUND_FLAGS)
         AC_SUBST(BOOST_CPPFLAGS)
         AC_SUBST(BOOST_LDFLAGS)
         AC_DEFINE(HAVE_BOOST,,[define if the Boost library is available])

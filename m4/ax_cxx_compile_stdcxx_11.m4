@@ -4,7 +4,7 @@
 #
 # SYNOPSIS
 #
-#   AX_CXX_COMPILE_STDCXX_11([ext|noext],[mandatory|optional],[ACTION-IF-FOUND],[ACTION-IF-NOT-FOUND])
+#   AX_CXX_COMPILE_STDCXX_11([ext|noext],[mandatory|optional])
 #
 # DESCRIPTION
 #
@@ -96,10 +96,7 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX_11], [dnl
           [eval $cachevar=no])
          CXXFLAGS="$ac_save_CXXFLAGS"])
       if eval test x\$$cachevar = xyes; then
-# I want to avoid using this flag in the whole library
-#        CXXFLAGS="$CXXFLAGS $switch"
-        CXXFLAGS_CXX11="$switch"
-        AC_SUBST(CXXFLAGS_CXX11)
+        CXXFLAGS="$CXXFLAGS $switch"
         ac_success=yes
         break
       fi
@@ -119,10 +116,7 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX_11], [dnl
           [eval $cachevar=no])
          CXXFLAGS="$ac_save_CXXFLAGS"])
       if eval test x\$$cachevar = xyes; then
-# I want to avoid using this flag in the whole library
-#        CXXFLAGS="$CXXFLAGS $switch"
-        CXXFLAGS_CXX11="$switch"
-	AC_SUBST(CXXFLAGS_CXX11)
+        CXXFLAGS="$CXXFLAGS $switch"
         ac_success=yes
         break
       fi
@@ -137,14 +131,10 @@ AC_DEFUN([AX_CXX_COMPILE_STDCXX_11], [dnl
     if test x$ac_success = xno; then
       HAVE_CXX11=0
       AC_MSG_NOTICE([No compiler with C++11 support was found])
-      # execute ACTION-IF-NOT-FOUND (if present):
-      ifelse([$4], , :, [$4])
     else
       HAVE_CXX11=1
       AC_DEFINE(HAVE_CXX11,1,
                 [define if the compiler supports basic C++11 syntax])
-      # execute ACTION-IF-FOUND (if present):
-      ifelse([$3], , :, [$3])
     fi
 
     AC_SUBST(HAVE_CXX11)

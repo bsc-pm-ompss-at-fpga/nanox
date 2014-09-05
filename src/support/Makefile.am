@@ -216,10 +216,7 @@ debug_libsupport_la_SOURCES+=$(gpu_support_sources)
 endif
 
 if fault_injection_enabled
-noinst_LTLIBRARIES += debug/libmpoison.la
-debug_libsupport_la_LIBADD = debug/libmpoison.la
-debug_libmpoison_la_SOURCES=$(libmpoison_sources)
-debug_libmpoison_la_CXXFLAGS=$(nanos_debug_cxxflags) $(CXXFLAGS_CXX11)
+debug_libsupport_la_SOURCES+=$(libmpoison_sources)
 endif
 endif
 
@@ -237,10 +234,7 @@ instrumentation_libsupport_la_SOURCES+=$(gpu_support_sources)
 endif
 
 if fault_injection_enabled
-noinst_LTLIBRARIES += instrumentation/libmpoison.la
-instrumentation_libsupport_la_LIBADD = instrumentation/libmpoison.la
-instrumentation_libmpoison_la_SOURCES=$(libmpoison_sources)
-instrumentation_libmpoison_la_CXXFLAGS=$(nanos_instr_cxxflags) $(CXXFLAGS_CXX11)
+instrumentation_libsupport_la_SOURCES+=$(libmpoison_sources)
 endif
 endif
 
@@ -258,10 +252,7 @@ instrumentation_debug_libsupport_la_SOURCES+=$(gpu_support_sources)
 endif
 
 if fault_injection_enabled
-noinst_LTLIBRARIES += instrumentation-debug/libmpoison.la
-instrumentation_debug_libsupport_la_LIBADD = instrumentation-debug/libmpoison.la
-instrumentation_debug_libmpoison_la_SOURCES=$(libmpoison_sources)
-instrumentation_debug_libmpoison_la_CXXFLAGS=$(nanos_instrdebug_cxxflags) $(CXXFLAGS_CXX11)
+instrumentation_debug_libsupport_la_SOURCES+=$(libmpoison_sources)
 endif
 endif
 
@@ -279,10 +270,7 @@ performance_libsupport_la_SOURCES+=$(gpu_support_sources)
 endif
 
 if fault_injection_enabled
-noinst_LTLIBRARIES += performance/libmpoison.la
-performance_libsupport_la_LIBADD = performance/libmpoison.la
-performance_libmpoison_la_SOURCES=$(libmpoison_sources)
-performance_libmpoison_la_CXXFLAGS=$(nanos_perfo_cxxflags) $(CXXFLAGS_CXX11)
+performance_libsupport_la_SOURCES+=$(libmpoison_sources)
 endif
 endif
 

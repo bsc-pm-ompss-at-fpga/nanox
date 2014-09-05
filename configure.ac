@@ -1093,15 +1093,6 @@ AC_CHECK_LIB([mkl_sequential],[mkl_blas_dgemm],[MKL_LIBS="-lm -lmkl_core -lmkl_s
 AM_CONDITIONAL([MKL_SUPPORT], test "$MKL_LIBS"x != x )
 AC_SUBST([MKL_LIBS])
 
-# Boost C++ library
-AX_BOOST_BASE([1.38],
-   [
-      use_boost=yes
-   ],
-   [
-      use_boost=no
-   ])
-
 # Task-level resiliency support
 AC_MSG_CHECKING([if task resiliency is enabled])
 AC_ARG_ENABLE([resiliency],
@@ -1119,30 +1110,22 @@ AC_MSG_RESULT([$resiliency])
 if test "x$resiliency" = "xyes"; then
     AX_CHECK_COMPILE_FLAG([-fnon-call-exceptions],
         [],#nothing to do if it pass the test
-        [#if not pass print error
+        [#if test did not pass print error
             AC_MSG_ERROR([resiliency mechanism depends on using compiler flag -fnon-call-exceptions])
         ],
         [-Werror])#enable warnings as errors on compile test
 
-    if test "x$use_boost" != "xyes";
-    then
-        AC_MSG_ERROR([resiliency mechanism requires Boost C++ library])
-    fi
+    # Boost C++ library
+    AX_BOOST_BASE([1.38],
+       [],#nothing to do if it pass the test
+       [
+          AC_MSG_ERROR([resiliency mechanism requires Boost C++ library])
+       ])
 fi
-
 AC_SUBST([resiliency])#used for test generator
 AM_CONDITIONAL([RESILIENCY], [test "x$resiliency" = "xyes"])
 
 # Fault injection
-# Compiler support for C++ 2011 standard (required for fault injection)
-AX_CXX_COMPILE_STDCXX_11([noext],[optional],
-   [
-       cxx11=yes
-   ],
-   [
-       cxx11=no
-   ])
-
 AC_MSG_CHECKING([if fault injection is enabled])
 AC_ARG_ENABLE([fault-injection],
    AS_HELP_STRING([--enable-fault-injection], [Enables page corruption injection module.]),
@@ -1153,10 +1136,27 @@ AC_ARG_ENABLE([fault-injection],
       fault_injection=no
    ])
 AC_MSG_RESULT([$fault_injection])
+
 if test "x$fault_injection" = "xyes"; then
-    if test "x$cxx11" = "xno"; then
-        AC_MSG_ERROR([C++11 compiler support is mandatory to enable page corruption injection module.])
+    # Check compiler support for C++ 2011 standard (required for fault injection)
+    AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+    # Check if random generators and engines are compilable (icpc 14.0 with gcc<4.7.0 fail to compile it)
+    AC_LANG_PUSH(C++)
+    AC_COMPILE_IFELSE(
+        [AC_LANG_PROGRAM(
+            [[@%:@include <random>
+            std::mt19937 generator;
+            std::uniform_int_distribution<size_t> distribution(0, 10);
+            ]], [[
+            size_t pos = distribution(generator);
+            ]])],
+        [rnd_supp=yes],
+        [rnd_supp=no])
+    AC_LANG_POP([C++])
+    if test "x$rnd_supp" != "xyes"; then
+        AC_MSG_ERROR([fault injection module depends on standard random number library. Try using a newer compiler version.])
     fi
+
     AC_DEFINE([NANOS_FAULT_INJECTION],[1],[Defined when page corruption injection module is enabled by the user.])
 fi
 AM_CONDITIONAL([fault_injection_enabled],[test "x$fault_injection" = "xyes"])

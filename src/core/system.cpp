@@ -104,7 +104,7 @@ System::System () :
 #ifdef NANOS_RESILIENCY_ENABLED
       , _resiliency_disabled(false)
       , _task_max_retries(1)
-      , _backup_pool_size(0)
+      , _backup_pool_size(sysconf(_SC_PAGESIZE ) * sysconf(_SC_PHYS_PAGES) / 2)
 #endif
 #ifdef NANOS_FAULT_INJECTION
       , _memory_poison_enabled(false)
@@ -531,12 +531,8 @@ void System::start ()
    
 #ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
    if(sys.isResiliencyEnabled()){// runtime disable
-      size_t pool_size = sys.getBackupPoolSize();
-      if(pool_size == 0) { // no user defined pool size? Use half the total amount of memory we can make use of
-         pool_size =  sysconf(_SC_PAGESIZE ) * sysconf(_SC_PHYS_PAGES) / 2; // Only available pages? Use: sysconf (_SC_AVPHYS_PAGES)
-      }
       // Insert a new separate memory address space to store input backups
-      BackupManager* mgr = new BackupManager("BackupMgr", pool_size);
+      BackupManager* mgr = new BackupManager("BackupMgr", _backup_pool_size);
 
       memory_space_id_t backup_id = addSeparateMemoryAddressSpace( *mgr, false /*allocFit*/);
       _backupMemory = &getSeparateMemory( backup_id );
