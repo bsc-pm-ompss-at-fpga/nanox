@@ -21,10 +21,16 @@
 #define MPOISON_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct {
+  uintptr_t addr;
+  size_t size;
+} chunk_t;
 
 //! Initialize data structures used by mpoison
 void mpoison_init ( void );
@@ -34,6 +40,9 @@ void mpoison_finalize ( void );
 
 //! \brief Looks through /proc/pid/maps file to look for memory regions that can hold application data
 void mpoison_scan ( void );
+
+//! \brief Instead of scanning maps file, use user defined chunk list to inject failures.
+void mpoison_user_defined ( size_t len, chunk_t data_chunks[len] );
 
 //! \brief Unblocks the page starting at address page_addr. Returns 0 if no errors were found
 int mpoison_unblock_page ( uintptr_t );
@@ -47,7 +56,7 @@ void mpoison_continue ( void );
 //! Makes the poison dedicated thread to begin randomized page blocking
 void mpoison_start ( void );
 
-void mpoison_delay_start ( long* );
+void mpoison_delay_start ( unsigned* );
 
 #ifdef __cplusplus
 }//extern C

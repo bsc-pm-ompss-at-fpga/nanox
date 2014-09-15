@@ -30,6 +30,7 @@ uint64_t pn_mask = ~(page_size - 1);
 
 
 MPoisonManager::MPoisonManager( int seed ):
+  mgr_lock(),
   alloc_list(),
   blocked_pages(),
   total_size(0),
@@ -40,6 +41,7 @@ MPoisonManager::MPoisonManager( int seed ):
 
 MPoisonManager::~MPoisonManager()
 {
+   LockBlock lock( mgr_lock );
    clearAllocations();
 }
 
@@ -67,7 +69,8 @@ void MPoisonManager::deleteAllocation( uintptr_t addr )
       {
          uintptr_t page_addr = (addr + offset) & pn_mask;
          if( blocked_pages.erase(page_addr) > 0 ) {// if a page was found, unblock it (it's blocked)
-            mprotect( (void*) page_addr, page_size, PROT_READ | PROT_WRITE );
+            if( mprotect( (void*) page_addr, page_size, PROT_READ | PROT_WRITE ) < 0 )
+               fatal0( "Error while unblocking page " << std::hex << page_addr << strerror(errno) );
             break;// Once we found it, finish.
          }
       }
@@ -83,7 +86,8 @@ void MPoisonManager::clearAllocations( )
    std::set<uintptr_t>::iterator it;
    for( it = blocked_pages.begin(); it != blocked_pages.end(); it++ ) {
       uintptr_t addr = *it;
-      mprotect( (void*)addr, page_size, PROT_READ | PROT_WRITE );
+      if( mprotect( (void*)addr, page_size, PROT_READ | PROT_WRITE ) < 0)
+         fatal0("Error while unpoisoning: " << strerror(errno) );
    }
    blocked_pages.clear();
 }
@@ -109,18 +113,16 @@ uintptr_t MPoisonManager::getRandomPage(){
 int MPoisonManager::blockPage() {
   uintptr_t addr = getRandomPage();
   if( addr ) {
-    // data races: accessing concurrently different elements is safe
-    // it is not possible to insert and delete an entry at the same time since
-    // an entry is not deleted until an invalid access has been made (i.e., after
-    // the mprotect) and at that time insert operation has already been completed.
-    debug0( "Mpoison: blocking memory page. Addr: " << std::hex << addr );
+    LockBlock lock ( mgr_lock );
     blocked_pages.insert( addr );
+    debug0( "Mpoison: blocking memory page. Addr: " << std::hex << addr << ". Total: " << blocked_pages.size() << " pages blocked." );
     return mprotect( (void*)addr, page_size, PROT_NONE );
   }
   return -1;
 }
 
 int MPoisonManager::unblockPage( uintptr_t page_addr ) {
+  LockBlock lock( mgr_lock );
   if( blocked_pages.erase( page_addr ) > 0 ) {
       return mprotect( (void*)page_addr, page_size, PROT_READ | PROT_WRITE );
   }

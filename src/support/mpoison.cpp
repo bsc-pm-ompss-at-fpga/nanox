@@ -69,7 +69,7 @@ int mpoison_unblock_page( uintptr_t page_addr ) {
    return mp_mgr->unblockPage(page_addr);
 }
 
-void mpoison_delay_start ( long *useconds ) {
+void mpoison_delay_start ( unsigned* useconds ) {
    if( sys.isPoisoningEnabled() ) {
       debug("Resiliency: MPoison: Creating mpoison thread");
       pthread_create(&tid, NULL, nanos::vm::mpoison_run, (void*)useconds);
@@ -77,8 +77,8 @@ void mpoison_delay_start ( long *useconds ) {
 }
 
 void mpoison_start ( ) {
-   static long delay = 0;
-   mpoison_delay_start(&delay);
+   static unsigned delay = sys.getMPoisonRate();
+   mpoison_delay_start( &delay );
 }
 
 void mpoison_init ( )
@@ -100,12 +100,27 @@ mpoison_finalize ( )
       run = false;
       void *ret;
 
-      if( tid == 0 ) {
+      if( tid != 0 ) {
          pthread_join(tid, &ret);
          delete mp_mgr;
 
          tid = 0;
          mp_mgr = NULL;
+      }
+   }
+}
+
+void mpoison_user_defined ( size_t len, chunk_t data_chunks[len] )
+{
+   using namespace nanos::vm;
+   if( sys.isPoisoningEnabled() ) {
+      for( size_t i = 0; i < len; i++ ) {
+         uintptr_t addr = data_chunks[i].addr & ~(page_size-1);
+         size_t region_size = (data_chunks[i].addr + data_chunks[i].size) & ~(page_size-1)// end of region
+                              - addr;// region aligned beginning
+         if( region_size < data_chunks[i].size )
+            region_size += page_size; 
+         mp_mgr->addAllocation( addr, region_size );
       }
    }
 }

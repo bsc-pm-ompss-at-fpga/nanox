@@ -25,6 +25,8 @@
 #include <cstdint>
 #include <unistd.h>
 
+#include "atomic.hpp"
+
 namespace nanos {
 namespace vm {
 
@@ -55,6 +57,8 @@ private:
     uintptr_t addr;
     std::size_t size;
   } alloc_t;
+
+  Lock mgr_lock; //!< Provides mutual exclusion access to unblockPage function.
 
   std::deque<alloc_t> alloc_list; //!< List that contains all the allocations made by the user.
   std::set<uintptr_t> blocked_pages; //!< Set of addresses that which address has been unauthorised randomly.

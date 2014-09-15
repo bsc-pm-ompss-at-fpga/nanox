@@ -1432,6 +1432,20 @@ void System::environmentSummary( void )
       message0( "===  | Threads:          " << (*it)->getNumThreads() );
       message0( "===  | Worker Threads:   " << (*it)->getNumWorkers() );
    }
+#ifdef NANOS_RESILIENCY_ENABLED
+   message0( "=== Runtime resiliency:  " << ( sys.isResiliencyEnabled()? "Enabled": "Disabled") );
+#else
+   message0( "=== Runtime resiliency:  Disabled" );
+#endif
+#ifdef NANOS_FAULT_INJECTION
+   if( sys.isPoisoningEnabled() ) {
+   message0( "=== Fault injection:     Enabled" );
+   message0( "=== Fault rate:          " << sys.getMPoisonRate() );
+   message0( "=== Fault injection seed:" << sys.getMPoisonSeed() );
+   } else
+#else
+      message0( "=== Fault injection:     Disabled" );
+#endif
 
    message0( "=========================================================" );
 
