@@ -191,6 +191,11 @@ inline std::string Config::PositiveHelpFormat::operator()()
    return "positive integer";
 }
 
+inline std::string Config::FloatPointHelpFormat::operator()()
+{
+   return "float";
+}
+
 template<typename T, class helpFormat, typename checkT>
 inline void Config::FuncOption<T,helpFormat,checkT>::setValue ( const T& value )
 {

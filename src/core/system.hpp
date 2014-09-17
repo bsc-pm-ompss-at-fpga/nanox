@@ -535,7 +535,7 @@ inline bool System::isPoisoningEnabled() const { return _memory_poison_enabled; 
 
 inline int System::getMPoisonSeed() const { return _memory_poison_seed; }
 
-inline unsigned System::getMPoisonRate() const { return _memory_poison_rate; }
+inline float System::getMPoisonRate() const { return _memory_poison_rate; }
 #endif
 
 inline void System::setSMPPlugin(SMPBasePlugin *p) {

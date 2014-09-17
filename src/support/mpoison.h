@@ -42,7 +42,7 @@ void mpoison_finalize ( void );
 void mpoison_scan ( void );
 
 //! \brief Instead of scanning maps file, use user defined chunk list to inject failures.
-void mpoison_user_defined ( size_t len, chunk_t data_chunks[len] );
+void mpoison_user_defined ( size_t len, chunk_t* data_chunks );
 
 //! \brief Unblocks the page starting at address page_addr. Returns 0 if no errors were found
 int mpoison_unblock_page ( uintptr_t );

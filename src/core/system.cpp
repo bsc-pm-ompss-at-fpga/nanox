@@ -109,7 +109,7 @@ System::System () :
 #ifdef NANOS_FAULT_INJECTION
       , _memory_poison_enabled(false)
       , _memory_poison_seed(time(0))
-      , _memory_poison_rate(1000000)
+      , _memory_poison_rate(0.0f)
 #endif
       , _atomicSeedMemorySpace( 1 ), _affinityFailureCount( 0 )
       , _createLocalTasks( false )
@@ -408,8 +408,8 @@ void System::config ()
    cfg.registerEnvOption("mp_seed", "NX_MPOISON_SEED");
 
    cfg.registerConfigOption("mp_rate",
-         NEW Config::UintVar(_memory_poison_rate),
-         "Memory poisoning rate (time in micro seconds between two faults). Default: '1s')");
+         NEW Config::FloatVar(_memory_poison_rate),
+         "Memory poisoning rate (error/s). Default: '0')");
    cfg.registerArgOption("mp_rate", "mpoison-rate");
    cfg.registerEnvOption("mp_rate", "NX_MPOISON_RATE");
 #endif
@@ -539,13 +539,6 @@ void System::start ()
 
       // Setup signal handlers
       myThread->setupSignalHandlers();
-   }
-#endif
-
-#ifdef NANOS_FAULT_INJECTION
-   if(sys.isPoisoningEnabled()){
-      debug0("Resiliency: Mpoison random seed: " << sys.getMPoisonSeed() );
-      debug0("Resiliency: Mpoison rate set to: " << sys.getMPoisonRate() << " us");
    }
 #endif
 
@@ -1439,9 +1432,9 @@ void System::environmentSummary( void )
 #endif
 #ifdef NANOS_FAULT_INJECTION
    if( sys.isPoisoningEnabled() ) {
-   message0( "=== Fault injection:     Enabled" );
-   message0( "=== Fault rate:          " << sys.getMPoisonRate() );
-   message0( "=== Fault injection seed:" << sys.getMPoisonSeed() );
+      message0( "=== Fault injection:     Enabled" );
+      message0( "===  | Rate:             " << sys.getMPoisonRate() );
+      message0( "===  | Seed:             " << sys.getMPoisonSeed() );
    } else
 #else
       message0( "=== Fault injection:     Disabled" );

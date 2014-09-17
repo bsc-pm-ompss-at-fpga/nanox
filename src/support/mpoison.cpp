@@ -42,6 +42,12 @@ nanos::vm::MPoisonManager *nanos::vm::getMPoisonManager() {
 
 void *nanos::vm::mpoison_run(void *arg)
 {
+   static float rate = sys.getMPoisonRate();
+   if( rate <= 0.001f ) // discard really low values and/or negative values
+      return NULL;
+
+   useconds_t time_between_failures = 1000000 / rate; // in useconds
+
    long *delay_start = (long*) arg;
    usleep( *delay_start );
 
@@ -49,7 +55,7 @@ void *nanos::vm::mpoison_run(void *arg)
       while(stop && run) {}// wait until the other thread indicates 
                            // to continue the poisoning
       mp_mgr->blockPage();
-      usleep( sys.getMPoisonRate() );
+      usleep( time_between_failures );
    }
 
    return NULL;
@@ -77,7 +83,7 @@ void mpoison_delay_start ( unsigned* useconds ) {
 }
 
 void mpoison_start ( ) {
-   static unsigned delay = sys.getMPoisonRate();
+   static unsigned delay = sys.getMPoisonRate() < 0.001f ? 0: 1000000 / sys.getMPoisonRate();
    mpoison_delay_start( &delay );
 }
 
@@ -110,13 +116,13 @@ mpoison_finalize ( )
    }
 }
 
-void mpoison_user_defined ( size_t len, chunk_t data_chunks[len] )
+void mpoison_user_defined ( size_t len, chunk_t* data_chunks )
 {
    using namespace nanos::vm;
    if( sys.isPoisoningEnabled() ) {
       for( size_t i = 0; i < len; i++ ) {
          uintptr_t addr = data_chunks[i].addr & ~(page_size-1);
-         size_t region_size = (data_chunks[i].addr + data_chunks[i].size) & ~(page_size-1)// end of region
+         size_t region_size = ((data_chunks[i].addr + data_chunks[i].size) & ~(page_size-1))// end of region
                               - addr;// region aligned beginning
          if( region_size < data_chunks[i].size )
             region_size += page_size; 

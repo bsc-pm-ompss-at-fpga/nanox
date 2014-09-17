@@ -229,8 +229,8 @@ namespace nanos
          bool                      _memory_poison_enabled;
          //! Seed used for mpoison RNG
          int                       _memory_poison_seed;
-         //! Time between page blocks in us.
-         unsigned                  _memory_poison_rate;
+         //! Number of error injections per second
+         float                     _memory_poison_rate;
 #endif
 
          // disable copy constructor & assignment operation
@@ -434,7 +434,7 @@ namespace nanos
          /*!
           * \brief Returns the time between two page blocks in us.
           */
-         unsigned getMPoisonRate() const;
+         float getMPoisonRate() const;
 #endif
 
          // team related methods

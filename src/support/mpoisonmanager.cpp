@@ -115,7 +115,7 @@ int MPoisonManager::blockPage() {
   if( addr ) {
     LockBlock lock ( mgr_lock );
     blocked_pages.insert( addr );
-    debug0( "Mpoison: blocking memory page. Addr: " << std::hex << addr << ". Total: " << blocked_pages.size() << " pages blocked." );
+    debug0( "Mpoison: blocking memory page. Addr: " << std::hex << addr << ". Total: " << std::dec << blocked_pages.size() << " pages blocked." );
     return mprotect( (void*)addr, page_size, PROT_NONE );
   }
   return -1;
