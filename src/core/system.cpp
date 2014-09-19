@@ -156,7 +156,14 @@ void System::loadModules ()
 
    const OS::ModuleList & modules = OS::getRequestedModules();
    std::for_each(modules.begin(),modules.end(), LoadModule());
-
+   
+#ifdef MPI_DEV
+   char* isOffloadSlave = getenv(const_cast<char*> ("OMPSS_OFFLOAD_SLAVE")); 
+   //Plugin->init of MPI will initialize MPI when we are slaves so MPI spawn returns ASAP in the master
+   //This plugin does not reserve any PE at initialization time, just perform MPI Init and other actions
+   if ( isOffloadSlave ) sys.loadPlugin("arch-mpi");
+#endif
+   
    // load host processor module
    if ( _hostFactory == NULL ) {
      verbose0( "loading Host support" );
@@ -165,7 +172,7 @@ void System::loadModules ()
        fatal0 ( "Couldn't load host support" );
    }
    ensure0( _hostFactory,"No default host factory" );
-
+   
 #ifdef GPU_DEV
    verbose0( "loading GPU support" );
 
@@ -192,7 +199,7 @@ void System::loadModules ()
    _pmInterface->start();
 
    if ( !loadPlugin( "instrumentation-"+getDefaultInstrumentation() ) )
-      fatal0( "Could not load " + getDefaultInstrumentation() + " instrumentation" );
+      fatal0( "Could not load " + getDefaultInstrumentation() + " instrumentation" );   
 
    // load default dependencies plugin
    verbose0( "loading " << getDefaultDependenciesManager() << " dependencies manager support" );
@@ -835,6 +842,7 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    size_t size_CopyData;
    size_t size_Data, offset_Data, size_DPtrs, offset_DPtrs, size_Copies, offset_Copies, size_Dimensions, offset_Dimensions, offset_PMD;
    size_t offset_DESC, size_DESC;
+   size_t offset_Sched;
    char *desc;
    size_t total_size;
 
@@ -878,10 +886,23 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    if ( size_PMD != 0 ) {
       static size_t align_PMD = _pmInterface->getInternalDataAlignment();
       offset_PMD = NANOS_ALIGNED_MEMORY_OFFSET(offset_DESC, size_DESC, align_PMD);
-      total_size = NANOS_ALIGNED_MEMORY_OFFSET(offset_PMD,size_PMD,1);
    } else {
-      offset_PMD = 0; // needed for a gcc warning
-      total_size = NANOS_ALIGNED_MEMORY_OFFSET(offset_DESC, size_DESC, 1);
+      offset_PMD = offset_DESC;
+      size_PMD = size_DESC;
+   }
+   
+   // Compute Scheduling Data size
+   static size_t size_Sched = _defSchedulePolicy->getWDDataSize();
+   if ( size_Sched != 0 )
+   {
+      static size_t align_Sched =  _defSchedulePolicy->getWDDataAlignment();
+      offset_Sched = NANOS_ALIGNED_MEMORY_OFFSET(offset_PMD, size_PMD, align_Sched );
+      total_size = NANOS_ALIGNED_MEMORY_OFFSET(offset_Sched,size_Sched,1);
+   }
+   else
+   {
+      offset_Sched = offset_PMD; // Needed by compiler unused variable error
+      total_size = NANOS_ALIGNED_MEMORY_OFFSET(offset_PMD,size_PMD,1);
    }
 
    chunk = NEW char[total_size];
@@ -941,6 +962,10 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
       _pmInterface->initInternalData( chunk + offset_PMD );
       wd->setInternalData( chunk + offset_PMD );
    }
+   
+   // Create Scheduling data
+   if ( size_Sched > 0 )
+      _defSchedulePolicy->initWDData( chunk + offset_Sched );
 
    // add to workdescriptor
    if ( uwg != NULL ) {

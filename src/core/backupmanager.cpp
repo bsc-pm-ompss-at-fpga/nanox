@@ -146,7 +146,7 @@ void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
 void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
                                         std::size_t len, std::size_t numChunks,
                                         std::size_t ld,
-                                        SeparateMemoryAddressSpace const& mem,
+                                        SeparateMemoryAddressSpace & mem,
                                         DeviceOps *ops, Functor *f,
                                         WorkDescriptor const& wd,
                                         void *hostObject, reg_t hostRegionId )
