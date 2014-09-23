@@ -33,6 +33,7 @@
 #include "synchronizedcondition.hpp"
 #include "regioncache.hpp"
 #include <cmath>
+#include <climits>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
