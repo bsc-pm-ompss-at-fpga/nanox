@@ -541,7 +541,7 @@ void System::start ()
       // Insert a new separate memory address space to store input backups
       BackupManager* mgr = new BackupManager("BackupMgr", _backup_pool_size);
 
-      memory_space_id_t backup_id = addSeparateMemoryAddressSpace( *mgr, false /*allocFit*/);
+      memory_space_id_t backup_id = addSeparateMemoryAddressSpace( *mgr, true /*allocWide*/);
       _backupMemory = &getSeparateMemory( backup_id );
 
       // Setup signal handlers

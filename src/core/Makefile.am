@@ -327,7 +327,7 @@ endif
 if INSTRUMENTATION_DEBUG_VERSION
 instrumentation_debug_LTLIBRARIES+=instrumentation-debug/libnanox.la
 
-instrumentation_libnanox_la_CPPFLAGS=$(BOOST_CPPFLAGS)
+instrumentation_debug_libnanox_la_CPPFLAGS=$(BOOST_CPPFLAGS)
 instrumentation_debug_libnanox_la_CFLAGS=$(common_cflags) $(common_instrdebug_cflags)
 instrumentation_debug_libnanox_la_CXXFLAGS=$(common_includes) $(common_instrdebug_cxxflags) $(hwloc_cxxflags)
 instrumentation_debug_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(instrumentation_debugdir) $(ignore_muldefs) $(hwloc_ldflags)

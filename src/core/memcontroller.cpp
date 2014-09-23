@@ -177,7 +177,7 @@ void MemController::preInit ( )
           */
          //std::cerr << "I am " << _wd.getId() << " parent: " <<  _wd.getParent()->getId() << " NOT ADDING THIS OBJECT "; _memCacheCopies[ index ]._reg.key->printRegion(std::cerr, 1); std::cerr << " adding it to " << &_parentRegions << std::endl;
          _parentRegions.addRegion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() );
-      } else {
+      } else { /* this should be for private data */
          if ( _wd.getParent() != NULL ) {
          //std::cerr << "I am " << _wd.getId() << " parent: " << _wd.getParent()->getId() << " ++++++ ADDING THIS OBJECT "; _memCacheCopies[ index ]._reg.key->printRegion(std::cerr, 1); std::cerr << std::endl;
             _wd.getParent()->_mcontrol._ownedRegions.addRegion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() );
@@ -315,6 +315,20 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
    ensure( _preinitialized == true, "MemController not initialized!");
    ensure( _initialized == true, "MemController not initialized!");
 
+   for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
+      if ( _wd.getCopies()[index].isOutput() ) {
+         if ( _wd.getParent() != NULL && _ownedRegions.hasObjectOfRegion( _memCacheCopies[index]._reg ) ) {
+            WD &parent = *(_wd.getParent());
+            for ( unsigned int parent_idx = 0; parent_idx < parent.getNumCopies(); parent_idx++ ) {
+               if ( parent._mcontrol._memCacheCopies[parent_idx]._reg.contains( _memCacheCopies[index]._reg ) ) {
+                  if ( parent._mcontrol._memCacheCopies[parent_idx].getChildrenProducedVersion() < _memCacheCopies[index].getChildrenProducedVersion() ) {
+                     parent._mcontrol._memCacheCopies[parent_idx].setChildrenProducedVersion( _memCacheCopies[index].getChildrenProducedVersion() );
+                  }
+               }
+            }
+         }
+      }
+   }
    //for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
    //   if ( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
    //      _memCacheCopies[ index ]._reg.setLocationAndVersion( _pe->getMemorySpaceId(), _memCacheCopies[ index ].getVersion() + 1 );
@@ -378,7 +392,7 @@ uint64_t MemController::getAddress( unsigned int index ) const {
 
 void MemController::getInfoFromPredecessor( MemController const &predecessorController ) {
    for( unsigned int index = 0; index < predecessorController._wd.getNumCopies(); index += 1) {
-      unsigned int version = predecessorController._memCacheCopies[ index ].getVersion() + ( predecessorController._wd.getCopies()[index].isOutput() ? 1 : 0 );
+      unsigned int version = predecessorController._memCacheCopies[ index ].getChildrenProducedVersion();
       _providedRegions.addRegion( predecessorController._memCacheCopies[ index ]._reg, version );
    }
 #if 0
@@ -536,7 +550,10 @@ bool MemController::isMemoryAllocated() const {
 void MemController::setCacheMetaData() {
    for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
       if ( _wd.getCopies()[index].isOutput() ) {
-         _memCacheCopies[ index ]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), _memCacheCopies[ index ].getVersion() + 1 );
+         unsigned int newVersion = _memCacheCopies[index].getVersion() +1;
+         _memCacheCopies[index]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion ); // update directory
+         _memCacheCopies[index].setChildrenProducedVersion( newVersion );
+
          if ( _pe->getMemorySpaceId() != 0 /* HOST_MEMSPACE_ID */) {
             sys.getSeparateMemory( _pe->getMemorySpaceId() ).setRegionVersion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() + 1, _wd, index );
          }

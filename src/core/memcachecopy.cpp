@@ -7,7 +7,7 @@
 #include "workdescriptor.hpp"
 
 MemCacheCopy::MemCacheCopy() : 
-   _version( 0 )
+   _version( 0 ), _childrenProducedVersion( 0 )
    , _reg( 0, (reg_key_t) NULL )
    , _locations()
    , _locationDataReady( false )
@@ -70,3 +70,12 @@ void MemCacheCopy::printLocations( std::ostream &o ) const {
       else o << " dir entry n/a" << std::endl;
    }
 }
+
+void MemCacheCopy::setChildrenProducedVersion( unsigned int version ) {
+   _childrenProducedVersion = version;
+}
+
+unsigned int MemCacheCopy::getChildrenProducedVersion() const {
+   return _childrenProducedVersion;
+}
+
