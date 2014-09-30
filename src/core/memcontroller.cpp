@@ -317,7 +317,7 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
 
    for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
       if ( _wd.getCopies()[index].isOutput() ) {
-         if ( _wd.getParent() != NULL && _ownedRegions.hasObjectOfRegion( _memCacheCopies[index]._reg ) ) {
+         if ( _wd.getParent() != NULL && _wd.getParent()->_mcontrol.ownsRegion( _memCacheCopies[ index ]._reg ) ) {
             WD &parent = *(_wd.getParent());
             for ( unsigned int parent_idx = 0; parent_idx < parent.getNumCopies(); parent_idx++ ) {
                if ( parent._mcontrol._memCacheCopies[parent_idx]._reg.contains( _memCacheCopies[index]._reg ) ) {
