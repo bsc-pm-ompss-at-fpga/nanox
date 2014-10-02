@@ -261,7 +261,6 @@ namespace nanos
          void processCpuMask( void );
          
          Atomic<int> _atomicSeedWg;
-         Atomic<int> _atomicSeedMemorySpace;
          Atomic<unsigned int> _affinityFailureCount;
          bool                      _createLocalTasks;
          bool _verboseDevOps;
@@ -607,9 +606,7 @@ namespace nanos
          Plugin * loadAndGetPlugin ( const char *name );
          Plugin * loadAndGetPlugin ( const std::string &name );
          int getWgId();
-         unsigned int getMemorySpaceId();
          unsigned int getRootMemorySpaceId();
-         unsigned int getNumMemorySpaces();
 
          HostMemoryAddressSpace &getHostMemory() { return _hostMemory; }
 

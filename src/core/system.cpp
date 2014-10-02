@@ -111,7 +111,7 @@ System::System () :
       , _memory_poison_seed(time(0))
       , _memory_poison_rate(0.0f)
 #endif
-      , _atomicSeedMemorySpace( 1 ), _affinityFailureCount( 0 )
+      , _affinityFailureCount( 0 )
       , _createLocalTasks( false )
       , _verboseDevOps( false )
       , _verboseCopies( false )
