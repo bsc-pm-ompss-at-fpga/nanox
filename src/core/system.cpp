@@ -110,6 +110,7 @@ System::System () :
       , _memory_poison_enabled(false)
       , _memory_poison_seed(time(0))
       , _memory_poison_rate(0.0f)
+      , _memory_poison_amount(-1)
 #endif
       , _affinityFailureCount( 0 )
       , _createLocalTasks( false )
@@ -419,6 +420,12 @@ void System::config ()
          "Memory poisoning rate (error/s). Default: '0')");
    cfg.registerArgOption("mp_rate", "mpoison-rate");
    cfg.registerEnvOption("mp_rate", "NX_MPOISON_RATE");
+
+   cfg.registerConfigOption("mp_amount",
+         NEW Config::IntegerVar(_memory_poison_amount),
+         "Maximum number of injected errors (default: infinite )");
+   cfg.registerArgOption("mp_amount", "mpoison-amount");
+   cfg.registerEnvOption("mp_amount", "NX_MPOISON_AMOUNT");
 #endif
 
    cfg.registerConfigOption ( "verbose-devops", NEW Config::FlagOption ( _verboseDevOps, true ), "Verbose cache ops" );

@@ -51,11 +51,20 @@ void *nanos::vm::mpoison_run(void *arg)
    long *delay_start = (long*) arg;
    usleep( *delay_start );
 
+   int error_count = sys.getMPoisonAmount();
+   run &= error_count!=0; // if we must not inject errors, just skip...
+
    while( run ) {
-      while(stop && run) {}// wait until the other thread indicates 
-                           // to continue the poisoning
+
+      while( stop && run ) {}// wait until the other thread indicates 
+                             // to continue the poisoning
       mp_mgr->blockPage();
       usleep( time_between_failures );
+
+      if( error_count > 0 )
+         error_count--;
+      else if ( error_count == 0 )// It is intended to make an infinite loop if error_count < 0
+         run = false;
    }
 
    return NULL;

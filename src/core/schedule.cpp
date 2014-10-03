@@ -1246,11 +1246,11 @@ void Scheduler::switchHelper (WD *oldWD, WD *newWD, void *arg)
 
 void Scheduler::switchTo ( WD *to )
 {
-   if( to->isInvalid() ) {
-      finishWork( to, true );
-      to->~WorkDescriptor();
-      delete[] (char *)to;
-   } else {
+   //if( to->isInvalid() ) {
+   //   finishWork( to, true );
+   //   to->~WorkDescriptor();
+   //   delete[] (char *)to;
+   //} else {
      if ( myThread->runningOn()->supportsUserLevelThreads() ) {
         if (!to->started()) {
            to->_mcontrol.initialize( *myThread->runningOn() );
@@ -1275,7 +1275,7 @@ void Scheduler::switchTo ( WD *to )
            delete[] (char *)to;
         }
      }
-   }
+   //}
 }
 
 void Scheduler::yield ()
@@ -1387,11 +1387,11 @@ void Scheduler::exit ( void )
       if ( !next ) thread->pause();
    }
 
-   if ( next && !next->isInvalid() ) {
+   if ( next ) {//&& !next->isInvalid() ) {
       Scheduler::exitTo(next);
    }
 
-   if ( next && next->isInvalid() ) {
+   if ( next ) {//&& next->isInvalid() ) {
       idleLoop<WorkerBehaviour>();// discard next workdescriptor and look for more work
    } else {
       idleLoop<ExitBehaviour>();

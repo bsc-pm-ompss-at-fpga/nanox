@@ -114,8 +114,8 @@ SMPDD * SMPDD::copyTo ( void *toAddr )
 void SMPDD::execute ( WD &wd ) throw ()
 {
 #ifdef NANOS_RESILIENCY_ENABLED
-   bool retry = false;
    unsigned num_tries = 0;
+
    if (wd.isInvalid() || (wd.getParent() != NULL && wd.getParent()->isInvalid())) {
       /*
        *  TODO Optimization?
@@ -133,6 +133,8 @@ void SMPDD::execute ( WD &wd ) throw ()
             // Call to the user function
             getWorkFct()( wd.getData() );
          } catch (nanos::TaskExecutionException& e) {
+            debug("Resiliency: error detected during task " << wd.getId() << " execution.");
+            sys.getExceptionStats().incrExecutionErrors();
             e.handle();
          } catch (std::exception& e) {
             std::string s = "Error: Uncaught exception ";
@@ -141,26 +143,47 @@ void SMPDD::execute ( WD &wd ) throw ()
             s += wd.getId();
             s += ". \n";
             s += e.what();
+
+            sys.getExceptionStats().incrExecutionErrors();
+            if( sys.isSummaryEnabled() )
+               sys.executionSummary();
+
             // Unexpected error: terminate execution
             fatal(s);
          } catch (...) {
+            sys.getExceptionStats().incrExecutionErrors();
             // Unexpected error: terminate execution
             fatal("Error: Uncaught exception (unknown type). Thrown in task " << wd.getId() << ". ");
+            if( sys.isSummaryEnabled() )
+               sys.executionSummary();
          }
-         // Only retry when ...
-         retry = wd.isInvalid()// ... the execution failed,
-         && wd.isRecoverable()//  ... the task is able to recover (pragma)
-         && (wd.getParent() == NULL || !wd.getParent()->isInvalid())// and there is not an invalid parent.
-         && num_tries < sys.getTaskMaxRetries();// This last condition avoids unlimited re-execution.
 
-         if (!retry)
-         break;
-
-         // This is exceuted only on re-execution
-         num_tries++;
-         restore(wd);
-
-         sys.getExceptionStats().incrRecoveredTasks();
+         /* 
+          * A task is only re-executed when the following conditions meet:
+          * 1) The execution was invalid
+          * 2) The task is marked as recoverable
+          * 3) The task parent is not invalid (it doesn't make sense to recover ourselves if our parent is going to undo our work)
+          * 4) The task has not run out of trials (a limit is set to avoid infinite loop)
+          */ 
+         if ( wd.isInvalid() 
+            && wd.isRecoverable() // Execution invalid and task recoverable
+            && ( wd.getParent() == NULL || !wd.getParent()->isInvalid() ) // Our parent is not invalid (if we got one)
+         ){
+            if ( num_tries < sys.getTaskMaxRetries() ) {// We are still able to retry
+               sys.getExceptionStats().incrRecoveredTasks();
+               num_tries++;
+               restore(wd);
+            } else {
+               // Giving up retrying...
+               wd.getParent()->setInvalid( true );
+               return;
+            }
+         } else {
+            debug( "Exiting task " << wd.getId() << "." );
+            // Nothing left to do, either task execution was OK or the recovery has to be done by an ancestor.
+            return;
+         }
+         debug( "Task " << wd.getId() << " is being re-executed." );
       }
    }
 #else

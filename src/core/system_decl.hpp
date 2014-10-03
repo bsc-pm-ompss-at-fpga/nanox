@@ -231,6 +231,8 @@ namespace nanos
          int                       _memory_poison_seed;
          //! Number of error injections per second
          float                     _memory_poison_rate;
+         //! Maximum error injections
+         int                       _memory_poison_amount;
 #endif
 
          // disable copy constructor & assignment operation
@@ -434,6 +436,10 @@ namespace nanos
           * \brief Returns the time between two page blocks in us.
           */
          float getMPoisonRate() const;
+         /*!
+          * \brief Returns the maximum number of injected errors
+          */
+         float getMPoisonAmount() const;
 #endif
 
          // team related methods

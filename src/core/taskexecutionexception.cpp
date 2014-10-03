@@ -30,9 +30,8 @@ TaskExecutionException::TaskExecutionException (
       task(t), signal_info(info), task_context(context)
 {
    std::stringstream ss;
-   ss << "Signal raised during the execution of task "
-      << t->getId() 
-      << std::endl;
+   // Note: supressed "in task %t execution" because the error can be raised as well when performing a backup/restore.
+   ss << "Signal raised:";
 
    const char* sig_desc;
    if (signal_info.si_signo >= 0 && signal_info.si_signo < NSIG && (sig_desc =
@@ -216,16 +215,12 @@ void TaskExecutionException::handle ( ) const
    if( task->started() ) {
       // error detected in task execution: invalidate task
       recoverable_error = task->setInvalid(true);
-      sys.getExceptionStats().incrExecutionErrors();
-      debug("Resiliency: error detected during task " << task->getId() << " execution.");
    } else {
       // error detected in task initialization: invalidate task AND its parent
       // if it has no recoverable parent, then the execution cannot continue
       recoverable_error = task->setInvalid(true) &&
                           task->getParent() &&
                           task->getParent()->setInvalid(true);
-      sys.getExceptionStats().incrInitializationErrors();
-      debug("Resiliency: error detected during task " << task->getId() << " initialization.");
    }
 
    if( !recoverable_error )  

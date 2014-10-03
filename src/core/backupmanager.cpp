@@ -86,6 +86,8 @@ void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
       memcpy((void*) devAddr, (void*) hostAddr, len);
    } catch ( TaskExecutionException &e ) {
       e.handle( );
+      sys.getExceptionStats().incrInitializationErrors();
+      debug("Resiliency: error detected during task " << wd.getId() << " input data backup.");
    }
    ops->completeOp();
 }
@@ -102,6 +104,8 @@ void BackupManager::_copyOut ( uint64_t hostAddr, uint64_t devAddr,
       memcpy((void*) hostAddr, (void*) devAddr, len);
    } catch ( TaskExecutionException &e ) {
       e.handle( );
+      sys.getExceptionStats().incrInitializationErrors();
+      debug("Resiliency: error detected during task " << wd.getId() << " input data restoration.");
    }
 
    ops->completeOp();
@@ -139,6 +143,8 @@ void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
       }
    } catch ( TaskExecutionException &e ) {
       e.handle( );
+      sys.getExceptionStats().incrInitializationErrors();
+      debug("Resiliency: error detected during task " << wd.getId() << " input data backup.");
    }
    ops->completeOp();
 }
@@ -161,6 +167,8 @@ void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
       }
    } catch ( TaskExecutionException &e ) {
       e.handle( );
+      sys.getExceptionStats().incrInitializationErrors();
+      debug("Resiliency: error detected during task " << wd.getId() << " input data restoration.");
    }
    ops->completeOp();
 }
