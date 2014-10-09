@@ -28,6 +28,7 @@ class MemController {
    SeparateAddressSpaceOutOps *_outOps;
 #ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
    SeparateAddressSpaceInOps  *_backupOps;
+   SeparateAddressSpaceInOps  *_backupOpsOut;
    SeparateAddressSpaceOutOps *_restoreOps;
    MemCacheCopy               *_backupCacheCopies;
 #endif

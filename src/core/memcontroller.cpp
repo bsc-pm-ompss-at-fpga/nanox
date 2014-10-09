@@ -14,15 +14,16 @@ namespace nanos {
 MemController::MemController ( WD &wd ) :
       _initialized( false), _preinitialized(false), _inputDataReady(false), _outputDataReady(
       false), _memoryAllocated( false), _mainWd( false), _wd(wd), _pe( NULL ), 
-      _provideLock(), _providedRegions(), 
+      _provideLock(), _providedRegions(), _inOps(NULL), _outOps(NULL), 
 #ifdef NANOS_RESILIENCY_ENABLED
-_backupOps(NULL), _restoreOps(NULL), 
+      _backupOps(NULL), _backupOpsOut(NULL), _restoreOps(NULL), _backupCacheCopies(NULL),
 #endif
-_affinityScore(0), _maxAffinityScore(0), _ownedRegions(), _parentRegions()
+      _affinityScore(0), _maxAffinityScore(0), _ownedRegions(), _parentRegions()
 {
    if (_wd.getNumCopies() > 0) {
       _memCacheCopies = NEW MemCacheCopy[wd.getNumCopies()];
-      // We can't initialize _backupCacheCopies array until the compiler sets the workdescriptor flags (is_recoverable flag required).
+      if( sys.isResiliencyEnabled() ) {
+         _backupCacheCopies = NEW MemCacheCopy[_wd.getNumCopies()];
    }
 }
 
@@ -127,16 +128,16 @@ void MemController::preInit ( )
       //
       //
 
-   uint64_t host_copy_addr = 0;
-   if ( _wd.getParent() != NULL /* && !_wd.getParent()->_mcontrol._mainWd */ ) {
-      for ( unsigned int parent_idx = 0; parent_idx < _wd.getParent()->getNumCopies(); parent_idx += 1 ) {
-         if ( _wd.getParent()->_mcontrol.getAddress( parent_idx ) == (uint64_t) _wd.getCopies()[ index ].getBaseAddress() ) {
-            host_copy_addr = (uint64_t) _wd.getParent()->getCopies()[ parent_idx ].getBaseAddress();
-            //std::cerr << "TADAAAA this comes from a father's copy "<< std::hex << host_copy_addr << std::endl;
-            _wd.getCopies()[ index ].setHostBaseAddress( host_copy_addr );
+      uint64_t host_copy_addr = 0;
+      if ( _wd.getParent() != NULL /* && !_wd.getParent()->_mcontrol._mainWd */ ) {
+         for ( unsigned int parent_idx = 0; parent_idx < _wd.getParent()->getNumCopies(); parent_idx += 1 ) {
+            if ( _wd.getParent()->_mcontrol.getAddress( parent_idx ) == (uint64_t) _wd.getCopies()[ index ].getBaseAddress() ) {
+               host_copy_addr = (uint64_t) _wd.getParent()->getCopies()[ parent_idx ].getBaseAddress();
+               //std::cerr << "TADAAAA this comes from a father's copy "<< std::hex << host_copy_addr << std::endl;
+               _wd.getCopies()[ index ].setHostBaseAddress( host_copy_addr );
+            }
          }
       }
-   }
       new (&_memCacheCopies[index]) MemCacheCopy(_wd, index);
 
       // o << "## " << (_wd.getCopies()[index].isInput() ? "in" : "") << (_wd.getCopies()[index].isOutput() ? "out" : "") << " " <<  _wd.getCopies()[index] << std::endl; 
@@ -183,25 +184,21 @@ void MemController::preInit ( )
             _wd.getParent()->_mcontrol._ownedRegions.addRegion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() );
          }
       }
-   }
-#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
-   if (sys.isResiliencyEnabled() && _wd.isRecoverable()) {
-      _backupCacheCopies = NEW MemCacheCopy[_wd.getNumCopies()];
 
-      for (index = 0; index < _wd.getNumCopies(); index += 1) {
+#ifdef NANOS_RESILIENCY_ENABLED
+      if ( _backupCacheCopies ) {
          new (&_backupCacheCopies[index]) MemCacheCopy(_wd, index);
-
-         _backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getVersion() );
-         _backupCacheCopies[index]._locations.insert(
-                                               _backupCacheCopies[index]._locations.end(),
-                                               _memCacheCopies[ index ]._locations.begin(),
-                                               _memCacheCopies[ index ]._locations.end()
-                                             );
-
-         _backupCacheCopies[index]._locationDataReady = true;
+         _backupCacheCopies[ index ].setVersion( _memCacheCopies[ index ].getVersion() );
+         if( _wd.getCopies()[index].isInput() )// only usefull for input data
+            _backupCacheCopies[index]._locations.insert(
+                  _backupCacheCopies[index]._locations.end(),
+                  _memCacheCopies[index]._locations.begin(),
+                  _memCacheCopies[index]._locations.end()
+               );
       }
-   }
 #endif
+
+   }
    if ( _VERBOSE_CACHE ) { 
       *(myThread->_file)
             << " (preinit)END OF INITIALIZING MEMCONTROLLER for WD "
@@ -223,10 +220,10 @@ void MemController::initialize( ProcessingElement &pe ) {
       } else {
          _inOps = NEW SeparateAddressSpaceInOps( _pe, true, sys.getSeparateMemory( _pe->getMemorySpaceId() ) );
       }
-#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
-
+#ifdef NANOS_RESILIENCY_ENABLED
       if( _wd.isRecoverable() ) {
          _backupOps = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
+         _backupOpsOut = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
       }
 #endif
       _initialized = true;
@@ -248,13 +245,13 @@ bool MemController::allocateTaskMemory() {
             _memCacheCopies[idx]._reg.setRooted();
          }
       }
+#ifdef NANOS_RESILIENCY_ENABLED
+      if( sys.isResiliencyEnabled() ) {
+         result &= sys.getBackupMemory().prepareRegions( _backupCacheCopies, _wd.getNumCopies(), _wd );
+      }
+#endif
    }
    _memoryAllocated = result;
-#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
-   if( result && _backupOps ) {
-      result &= sys.getBackupMemory().prepareRegions( _backupCacheCopies, _wd.getNumCopies(), _wd );
-   }
-#endif
    return result;
 }
 
@@ -288,16 +285,6 @@ void MemController::copyDataIn() {
    for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
       _memCacheCopies[ index ].generateInOps( *_inOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd, index );
    }
-#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
-   if (_backupOps) {
-      for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
-         if (_wd.getCopies()[index].isInput()) {
-            _backupCacheCopies[ index ].generateInOps( *_backupOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd, index);
-         }
-      }
-      _backupOps->issue(_wd);
-   }
-#endif
 
    //NANOS_INSTRUMENT( InstrumentState inst5(NANOS_CC_CDIN_DO_OP); );
    _inOps->issue( _wd );
@@ -308,6 +295,18 @@ void MemController::copyDataIn() {
          std::cerr << "### copyDataIn wd " << std::dec << _wd.getId() << " done" << std::endl;
       }
    }
+#ifdef NANOS_RESILIENCY_ENABLED
+   if ( sys.isResiliencyEnabled() ) {
+      ensure( _backupOps, "Backup ops array has not been initializedi!" );
+      for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
+	if ( _wd.getCopies()[index].isInput() ) {
+            _backupCacheCopies[ index ].generateInOps( *_backupOps, true, false, _wd, index);
+           std::cout << " Data copy. Index: " << index << ". Children version: " << _memCacheCopies[index].getChildrenProducedVersion() << ". Version: " << _memCacheCopies[index].getVersion() << ". Backup cache copies version: "<< _backupCacheCopies[index].getVersion() << std::endl;
+	}
+      }
+      _backupOps->issue(_wd);
+   }
+#endif
    //NANOS_INSTRUMENT( inst2.close(); );
 }
 
@@ -337,7 +336,7 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
    if ( _VERBOSE_CACHE || sys.getVerboseCopies() ) { *(myThread->_file) << "### copyDataOut wd " << std::dec << _wd.getId() << " metadata set, not released yet" << std::endl; }
 
    if ( _pe->getMemorySpaceId() == 0 /* HOST_MEMSPACE_ID */) {
-      _outputDataReady = true;
+      //_outputDataReady = true;
    } else {
       _outOps = NEW SeparateAddressSpaceOutOps( _pe, false, true );
 
@@ -348,10 +347,31 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
       //if( sys.getNetwork()->getNodeNum()== 0)std::cerr << "MemController::copyDataOut for wd " << _wd.getId() << std::endl;
       _outOps->issue( _wd );
    }
+#ifdef NANOS_RESILIENCY_ENABLED
+   if (sys.isResiliencyEnabled()) {
+      ensure( _backupOpsOut, "Backup ops array has not been initialized!" );
+      //sys.getBackupMemory().prepareRegions( _backupCacheCopies, _wd.getNumCopies(), _wd );
+
+      for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
+         // Needed for CP input data
+         if( _wd.getCopies()[index].isOutput() ) {
+            _backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
+            _backupCacheCopies[index]._locationDataReady = true;
+
+	    _backupCacheCopies[index]._locations.clear();
+            _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
+
+
+            _backupCacheCopies[index].generateInOps( *_backupOpsOut, true, false, _wd, index);
+           std::cout << " Data copy. Index: " << index << ". Children version: " << _memCacheCopies[index].getChildrenProducedVersion() << ". Version: " << _memCacheCopies[index].getVersion() << std::endl;
+         }
+      }
+      _backupOpsOut->issue( _wd );
+   }
+#endif
 }
 
-#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
-
+#ifdef NANOS_RESILIENCY_ENABLED
 void MemController::restoreBackupData ( )
 {
    ensure( _preinitialized == true, "MemController not initialized!");
@@ -421,17 +441,12 @@ bool MemController::isDataReady ( WD const &wd )
    ensure( _preinitialized == true, "MemController not initialized!");
    if (_initialized) {
       if (!_inputDataReady) {
+         _inputDataReady = _inOps->isDataReady(wd);
 #if NANOS_RESILIENCY_ENABLED
          if (_backupOps) {
-            _inputDataReady = _inOps->isDataReady(wd)
-                  && _backupOps->isDataReady(wd);
-         } else {
-            _inputDataReady = _inOps->isDataReady(wd);
-         }
-         if (_backupOps)
+            _inputDataReady &= _backupOps->isDataReady(wd);
             _backupOps->releaseLockedSourceChunks(wd);
-#else
-          _inputDataReady = _inOps->isDataReady(wd);
+         }
 #endif
       }
       return _inputDataReady;
@@ -442,7 +457,7 @@ bool MemController::isDataReady ( WD const &wd )
 bool MemController::isOutputDataReady( WD const &wd ) {
    ensure( _preinitialized == true, "MemController not initialized!");
    if ( _initialized ) {
-      if ( !_outputDataReady ) {
+      if ( _outOps && !_outputDataReady ) {
          _outputDataReady = _outOps->isDataReady( wd );
          if ( _outputDataReady ) {
             if ( _VERBOSE_CACHE ) { *(myThread->_file) << "Output data is ready for wd " << _wd.getId() << " obj " << (void *)_outOps << std::endl; }
@@ -452,14 +467,22 @@ bool MemController::isOutputDataReady( WD const &wd ) {
             //   sys.getSeparateMemory( _pe->getMemorySpaceId() ).releaseRegions( _memCacheCopies, _wd.getNumCopies(), _wd ) ;
             //}
          }
+      } else if ( !_outOps ) {
+         // Maybe the output data wasnt ready because theres no output data
+         _outputDataReady = true;
       }
+#if NANOS_RESILIENCY_ENABLED
+      if (_backupOpsOut) {
+         _outputDataReady = _backupOpsOut->isDataReady(wd);
+         _backupOpsOut->releaseLockedSourceChunks(wd);
+      }
+#endif
       return _outputDataReady;
-   } 
+   }
    return false;
 }
 
-#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
-
+#ifdef NANOS_RESILIENCY_ENABLED
 bool MemController::isDataRestored( WD const &wd ) {
    ensure( _preinitialized == true, "MemController not initialized!");
    ensure( _wd.isRecoverable(), "Task is not recoverable. There wasn't any data to be restored. ")
