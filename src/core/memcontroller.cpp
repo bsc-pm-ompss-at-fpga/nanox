@@ -356,14 +356,11 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
          // Needed for CP input data
          if( _wd.getCopies()[index].isOutput() ) {
             _backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
-            _backupCacheCopies[index]._locationDataReady = true;
 
 	    _backupCacheCopies[index]._locations.clear();
             _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
+            _backupCacheCopies[index]._locationDataReady = true;
 
-
-            _backupCacheCopies[index].generateInOps( *_backupOpsOut, true, false, _wd, index);
-           std::cout << " Data copy. Index: " << index << ". Children version: " << _memCacheCopies[index].getChildrenProducedVersion() << ". Version: " << _memCacheCopies[index].getVersion() << std::endl;
          }
       }
       _backupOpsOut->issue( _wd );
@@ -564,6 +561,13 @@ void MemController::setMainWD() {
 
 void MemController::synchronize() {
    sys.getHostMemory().synchronize( _wd );
+   for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
+      if ( _wd.getCopies()[index].isOutput() ) {
+         unsigned int newVersion = _memCacheCopies[index].getChildrenProducedVersion() +1;
+         _memCacheCopies[index]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion ); // update directory
+         _memCacheCopies[index].setChildrenProducedVersion( newVersion );
+      }
+   }
 }
 
 bool MemController::isMemoryAllocated() const {
