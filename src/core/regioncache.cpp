@@ -44,12 +44,20 @@
  #define _VERBOSE_CACHE 0
 #endif
 
+Chunk::Chunk() : 
+   _address(0), _hostAddress(0), _size(0)
+{
+}
+
+Chunk::Chunk( uint64_t addr, uint64_t hostAddr, std::size_t size ) :
+   _address(addr), _hostAddress(hostAddr), _size(size)
+{
+}
+
 AllocatedChunk::AllocatedChunk( RegionCache &owner, uint64_t addr, uint64_t hostAddress, std::size_t size, global_reg_t const &allocatedRegion, bool rooted ) :
+   Chunk( addr, hostAddress, size ),
    _owner( owner ),
    _lock(),
-   _address( addr ),
-   _hostAddress( hostAddress ),
-   _size( size ),
    _dirty( false ),
    _rooted( rooted ),
    _lruStamp( 0 ),

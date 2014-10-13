@@ -74,14 +74,10 @@ std::size_t BackupManager::getMemCapacity (
    return _managed_pool.get_size();
 }
 
-void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
+void BackupManager::rawCopyIn ( uint64_t devAddr, uint64_t hostAddr,
                               std::size_t len, SeparateMemoryAddressSpace &mem,
-                              DeviceOps *ops, Functor *f,
-                              WorkDescriptor const& wd, void *hostObject,
-                              reg_t hostRegionId ) const
+                              WorkDescriptor const& wd ) const
 {
-   // Called on backup operations
-   ops->addOp();
    try {
       memcpy((void*) devAddr, (void*) hostAddr, len);
    } catch ( TaskExecutionException &e ) {
@@ -89,7 +85,33 @@ void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
       sys.getExceptionStats().incrInitializationErrors();
       debug("Resiliency: error detected during task " << wd.getId() << " input data backup.");
    }
+}
+
+void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
+                              std::size_t len, SeparateMemoryAddressSpace &mem,
+                              DeviceOps *ops, Functor *f,
+                              WorkDescriptor const& wd, void *hostObject,
+                              reg_t hostRegionId ) const
+{
+   ops->addOp();
+
+   rawCopyIn( devAddr, hostAddr, len, mem, wd );
+
    ops->completeOp();
+}
+
+void BackupManager::rawCopyOut ( uint64_t hostAddr, uint64_t devAddr,
+                               std::size_t len, SeparateMemoryAddressSpace &mem,
+                               WorkDescriptor const& wd ) const
+{
+   // This is called on restore operations
+   try {
+      memcpy((void*) hostAddr, (void*) devAddr, len);
+   } catch ( TaskExecutionException &e ) {
+      e.handle( );
+      sys.getExceptionStats().incrInitializationErrors();
+      debug("Resiliency: error detected during task " << wd.getId() << " input data restoration.");
+   }
 }
 
 void BackupManager::_copyOut ( uint64_t hostAddr, uint64_t devAddr,
@@ -98,15 +120,9 @@ void BackupManager::_copyOut ( uint64_t hostAddr, uint64_t devAddr,
                                WorkDescriptor const& wd, void *hostObject,
                                reg_t hostRegionId ) const
 {
-   // This is called on restore operations
    ops->addOp();
-   try {
-      memcpy((void*) hostAddr, (void*) devAddr, len);
-   } catch ( TaskExecutionException &e ) {
-      e.handle( );
-      sys.getExceptionStats().incrInitializationErrors();
-      debug("Resiliency: error detected during task " << wd.getId() << " input data restoration.");
-   }
+
+   rawCopyOut( hostAddr, devAddr, len, mem, wd );
 
    ops->completeOp();
 }
@@ -135,7 +151,6 @@ void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
 {
    char* hostAddresses = (char*) hostAddr;
    char* deviceAddresses = (char*) devAddr;
-
    ops->addOp();
    try {
       for (unsigned int i = 0; i < numChunks; i += 1) {

@@ -134,8 +134,15 @@ devinclude_HEADERS = \
 	trackableobject_decl.hpp \
 	trackableobject.hpp \
 	hwloc_decl.hpp \
-	regionset_decl.hpp \
+	regionset_decl.hpp
+if RESILIENCY
+devinclude_HEADERS+=\
+	taskexecutionexception_fwd.hpp \
 	$(END)
+else
+devinclude_HEADERS+=\
+	$(END)
+endif
 
 common_sources=\
 	nanos-int.h \

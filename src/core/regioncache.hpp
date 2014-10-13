@@ -6,19 +6,19 @@
 #include "processingelement_decl.hpp"
 
 
-inline uint64_t AllocatedChunk::getAddress() const {
+inline uint64_t Chunk::getAddress() const {
    return _address;
 }
 
-inline uint64_t AllocatedChunk::getHostAddress() const {
+inline uint64_t Chunk::getHostAddress() const {
    return _hostAddress;
 }
 
-inline void AllocatedChunk::setHostAddress( uint64_t addr ) {
+inline void Chunk::setHostAddress( uint64_t addr ) {
    _hostAddress = addr;
 }
 
-inline std::size_t AllocatedChunk::getSize() const {
+inline std::size_t Chunk::getSize() const {
    return _size;
 }
 
@@ -67,7 +67,7 @@ inline bool AllocatedChunk::isRooted() const {
    return _rooted;
 }
 
-inline Device const &RegionCache::getDevice() const {
+inline Device /*const*/ &RegionCache::getDevice() const {
    return _device;
 }
 

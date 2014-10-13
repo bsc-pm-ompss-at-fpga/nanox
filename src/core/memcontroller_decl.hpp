@@ -27,10 +27,11 @@ class MemController {
    BaseAddressSpaceInOps      *_inOps;
    SeparateAddressSpaceOutOps *_outOps;
 #ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
-   SeparateAddressSpaceInOps  *_backupOps;
+   SeparateAddressSpaceInOps  *_backupOpsIn;
    SeparateAddressSpaceInOps  *_backupOpsOut;
    SeparateAddressSpaceOutOps *_restoreOps;
    MemCacheCopy               *_backupCacheCopies;
+   Chunk                      *_backupInOutCopies;
 #endif
    std::size_t                 _affinityScore;
    std::size_t                 _maxAffinityScore;

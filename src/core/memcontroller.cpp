@@ -10,13 +10,17 @@
  //#define _VERBOSE_CACHE ( sys.getNetwork()->getNodeNum() == 0 )
 #endif
 
+#ifdef NANOS_RESILIENCY_ENABLED
+#include "backupmanager.hpp"
+#endif
+
 namespace nanos {
 MemController::MemController ( WD &wd ) :
       _initialized( false), _preinitialized(false), _inputDataReady(false), _outputDataReady(
       false), _memoryAllocated( false), _mainWd( false), _wd(wd), _pe( NULL ), 
       _provideLock(), _providedRegions(), _inOps(NULL), _outOps(NULL), 
 #ifdef NANOS_RESILIENCY_ENABLED
-      _backupOps(NULL), _backupOpsOut(NULL), _restoreOps(NULL), _backupCacheCopies(NULL),
+      _backupOpsIn(NULL), _backupOpsOut(NULL), _restoreOps(NULL), _backupCacheCopies(NULL), _backupInOutCopies(NULL),
 #endif
       _affinityScore(0), _maxAffinityScore(0), _ownedRegions(), _parentRegions()
 {
@@ -24,81 +28,10 @@ MemController::MemController ( WD &wd ) :
       _memCacheCopies = NEW MemCacheCopy[wd.getNumCopies()];
       if( sys.isResiliencyEnabled() ) {
          _backupCacheCopies = NEW MemCacheCopy[_wd.getNumCopies()];
-   }
-}
-
-#if 0
-bool MemController::hasVersionInfoForRegion( global_reg_t reg, unsigned int &version, NewLocationInfoList &locations ) {
-   bool resultHIT = false;
-   bool resultSUBR = false;
-   bool resultSUPER = false;
-   std::map<NewNewRegionDirectory::RegionDirectoryKey, std::map< reg_t, unsigned int > >::iterator wantedDir = _providedRegions.find( reg.key );
-   if ( wantedDir != _providedRegions.end() ) {
-      unsigned int versionHIT = 0;
-      std::map< reg_t, unsigned int >::iterator wantedReg = wantedDir->second.find( reg.id );
-      if ( wantedReg != wantedDir->second.end() ) {
-         versionHIT = wantedReg->second;
-         //double check the directory because a there may be WDs that have not been detected as predecessors
-         NewNewDirectoryEntryData *entry = ( NewNewDirectoryEntryData * ) wantedDir->first->getRegionData( wantedReg->first );
-         if ( entry->getVersion() > versionHIT ) {
-            versionHIT = entry->getVersion();
-         }
-         resultHIT = true;
-         wantedDir->second.erase( wantedReg );
-      }
-      //if ( resultHIT ) {
-      //   std::cerr << " HIT got version " << versionHIT << " for region " << reg.id << std::endl;
-      //}
-
-      unsigned int versionSUPER = 0;
-      reg_t superPart = wantedDir->first->isThisPartOf( reg.id, wantedDir->second.begin(), wantedDir->second.end(), versionSUPER ); 
-      if ( superPart != 0 ) {
-         resultSUPER = true;
-      }
-
-      unsigned int versionSUBR = 0;
-      if ( wantedDir->first->doTheseRegionsForm( reg.id, wantedDir->second.begin(), wantedDir->second.end(), versionSUBR ) ) {
-         if ( versionHIT < versionSUBR && versionSUPER < versionSUBR ) {
-            NewNewDirectoryEntryData *dirEntry = ( NewNewDirectoryEntryData * ) wantedDir->first->getRegionData( reg.id );
-            if ( dirEntry != NULL ) { /* if entry is null, do check directory, because we need to insert the region info in the intersect maps */
-               for ( std::map< reg_t, unsigned int >::const_iterator it = wantedDir->second.begin(); it != wantedDir->second.end(); it++ ) {
-                  global_reg_t r( it->first, wantedDir->first );
-                  reg_t intersect = r.key->computeIntersect( reg.id, r.id );
-                  if ( it->first == intersect ) {
-                     locations.push_back( std::make_pair( it->first, it->first ) );
-                  }
-               }
-               version = versionSUBR;
-            } else {
-               sys.getHostMemory().getVersionInfo( reg, version, locations );
-            }
-            resultSUBR = true;
-            //std::cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! VERSION INFO !!! CHUNKS FORM THIS REG!!! and version computed is " << version << std::endl;
-         }
-      }
-      if ( !resultSUBR && ( resultSUPER || resultHIT ) ) {
-         if ( versionHIT >= versionSUPER ) {
-            version = versionHIT;
-            //std::cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! VERSION INFO !!! CHUNKS HIT!!! and version computed is " << version << std::endl;
-            locations.push_back( std::make_pair( reg.id, reg.id ) );
-         } else {
-            version = versionSUPER;
-            //std::cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! VERSION INFO !!! CHUNKS COMES FROM A BIGGER!!! and version computed is " << version << std::endl;
-            NewNewDirectoryEntryData *firstEntry = ( NewNewDirectoryEntryData * ) wantedDir->first->getRegionData( reg.id );
-            if ( firstEntry != NULL ) {
-               locations.push_back( std::make_pair( reg.id, superPart ) );
-               NewNewDirectoryEntryData *secondEntry = ( NewNewDirectoryEntryData * ) wantedDir->first->getRegionData( superPart );
-               if (secondEntry == NULL) std::cerr << "LOLWTF!"<< std::endl;
-               *firstEntry = *secondEntry;
-            } else {
-               sys.getHostMemory().getVersionInfo( reg, version, locations );
-            }
-         }
+         _backupInOutCopies = NEW Chunk[_wd.getNumCopies()];
       }
    }
-   return (resultSUBR || resultSUPER || resultHIT) ;
 }
-#endif
 
 bool MemController::ownsRegion( global_reg_t const &reg ) {
    bool i_has_it = _ownedRegions.hasObjectOfRegion( reg );
@@ -124,10 +57,6 @@ void MemController::preInit ( )
    for (index = 0; index < _wd.getNumCopies(); index += 1) {
       //std::cerr << "WD "<< _wd.getId() << " Depth: "<< _wd.getDepth() <<" Creating copy "<< index << std::endl;
       //std::cerr << _wd.getCopies()[ index ];
-      //
-      //
-      //
-
       uint64_t host_copy_addr = 0;
       if ( _wd.getParent() != NULL /* && !_wd.getParent()->_mcontrol._mainWd */ ) {
          for ( unsigned int parent_idx = 0; parent_idx < _wd.getParent()->getNumCopies(); parent_idx += 1 ) {
@@ -189,12 +118,13 @@ void MemController::preInit ( )
       if ( _backupCacheCopies ) {
          new (&_backupCacheCopies[index]) MemCacheCopy(_wd, index);
          _backupCacheCopies[ index ].setVersion( _memCacheCopies[ index ].getVersion() );
-         if( _wd.getCopies()[index].isInput() )// only usefull for input data
+         if( _wd.getCopies()[index].isInput() ) {
             _backupCacheCopies[index]._locations.insert(
                   _backupCacheCopies[index]._locations.end(),
                   _memCacheCopies[index]._locations.begin(),
                   _memCacheCopies[index]._locations.end()
                );
+         }
       }
 #endif
 
@@ -222,7 +152,7 @@ void MemController::initialize( ProcessingElement &pe ) {
       }
 #ifdef NANOS_RESILIENCY_ENABLED
       if( _wd.isRecoverable() ) {
-         _backupOps = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
+         _backupOpsIn = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
          _backupOpsOut = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
       }
 #endif
@@ -297,14 +227,29 @@ void MemController::copyDataIn() {
    }
 #ifdef NANOS_RESILIENCY_ENABLED
    if ( sys.isResiliencyEnabled() ) {
-      ensure( _backupOps, "Backup ops array has not been initializedi!" );
+      ensure( _backupOpsIn, "Backup ops array has not been initializedi!" );
       for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
-	if ( _wd.getCopies()[index].isInput() ) {
-            _backupCacheCopies[ index ].generateInOps( *_backupOps, true, false, _wd, index);
-           std::cout << " Data copy. Index: " << index << ". Children version: " << _memCacheCopies[index].getChildrenProducedVersion() << ". Version: " << _memCacheCopies[index].getVersion() << ". Backup cache copies version: "<< _backupCacheCopies[index].getVersion() << std::endl;
-	}
+         if ( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
+            // For inout parameters, make a temporary independent backup. We have to do this privately, without
+            // the cache being noticed, because this backup is for exclusive use of this workdescriptor only.
+            BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
+
+            std::size_t size = _wd.getCopies()[index].getSize();
+            uint64_t hostAddress = _wd.getCopies()[index].getAddress();
+            uint64_t address = (uint64_t) dev.memAllocate(size, sys.getBackupMemory(), _wd, index);
+
+            new (&_backupInOutCopies[index]) Chunk( address, hostAddress, size );
+
+            dev.rawCopyIn( address, hostAddress, size, sys.getBackupMemory(), _wd );
+         // Note: we may want to make the regular backup too, even for inouts, as children tasks' "in" 
+         // parameters will do the backup later if they exist.
+         //}
+         //if ( _wd.getCopies()[index].isInput() ) {
+         } else if ( _wd.getCopies()[index].isInput() ) {
+            _backupCacheCopies[ index ].generateInOps( *_backupOpsIn, true, false, _wd, index);
+         }
       }
-      _backupOps->issue(_wd);
+      _backupOpsIn->issue(_wd);
    }
 #endif
    //NANOS_INSTRUMENT( inst2.close(); );
@@ -350,7 +295,6 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
 #ifdef NANOS_RESILIENCY_ENABLED
    if (sys.isResiliencyEnabled()) {
       ensure( _backupOpsOut, "Backup ops array has not been initialized!" );
-      //sys.getBackupMemory().prepareRegions( _backupCacheCopies, _wd.getNumCopies(), _wd );
 
       for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
          // Needed for CP input data
@@ -361,6 +305,15 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
             _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
             _backupCacheCopies[index]._locationDataReady = true;
 
+           _backupCacheCopies[index].generateInOps( *_backupOpsOut, true, false, _wd, index);
+         }
+
+         if( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
+            // Inoutparameters have to be restored no matter whether they were corrupted or not (they may be dirty).
+            BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
+
+            dev.memFree( _backupInOutCopies[index].getAddress(),
+                          sys.getBackupMemory() );
          }
       }
       _backupOpsOut->issue( _wd );
@@ -379,7 +332,17 @@ void MemController::restoreBackupData ( )
    if (_backupCacheCopies) {
       _restoreOps = NEW SeparateAddressSpaceOutOps( _pe, false, true);
       for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
-         if (_wd.getCopies()[index].isInput()) {
+         if (_wd.getCopies()[index].isInput()
+             && _wd.getCopies()[index].isOutput() ) {
+            // Inoutparameters have to be restored no matter whether they were corrupted or not (they may be dirty).
+            BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
+
+            dev.rawCopyOut( _backupInOutCopies[index].getHostAddress(),
+                            _backupInOutCopies[index].getAddress(),
+                            _backupInOutCopies[index].getSize(),
+                            sys.getBackupMemory(), _wd );
+
+         } else if (_wd.getCopies()[index].isInput()) {
             _backupCacheCopies[index]._chunk->copyRegionToHost( *_restoreOps,
                   _backupCacheCopies[index]._reg.id,
                   _backupCacheCopies[index].getVersion(), _wd, index);
@@ -440,9 +403,9 @@ bool MemController::isDataReady ( WD const &wd )
       if (!_inputDataReady) {
          _inputDataReady = _inOps->isDataReady(wd);
 #if NANOS_RESILIENCY_ENABLED
-         if (_backupOps) {
-            _inputDataReady &= _backupOps->isDataReady(wd);
-            _backupOps->releaseLockedSourceChunks(wd);
+         if (_backupOpsIn) {
+            _inputDataReady &= _backupOpsIn->isDataReady(wd);
+            _backupOpsIn->releaseLockedSourceChunks(wd);
          }
 #endif
       }

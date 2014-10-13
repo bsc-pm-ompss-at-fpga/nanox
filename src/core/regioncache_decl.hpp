@@ -38,13 +38,24 @@ namespace nanos {
 
    class RegionCache;
 
-   class AllocatedChunk {
+   class Chunk {
       private:
-         RegionCache                      &_owner;
-         RecursiveLock                     _lock;
          uint64_t                          _address;
          uint64_t                          _hostAddress;
          std::size_t                       _size;
+      public:
+         Chunk ();
+         Chunk ( uint64_t address, uint64_t hostAddress, std::size_t size );
+         uint64_t getAddress() const;
+         uint64_t getHostAddress() const;
+         void setHostAddress( uint64_t addr );
+         std::size_t getSize() const;
+   };
+
+   class AllocatedChunk : public Chunk {
+      private:
+         RegionCache                      &_owner;
+         RecursiveLock                     _lock;
          bool                              _dirty;
          bool                              _rooted;
          unsigned int                      _lruStamp;
@@ -64,13 +75,9 @@ namespace nanos {
          AllocatedChunk &operator=( AllocatedChunk const &chunk );
          ~AllocatedChunk();
 
-         uint64_t getAddress() const;
-         uint64_t getHostAddress() const;
-         std::size_t getSize() const;
          bool isDirty() const;
          unsigned int getLruStamp() const;
          void increaseLruStamp();
-         void setHostAddress( uint64_t addr );
 
          void clearRegions();
          void clearNewRegions( global_reg_t const &newAllocatedRegion );
@@ -195,7 +202,7 @@ namespace nanos {
          void unlock();
          bool tryLock();
          bool canCopyFrom( RegionCache const &from ) const;
-         Device const &getDevice() const;
+         Device /*const*/ &getDevice() const;
          unsigned int getNodeNumber() const;
          unsigned int getLruTime() const;
          void increaseLruTime();
