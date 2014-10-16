@@ -16,13 +16,13 @@
 /*      You should have received a copy of the GNU Lesser General Public License     */
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
-#ifndef _NANOS_TASKEXECUTIONEXCEPTION_FWD_H
-#define _NANOS_TASKEXECUTIONEXCEPTION_FWD_H
+#ifndef _NANOS_TASKEXCEPTION_FWD_H
+#define _NANOS_TASKEXCEPTION_FWD_H
 
 namespace nanos
 {
-   class TaskExecutionException;
+   class TaskException;
 };
 
-#endif // _NANOS_TASKEXECUTIONEXCEPTION_FWD_H
+#endif // _NANOS_TASKEXCEPTION_FWD_H
 

@@ -10,8 +10,11 @@ uint64_t global_reg_t::getKeyFirstAddress() const {
 
 uint64_t global_reg_t::getRealFirstAddress() const {
    uint64_t addr = 0;
-   NewNewDirectoryEntryData *entry = NewNewRegionDirectory::getDirectoryEntry( *key, id );
+   ensure( key != NULL, "aaa es null" );
+   // NewNewDirectoryEntryData *entry = NewNewRegionDirectory::getDirectoryEntry( *this->key, this->id );
+   NewNewDirectoryEntryData *entry = NewNewRegionDirectory::getDirectoryEntry( *this->key, id );
    ensure(entry != NULL, "invalid entry.");
+   //addr = entry->getBaseAddress() == 0 ? this->key->getRealBaseAddress() : entry->getBaseAddress();
    addr = entry->getBaseAddress() == 0 ? key->getRealBaseAddress() : entry->getBaseAddress();
    if ( addr != 0 ) {
       addr = getFirstAddress( addr );

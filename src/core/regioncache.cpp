@@ -781,6 +781,7 @@ unsigned int AllocatedChunk::getVersion( global_reg_t const &reg ) {
 
 DeviceOps *AllocatedChunk::getDeviceOps( global_reg_t const &reg ) {
    CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg.id );
+   ensure(entry != NULL, "CacheEntry not found!");
    return entry->getDeviceOps();
 }
 

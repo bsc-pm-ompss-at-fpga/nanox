@@ -22,7 +22,7 @@
 
 #include "basethread_fwd.hpp"
 #include "smpprocessor_fwd.hpp"
-#include "taskexecutionexception_fwd.hpp"
+#include "taskexception_fwd.hpp"
 #include <pthread.h>
 #include <signal.h>
 
@@ -94,7 +94,7 @@ namespace nanos {
 void * os_bootthread ( void *arg );
 
 #ifdef NANOS_RESILIENCY_ENABLED
-void taskExecutionHandler(int sig, siginfo_t* si, void* context);
+void taskErrorHandler(int sig, siginfo_t* si, void* context);
 #endif
 
 #endif

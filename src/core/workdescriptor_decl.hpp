@@ -41,7 +41,7 @@
 #include "dependenciesdomain_decl.hpp"
 #include "simpleallocator_decl.hpp"
 
-#include "taskexecutionexception_fwd.hpp"
+#include "taskexception_fwd.hpp"
 #include "debug.hpp"
 
 #include "schedule_fwd.hpp"   // ScheduleWDData
@@ -182,7 +182,7 @@ namespace nanos
             * execution can continue (e.g. use a different memory page if we find one
             * corrupted/invalid.
             */
-            virtual bool recover ( TaskExecutionException const& err ) {
+            virtual bool recover ( TaskException const& err ) {
                fatal0(__PRETTY_FUNCTION__ << "is not implemented."); 
                return false;
             }

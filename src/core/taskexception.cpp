@@ -18,13 +18,13 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.  */
 /**************************************************************************/
 
-#include "taskexecutionexception.hpp"
+#include "taskexception.hpp"
 #include "workdescriptor.hpp"
 #include "system_decl.hpp"
 
 namespace nanos {
 
-TaskExecutionException::TaskExecutionException (
+TaskException::TaskException (
       WD *t, siginfo_t const &info,
       ucontext_t const &context ) throw () :
       task(t), signal_info(info), task_context(context)
@@ -161,15 +161,15 @@ TaskExecutionException::TaskExecutionException (
    error_msg = ss.str();
 }
 
-TaskExecutionException::TaskExecutionException (
-      TaskExecutionException const &tee ) throw () :
+TaskException::TaskException (
+      TaskException const &tee ) throw () :
       error_msg(tee.error_msg), task(tee.task), signal_info(tee.signal_info), task_context(
             tee.task_context)
 {
 
 }
 
-TaskExecutionException::~TaskExecutionException ( ) throw ()
+TaskException::~TaskException ( ) throw ()
 {
    /*
     * Note that this destructor does not delete the WorkDescriptor object pointed by 'task'.
@@ -178,27 +178,27 @@ TaskExecutionException::~TaskExecutionException ( ) throw ()
     */
 }
 
-const WD* TaskExecutionException::getFailedTask ( ) const
+const WD* TaskException::getFailedTask ( ) const
 {
    return task;
 }
 
-int TaskExecutionException::getSignal ( ) const
+int TaskException::getSignal ( ) const
 {
    return signal_info.si_signo;
 }
 
-const siginfo_t TaskExecutionException::getSignalInfo ( ) const
+const siginfo_t TaskException::getSignalInfo ( ) const
 {
    return signal_info;
 }
 
-const ucontext_t TaskExecutionException::getExceptionContext ( ) const
+const ucontext_t TaskException::getExceptionContext ( ) const
 {
    return task_context;
 }
 
-void TaskExecutionException::handle ( ) const
+void TaskException::handleCheckpointError ( WorkDescriptor const &initTask ) const
 {
    /*
     * When a signal handler is executing, the delivery of the same signal
@@ -211,17 +211,48 @@ void TaskExecutionException::handle ( ) const
    sigaddset(&sigs, signal_info.si_signo);
    pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
 
-   bool recoverable_error = false;
-   if( task->started() ) {
-      // error detected in task execution: invalidate task
-      recoverable_error = task->setInvalid(true);
+   // error detected in task initialization: invalidate task AND its parent
+   // if it has no recoverable parent, then the execution cannot continue
+   bool recoverable_error = //initTask->setInvalid(true) &&
+                        initTask.getParent() &&
+                        initTask.getParent()->setInvalid(true);
+
+   if( !recoverable_error )  
+   {
+      static bool call_once = true;
+      if( sys.isSummaryEnabled() && call_once )
+         call_once = false;
+         sys.executionSummary();
+      // Unrecoverable error: terminate execution
+      fatal("An error was found, but there isn't any recoverable ancestor." << std::endl << what());
    } else {
-      // error detected in task initialization: invalidate task AND its parent
-      // if it has no recoverable parent, then the execution cannot continue
-      recoverable_error = task->setInvalid(true) &&
-                          task->getParent() &&
-                          task->getParent()->setInvalid(true);
+      debug( what() );
    }
+
+   // Try to recover the system from the failure (so we can continue with the execution)
+   if(!task->getActiveDevice().recover( *this )) {
+      if( sys.isSummaryEnabled() )
+         sys.executionSummary();
+      // If we couldn't recover the system, we can't go on with the execution
+      fatal("Resiliency: Unrecoverable error found." << std::endl << what());
+   }
+}
+
+void TaskException::handleExecutionError ( ) const
+{
+   /*
+    * When a signal handler is executing, the delivery of the same signal
+    * is blocked, and it does not become unblocked until the handler returns.
+    * In this case, it will not become unblocked since the handler is exited
+    * through an exception: it should be explicitly unblocked.
+    */
+   sigset_t sigs;
+   sigemptyset(&sigs);
+   sigaddset(&sigs, signal_info.si_signo);
+   pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
+
+   // error detected in task execution: invalidate it
+   bool recoverable_error = task->setInvalid(true);
 
    if( !recoverable_error )  
    {

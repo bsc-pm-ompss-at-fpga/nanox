@@ -18,10 +18,10 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.  */
 /**************************************************************************/
 
-#ifndef _NANOS_TASKEXECUTIONEXCEPTION_H
-#define _NANOS_TASKEXECUTIONEXCEPTION_H
+#ifndef _NANOS_TASKEXCEPTION_H
+#define _NANOS_TASKEXCEPTION_H
 
-#include "taskexecutionexception_fwd.hpp"
+#include "taskexception_fwd.hpp"
 
 #include "workdescriptor_fwd.hpp"
 #include <exception>
@@ -63,11 +63,12 @@ namespace nanos {
    };
 
    /*!
-    * \class TaskExecutionException
+    * \class TaskException
     * \brief Contains usefull information about a runtime error generated in a task execution.
     */
-   class TaskExecutionException: public std::exception
+   class TaskException: public std::exception
    {
+
       private:
          std::string error_msg; /*!< Description of the error that created this exception */
          WD* task;/*!< Pointer to the affected task */
@@ -75,24 +76,25 @@ namespace nanos {
          const ucontext_t task_context;/*!< Detailed description after the member */
 
       public:
+
          /*!
-          * Constructor for class TaskExecutionException
+          * Constructor for class TaskException
           * \param task a pointer to the task where the error appeared
           * \param info information about the signal raised
           * \param context contains the state of execution when the error appeared
           */
-         TaskExecutionException ( WD *t, siginfo_t const &info,
+         TaskException ( WD *t, siginfo_t const &info,
                                   ucontext_t const &context ) throw ();
 
          /*!
-          * Copy constructor for class TaskExecutionException
+          * Copy constructor for class TaskException
           */
-         TaskExecutionException ( TaskExecutionException const &tee ) throw ();
+         TaskException ( TaskException const &tee ) throw ();
 
          /*!
-          * Destructor for class TaskExecutionException
+          * Destructor for class TaskException
           */
-         virtual ~TaskExecutionException ( ) throw ();
+         virtual ~TaskException ( ) throw ();
 
          /*!
           * Returns some information about the error in text format.
@@ -121,8 +123,17 @@ namespace nanos {
           */
          const ucontext_t getExceptionContext ( ) const;
 
-         void handle ( ) const;
+         /*!
+          * Common actions to be taken when an error raises in backup/restart operations.
+          * \param initTask Task that was being initialized at the moment of the error. That task is invalidated.
+          */
+         void handleCheckpointError ( WorkDescriptor const &initTask ) const;
+
+         /*!
+          * Common actions to be taken when an error raises in execution. This task is invalidated.
+          */
+         void handleExecutionError ( ) const;
    };
 }
 
-#endif /* _NANOS_TASKEXECUTIONEXCEPTION_H */
+#endif /* _NANOS_TASKEXCEPTION_H */

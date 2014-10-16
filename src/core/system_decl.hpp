@@ -58,7 +58,7 @@
 #endif
 
 #ifdef NANOS_RESILIENCY_ENABLED
-#include "taskexecutionexception.hpp"
+#include "taskexception.hpp"
 #endif
 
 #ifdef NANOS_FAULT_INJECTION

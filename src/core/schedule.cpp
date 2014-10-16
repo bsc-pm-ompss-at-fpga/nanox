@@ -40,10 +40,6 @@
 
 #include <iostream>
 
-#ifdef NANOS_RESILIENCY_ENABLED
-#include "taskexecutionexception.hpp"
-#endif
-
 using namespace nanos;
 
 void SchedulerConf::config (Config &cfg)

@@ -94,7 +94,7 @@ namespace ext
              * execution can continue (e.g. use a different memory page if we find one
              * corrupted/invalid.
              */
-            virtual bool recover ( TaskExecutionException const& err );
+            virtual bool recover ( TaskException const& err );
 
             /*! \brief Restores the workdescriptor to its original state.
              * Leaving the recovery dependent to the arch allows more

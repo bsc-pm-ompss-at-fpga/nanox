@@ -150,7 +150,9 @@ Version *ContainerSparse< T >::getRegionData( reg_t id ) {
       it->second.setLeaf( _orig.getRegionNode( id ) );
       return NULL;
    }
-   return it->second.getData();
+   auto a = it->second.getData();
+   return a;
+   //return it->second.getData();
 }
 
 template <class T>

@@ -230,6 +230,8 @@ void MemController::copyDataIn() {
 #ifdef NANOS_RESILIENCY_ENABLED
    if ( sys.isResiliencyEnabled() && _wd.isRecoverable() && !_wd.isInvalid() ) {
       ensure( _backupOpsIn, "Backup ops array has not been initializedi!" );
+
+      bool queuedOps = false;
       for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
          if ( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
             // For inout parameters, make a temporary independent backup. We have to do this privately, without
@@ -247,9 +249,12 @@ void MemController::copyDataIn() {
          // parameters will always do the backup later if they exist no matter if now we perform the copy or not
          } else if ( _wd.getCopies()[index].isInput() ) {
             _backupCacheCopies[ index ].generateInOps( *_backupOpsIn, true, false, _wd, index);
+            queuedOps = true;
          }
       }
-      _backupOpsIn->issue(_wd);
+
+      if( queuedOps )
+         _backupOpsIn->issue(_wd);
    }
 #endif
    //NANOS_INSTRUMENT( inst2.close(); );
@@ -293,30 +298,49 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
       _outOps->issue( _wd );
    }
 #ifdef NANOS_RESILIENCY_ENABLED
-   if (sys.isResiliencyEnabled() && !_wd.isInvalid() ) {
-      ensure( _backupOpsOut, "Backup ops array has not been initialized!" );
+   if (sys.isResiliencyEnabled() ) {
+      if( !_wd.isInvalid() ) {
+         ensure( _backupOpsOut, "Backup ops array has not been initialized!" );
 
-      for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
-         // Needed for CP input data
-         if( _wd.getCopies()[index].isOutput() ) {
-            _backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
+         bool queuedOps = false;
+         for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
+            // Needed for CP input data
+            if( _wd.getCopies()[index].isOutput() ) {
+               _backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
 
-	    _backupCacheCopies[index]._locations.clear();
-            _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
-            _backupCacheCopies[index]._locationDataReady = true;
+               _backupCacheCopies[index]._locations.clear();
+               _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
+               _backupCacheCopies[index]._locationDataReady = true;
 
-           _backupCacheCopies[index].generateInOps( *_backupOpsOut, true, false, _wd, index);
+              _backupCacheCopies[index].generateInOps( *_backupOpsOut, true, false, _wd, index);
+              queuedOps = true;
+            }
+
+            if( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
+               // Inoutparameters' backup have to be cleaned: they are private
+               BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
+
+               dev.memFree( _backupInOutCopies[index].getAddress(),
+                             sys.getBackupMemory() );
+            }
          }
 
-         if( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
-            // Inoutparameters have to be restored no matter whether they were corrupted or not (they may be dirty).
-            BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
-
-            dev.memFree( _backupInOutCopies[index].getAddress(),
-                          sys.getBackupMemory() );
+         if( queuedOps ) {
+            _backupOpsOut->issue( _wd );
          }
+
+      } else {
+         for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
+            if( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
+               // Inoutparameters' backup have to be cleaned: they are private
+               BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
+
+               dev.memFree( _backupInOutCopies[index].getAddress(),
+                             sys.getBackupMemory() );
+            }
+         }
+
       }
-      _backupOpsOut->issue( _wd );
    }
 #endif
 }

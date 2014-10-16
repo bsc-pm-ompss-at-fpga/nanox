@@ -161,7 +161,7 @@ void PThread::setupSignalHandlers ()
 {
    /* Set up the structure to specify task-recovery. */
    struct sigaction recovery_action;
-   recovery_action.sa_sigaction = &taskExecutionHandler;
+   recovery_action.sa_sigaction = &taskErrorHandler;
    sigemptyset(&recovery_action.sa_mask);
    recovery_action.sa_flags = SA_SIGINFO // Provides context information to the handler.
                             | SA_RESTART; // Resume system calls interrupted by the signal.
@@ -178,7 +178,7 @@ void PThread::setupSignalHandlers ()
 
 }
 
-void taskExecutionHandler ( int sig, siginfo_t* si, void* context )
+void taskErrorHandler ( int sig, siginfo_t* si, void* context )
 {
    /*
     * In order to prevent the signal to be raised inside the handler,
@@ -188,6 +188,6 @@ void taskExecutionHandler ( int sig, siginfo_t* si, void* context )
     * we must unblock the signal or that signal will not be available to catch
     * in the future (this is done in at the catch clause).
     */
-   throw TaskExecutionException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context);
+   throw TaskException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context);
 }
 #endif

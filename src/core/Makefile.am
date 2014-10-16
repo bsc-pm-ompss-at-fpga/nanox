@@ -137,7 +137,7 @@ devinclude_HEADERS = \
 	regionset_decl.hpp
 if RESILIENCY
 devinclude_HEADERS+=\
-	taskexecutionexception_fwd.hpp \
+	taskexception_fwd.hpp \
 	$(END)
 else
 devinclude_HEADERS+=\
@@ -277,9 +277,9 @@ common_sources=\
 	regionset.cpp
 if RESILIENCY
 common_sources+=\
-	taskexecutionexception_fwd.hpp \
-	taskexecutionexception.hpp \
-	taskexecutionexception.cpp \
+	taskexception_fwd.hpp \
+	taskexception.hpp \
+	taskexception.cpp \
 	backupmanager.hpp \
 	backupmanager.cpp \
         $(END)

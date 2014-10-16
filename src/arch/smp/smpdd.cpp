@@ -29,7 +29,7 @@
 
 #ifdef NANOS_RESILIENCY_ENABLED
 #include <stdint.h>
-#include "taskexecutionexception.hpp"
+#include "taskexception.hpp"
 #include "memcontroller_decl.hpp"
 
 #ifdef NANOS_FAULT_INJECTION
@@ -132,10 +132,10 @@ void SMPDD::execute ( WD &wd ) throw ()
          try {
             // Call to the user function
             getWorkFct()( wd.getData() );
-         } catch (nanos::TaskExecutionException& e) {
+         } catch (nanos::TaskException& e) {
             debug("Resiliency: error detected during task " << wd.getId() << " execution.");
             sys.getExceptionStats().incrExecutionErrors();
-            e.handle();
+            e.handleExecutionError( );
          } catch (std::exception& e) {
             std::string s = "Error: Uncaught exception ";
             s += typeid(e).name();
@@ -193,7 +193,7 @@ void SMPDD::execute ( WD &wd ) throw ()
 }
 
 #ifdef NANOS_RESILIENCY_ENABLED
-bool SMPDD::recover( TaskExecutionException const& err ) {
+bool SMPDD::recover( TaskException const& err ) {
    bool result = true;
 
    static size_t page_size = sysconf(_SC_PAGESIZE);
@@ -204,7 +204,7 @@ bool SMPDD::recover( TaskExecutionException const& err ) {
 
          switch(err.getSignalInfo().si_code) {
             case SEGV_MAPERR: /* Address not mapped to object.  */
-               debug("Resiliency: SEGV_MAPERR error recovery is still not supported.")
+               // SEGV_MAPERR error recovery is not fully supported
                break;// case SEGV_MAPERR
             case SEGV_ACCERR: /* Invalid permissions for mapped object.  */
                uintptr_t page_addr = (uintptr_t)err.getSignalInfo().si_addr;
