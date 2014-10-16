@@ -79,7 +79,9 @@ void BackupManager::rawCopyIn ( uint64_t devAddr, uint64_t hostAddr,
                               WorkDescriptor const& wd ) const
 {
    try {
-      memcpy((void*) devAddr, (void*) hostAddr, len);
+      // We cannot use memcpy. It has empty exception specifier
+      std::copy((char*) hostAddr, (char*) hostAddr+len, (char*) devAddr);
+      //memcpy((void*) devAddr, (void*) hostAddr, len);
    } catch ( TaskExecutionException &e ) {
       e.handle( );
       sys.getExceptionStats().incrInitializationErrors();
@@ -106,7 +108,8 @@ void BackupManager::rawCopyOut ( uint64_t hostAddr, uint64_t devAddr,
 {
    // This is called on restore operations
    try {
-      memcpy((void*) hostAddr, (void*) devAddr, len);
+      //memcpy((void*) hostAddr, (void*) devAddr, len);
+      std::copy((char*) devAddr, (char*) devAddr+len, (char*) hostAddr);
    } catch ( TaskExecutionException &e ) {
       e.handle( );
       sys.getExceptionStats().incrInitializationErrors();
@@ -154,7 +157,8 @@ void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
    ops->addOp();
    try {
       for (unsigned int i = 0; i < numChunks; i += 1) {
-         memcpy(&deviceAddresses[i * ld], &hostAddresses[i * ld], len);
+         //memcpy(&deviceAddresses[i * ld], &hostAddresses[i * ld], len);
+         std::copy((char*) &hostAddresses[i * ld], (char*) &hostAddresses[i * ld]+len, (char*) &deviceAddresses[i * ld]);
       }
    } catch ( TaskExecutionException &e ) {
       e.handle( );
@@ -178,7 +182,8 @@ void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
    ops->addOp();
    try {
       for (unsigned int i = 0; i < numChunks; i += 1) {
-         memcpy(&hostAddresses[i * ld], &deviceAddresses[i * ld], len);
+         //memcpy(&hostAddresses[i * ld], &deviceAddresses[i * ld], len);
+         std::copy((char*) &deviceAddresses[i * ld], (char*) &deviceAddresses[i * ld]+len, (char*) &hostAddresses[i * ld]);
       }
    } catch ( TaskExecutionException &e ) {
       e.handle( );

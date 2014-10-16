@@ -367,7 +367,8 @@ void NewNewRegionDirectory::print() const {
       for (reg_t i = 1; i < it->second->getMaxRegionId(); i++ ) {
          NewNewDirectoryEntryData *entry = ( NewNewDirectoryEntryData * ) it->second->getRegionData( i );
          if ( !entry ) {
-            std::cerr << "\t" << i << " "; it->second->printRegion( std::cerr, i ); std::cerr << " : null " << std::endl;
+            //std::cerr << "\t" << i << " "; it->second->printRegion( std::cerr, i ); std::cerr << " : null " << std::endl;
+            //std::cerr << "\t" << i << " : null entry " << std::endl;
          } else {
             std::cerr << "\t" << i << " "; it->second->printRegion( std::cerr, i ); std::cerr << " : ("<< entry <<") "<< *entry << std::endl;
          }

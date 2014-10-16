@@ -151,8 +151,10 @@ void MemController::initialize( ProcessingElement &pe ) {
          _inOps = NEW SeparateAddressSpaceInOps( _pe, true, sys.getSeparateMemory( _pe->getMemorySpaceId() ) );
       }
 #ifdef NANOS_RESILIENCY_ENABLED
-      if( _wd.isRecoverable() ) {
-         _backupOpsIn = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
+      if( sys.isResiliencyEnabled() ) {
+         if( _wd.isRecoverable() ) {
+            _backupOpsIn = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
+         }
          _backupOpsOut = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
       }
 #endif
@@ -226,7 +228,7 @@ void MemController::copyDataIn() {
       }
    }
 #ifdef NANOS_RESILIENCY_ENABLED
-   if ( sys.isResiliencyEnabled() ) {
+   if ( sys.isResiliencyEnabled() && _wd.isRecoverable() && !_wd.isInvalid() ) {
       ensure( _backupOpsIn, "Backup ops array has not been initializedi!" );
       for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
          if ( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
@@ -241,10 +243,8 @@ void MemController::copyDataIn() {
             new (&_backupInOutCopies[index]) Chunk( address, hostAddress, size );
 
             dev.rawCopyIn( address, hostAddress, size, sys.getBackupMemory(), _wd );
-         // Note: we may want to make the regular backup too, even for inouts, as children tasks' "in" 
-         // parameters will do the backup later if they exist.
-         //}
-         //if ( _wd.getCopies()[index].isInput() ) {
+         // Note: we dont want to make the regular backup for inouts, as children tasks' "in" 
+         // parameters will always do the backup later if they exist no matter if now we perform the copy or not
          } else if ( _wd.getCopies()[index].isInput() ) {
             _backupCacheCopies[ index ].generateInOps( *_backupOpsIn, true, false, _wd, index);
          }
@@ -293,7 +293,7 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
       _outOps->issue( _wd );
    }
 #ifdef NANOS_RESILIENCY_ENABLED
-   if (sys.isResiliencyEnabled()) {
+   if (sys.isResiliencyEnabled() && !_wd.isInvalid() ) {
       ensure( _backupOpsOut, "Backup ops array has not been initialized!" );
 
       for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
