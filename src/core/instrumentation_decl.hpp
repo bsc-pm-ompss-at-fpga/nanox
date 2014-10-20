@@ -601,6 +601,12 @@ namespace nanos {
             /* 50 */ registerEventKey("wd-blocked", "Work descriptor becomes blocked", false);
             /* 51 */ registerEventKey("parallel-outline-fct", "Parallel Outline Function", false);
 
+            /* 53 */ registerEventKey("checkpoint-inputs", "Copying task input data from host to backup pool." );
+            /* 54 */ registerEventKey("checkpoint-outputs", "Copying task output data from host to backup pool." );
+            /* 55 */ registerEventKey("restore", "Copying task input data from backup pool back to the host." );
+            /* 56 */ registerEventKey("task-reexecution", "Current task is executed again because an error was found." );
+            /* 57 */ registerEventKey("task-discard", "Current task's execution is skipped because it has been invalidated." );
+
             /* ** */ registerEventKey("debug","Debug Key", true); /* Keep this key as the last one */
          }
 

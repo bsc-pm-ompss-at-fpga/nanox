@@ -151,10 +151,8 @@ void MemController::initialize( ProcessingElement &pe ) {
          _inOps = NEW SeparateAddressSpaceInOps( _pe, true, sys.getSeparateMemory( _pe->getMemorySpaceId() ) );
       }
 #ifdef NANOS_RESILIENCY_ENABLED
-      if( sys.isResiliencyEnabled() ) {
-         if( _wd.isRecoverable() ) {
-            _backupOpsIn = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
-         }
+      if( sys.isResiliencyEnabled() && _wd.isRecoverable() ) {
+         _backupOpsIn = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
          _backupOpsOut = NEW SeparateAddressSpaceInOps(_pe, true, sys.getBackupMemory() );
       }
 #endif
@@ -231,6 +229,12 @@ void MemController::copyDataIn() {
    if ( sys.isResiliencyEnabled() && _wd.isRecoverable() && !_wd.isInvalid() ) {
       ensure( _backupOpsIn, "Backup ops array has not been initializedi!" );
 
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("checkpoint-inputs") );
+   NANOS_INSTRUMENT ( nanos_event_value_t val = _wd.getId() );
+   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
+#endif
+
       bool queuedOps = false;
       for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
          if ( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
@@ -255,6 +259,11 @@ void MemController::copyDataIn() {
 
       if( queuedOps )
          _backupOpsIn->issue(_wd);
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
+#endif
+
    }
 #endif
    //NANOS_INSTRUMENT( inst2.close(); );
@@ -298,7 +307,24 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
       _outOps->issue( _wd );
    }
 #ifdef NANOS_RESILIENCY_ENABLED
-   if (sys.isResiliencyEnabled() ) {
+   if (sys.isResiliencyEnabled() && _wd.isRecoverable() ) {
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("checkpoint-outputs") );
+   NANOS_INSTRUMENT ( nanos_event_value_t val = _wd.getId() );
+   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
+#endif
+
+      for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
+         if( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
+            // Inoutparameters' backup have to be cleaned: they are private
+            BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
+
+            dev.memFree( _backupInOutCopies[index].getAddress(),
+                          sys.getBackupMemory() );
+         }
+      }
+
       if( !_wd.isInvalid() ) {
          ensure( _backupOpsOut, "Backup ops array has not been initialized!" );
 
@@ -315,33 +341,18 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
               _backupCacheCopies[index].generateInOps( *_backupOpsOut, true, false, _wd, index);
               queuedOps = true;
             }
-
-            if( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
-               // Inoutparameters' backup have to be cleaned: they are private
-               BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
-
-               dev.memFree( _backupInOutCopies[index].getAddress(),
-                             sys.getBackupMemory() );
-            }
          }
 
          if( queuedOps ) {
             _backupOpsOut->issue( _wd );
          }
-
-      } else {
-         for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
-            if( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
-               // Inoutparameters' backup have to be cleaned: they are private
-               BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
-
-               dev.memFree( _backupInOutCopies[index].getAddress(),
-                             sys.getBackupMemory() );
-            }
-         }
-
       }
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
+#endif
    }
+
 #endif
 }
 
@@ -427,7 +438,7 @@ bool MemController::isDataReady ( WD const &wd )
       if (!_inputDataReady) {
          _inputDataReady = _inOps->isDataReady(wd);
 #if NANOS_RESILIENCY_ENABLED
-         if (_backupOpsIn) {
+         if ( _wd.isRecoverable() && _backupOpsIn) {
             _inputDataReady &= _backupOpsIn->isDataReady(wd);
             _backupOpsIn->releaseLockedSourceChunks(wd);
          }
@@ -456,7 +467,7 @@ bool MemController::isOutputDataReady( WD const &wd ) {
          _outputDataReady = true;
       }
 #if NANOS_RESILIENCY_ENABLED
-      if (_backupOpsOut) {
+      if ( _wd.isRecoverable() && _backupOpsOut) {
          _outputDataReady = _backupOpsOut->isDataReady(wd);
          _backupOpsOut->releaseLockedSourceChunks(wd);
       }
