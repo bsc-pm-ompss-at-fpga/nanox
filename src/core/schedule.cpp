@@ -1160,69 +1160,78 @@ void Scheduler::finishWork( WD * wd, bool schedule )
 
 bool Scheduler::inlineWork ( WD *wd, bool schedule )
 {
-   BaseThread *thread = getMyThreadSafe();
-
-   // run it in the current frame
-   WD *oldwd = thread->getCurrentWD();
-
-   GenericSyncCond *syncCond = oldwd->getSyncCond();
-   if ( syncCond != NULL ) syncCond->unlock();
-
-   debug( "switching(inlined) from task " << oldwd << ":" << oldwd->getId() <<
-          " to " << wd << ":" << wd->getId() << " at node " << sys.getNetwork()->getNodeNum() );
-
-   // Initializing wd if necessary
-   // It will be started later in inlineWorkDependent call
-   
-   if ( !wd->started() ) { 
-      if ( !wd->_mcontrol.isMemoryAllocated() ) {
-         wd->_mcontrol.initialize( *thread->runningOn() );
-         bool result;
-         do {
-            result = wd->_mcontrol.allocateTaskMemory();
-         } while( result == false );
-      }
-      wd->init();
-   }
-
-   // This ensures that when we return from the inlining is still the same thread
-   // and we don't violate rules about tied WD
-   if ( oldwd->isTiedTo() != NULL && (wd->isTiedTo() == NULL)) wd->tieTo(*oldwd->isTiedTo());
-
-   thread->setCurrentWD( *wd );
-
-   /* Instrumenting context switch: wd enters cpu (last = n/a) */
-   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldwd, wd, false) );
-
-   bool done = thread->inlineWorkDependent(*wd);
-
-   // reload thread after running WD due wd may be not tied to thread if
-   // both work descriptor were not tied to any thread
-   thread = getMyThreadSafe();
-
-   if ( done ) {
+   if ( wd->isInvalid() ) {
       wd->finish();
+      finishWork( wd, false );
+      wd->~WorkDescriptor();
+      delete [] wd;
 
-      finishWork( wd, schedule );
-      /* Instrumenting context switch: wd leaves cpu and will not come back (last = true) and new_wd enters */
-      NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, oldwd, true) );
+      return true;
+   } else {
+      BaseThread *thread = getMyThreadSafe();
+
+      // run it in the current frame
+      WD *oldwd = thread->getCurrentWD();
+
+      GenericSyncCond *syncCond = oldwd->getSyncCond();
+      if ( syncCond != NULL ) syncCond->unlock();
+
+      debug( "switching(inlined) from task " << oldwd << ":" << oldwd->getId() <<
+             " to " << wd << ":" << wd->getId() << " at node " << sys.getNetwork()->getNodeNum() );
+
+      // Initializing wd if necessary
+      // It will be started later in inlineWorkDependent call
+      
+      if ( !wd->started() ) { 
+         if ( !wd->_mcontrol.isMemoryAllocated() ) {
+            wd->_mcontrol.initialize( *thread->runningOn() );
+            bool result;
+            do {
+               result = wd->_mcontrol.allocateTaskMemory();
+            } while( result == false );
+         }
+         wd->init();
+      }
+
+      // This ensures that when we return from the inlining is still the same thread
+      // and we don't violate rules about tied WD
+      if ( oldwd->isTiedTo() != NULL && (wd->isTiedTo() == NULL)) wd->tieTo(*oldwd->isTiedTo());
+
+      thread->setCurrentWD( *wd );
+
+      /* Instrumenting context switch: wd enters cpu (last = n/a) */
+      NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldwd, wd, false) );
+
+      bool done = thread->inlineWorkDependent(*wd);
+
+      // reload thread after running WD due wd may be not tied to thread if
+      // both work descriptor were not tied to any thread
+      thread = getMyThreadSafe();
+
+      if ( done ) {
+         wd->finish();
+
+         finishWork( wd, schedule );
+         /* Instrumenting context switch: wd leaves cpu and will not come back (last = true) and new_wd enters */
+         NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, oldwd, true) );
+      }
+      debug( "exiting(inlined) from task " << wd << ":" << wd->getId() <<
+             " to " << oldwd << ":" << oldwd->getId() << " at node " << sys.getNetwork()->getNodeNum() );
+
+      thread->setCurrentWD( *oldwd );
+
+      // While we tie the inlined tasks this is not needed
+      // as we will always return to the current thread
+      #if 0
+      if ( oldwd->isTiedTo() != NULL )
+         switchToThread(oldwd->isTiedTo());
+      #endif
+
+      ensure(oldwd->isTiedTo() == NULL || thread == oldwd->isTiedTo(),
+              "Violating tied rules " + toString<BaseThread*>(thread) + "!=" + toString<BaseThread*>(oldwd->isTiedTo()));
+      
+     return done;
    }
-   debug( "exiting(inlined) from task " << wd << ":" << wd->getId() <<
-          " to " << oldwd << ":" << oldwd->getId() << " at node " << sys.getNetwork()->getNodeNum() );
-
-   thread->setCurrentWD( *oldwd );
-
-   // While we tie the inlined tasks this is not needed
-   // as we will always return to the current thread
-   #if 0
-   if ( oldwd->isTiedTo() != NULL )
-      switchToThread(oldwd->isTiedTo());
-   #endif
-
-   ensure(oldwd->isTiedTo() == NULL || thread == oldwd->isTiedTo(),
-           "Violating tied rules " + toString<BaseThread*>(thread) + "!=" + toString<BaseThread*>(oldwd->isTiedTo()));
-   
-  return done;
 }
 
 void Scheduler::switchHelper (WD *oldWD, WD *newWD, void *arg)
@@ -1242,11 +1251,12 @@ void Scheduler::switchHelper (WD *oldWD, WD *newWD, void *arg)
 
 void Scheduler::switchTo ( WD *to )
 {
-   //if( to->isInvalid() ) {
-   //   finishWork( to, true );
-   //   to->~WorkDescriptor();
-   //   delete[] (char *)to;
-   //} else {
+   if( to->isInvalid() ) {
+      to->finish();
+      finishWork( to, true );
+      to->~WorkDescriptor();
+      delete[] (char *)to;
+   } else {
      if ( myThread->runningOn()->supportsUserLevelThreads() ) {
         if (!to->started()) {
            to->_mcontrol.initialize( *myThread->runningOn() );
@@ -1271,7 +1281,7 @@ void Scheduler::switchTo ( WD *to )
            delete[] (char *)to;
         }
      }
-   //}
+   }
 }
 
 void Scheduler::yield ()
@@ -1383,12 +1393,12 @@ void Scheduler::exit ( void )
       if ( !next ) thread->pause();
    }
 
-   if ( next ) {//&& !next->isInvalid() ) {
+   if ( next ) {
       Scheduler::exitTo(next);
    }
 
-   if ( next ) {//&& next->isInvalid() ) {
-      idleLoop<WorkerBehaviour>();// discard next workdescriptor and look for more work
+   if ( next) {
+      idleLoop<WorkerBehaviour>();
    } else {
       idleLoop<ExitBehaviour>();
    }
