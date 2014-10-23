@@ -509,6 +509,5 @@ inline bool WorkDescriptor::isInvalid() const { return _flags.is_invalid; }
 inline void WorkDescriptor::setRecoverable( bool flag ) { _flags.is_recoverable = flag; }
 
 inline bool WorkDescriptor::isRecoverable() const { return _flags.is_recoverable; }
-
 #endif
 

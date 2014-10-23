@@ -198,7 +198,7 @@ const ucontext_t TaskException::getExceptionContext ( ) const
    return task_context;
 }
 
-void TaskException::handleCheckpointError ( WorkDescriptor const &initTask ) const
+bool TaskException::handleCheckpointError ( WorkDescriptor const &initTask, bool hasTrialsLeft, uint64_t srcAddr, uint64_t destAddr, size_t len ) const
 {
    /*
     * When a signal handler is executing, the delivery of the same signal
@@ -211,31 +211,36 @@ void TaskException::handleCheckpointError ( WorkDescriptor const &initTask ) con
    sigaddset(&sigs, signal_info.si_signo);
    pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
 
-   // error detected in task initialization: invalidate task AND its parent
-   // if it has no recoverable parent, then the execution cannot continue
-   bool recoverable_error = //initTask->setInvalid(true) &&
-                        initTask.getParent() &&
-                        initTask.getParent()->setInvalid(true);
+   // Try to recover the system from the failure (so we can continue with the execution)
+   if(!task->getActiveDevice().recover( *this )) {
+      // If we couldn't recover the system, we can't go on with the execution
+      fatal("Resiliency: An error was found and the system could not be recovered: " << what());
+   }
 
-   if( !recoverable_error )  
-   {
-      static bool call_once = true;
-      if( sys.isSummaryEnabled() && call_once )
-         call_once = false;
-         sys.executionSummary();
+   // If the error was found in the destination address, we can try again as the recovery
+   // was able to restore the system and we can overwrite the corrupted data securely.
+   const uint64_t faultAddr = (uint64_t) signal_info.si_addr;
+   const bool retry = hasTrialsLeft // Don't keep trying forever...
+       && destAddr < faultAddr   // and check whether the faulty address was in the destination region
+       && faultAddr < (destAddr + len);
+
+   // If we can recover directly (we were actually writing to the corrupted page)
+   // we dont need to invalidate anything. Otherwise, we have to invalidate the parent
+   // task if any.
+   const bool recoverable_error = retry ||
+                        ( initTask.getParent() &&
+                          initTask.getParent()->setInvalid(true)
+                        );
+
+   // Moreover, if we cannot recover, we shall finish the execution inmediatly.
+   if( !recoverable_error ) {
       // Unrecoverable error: terminate execution
-      fatal("An error was found, but there isn't any recoverable ancestor." << std::endl << what());
+      fatal("Resiliency: An error was found, but the task hasn't any recoverable ancestor: " << what());
    } else {
       debug( what() );
    }
 
-   // Try to recover the system from the failure (so we can continue with the execution)
-   if(!task->getActiveDevice().recover( *this )) {
-      if( sys.isSummaryEnabled() )
-         sys.executionSummary();
-      // If we couldn't recover the system, we can't go on with the execution
-      fatal("Resiliency: Unrecoverable error found." << std::endl << what());
-   }
+   return retry;
 }
 
 void TaskException::handleExecutionError ( ) const
@@ -256,8 +261,6 @@ void TaskException::handleExecutionError ( ) const
 
    if( !recoverable_error )  
    {
-      if( sys.isSummaryEnabled() )
-         sys.executionSummary();
       // Unrecoverable error: terminate execution
       fatal("An error was found, but there isn't any recoverable ancestor." << std::endl << what());
    } else {
@@ -266,8 +269,6 @@ void TaskException::handleExecutionError ( ) const
 
    // Try to recover the system from the failure (so we can continue with the execution)
    if(!task->getActiveDevice().recover( *this )) {
-      if( sys.isSummaryEnabled() )
-         sys.executionSummary();
       // If we couldn't recover the system, we can't go on with the execution
       fatal("Resiliency: Unrecoverable error found." << std::endl << what());
    }

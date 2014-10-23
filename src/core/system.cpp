@@ -36,7 +36,6 @@
 #include <csignal>
 #include <set>
 #include <climits>
-#include <unistd.h>
 
 #include "smpthread.hpp"
 #include "regiondict.hpp"
@@ -103,7 +102,7 @@ System::System () :
       , _lockPoolSize(37), _lockPool( NULL ), _mainTeam (NULL), _simulator(false)
 #ifdef NANOS_RESILIENCY_ENABLED
       , _resiliency_disabled(false)
-      , _task_max_retries(1)
+      , _task_max_trials(1)
       , _backup_pool_size(sysconf(_SC_PAGESIZE ) * sysconf(_SC_PHYS_PAGES) / 2)
 #endif
 #ifdef NANOS_FAULT_INJECTION
@@ -389,11 +388,11 @@ void System::config ()
    cfg.registerArgOption("disable_resiliency", "disable-resiliency");
    cfg.registerEnvOption("disable_resiliency", "NX_DISABLE_RESILIENCY");
 
-   cfg.registerConfigOption("task_retries",
-         NEW Config::UintVar(_task_max_retries),
+   cfg.registerConfigOption("task_retrials",
+         NEW Config::UintVar(_task_max_trials),
          "Defines the number of times a restartable task can be re-executed (default: 1). ");
-   cfg.registerArgOption("task_retries", "task-retries");
-   cfg.registerEnvOption("task_retries", "NX_TASK_RETRIES");
+   cfg.registerArgOption("task_retrials", "task-retrials");
+   cfg.registerEnvOption("task_retrials", "NX_TASK_RETRIALS");
 
    cfg.registerConfigOption("backup_pool_size",
          NEW Config::SizeVar(_backup_pool_size),

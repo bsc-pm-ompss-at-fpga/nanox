@@ -1160,7 +1160,9 @@ void Scheduler::finishWork( WD * wd, bool schedule )
 
 bool Scheduler::inlineWork ( WD *wd, bool schedule )
 {
-   if ( wd->isInvalid() ) {
+   if ( wd->isInvalid() 
+        || ( wd->getParent() && wd->getParent()->isInvalid() ))
+   {
       wd->finish();
       finishWork( wd, false );
       wd->~WorkDescriptor();
@@ -1251,7 +1253,9 @@ void Scheduler::switchHelper (WD *oldWD, WD *newWD, void *arg)
 
 void Scheduler::switchTo ( WD *to )
 {
-   if( to->isInvalid() ) {
+   if ( to->isInvalid() 
+        || ( to->getParent() && to->getParent()->isInvalid() ))
+   {
       to->finish();
       finishWork( to, true );
       to->~WorkDescriptor();

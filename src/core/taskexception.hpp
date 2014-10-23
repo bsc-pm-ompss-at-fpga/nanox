@@ -126,8 +126,11 @@ namespace nanos {
          /*!
           * Common actions to be taken when an error raises in backup/restart operations.
           * \param initTask Task that was being initialized at the moment of the error. That task is invalidated.
+          * \param srcAddr Contains the address where the data was being copied from.
+          * \param destAddr Contains the address where the data was being copied to.
+          * \return whether the checkpoint can be retried again safely or not.
           */
-         void handleCheckpointError ( WorkDescriptor const &initTask ) const;
+         bool handleCheckpointError ( WorkDescriptor const &initTask, bool hasTrialsLeft, uint64_t srcAddr, uint64_t destAddr, size_t len ) const;
 
          /*!
           * Common actions to be taken when an error raises in execution. This task is invalidated.

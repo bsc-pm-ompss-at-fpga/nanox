@@ -113,12 +113,16 @@ uintptr_t MPoisonManager::getRandomPage(){
 int MPoisonManager::blockPage() {
   uintptr_t addr = getRandomPage();
   if( addr ) {
-    LockBlock lock ( mgr_lock );
-    blocked_pages.insert( addr );
-    debug0( "Mpoison: blocking memory page. Addr: " << std::hex << addr << ". Total: " << std::dec << blocked_pages.size() << " pages blocked." );
-    return mprotect( (void*)addr, page_size, PROT_NONE );
+     return blockSpecificPage( addr );
   }
   return -1;
+}
+
+int MPoisonManager::blockSpecificPage( uintptr_t page_addr ) {
+    LockBlock lock ( mgr_lock );
+    blocked_pages.insert( page_addr );
+    debug0( "Mpoison: blocking memory page. Addr: " << std::hex << page_addr << ". Total: " << std::dec << blocked_pages.size() << " pages blocked." );
+    return mprotect( (void*)page_addr, page_size, PROT_NONE );
 }
 
 int MPoisonManager::unblockPage( uintptr_t page_addr ) {

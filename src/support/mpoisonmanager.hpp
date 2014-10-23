@@ -50,6 +50,8 @@ public:
 
   int blockPage( );
 
+  int blockSpecificPage( uintptr_t page_addr );
+
   int unblockPage( uintptr_t page_addr );
 
 private: 

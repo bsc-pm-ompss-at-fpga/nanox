@@ -515,7 +515,7 @@ inline bool System::haveDependencePendantWrites ( void *addr ) const
 #ifdef NANOS_RESILIENCY_ENABLED
 inline bool System::isResiliencyEnabled() const { return !_resiliency_disabled; }
 
-inline unsigned System::getTaskMaxRetries() const { return _task_max_retries; }
+inline unsigned System::getTaskMaxRetrials() const { return _task_max_trials; }
 
 inline size_t System::getBackupPoolSize() const { return _backup_pool_size; }
 

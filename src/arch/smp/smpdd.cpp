@@ -143,25 +143,16 @@ void SMPDD::execute ( WD &wd ) throw ()
             sys.getExceptionStats().incrExecutionErrors();
             e.handleExecutionError( );
          } catch (std::exception& e) {
-            std::string s = "Error: Uncaught exception ";
-            s += typeid(e).name();
-            s += ". Thrown in task ";
-            s += wd.getId();
-            s += ". \n";
-            s += e.what();
-
             sys.getExceptionStats().incrExecutionErrors();
-            if( sys.isSummaryEnabled() )
-               sys.executionSummary();
 
             // Unexpected error: terminate execution
-            fatal(s);
+            fatal( "Error: Uncaught exception " << typeid(e).name() 
+                   << ". Thrown in task " << wd.getId() << std::endl
+                   << e.what() );
          } catch (...) {
             sys.getExceptionStats().incrExecutionErrors();
             // Unexpected error: terminate execution
             fatal("Error: Uncaught exception (unknown type). Thrown in task " << wd.getId() << ". ");
-            if( sys.isSummaryEnabled() )
-               sys.executionSummary();
          }
 
          /* 
@@ -175,7 +166,7 @@ void SMPDD::execute ( WD &wd ) throw ()
             && wd.isRecoverable() // Execution invalid and task recoverable
             && ( wd.getParent() == NULL || !wd.getParent()->isInvalid() ) // Our parent is not invalid (if we got one)
          ){
-            if ( num_tries < sys.getTaskMaxRetries() ) {// We are still able to retry
+            if ( num_tries < sys.getTaskMaxRetrials() ) {// We are still able to retry
                sys.getExceptionStats().incrRecoveredTasks();
                num_tries++;
                restore(wd);

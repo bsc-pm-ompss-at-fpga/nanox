@@ -696,7 +696,7 @@ namespace nanos
          //! \brief Marks the WorkDescriptor as recoverable. If the execution of this task is invalid, it will try to re-execute.
          void setRecoverable( bool flag );
 
-         //!brief Returns whether a WorkDescriptor is able to re-execute from the beginning if an error is detected.
+         //! \brief Returns whether a WorkDescriptor is able to re-execute from the beginning if an error is detected.
          bool isRecoverable ( void ) const;
    };
 
