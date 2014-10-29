@@ -126,11 +126,9 @@ void SMPDD::execute ( WD &wd ) throw ()
       wd.setInvalid(true);
       debug ( "Resiliency: Task " << wd.getId() << " is flagged as invalid. Skipping it.");
 
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-      NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("task-discard") );
-      NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) wd.getId() );
+      NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
+      NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) NANOS_FT_DISCARD );
       NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_discard_key, &task_discard_val) );
-#endif
 
       sys.getExceptionStats().incrDiscardedTasks();
    } else {
@@ -181,11 +179,11 @@ void SMPDD::execute ( WD &wd ) throw ()
             return;
          }
          debug( "Task " << wd.getId() << " is being re-executed." );
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-         NANOS_INSTRUMENT ( static nanos_event_key_t task_reexec_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("task-reexecution") );
-         NANOS_INSTRUMENT ( nanos_event_value_t task_reexec_val = (nanos_event_value_t ) wd.getId() );
+
+         NANOS_INSTRUMENT ( static nanos_event_key_t task_reexec_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
+         NANOS_INSTRUMENT ( nanos_event_value_t task_reexec_val = (nanos_event_value_t ) NANOS_FT_RESTART );
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_reexec_key, &task_reexec_val) );
-#endif
+
       }
    }
 #else
@@ -238,11 +236,7 @@ bool SMPDD::recover( TaskException const& err ) {
 
 
 void SMPDD::restore( WD & wd ) {
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("restore") );
-   NANOS_INSTRUMENT ( nanos_event_value_t val = wd.getId() );
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
-#endif
+
    debug ( "Resiliency: Task " << wd.getId() << " is being recovered to be re-executed further on.");
    // Wait for successors to finish.
    wd.waitCompletion();
@@ -258,8 +252,5 @@ void SMPDD::restore( WD & wd ) {
    // Reset invalid state
    wd.setInvalid(false);
 
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
-#endif
 }
 #endif

@@ -601,11 +601,14 @@ namespace nanos {
             /* 50 */ registerEventKey("wd-blocked", "Work descriptor becomes blocked", false);
             /* 51 */ registerEventKey("parallel-outline-fct", "Parallel Outline Function", false);
 
-            /* 53 */ registerEventKey("checkpoint-inputs", "Copying task input data from host to backup pool." );
-            /* 54 */ registerEventKey("checkpoint-outputs", "Copying task output data from host to backup pool." );
-            /* 55 */ registerEventKey("restore", "Copying task input data from backup pool back to the host." );
-            /* 56 */ registerEventKey("task-reexecution", "Current task is executed again because an error was found." );
-            /* 57 */ registerEventKey("task-discard", "Current task's execution is skipped because it has been invalidated." );
+            /* 53 */ registerEventKey("ft-checkpoint", "Fault tolerance task checkpoint/restore." );
+            registerEventValue("ft-checkpoint", "NANOS_FT_CP_IN", "Making task's input data backup." );   /* 1 */
+            registerEventValue("ft-checkpoint", "NANOS_FT_CP_OUT", "Making task's output data backup." ); /* 2 */
+            registerEventValue("ft-checkpoint", "NANOS_FT_CP_RESTORE", "Restoring task's input data from existing backup." ); /* 3 */
+
+            /* 54 */ registerEventKey("ft-task-operation", "Fault tolerance task control." );
+            registerEventValue("ft-task-operation", "NANOS_FT_RESTART", "Current task is being executed again because its execution was erroneous." ); /* 1 */
+            registerEventValue("ft-task-operation", "NANOS_FT_DISCARD", "Skipping task execution due to invalidation." );                              /* 2 */
 
             /* ** */ registerEventKey("debug","Debug Key", true); /* Keep this key as the last one */
          }

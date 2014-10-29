@@ -704,6 +704,10 @@ namespace nanos
 
    typedef class DeviceData DD;
 
+   typedef enum {
+      NANOS_FT_RESTART, /* 1 */
+      NANOS_FT_DISCARD /* 2 */
+   } task_operations_event_value_t;
 };
 
 #endif

@@ -1168,6 +1168,10 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
       wd->~WorkDescriptor();
       delete [] wd;
 
+      NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
+      NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) NANOS_FT_DISCARD );
+      NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_discard_key, &task_discard_val) );
+
       return true;
    } else {
       BaseThread *thread = getMyThreadSafe();
@@ -1260,6 +1264,11 @@ void Scheduler::switchTo ( WD *to )
       finishWork( to, true );
       to->~WorkDescriptor();
       delete[] (char *)to;
+
+      NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
+      NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) NANOS_FT_DISCARD );
+      NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_discard_key, &task_discard_val) );
+
    } else {
      if ( myThread->runningOn()->supportsUserLevelThreads() ) {
         if (!to->started()) {
