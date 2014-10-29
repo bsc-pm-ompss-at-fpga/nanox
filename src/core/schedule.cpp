@@ -1163,10 +1163,13 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
    if ( wd->isInvalid() 
         || ( wd->getParent() && wd->getParent()->isInvalid() ))
    {
+      // Discard task, clean it and look for more work to do...
       wd->finish();
-      finishWork( wd, false );
+      finishWork( wd, schedule );
       wd->~WorkDescriptor();
-      delete [] wd;
+      delete[] (char *)wd;
+
+      sys.getExceptionStats().incrDiscardedTasks();
 
       NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
       NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) NANOS_FT_DISCARD );
@@ -1260,10 +1263,13 @@ void Scheduler::switchTo ( WD *to )
    if ( to->isInvalid() 
         || ( to->getParent() && to->getParent()->isInvalid() ))
    {
+      // Discard task, clean it and look for more work to do...
       to->finish();
-      finishWork( to, true );
+      finishWork( to );
       to->~WorkDescriptor();
       delete[] (char *)to;
+
+      sys.getExceptionStats().incrDiscardedTasks();
 
       NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
       NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) NANOS_FT_DISCARD );
