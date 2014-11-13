@@ -240,8 +240,8 @@ void MemController::copyDataIn() {
             // the cache being noticed, because this backup is for exclusive use of this workdescriptor only.
             BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
 
-            std::size_t size = _wd.getCopies()[index].getSize();
-            uint64_t hostAddress = _wd.getCopies()[index].getAddress();
+            std::size_t size = _wd.getCopies()[index].getFitSize();
+            uint64_t hostAddress = _wd.getCopies()[index].getFitAddress();
             uint64_t address = (uint64_t) dev.memAllocate(size, sys.getBackupMemory(), _wd, index);
 
             new (&_backupInOutCopies[index]) Chunk( address, hostAddress, size );
