@@ -56,7 +56,7 @@ void mpoison_continue ( void );
 //! Makes the poison dedicated thread to begin randomized page blocking
 void mpoison_start ( void );
 
-void mpoison_delay_start ( unsigned* );
+void mpoison_delay_start ( unsigned long* );
 
 #ifdef __cplusplus
 }//extern C

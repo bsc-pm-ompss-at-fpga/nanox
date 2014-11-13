@@ -48,7 +48,7 @@ void *nanos::vm::mpoison_run(void *arg)
 
    useconds_t time_between_failures = 1000000 / rate; // in useconds
 
-   long *delay_start = (long*) arg;
+   unsigned long *delay_start = (unsigned long*) arg;
    usleep( *delay_start );
 
    int error_count = sys.getMPoisonAmount();
@@ -84,7 +84,7 @@ int mpoison_unblock_page( uintptr_t page_addr ) {
    return mp_mgr->unblockPage(page_addr);
 }
 
-void mpoison_delay_start ( unsigned* useconds ) {
+void mpoison_delay_start ( unsigned long* useconds ) {
    if( sys.isPoisoningEnabled() ) {
       debug("Resiliency: MPoison: Creating mpoison thread");
       pthread_create(&tid, NULL, nanos::vm::mpoison_run, (void*)useconds);
@@ -92,7 +92,7 @@ void mpoison_delay_start ( unsigned* useconds ) {
 }
 
 void mpoison_start ( ) {
-   static unsigned delay = sys.getMPoisonRate() < 0.001f ? 0: 1000000 / sys.getMPoisonRate();
+   static unsigned long delay = sys.getMPoisonRate() < 0.001f ? 0: 1000000 / sys.getMPoisonRate();
    mpoison_delay_start( &delay );
 }
 
