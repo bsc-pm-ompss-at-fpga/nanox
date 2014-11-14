@@ -98,6 +98,9 @@ void SeparateAddressSpace::releaseRegions( MemCacheCopy *memCopies, unsigned int
 //}
 
 void SeparateAddressSpace::copyFromHost( TransferList &list, WD const &wd ) {
+   // for ( TransferList::const_iterator it = list.begin(); it != list.end(); it++ ) {
+   //      std::cerr << "copy region " << it->getRegion().id << " version: " << it->getVersion() << std::endl;
+   // }
    for ( TransferList::const_iterator it = list.begin(); it != list.end(); it++ ) {
       this->doOp( sys.getHostMemory(), it->getRegion(), it->getVersion(), wd, it->getCopyIndex(), it->getDeviceOps(), it->getChunk(), false );
    }

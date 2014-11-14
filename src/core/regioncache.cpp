@@ -1104,6 +1104,7 @@ AllocatedChunk *RegionCache::_getAllocatedChunk( global_reg_t const &reg, bool c
 
 void RegionCache::NEWcopyIn( unsigned int srcLocation, global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx, DeviceOps *givenOps, AllocatedChunk *chunk ) {
    //AllocatedChunk *chunk = getAllocatedChunk( reg );
+   //std::cerr << " NEWcopyIn for reg: "; reg.key->printRegion( std::cerr, reg.id ); std::cerr << std::endl;
    uint64_t origDevAddr = chunk->getAddress() + ( reg.getRealFirstAddress() - chunk->getHostAddress() );
    DeviceOps *ops = ( givenOps != NULL ) ? givenOps : chunk->getDeviceOps( reg );
    //chunk->unlock();

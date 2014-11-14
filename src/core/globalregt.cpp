@@ -13,6 +13,11 @@ uint64_t global_reg_t::getRealFirstAddress() const {
    ensure( key != NULL, "aaa es null" );
    // NewNewDirectoryEntryData *entry = NewNewRegionDirectory::getDirectoryEntry( *this->key, this->id );
    NewNewDirectoryEntryData *entry = NewNewRegionDirectory::getDirectoryEntry( *this->key, id );
+   if ( entry == NULL ) {
+      NewNewRegionDirectory::initializeEntry( key, id );
+      entry = NewNewRegionDirectory::getDirectoryEntry( *this->key, id );
+   }
+   if ( entry == NULL ) printBt(std::cerr);
    ensure(entry != NULL, "invalid entry.");
    //addr = entry->getBaseAddress() == 0 ? this->key->getRealBaseAddress() : entry->getBaseAddress();
    addr = entry->getBaseAddress() == 0 ? key->getRealBaseAddress() : entry->getBaseAddress();
