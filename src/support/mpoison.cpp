@@ -51,8 +51,7 @@ void *nanos::vm::mpoison_run(void *arg)
    unsigned long *delay_start = (unsigned long*) arg;
    usleep( *delay_start );
 
-   int error_count = sys.getMPoisonAmount();
-   run &= error_count!=0; // if we must not inject errors, just skip...
+   run &= sys.getMPoisonAmount() !=0; // if we must not inject errors, just skip...
 
    while( run ) {
 
@@ -61,10 +60,12 @@ void *nanos::vm::mpoison_run(void *arg)
       mp_mgr->blockPage();
       usleep( time_between_failures );
 
-      if( error_count > 0 )
-         error_count--;
-      else if ( error_count == 0 )// It is intended to make an infinite loop if error_count < 0
+      // It is intended to make an infinite loop if MPoisonAmount < 0
+      if( sys.getMPoisonAmount() < 0 || sys.getMPoisonAmount() > sys.getExceptionStats().getInjectedErrors() ) {
+         sys.getExceptionStats().incrInjectedErrors();
+      } else {
          run = false;
+      }
    }
 
    return NULL;

@@ -400,6 +400,11 @@ namespace nanos
          /*!
           * \brief Returns current task execution error count.
           */
+         int getInjectedErrors ( ) const;
+
+         /*!
+          * \brief Returns current task execution error count.
+          */
          int getExecutionErrors ( ) const;
                                  
          /*!

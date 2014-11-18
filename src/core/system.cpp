@@ -687,6 +687,7 @@ void System::finish ()
    verbose ( "NANOS++ statistics");
    verbose ( std::dec << (unsigned int) getCreatedTasks() << " tasks have been executed" );
 #ifdef NANOS_RESILIENCY_ENABLED
+   verbose ( std::dec << (unsigned int) getInjectedErrors() << " errors injected" );
    verbose ( std::dec << (unsigned int) getInitializationErrors() << " tasks could not be initialized (backup failed)" );
    verbose ( std::dec << (unsigned int) getExecutionErrors() << " task executions failed" );
    verbose ( std::dec << (unsigned int) getRecoveredTasks() << " tasks have been reexecuted" );
@@ -1516,6 +1517,7 @@ void System::executionSummary( void )
    message0( "=== Application ended in " << seconds << " seconds" );
    message0( "=== " << getCreatedTasks()            << " tasks have been executed" );
 #ifdef NANOS_RESILIENCY_ENABLED
+   message0( "=== " << getInjectedErrors()          << " errors injected" );
    message0( "=== " << getInitializationErrors()    << " tasks could not be initialized (backup failed)" );
    message0( "=== " << getExecutionErrors()         << " task executions failed" );
    message0( "=== " << getRecoveredTasks()          << " tasks have been reexecuted" );

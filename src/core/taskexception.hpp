@@ -35,6 +35,7 @@ namespace nanos {
    class TaskExceptionStats
    {
       private:
+         Atomic<int> _errors_injected;
          Atomic<int> _errors_in_execution;
          Atomic<int> _errors_in_initialization;
          Atomic<int> _recovered_tasks;
@@ -48,6 +49,9 @@ namespace nanos {
          TaskExceptionStats () : _errors_in_execution(0), _errors_in_initialization(0), _recovered_tasks(0), _discarded_tasks(0) {}
 
          ~TaskExceptionStats () {}
+
+         int getInjectedErrors() const { return _errors_injected.value(); }
+         void incrInjectedErrors() { _errors_injected++; }
 
          int getExecutionErrors() const { return _errors_in_execution.value(); }
          void incrExecutionErrors() { _errors_in_execution++; }

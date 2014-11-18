@@ -519,6 +519,8 @@ inline unsigned System::getTaskMaxRetrials() const { return _task_max_trials; }
 
 inline size_t System::getBackupPoolSize() const { return _backup_pool_size; }
 
+inline int System::getInjectedErrors() const { return _resiliencyStats.getInjectedErrors(); }
+
 inline int System::getExecutionErrors() const { return _resiliencyStats.getExecutionErrors(); }
 
 inline int System::getInitializationErrors() const { return _resiliencyStats.getInitializationErrors(); }
