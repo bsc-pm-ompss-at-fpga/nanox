@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <utility>
 #include <vector>
+#include "debug.hpp"
 #include "workdescriptor_decl.hpp"
 #include "dependableobjectwd.hpp"
 #include "copydata.hpp"

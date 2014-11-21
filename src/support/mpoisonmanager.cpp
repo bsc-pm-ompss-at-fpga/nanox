@@ -70,7 +70,9 @@ void MPoisonManager::deleteAllocation( uintptr_t addr )
          uintptr_t page_addr = (addr + offset) & pn_mask;
          if( blocked_pages.erase(page_addr) > 0 ) {// if a page was found, unblock it (it's blocked)
             if( mprotect( (void*) page_addr, page_size, PROT_READ | PROT_WRITE ) < 0 )
-               fatal0( "Error while unblocking page " << std::hex << page_addr << strerror(errno) );
+               fatal0( "Error while unblocking page ", std::hex, page_addr,
+                       strerror(errno)
+                     );
             break;// Once we found it, finish.
          }
       }
@@ -87,7 +89,7 @@ void MPoisonManager::clearAllocations( )
    for( it = blocked_pages.begin(); it != blocked_pages.end(); it++ ) {
       uintptr_t addr = *it;
       if( mprotect( (void*)addr, page_size, PROT_READ | PROT_WRITE ) < 0)
-         fatal0("Error while unpoisoning: " << strerror(errno) );
+         fatal0( "Error while unpoisoning: ", strerror(errno) );
    }
    blocked_pages.clear();
 }
@@ -121,7 +123,9 @@ int MPoisonManager::blockPage() {
 int MPoisonManager::blockSpecificPage( uintptr_t page_addr ) {
     LockBlock lock ( mgr_lock );
     blocked_pages.insert( page_addr );
-    debug0( "Mpoison: blocking memory page. Addr: " << std::hex << page_addr << ". Total: " << std::dec << blocked_pages.size() << " pages blocked." );
+    debug0( "Mpoison: blocking memory page. Addr: 0x", std::hex, page_addr, ". "
+            "Total: ", std::dec, blocked_pages.size(), " pages blocked."
+          );
     return mprotect( (void*)page_addr, page_size, PROT_NONE );
 }
 

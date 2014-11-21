@@ -74,6 +74,8 @@
 #include <config.h>
 #endif
 
+#include <mutex>
+
 using namespace nanos;
 
 System nanos::sys;
@@ -140,7 +142,7 @@ struct LoadModule
    void operator() ( const char *module )
    {
       if ( module ) {
-        verbose0( "loading " << module << " module" );
+        verbose0( "loading ", module, " module" );
         sys.loadPlugin(module);
       }
    }
@@ -202,7 +204,7 @@ void System::loadModules ()
       fatal0( "Could not load " + getDefaultInstrumentation() + " instrumentation" );   
 
    // load default dependencies plugin
-   verbose0( "loading " << getDefaultDependenciesManager() << " dependencies manager support" );
+   verbose0( "loading ", getDefaultDependenciesManager(), " dependencies manager support" );
 
    if ( !loadPlugin( "deps-"+getDefaultDependenciesManager() ) )
       fatal0 ( "Couldn't load main dependencies manager" );
@@ -210,21 +212,21 @@ void System::loadModules ()
    ensure0( _dependenciesManager,"No default dependencies manager" );
 
    // load default schedule plugin
-   verbose0( "loading " << getDefaultSchedule() << " scheduling policy support" );
+   verbose0( "loading ", getDefaultSchedule(), " scheduling policy support" );
 
    if ( !loadPlugin( "sched-"+getDefaultSchedule() ) )
       fatal0 ( "Couldn't load main scheduling policy" );
 
    ensure0( _defSchedulePolicy,"No default system scheduling factory" );
 
-   verbose0( "loading " << getDefaultThrottlePolicy() << " throttle policy" );
+   verbose0( "loading ", getDefaultThrottlePolicy(), " throttle policy" );
 
    if ( !loadPlugin( "throttle-"+getDefaultThrottlePolicy() ) )
       fatal0( "Could not load main cutoff policy" );
 
    ensure0( _throttlePolicy, "No default throttle policy" );
 
-   verbose0( "loading " << getDefaultBarrier() << " barrier algorithm" );
+   verbose0( "loading ", getDefaultBarrier(), " barrier algorithm" );
 
    if ( !loadPlugin( "barrier-"+getDefaultBarrier() ) )
       fatal0( "Could not load main barrier algorithm" );
@@ -471,7 +473,9 @@ void System::start ()
       } else if ( _regionCachePolicyStr.compare("writeback") == 0 ) {
          _regionCachePolicy = RegionCache::WRITE_BACK;
       } else {
-         warning0("Invalid option for region cache policy '" << _regionCachePolicyStr << "', using default value.");
+         warning0( "Invalid option for region cache policy '", _regionCachePolicyStr,
+                   "', using default value."
+                 );
       }
    }
 
@@ -494,7 +498,7 @@ void System::start ()
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
    {
-      verbose0("addPEs for arch: " << (*it)->getName()); 
+      verbose0("addPEs for arch: ", (*it)->getName()); 
       (*it)->addPEs( _pes );
    }
 
@@ -527,14 +531,16 @@ void System::start ()
       // If that node has not been translated, yet
       if ( _numaNodeMap[ node ] == INT_MIN )
       {
-         verbose0( "[NUMA] Mapping from physical node " << node << " to user node " << availNUMANodes );
+         verbose0( "[NUMA] Mapping from physical node ", node, 
+                   " to user node ", availNUMANodes
+                 );
          _numaNodeMap[ node ] = availNUMANodes;
          // Increase the number of available NUMA nodes
          ++availNUMANodes;
       }
       // Otherwise, do nothing
    }
-   verbose0( "[NUMA] " << availNUMANodes << " NUMA node(s) available for the user." );
+   verbose0( "[NUMA] ", availNUMANodes, " NUMA node(s) available for the user." );
 
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
@@ -644,11 +650,22 @@ void System::start ()
    // List unrecognised arguments
    std::string unrecog = Config::getOrphanOptions();
    if ( !unrecog.empty() )
-      warning( "Unrecognised arguments: " << unrecog );
+      warning( "Unrecognised arguments: ", unrecog );
    Config::deleteOrphanOptions();
       
-   if ( _summary )
+   if ( _summary ) {
       environmentSummary();
+      std::set_terminate( []() { 
+                             static std::once_flag flag;
+                             std::call_once( flag, 
+                                             [](){
+                                                    sys.executionSummary();
+                                                 }
+                                           );
+                             std::abort();
+                          }
+      );
+   }
 }
 
 System::~System ()
@@ -685,13 +702,13 @@ void System::finish ()
    ensure( _schedStats._readyTasks == 0, "Ready task counter has an invalid value!");
 
    verbose ( "NANOS++ statistics");
-   verbose ( std::dec << (unsigned int) getCreatedTasks() << " tasks have been executed" );
+   verbose ( std::dec, (unsigned int) getCreatedTasks(),         " tasks have been executed" );
 #ifdef NANOS_RESILIENCY_ENABLED
-   verbose ( std::dec << (unsigned int) getInjectedErrors() << " errors injected" );
-   verbose ( std::dec << (unsigned int) getInitializationErrors() << " tasks could not be initialized (backup failed)" );
-   verbose ( std::dec << (unsigned int) getExecutionErrors() << " task executions failed" );
-   verbose ( std::dec << (unsigned int) getRecoveredTasks() << " tasks have been reexecuted" );
-   verbose ( std::dec << (unsigned int) getDiscardedTasks() << " tasks have been discarded (initialization, parent or sibling(s) failed" );
+   verbose ( std::dec, (unsigned int) getInjectedErrors(),       " errors injected" );
+   verbose ( std::dec, (unsigned int) getInitializationErrors(), " tasks could not be initialized (backup failed)" );
+   verbose ( std::dec, (unsigned int) getExecutionErrors(),      " task executions failed" );
+   verbose ( std::dec, (unsigned int) getRecoveredTasks(),       " tasks have been reexecuted" );
+   verbose ( std::dec, (unsigned int) getDiscardedTasks(),       " tasks have been discarded (initialization, parent or sibling(s) failed" );
 #endif // NANOS_RESILIENCY_ENABLED
    sys.getNetwork()->nodeBarrier();
 
@@ -1337,7 +1354,10 @@ void System::acquireWorker ( ThreadTeam * team, BaseThread * thread, bool enter,
    if ( enter ) thread->enterTeam( data );
    else thread->setNextTeamData( data );
 
-   debug( "added thread " << thread << " with id " << toString<int>(thId) << " to " << team );
+   debug( "added thread ", thread,
+          " with id ", toString<int>(thId),
+          " to ", team
+        );
 }
 
 void System::releaseWorker ( BaseThread * thread )
@@ -1345,7 +1365,9 @@ void System::releaseWorker ( BaseThread * thread )
    ensure( myThread == thread, "Calling release worker from other thread context" );
 
    //! \todo Destroy if too many?
-   debug("Releasing thread " << thread << " from team " << thread->getTeam() );
+   debug("Releasing thread ", thread,
+         " from team ", thread->getTeam()
+        );
 
    thread->lock();
    thread->sleep();
@@ -1375,7 +1397,9 @@ ThreadTeam * System::createTeam ( unsigned nthreads, void *constraints, bool reu
    ThreadTeam * team = NEW ThreadTeam( nthreads, *sched, std, *_defBarrFactory(), *(_pmInterface->getThreadTeamData()),
                                        reuse? myThread->getTeam() : NULL );
 
-   debug( "Creating team " << team << " of " << nthreads << " threads" );
+   debug( "Creating team ", team,
+          " of ", nthreads, " threads"
+        );
 
    team->setFinalSize(nthreads);
 
@@ -1404,7 +1428,9 @@ ThreadTeam * System::createTeam ( unsigned nthreads, void *constraints, bool reu
 
 void System::endTeam ( ThreadTeam *team )
 {
-   debug("Destroying thread team " << team << " with size " << team->size() );
+   debug("Destroying thread team ", team,
+         " with size ", team->size()
+        );
 
    dlb_returnCpusIfNeeded();
    while ( team->size ( ) > 0 ) {
@@ -1474,31 +1500,31 @@ void System::environmentSummary( void )
    }
 
    message0( "========== Nanos++ Initial Environment Summary ==========" );
-   message0( "=== PID:                 " << getpid() );
-   //message0( "=== Num. SMP threads:        " << _smpPlugin->getNumThreads() );
-   //message0( "=== Num. SMP worker threads: " << _smpPlugin->getNumWorkers() );
-   message0( "=== Num. worker threads: " << _workers.size() );
-   message0( "=== System CPUs:         " << mask.str() );
-   message0( "=== Binding:             " << std::boolalpha << _smpPlugin->getBinding() );
-   message0( "=== Prog. Model:         " << prog_model );
+   message0( "=== PID:                 ", getpid() );
+   //message0( "=== Num. SMP threads:        ", _smpPlugin->getNumThreads() );
+   //message0( "=== Num. SMP worker threads: ", _smpPlugin->getNumWorkers() );
+   message0( "=== Num. worker threads: ", _workers.size() );
+   message0( "=== System CPUs:         ", mask.str() );
+   message0( "=== Binding:             ", std::boolalpha, _smpPlugin->getBinding() );
+   message0( "=== Prog. Model:         ", prog_model );
 
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it ) {
-      message0( "=== Plugin:              " << (*it)->getName() );
-      message0( "===  | PEs:              " << (*it)->getNumPEs() );
-      message0( "===  | Threads:          " << (*it)->getNumThreads() );
-      message0( "===  | Worker Threads:   " << (*it)->getNumWorkers() );
+      message0( "=== Plugin:              ", (*it)->getName() );
+      message0( "===  | PEs:              ", (*it)->getNumPEs() );
+      message0( "===  | Threads:          ", (*it)->getNumThreads() );
+      message0( "===  | Worker Threads:   ", (*it)->getNumWorkers() );
    }
 #ifdef NANOS_RESILIENCY_ENABLED
-   message0( "=== Runtime resiliency:  " << ( sys.isResiliencyEnabled()? "Enabled": "Disabled") );
+   message0( "=== Runtime resiliency:  ", ( sys.isResiliencyEnabled()? "Enabled": "Disabled") );
 #else
    message0( "=== Runtime resiliency:  Disabled" );
 #endif
 #ifdef NANOS_FAULT_INJECTION
    if( sys.isPoisoningEnabled() ) {
       message0( "=== Fault injection:     Enabled" );
-      message0( "===  | Rate:             " << sys.getMPoisonRate() );
-      message0( "===  | Seed:             " << sys.getMPoisonSeed() );
+      message0( "===  | Rate:             ", sys.getMPoisonRate() );
+      message0( "===  | Seed:             ", sys.getMPoisonSeed() );
    } else
 #else
       message0( "=== Fault injection:     Disabled" );
@@ -1514,14 +1540,14 @@ void System::executionSummary( void )
 {
    time_t seconds = time(NULL) -_summaryStartTime;
    message0( "============ Nanos++ Final Execution Summary ==================" );
-   message0( "=== Application ended in " << seconds << " seconds" );
-   message0( "=== " << getCreatedTasks()            << " tasks have been executed" );
+   message0( "=== Application ended in ", seconds, " seconds" );
+   message0( "=== ", getCreatedTasks(),         " tasks have been executed" );
 #ifdef NANOS_RESILIENCY_ENABLED
-   message0( "=== " << getInjectedErrors()          << " errors injected" );
-   message0( "=== " << getInitializationErrors()    << " tasks could not be initialized (backup failed)" );
-   message0( "=== " << getExecutionErrors()         << " task executions failed" );
-   message0( "=== " << getRecoveredTasks()          << " tasks have been reexecuted" );
-   message0( "=== " << getDiscardedTasks()          << " tasks have been discarded (initialization, parent or sibling(s) failed" );
+   message0( "=== ", getInjectedErrors(),       " errors injected" );
+   message0( "=== ", getInitializationErrors(), " tasks could not be initialized (backup failed)" );
+   message0( "=== ", getExecutionErrors(),      " task executions failed" );
+   message0( "=== ", getRecoveredTasks(),       " tasks have been reexecuted" );
+   message0( "=== ", getDiscardedTasks(),       " tasks have been discarded (initialization, parent or sibling(s) failed" );
 #endif // NANOS_RESILIENCY_ENABLED
    message0( "===============================================================" );
 }

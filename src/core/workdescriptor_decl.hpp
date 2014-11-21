@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <utility>
 #include <vector>
+#include "debug_decl.hpp"
 #include "dependableobjectwd_decl.hpp"
 #include "copydata_decl.hpp"
 #include "synchronizedcondition_decl.hpp"
@@ -42,7 +43,6 @@
 #include "simpleallocator_decl.hpp"
 
 #include "taskexception_fwd.hpp"
-#include "debug.hpp"
 
 #include "schedule_fwd.hpp"   // ScheduleWDData
 
@@ -183,7 +183,9 @@ namespace nanos
             * corrupted/invalid.
             */
             virtual bool recover ( TaskException const& err ) {
-               fatal0(__PRETTY_FUNCTION__ << "is not implemented."); 
+               fatal( "Recovery error: recover function is not implemented for device ",
+                      getName()
+                    );
                return false;
             }
 
@@ -192,7 +194,9 @@ namespace nanos
              * accurate recovery for each kind of device.
              */
             virtual void restore ( WD& wd ) {
-               fatal0(__PRETTY_FUNCTION__ << "is not implemented."); 
+               fatal( "Restoration error: restore function is not implemented for device ",
+                       getName()
+                    );
             }
 #endif
 

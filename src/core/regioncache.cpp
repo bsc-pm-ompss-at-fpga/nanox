@@ -815,7 +815,12 @@ AllocatedChunk *RegionCache::tryGetAddress( global_reg_t const &reg, WD const &w
 
    _chunks.getOrAddChunk2( targetHostAddr, allocSize, results );
    if ( results.size() != 1 ) {
-      message0( "Got results.size()="<< results.size() << " for addr " << ((void*) targetHostAddr) << " with allocSize " << allocSize <<" I think we need to realloc " << __FUNCTION__ << " @ " << __FILE__ << ":" << __LINE__ );
+      message0( "Got results.size()=", results.size(), 
+                " for addr ", std::hex, targetHostAddr, 
+                " with allocSize ", allocSize,
+                " I think we need to realloc ",
+                __FUNCTION__, " @ ", __FILE__, ":", __LINE__ );
+
       for ( ChunkList::iterator it = results.begin(); it != results.end(); it++ )
          std::cerr << " addr: " << (void *) it->first->getAddress() << " size " << it->first->getLength() << std::endl; 
       if ( &wd != NULL ) {
@@ -971,7 +976,11 @@ AllocatedChunk *RegionCache::getOrCreateChunk( global_reg_t const &reg, WD const
 
    _chunks.getOrAddChunk2( targetHostAddr, allocSize, results );
    if ( results.size() != 1 ) {
-      message0( "Got results.size()="<< results.size() << " I think we need to realloc " << __FUNCTION__ << " @ " << __FILE__ << ":" << __LINE__ );
+      message0( "Got results.size()=", results.size(), 
+                " for addr ", std::hex, targetHostAddr, 
+                " with allocSize ", allocSize,
+                " I think we need to realloc ",
+                __FUNCTION__, " @ ", __FILE__, ":", __LINE__ );
       for ( ChunkList::iterator it = results.begin(); it != results.end(); it++ )
          std::cerr << " addr: " << (void *) it->first->getAddress() << " size " << it->first->getLength() << std::endl; 
    } else {
@@ -1043,8 +1052,11 @@ AllocatedChunk *RegionCache::getAddress( uint64_t hostAddr, std::size_t len ) {
    AllocatedChunk *allocChunkPtr = NULL;
    _chunks.getChunk3( hostAddr, len, results );
    if ( results.size() != 1 ) {
-         std::cerr <<"Requested addr " << (void *) hostAddr << " size " <<len << std::endl;
-      message0( "I think we need to realloc " << __FUNCTION__ << " @ " << __FILE__ << ":" << __LINE__ );
+      message0( "Requested addr ", std::hex, hostAddr,
+                " with size ", len,
+                " I think we need to realloc ",
+                __FUNCTION__, " @ ", __FILE__, ":", __LINE__ );
+
       for ( ConstChunkList::iterator it = results.begin(); it != results.end(); it++ )
          std::cerr << " addr: " << (void *) it->first->getAddress() << " size " << it->first->getLength() << std::endl; 
    } else {
@@ -1080,8 +1092,11 @@ AllocatedChunk *RegionCache::_getAllocatedChunk( global_reg_t const &reg, bool c
       else
          allocChunkPtr = NULL;
    } else if ( results.size() > 1 ) {
-         *(myThread->_file) <<"Requested addr " << (void *) reg.getRealFirstAddress() << " size " << reg.getBreadth() << std::endl;
-      message0( "I think we need to realloc " << __FUNCTION__ << " @ " << __FILE__ << ":" << __LINE__ );
+      message0( "Requested addr ", std::hex, reg.getRealFirstAddress(),
+                " with size ", reg.getBreadth(),
+                " I think we need to realloc ",
+                __FUNCTION__, " @ ", __FILE__, ":", __LINE__ );
+
       for ( ConstChunkList::const_iterator it = results.begin(); it != results.end(); it++ )
          std::cerr << " addr: " << (void *) it->first->getAddress() << " size " << it->first->getLength() << std::endl; 
       if ( &wd != NULL ) {

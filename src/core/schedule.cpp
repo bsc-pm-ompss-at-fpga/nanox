@@ -70,7 +70,7 @@ void Scheduler::submit ( WD &wd, bool force_queue )
    NANOS_INSTRUMENT( InstrumentState inst(NANOS_SCHEDULING) );
    BaseThread *mythread = myThread;
 
-   debug ( "submitting task " << wd.getId() );
+   debug ( "submitting task ", wd.getId() );
 
    wd.submitted();
    wd.setReady();
@@ -990,7 +990,10 @@ void Scheduler::preOutlineWorkWithThread ( BaseThread * thread, WD *wd )
    //}
 
    //std::cerr << "thd " << myThread->getId() <<  " switching(outlined) to task " << wd << ":" << wd->getId() << std::endl;
-   debug( "switching(pre outline) from task " << &(thread->getThreadWD()) << ":" << thread->getThreadWD().getId() << " to " << wd << ":" << wd->getId() );
+   debug( "switching(pre outline) from task ",
+          &(thread->getThreadWD()), ":", thread->getThreadWD().getId(),
+          " to ", wd, ":", wd->getId()
+        );
 
    //NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(oldwd, NULL, false) );
 
@@ -1026,7 +1029,10 @@ void Scheduler::preOutlineWork ( WD *wd )
    //}
 
    //std::cerr << "thd " << myThread->getId() <<  " switching(outlined) to task " << wd << ":" << wd->getId() << std::endl;
-   debug( "switching(pre outline) from task " << &(thread->getThreadWD()) << ":" << thread->getThreadWD().getId() << " to " << wd << ":" << wd->getId() );
+   debug( "switching(pre outline) "
+          "from task ", &(thread->getThreadWD()), ":", thread->getThreadWD().getId(),
+          " to ", wd, ":", wd->getId()
+        );
 
    //NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(oldwd, NULL, false) );
 
@@ -1060,7 +1066,10 @@ bool Scheduler::tryPreOutlineWork ( WD *wd )
       NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
       NANOS_INSTRUMENT ( static nanos_event_key_t copy_data_in_key = ID->getEventKey("copy-data-in"); )
       NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( copy_data_in_key, (nanos_event_value_t) wd->getId() ); )
-      debug( "switching(try pre outline) from task " << &(thread->getThreadWD()) << ":" << thread->getThreadWD().getId() << " to " << wd << ":" << wd->getId() );
+      debug( "switching(try pre outline) "
+             "from task ", &(thread->getThreadWD()), ":", thread->getThreadWD().getId(),
+             " to ", wd, ":", wd->getId()
+           );
 
       result = true;
       wd->tieTo( *thread );
@@ -1095,7 +1104,9 @@ void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner )
 
    //std::cerr << "thd " << myThread->getId() << "exiting task(inlined) " << wd << ":" << wd->getId() <<
    //       " to " << oldwd << ":" << oldwd->getId() << std::endl;
-   debug( "exiting task(post outline) " << wd << ":" << std::dec << wd->getId() << " to " << &(thread->getThreadWD()) << ":" << std::dec << thread->getThreadWD().getId() );
+   debug( "exiting task(post outline) ", wd, ":", std::dec, wd->getId(),
+          " to ", &(thread->getThreadWD()), ":", std::dec, thread->getThreadWD().getId()
+        );
 
    thread->setCurrentWD( thread->getThreadWD() );
 
@@ -1185,8 +1196,10 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
       GenericSyncCond *syncCond = oldwd->getSyncCond();
       if ( syncCond != NULL ) syncCond->unlock();
 
-      debug( "switching(inlined) from task " << oldwd << ":" << oldwd->getId() <<
-             " to " << wd << ":" << wd->getId() << " at node " << sys.getNetwork()->getNodeNum() );
+      debug( "switching(inlined) from task ", oldwd, ":", oldwd->getId(),
+             " to ", wd, ":", wd->getId(),
+             " at node ", sys.getNetwork()->getNodeNum()
+           );
 
       // Initializing wd if necessary
       // It will be started later in inlineWorkDependent call
@@ -1224,8 +1237,10 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
          /* Instrumenting context switch: wd leaves cpu and will not come back (last = true) and new_wd enters */
          NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, oldwd, true) );
       }
-      debug( "exiting(inlined) from task " << wd << ":" << wd->getId() <<
-             " to " << oldwd << ":" << oldwd->getId() << " at node " << sys.getNetwork()->getNodeNum() );
+      debug( "exiting(inlined) from task ", wd, ":", wd->getId(),
+             " to ", oldwd, ":", oldwd->getId(),
+             " at node ", sys.getNetwork()->getNodeNum()
+           );
 
       thread->setCurrentWD( *oldwd );
 
@@ -1287,8 +1302,9 @@ void Scheduler::switchTo ( WD *to )
            to->start(WD::IsAUserLevelThread);
         }
    
-        debug( "switching from task " << myThread->getCurrentWD() << ":" << myThread->getCurrentWD()->getId() <<
-              " to " << to << ":" << to->getId() );
+        debug( "switching from task ", myThread->getCurrentWD(), ":", myThread->getCurrentWD()->getId(),
+               " to ", to, ":", to->getId()
+             );
    
         NANOS_INSTRUMENT( WD *oldWD = myThread->getCurrentWD(); )
            NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, to, false ) );
@@ -1375,8 +1391,9 @@ void Scheduler::exitTo ( WD *to )
       to->start(WD::IsAUserLevelThread,NULL);
    }
 
-   debug( "exiting task " << myThread->getCurrentWD() << ":" << myThread->getCurrentWD()->getId() <<
-         " to " << to << ":" << to->getId() );
+   debug( "exiting task ", myThread->getCurrentWD(), ":", myThread->getCurrentWD()->getId(),
+          " to ", to, ":", to->getId()
+        );
 
    NANOS_INSTRUMENT( WD *oldWD = myThread->getCurrentWD(); )
    NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, to, true ) );

@@ -24,7 +24,7 @@
 #include <list>
 #include <vector>
 #include "atomic_decl.hpp"
-#include "debug.hpp"
+#include "debug_decl.hpp"
 #include "workdescriptor_fwd.hpp"
 
 #define NANOX_MULTIPLE_SYNC_COND_SIZE 100

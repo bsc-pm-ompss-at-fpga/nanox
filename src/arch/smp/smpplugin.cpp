@@ -180,20 +180,37 @@ class SMPPlugin : public SMPBasePlugin
 
       if ( _availableCores == 0 ) {
          if ( available_cores_by_mask > 0 ) {
-            warning0("SMPPlugin: Unable to detect the number of processors in the system, using the value provided by the process cpu mask (" << available_cores_by_mask << ").");
+            warning0( "SMPPlugin: Unable to detect the number of processors in the system, "
+                      "using the value provided by the process cpu mask (",
+                      available_cores_by_mask,
+                       ")." 
+                    );
+
             _availableCores = available_cores_by_mask;
          } else if ( _requestedCores > 0 ) {
-            warning0("SMPPlugin: Unable to detect the number of processors in the system and cpu mask not set, using the number of requested cpus (" << _requestedCores << ").");
+            warning0( "SMPPlugin: Unable to detect the number of processors in the system "
+                      "and cpu mask not set, using the number of requested cpus (",
+                      _requestedCores,
+                      ")."
+                    );
+
             _availableCores = _requestedCores;
          } else {
-            fatal0("SMPPlugin: Unable to detect the number of cpus of the system and --smp-cpus was unset or with a value less than 1.");
+            fatal0( "SMPPlugin: Unable to detect the number of cpus of the "
+                    "system and --smp-cpus was unset or with a value less than 1."
+                  );
          }
       }
       //at this point _availableCores has a valid value
 
       if ( _requestedCores > 0 ) { //--smp-cpus flag was set
          if ( _requestedCores > available_cores_by_mask ) {
-            warning0("SMPPlugin: Requested number of cpus is greater than the cpu mask provided, using the value specified by the mask (" << available_cores_by_mask << ").");
+            warning0( "SMPPlugin: Requested number of cpus is greater than the cpu mask provided, "
+                      "using the value specified by the mask (",
+                      available_cores_by_mask,
+                      ")."
+                    );
+
             _currentCores = available_cores_by_mask;
          } else {
             _currentCores = _requestedCores;
@@ -201,10 +218,12 @@ class SMPPlugin : public SMPBasePlugin
       } else if ( _requestedCores == 0 ) { //no cpus requested through --smp-cpus
          _currentCores = available_cores_by_mask;
       } else {
-         fatal0("Invalid number of requested cpus (--smp-cpus)");
+         fatal0( "Invalid number of requested cpus (--smp-cpus)" );
       }
-      verbose0("requested cpus: " << _requestedCores << " available: " << _availableCores << " to be used: " << _currentCores);
-
+      verbose0( "requested cpus: ", _requestedCores,
+                " available: ",     _availableCores,
+                " to be used: ",    _currentCores
+              );
 
       _bindings.reserve( _availableCores );
       for ( unsigned int i=0; i<CPU_SETSIZE; i++ ) {
@@ -342,7 +361,7 @@ class SMPPlugin : public SMPBasePlugin
       } else {
          count = active_cpus - reserved_cpus;
       }
-      debug0( __FUNCTION__ << " called before creating the SMP workers, the estimated number of workers is: " << count);
+      debug0( __FUNCTION__, " called before creating the SMP workers, the estimated number of workers is: ", count);
       return count + future_threads;
 
    }
@@ -386,11 +405,24 @@ class SMPPlugin : public SMPBasePlugin
 
       int max_workers;  
       if ( _requestedWorkers != -1 && (_requestedWorkers - 1) > available_cpus ) {
-         warning("SMPPlugin: requested number of workers (" << _requestedWorkers << ") is greater than the number of available cpus (" << available_cpus+1 << ") a total of " << available_cpus+1 << " workers will be created.");
+         warning( "SMPPlugin: requested number of workers (", _requestedWorkers,
+                  ") is greater than the number of available cpus (", available_cpus+1,
+                  ") a total of ", available_cpus+1,
+                  " workers will be created."
+                );
+
          if ( _availableCores > _currentCores ) {
-            warning("SMPPlugin: The system has more cpus available (" << _availableCores << ") but only " << _currentCores << " are being used. Try increasing the cpus available to Nanos++ using the --smp-cpus flag or the setting appropiate cpu mask (using the 'taskset' command). Please note that if both the --smp-cpus flag and the cpu mask are set, the most restrictive value will be considered.");
+            warning( "SMPPlugin: The system has more cpus available (", _availableCores,
+                     ") but only ", _currentCores,
+                     " are being used. Try increasing the cpus available to Nanos++ using the "
+                     "--smp-cpus flag or the setting appropiate cpu mask (using the 'taskset' "
+                     "command). Please note that if both the --smp-cpus flag and the cpu mask "
+                     "are set, the most restrictive value will be considered."
+                   );
          } else {
-            warning("SMPPlugin: All cpus are being used by Nanos++ (" << _availableCores << ") so you may have requested too many smp workers.");
+            warning( "SMPPlugin: All cpus are being used by Nanos++ (",
+                     _availableCores,
+                     ") so you may have requested too many smp workers.");
          }
          max_workers = available_cpus + 1;
       } else {
@@ -586,7 +618,10 @@ class SMPPlugin : public SMPBasePlugin
 //      if ( _coresPerSocket == 0 )
 //         _coresPerSocket = std::ceil( _cpus->size() / static_cast<float>( _numSockets ) );
 //#endif
-      verbose0( toString( "[NUMA] " ) + toString( _numSockets ) + toString( " NUMA nodes, " ) + toString( _coresPerSocket ) + toString( " HW threads each." ) );
+      verbose0( "[NUMA] ", _numSockets, 
+                " NUMA nodes, ", _coresPerSocket,
+                " HW threads each."
+              );
    }
 
    unsigned getNodeOfPE ( unsigned pe )
@@ -701,15 +736,21 @@ class SMPPlugin : public SMPBasePlugin
             }
          }
          oss_cpu_idx << "]";
-         verbose0( "PID[" << getpid() << "]. CPU affinity " << oss_cpu_idx.str() );
+         verbose0( "PID[", getpid(), "]."
+                   " CPU affinity ", oss_cpu_idx.str() 
+                 );
+
          if ( sys.getPMInterface().isMalleable() ) {
             applyCpuMask();
          }
       } else {
-         verbose0( "PID[" << getpid() << "]. Changing number of threads: " << (int) myThread->getTeam()->getFinalSize() << " to " << (int) CPU_COUNT( &_cpuActiveSet ) );
-         if ( sys.getPMInterface().isMalleable() ) {
+         verbose0( "PID[", getpid(), "]. "
+                   "Changing number of threads: ", myThread->getTeam()->getFinalSize(),
+                   " to ", &_cpuActiveSet
+                 );
+         /*if ( sys.getPMInteface().isMalleable() ) {
             updateActiveWorkers( CPU_COUNT( &_cpuActiveSet ) );
-         }
+         }*/
       }
    }
 
@@ -833,13 +874,13 @@ class SMPPlugin : public SMPBasePlugin
       CPU_SET( cpu->getBindingId(), &_cpuActiveSet );
 
       //! \note Getting Programming Model interface data
-      WD &mainWD = *myThread->getCurrentWD();
-      if ( sys.getPMInterface().getInternalDataSize() > 0 ) {
+      //WD &mainWD = *myThread->getCurrentWD();
+/*      if ( sys.getPMInterface().getInternalDataSize() > 0 ) {
          char *data = NEW char[sys.getPMInterface().getInternalDataSize()];
          sys.getPMInterface().initInternalData( data );
          mainWD.setInternalData( data );
       }
-
+*/
       //! \note Include thread into main thread
       sys.acquireWorker( sys.getMainTeam(), thread, /* enter */ true, /* starring */ false, /* creator */ false );
    }
@@ -874,7 +915,7 @@ class SMPPlugin : public SMPBasePlugin
       } else {
          count = active_cpus - reserved_cpus;
       }
-      debug0( __FUNCTION__ << " called before creating the SMP workers, the estimated number of workers is: " << count);
+      debug0( __FUNCTION__, " called before creating the SMP workers, the estimated number of workers is: ", count);
       return count;
    }
 

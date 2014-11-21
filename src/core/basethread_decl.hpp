@@ -22,7 +22,7 @@
 
 #include "workdescriptor_decl.hpp"
 #include "processingelement_fwd.hpp"
-#include "debug.hpp"
+#include "debug_decl.hpp"
 #include "atomic_decl.hpp"
 #include "schedule_fwd.hpp"
 #include "threadteam_fwd.hpp"

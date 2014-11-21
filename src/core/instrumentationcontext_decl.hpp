@@ -22,7 +22,7 @@
 #include <list>
 
 #include "instrumentation_decl.hpp"
-#include "debug.hpp"
+#include "debug_decl.hpp"
 
 namespace nanos {
 

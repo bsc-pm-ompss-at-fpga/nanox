@@ -38,7 +38,7 @@ bool PluginManager::isPlugin ( const char *name )
    handler = OS::loadDL( "",dlname );
 
    if ( !handler ) {
-      warning0 ( "plugin error=" << OS::dlError( handler ) );
+      warning0( "plugin error=", OS::dlError( handler ) );
       return false;
    }
 
@@ -76,19 +76,19 @@ Plugin * PluginManager::loadAndGetPlugin( const char *name, const bool initPlugi
       handler = OS::loadDL( "",dlname );
 
       if ( !handler ) {
-         warning0 ( "plugin error=" << OS::dlError( handler ) );
+         warning0( "plugin error=", OS::dlError( handler ) );
          return NULL;
       }
 
       Plugin *(*pluginFactory)() = ( Plugin *(*)() ) OS::dlFindSymbol( handler, "NanosXPluginFactory" );
 
       if ( !pluginFactory ) {
-         warning0 ( "plugin error=" << OS::dlError( handler ) );
+         warning0( "plugin error=", OS::dlError( handler ) );
          return NULL;
       } else {
          plugin = (*pluginFactory)();
          if ( !plugin ) {
-            warning0 ( "plugin error=" << OS::dlError( handler ) );
+            warning0( "plugin error=", OS::dlError( handler ) );
             return NULL;
          }
       }

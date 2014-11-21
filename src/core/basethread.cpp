@@ -44,7 +44,8 @@ void BaseThread::run ()
 void BaseThread::addNextWD ( WD *next )
 {
    if ( next != NULL ) {
-      debug("Add next WD as: " << next << ":"<< next->getId() << " @ thread " << _id );
+      debug("Add next WD as: ", next, ":",
+             next->getId(), " @ thread ", _id );
       _nextWDs.push_back( next );
    }
 }
@@ -121,7 +122,7 @@ void BaseThread::notifyOutlinedCompletionDependent( WD *completedWD ) {
 }
 
 int BaseThread::getCpuId() const {
-   ensure( _parent != NULL, "Wrong call to getCpuId" ) 
+   ensure( _parent != NULL, "Wrong call to getCpuId" );
    return _parent->getCpuId();
 }
 

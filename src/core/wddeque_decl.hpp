@@ -23,7 +23,7 @@
 #include <list>
 #include <functional>
 #include "atomic_decl.hpp"
-#include "debug.hpp"
+#include "debug_decl.hpp"
 #include "workdescriptor_fwd.hpp"
 #include "basethread_fwd.hpp"
 

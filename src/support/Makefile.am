@@ -32,6 +32,7 @@ devinclude_HEADERS = \
 	compatibility.hpp\
 	queue_decl.hpp\
 	queue.hpp\
+	debug_decl.hpp\
 	debug.hpp\
 	config_fwd.hpp\
 	config_decl.hpp\

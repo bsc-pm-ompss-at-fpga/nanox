@@ -124,7 +124,7 @@ void SMPDD::execute ( WD &wd ) throw ()
        *  skip data copies of dependences.
        */
       wd.setInvalid(true);
-      debug ( "Resiliency: Task " << wd.getId() << " is flagged as invalid. Skipping it.");
+      debug ( "Resiliency: Task ", wd.getId(), " is flagged as invalid. Skipping it.");
 
       NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
       NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) NANOS_FT_DISCARD );
@@ -137,20 +137,23 @@ void SMPDD::execute ( WD &wd ) throw ()
             // Call to the user function
             getWorkFct()( wd.getData() );
          } catch (nanos::TaskException& e) {
-            debug("Resiliency: error detected during task " << wd.getId() << " execution.");
+            debug("Resiliency: error detected during task ", wd.getId(), " execution.");
             sys.getExceptionStats().incrExecutionErrors();
             e.handleExecutionError( );
          } catch (std::exception& e) {
             sys.getExceptionStats().incrExecutionErrors();
 
             // Unexpected error: terminate execution
-            fatal( "Error: Uncaught exception " << typeid(e).name() 
-                   << ". Thrown in task " << wd.getId() << std::endl
-                   << e.what() );
+            fatal( "Error: Uncaught exception ", typeid(e).name(),
+                   ". Thrown in task ", wd.getId(), ". "
+                   "Reason: ", e.what()
+                 );
          } catch (...) {
             sys.getExceptionStats().incrExecutionErrors();
             // Unexpected error: terminate execution
-            fatal("Error: Uncaught exception (unknown type). Thrown in task " << wd.getId() << ". ");
+            fatal( "Error: Uncaught exception (unknown type). "
+                   "Thrown in task ", wd.getId(), ". "
+                 );
          }
 
          /* 
@@ -174,11 +177,11 @@ void SMPDD::execute ( WD &wd ) throw ()
                return;
             }
          } else {
-            debug( "Exiting task " << wd.getId() << "." );
+            debug( "Exiting task ", wd.getId(), "." );
             // Nothing left to do, either task execution was OK or the recovery has to be done by an ancestor.
             return;
          }
-         debug( "Task " << wd.getId() << " is being re-executed." );
+         debug( "Task ", wd.getId(), " is being re-executed." );
 
          NANOS_INSTRUMENT ( static nanos_event_key_t task_reexec_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
          NANOS_INSTRUMENT ( nanos_event_value_t task_reexec_val = (nanos_event_value_t ) NANOS_FT_RESTART );
@@ -213,10 +216,10 @@ bool SMPDD::recover( TaskException const& err ) {
 #ifdef NANOS_FAULT_INJECTION
                if( sys.isPoisoningEnabled() ) {
                   if( mpoison_unblock_page(page_addr) == 0 ) {
-                     debug("Resiliency: Page restored! Address: 0x" << std::hex << page_addr);
+                     debug("Resiliency: Page restored! Address: 0x", std::hex, page_addr);
                      result = true;
                   } else {
-                     debug("Resiliency: Error while restoring page. Address: 0x" << std::hex << page_addr);
+                     debug("Resiliency: Error while restoring page. Address: 0x", std::hex, page_addr);
                      result = false;
                   }
                } else {
@@ -237,7 +240,7 @@ bool SMPDD::recover( TaskException const& err ) {
 
 void SMPDD::restore( WD & wd ) {
 
-   debug ( "Resiliency: Task " << wd.getId() << " is being recovered to be re-executed further on.");
+   debug ( "Resiliency: Task ", wd.getId(), " is being recovered to be re-executed further on.");
    // Wait for successors to finish.
    wd.waitCompletion();
 
@@ -248,7 +251,7 @@ void SMPDD::restore( WD & wd ) {
       myThread->idle();
    }
 
-   debug ( "Resiliency: Task " << wd.getId() << " recovery complete.");
+   debug ( "Resiliency: Task ", wd.getId(), " recovery complete.");
    // Reset invalid state
    wd.setInvalid(false);
 

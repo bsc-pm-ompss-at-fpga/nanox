@@ -71,7 +71,7 @@ static void staticLoop ( void *arg )
 
 void SlicerStaticFor::submit ( WorkDescriptor &work )
 {
-   debug ( "Submitting sliced task " << &work << ":" << work.getId() );
+   debug ( "Submitting sliced task ", &work, ":", work.getId() );
    
    BaseThread *mythread = myThread;
    ThreadTeam *team = mythread->getTeam();
@@ -139,7 +139,9 @@ void SlicerStaticFor::submit ( WorkDescriptor &work )
          slice = NULL;
          sys.duplicateWD( &slice, &work );
    
-         debug ( "Creating task " << slice << ":" << slice->getId() << " from sliced one " << &work << ":" << work.getId() );
+         debug ( "Creating task ", slice, ":", slice->getId(), 
+                 " from sliced one ", &work, ":", work.getId()
+               );
 
          // Computing specific loop boundaries for current slice
          loop_info = ( nanos_loop_info_t * ) slice->getData();
@@ -175,7 +177,9 @@ void SlicerStaticFor::submit ( WorkDescriptor &work )
          slice = NULL;
          sys.duplicateWD( &slice, &work );
 
-         debug ( "Creating task " << slice << ":" << slice->getId() << " from sliced one " << &work << ":" << work.getId() );
+         debug ( "Creating task ", slice, ":", slice->getId(), 
+                 " from sliced one ", &work, ":", work.getId()
+               );
 
          // Computing specific loop boundaries for current slice
          loop_info = ( nanos_loop_info_t * ) slice->getData();

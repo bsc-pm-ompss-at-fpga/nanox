@@ -97,13 +97,11 @@ namespace nanos {
                   fatal( "SmartPriority::successorFound  successor->getRelatedObject() is NULL" );
                }
                
-               debug ( "Propagating priority from "
-                  << (void*)succ << ":" << succ->getId() << " to "
-                  << (void*)pred << ":"<< pred->getId()
-                  << ", old priority: " << pred->getPriority()
-                  << ", new priority: " << std::max( pred->getPriority(),
-                  succ->getPriority() )
-               );
+               debug ( "Propagating priority from ", (void*)succ, ":", succ->getId(), 
+                       " to ", (void*)pred, ":", pred->getId(), ", "
+                       "old priority: ", pred->getPriority(), ", "
+                       "new priority: ", std::max( pred->getPriority(), succ->getPriority() )
+                     );
                
                // Propagate priority
                if ( pred->getPriority() < succ->getPriority() ) {

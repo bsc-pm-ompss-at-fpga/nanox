@@ -180,7 +180,7 @@ void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
    } catch ( TaskException &e ) {
       e.handleCheckpointError( wd, false, hostAddr, devAddr, len );
       sys.getExceptionStats().incrInitializationErrors();
-      debug("Resiliency: error detected during task " << wd.getId() << " input data backup.");
+      debug("Resiliency: error detected during task ", wd.getId(), " input data backup.");
    }
    ops->completeOp();
 }
@@ -205,7 +205,7 @@ void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
    } catch ( TaskException &e ) {
       e.handleCheckpointError( wd, false, devAddr, hostAddr, len );
       sys.getExceptionStats().incrInitializationErrors();
-      debug("Resiliency: error detected during task " << wd.getId() << " input data restoration.");
+      debug("Resiliency: error detected during task ", wd.getId(), " input data restoration.");
    }
    ops->completeOp();
 }
@@ -224,5 +224,5 @@ void BackupManager::_getFreeMemoryChunksList (
       SeparateMemoryAddressSpace const& mem,
       SimpleAllocator::ChunkList &list ) const
 {
-   fatal(__PRETTY_FUNCTION__ << "is not implemented.");
+   fatal(__PRETTY_FUNCTION__, "is not implemented.");
 }

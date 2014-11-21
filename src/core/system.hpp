@@ -21,6 +21,7 @@
 #define _NANOS_SYSTEM_H
 
 #include "system_decl.hpp"
+#include "debug.hpp"
 #include "dependenciesdomain_decl.hpp"
 #include <vector>
 #include <string>

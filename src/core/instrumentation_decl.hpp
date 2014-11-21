@@ -202,7 +202,7 @@
 #include <utility>
 #include <string>
 #include "compatibility.hpp"
-#include "debug.hpp"
+#include "debug_decl.hpp"
 #include "nanos-int.h"
 #include "atomic_decl.hpp"
 #include "instrumentationcontext_fwd.hpp"

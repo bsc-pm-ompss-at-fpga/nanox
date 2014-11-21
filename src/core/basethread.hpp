@@ -192,7 +192,10 @@ namespace nanos
       if ( _teamData ) 
       {
          TeamData *td = _teamData;
-         debug( "removing thread " << this << " with id " << toString<int>(getTeamId()) << " from " << _teamData->getTeam() );
+         debug( "removing thread ", this,
+                " with id ", getTeamId(), 
+                " from ", _teamData->getTeam()
+              );
 
          size_t final_size = td->getTeam()->removeThread( getTeamId() );
          if ( final_size == td->getTeam()->getFinalSize() ) td->getTeam()->setStable(true);

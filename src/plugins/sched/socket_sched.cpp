@@ -234,7 +234,9 @@ namespace nanos {
                      // Convert to virtual
                      int vNode = sys.getVirtualNUMANode( node );
                      _gpuNodes.insert( vNode );
-                     verbose0( "Found GPU Worker in node " << node << " (virtual " << vNode << ")" );
+                     verbose0( "Found GPU Worker in node ", node, 
+                               " (virtual ", vNode, ")"
+                             );
                   }
 #endif
                   // Avoid unused variable warning.
@@ -279,7 +281,10 @@ namespace nanos {
                fatal_cond( _gpuNodes.count( newNode ) == 0, "Cannot find a node with GPUs to move the task to." );
                
                
-               verbose( "WD " << wd.getId() << " cannot run in node " << node << ", moved to " << newNode );
+               verbose( "WD ", wd.getId(), " cannot run "
+                        "in node ", node, ", "
+                        "moved to ", newNode
+                      );
                return newNode;
             //#endif
             }
@@ -485,13 +490,16 @@ namespace nanos {
                   {
                      const BaseThread * w = sys.getWorker( i );
                      
-                     message0( "===  | Worker " << w->getId() << ", cpu id: " << w->getCpuId() << ", NUMA node " << w->runningOn()->getNumaNode() );
+                     message0( "===  | Worker ", w->getId(), ", "
+                               "cpu id: ", w->getCpuId(), ", "
+                               "NUMA node ", w->runningOn()->getNumaNode()
+                             );
                   }
                   
                   std::stringstream ss;
                   std::ostream_iterator<int> outIt (ss ,", ");
                   std::copy( _gpuNodes.begin(), _gpuNodes.end(), outIt );
-                  message0( "=== CUDA devices in:     " << ss.str() );
+                  message0( "=== CUDA devices in:     ", ss.str() );
                   
                   // Clear stringstream to reuse it
                   ss.str( std::string() );
@@ -594,7 +602,7 @@ namespace nanos {
                TeamData &tdata = (TeamData &) *thread->getTeam()->getScheduleData();
                
                if( wdata._wakeUpQueue != std::numeric_limits<unsigned>::max() )
-                  warning0( "WD already has a queue (" << wdata._wakeUpQueue << ")" );
+                  warning0( "WD already has a queue (", wdata._wakeUpQueue, ")" );
                
                unsigned index;
                unsigned node;
@@ -865,7 +873,7 @@ namespace nanos {
                
                WD *pred = ( WD* ) predecessor->getRelatedObject();
                if ( pred == NULL ) {
-                  debug( "SmartPriority::successorFound predecessor->getRelatedObject() is NULL" )
+                  debug( "SmartPriority::successorFound predecessor->getRelatedObject() is NULL" );
                   return;
                }
                
@@ -876,13 +884,12 @@ namespace nanos {
                
                //debug( "Predecessor[" << pred->getId() << "]" << pred << ", Successor[" << succ->getId() << "]" );
                
-               debug ( "Propagating priority from "
-                  << (void*)succ << ":" << succ->getId() << " to "
-                  << (void*)pred << ":"<< pred->getId()
-                  << ", old priority: " << pred->getPriority()
-                  << ", new priority: " << std::max( pred->getPriority(),
-                  succ->getPriority() )
-               );
+               debug ( "Propagating priority "
+                       "from " , (void*)succ, ":", succ->getId(), 
+                       " to " , (void*)pred, ":", pred->getId(), ", "
+                       "old priority: ", pred->getPriority(), ", "
+                       "new priority: ", std::max( pred->getPriority(), succ->getPriority() )
+                     );
                
                // Propagate priority
                if ( pred->getPriority() < succ->getPriority() ) {

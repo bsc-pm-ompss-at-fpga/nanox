@@ -23,7 +23,7 @@
 #include <queue>
 #include "queue_decl.hpp"
 #include "atomic.hpp"
-#include "debug.hpp"
+#include "debug_decl.hpp"
 
 using namespace nanos;
 

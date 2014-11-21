@@ -18,7 +18,7 @@
 /*************************************************************************************/
 #ifndef __NANOS_INSTRUMENTOR_MODULE_DECL_H
 #define __NANOS_INSTRUMENTOR_MODULE_DECL_H
-#include "debug.hpp"
+#include "debug_decl.hpp"
 #include "nanos-int.h"
 #include "instrumentation.hpp"
 #include "system_decl.hpp"

@@ -477,7 +477,7 @@ bool MemController::isOutputDataReady( WD const &wd ) {
 #ifdef NANOS_RESILIENCY_ENABLED
 bool MemController::isDataRestored( WD const &wd ) {
    ensure( _preinitialized == true, "MemController not initialized!");
-   ensure( _wd.isRecoverable(), "Task is not recoverable. There wasn't any data to be restored. ")
+   ensure( _wd.isRecoverable(), "Task is not recoverable. There wasn't any data to be restored. ");
    if ( _initialized ) {
       if ( !_dataRestored ) {
          _dataRestored = _restoreOps->isDataReady( wd );

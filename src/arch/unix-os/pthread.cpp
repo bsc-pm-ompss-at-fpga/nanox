@@ -103,7 +103,7 @@ void PThread::bind()
    cpu_set_t cpu_set;
    CPU_ZERO( &cpu_set );
    CPU_SET( cpu_id, &cpu_set );
-   verbose( " Binding thread " << getMyThreadSafe()->getId() << " to cpu " << cpu_id );
+   verbose( " Binding thread ", getMyThreadSafe()->getId(), " to cpu ", cpu_id );
    OS::bindThread( _pth, &cpu_set );
 
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )

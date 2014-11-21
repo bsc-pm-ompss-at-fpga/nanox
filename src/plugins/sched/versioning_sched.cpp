@@ -360,11 +360,19 @@ namespace ext
                         WDBestRecordKey key = *it;
                         WDBestRecordData &data = _wdExecBest[key];
 
-                        message( "    Best version found for groupId " << key.first << ", paramSize " << key.second << ":");
+                        message( "    Best version found for groupId ", key.first, ", "
+                                 "paramSize ", key.second, ":"
+                               );
+
                         if ( data._pe != NULL ) {
-                           message( "    versionId: " << data._versionId << ", PE: " << data._pe->getDeviceType()->getName() << ", time: " << data._elapsedTime );
+                           message( "    versionId: ", data._versionId, ", "
+                                    "PE: ", data._pe->getDeviceType()->getName(), ", "
+                                    "time: ", data._elapsedTime
+                                  );
                         } else {
-                           message( "    versionId: " << data._versionId << ", PE: null, time: " << data._elapsedTime );
+                           message( "    versionId: ", data._versionId, ", "
+                                    "PE: null, time: ", data._elapsedTime
+                                  );
                         }
                      }
 
@@ -374,17 +382,27 @@ namespace ext
                         WDExecInfoKey key = *it;
                         WDExecInfoData &data = _wdExecStats[key];
 
-                        message( "    Statistics for groupId " << key.first << ", paramSize " << key.second << ":");
+                        message( "    Statistics for groupId ", key.first, ", "
+                                 "paramSize ", key.second, ":");
                         for ( unsigned int i = 0; i < data.size(); i++ ) {
                            WDExecRecord &record = data[i];
                            if ( record._pe == NULL ) {
                               if ( record._numAssigned.value() != _minRecordTrial ) {
-                                 message( "    PE: " << "Device is NULL" << ", elapsed time: " << record._elapsedTime << " us, #records: " << record._numAssigned.value() );
+                                 message( "    PE: Device is NULL, "
+                                          "elapsed time: ", record._elapsedTime, " us, "
+                                          "#records: ", record._numAssigned.value()
+                                        );
                               } else {
-                                 message( "    PE: " << "Device not present" << ", elapsed time: " << record._elapsedTime << " us, #records: " << record._numAssigned.value() );
+                                 message( "    PE: Device not present, "
+                                          "elapsed time: ", record._elapsedTime, " us, "
+                                          "#records: ", record._numAssigned.value()
+                                        );
                               }
                            } else {
-                              message( "    PE: " << record._pe->getDeviceType()->getName() << ", elapsed time: " << record._elapsedTime << " us, #records: " << record._numAssigned.value() );
+                              message( "    PE: ", record._pe->getDeviceType()->getName(), ", "
+                                       "elapsed time: ", record._elapsedTime, " us, "
+                                       "#records: ", record._numAssigned.value()
+                                     );
                            }
                         }
                      }
@@ -854,13 +872,12 @@ namespace ext
                         if ( sqrt( sqDev ) > MAX_DEVIATION ) {
                            // Time values differ too much from each other, try to run the task again
 
-                           debug("[versioning] Too much difference in records for my device ("
-                                 + toString<double>( sqrt( sqDev ) ) + " > "
-                                 + toString<double>( MAX_DEVIATION ) + ") for key ("
-                                 + toString<unsigned long>( key.first ) + ", "
-                                 + toString<size_t>( key.second ) + ") vId "
-                                 + toString<unsigned int>( i ) + " device "
-                                 + next->getDevices()[i]->getDevice()->getName() );
+                           debug( "[versioning] Too much difference in records for my device "
+                                  "(", sqrt( sqDev ), " > ", MAX_DEVIATION, ") "
+                                  "for key (" key.first , ", ", key.second, ") "
+                                  "vId ", i ,
+                                  " device ", next->getDevices()[i]->getDevice()->getName()
+                                );
 
                            // If this PE can run the task, run it
                            if ( next->getDevices()[i]->isCompatible( *pe->getDeviceType(), pe ) ) {
@@ -887,13 +904,12 @@ namespace ext
                   double sqDev = data[bestCandidateIdx]._elapsedTime - data[bestCandidateIdx]._lastElapsedTime;
                   sqDev *= sqDev;
 
-                  debug("[versioning] Discarding my PE, but assigning to another device ("
-                        + toString<double>( sqrt( sqDev ) ) + " > "
-                        + toString<double>( MAX_DEVIATION ) + ") for key ("
-                        + toString<unsigned long>( next->getVersionGroupId() ) + ", "
-                        + toString<size_t>( next->getParamsSize() ) + ") vId "
-                        + toString<unsigned int>( bestCandidateIdx ) + " device "
-                        + next->getDevices()[bestCandidateIdx]->getDevice()->getName() );
+                  debug( "[versioning] Discarding my PE, but assigning to another device "
+                         "(", sqrt( sqDev ), " > ", MAX_DEVIATION, ") "
+                         "for key (", next->getVersionGroupId(), ", ", next->getParamsSize(), ") "
+                         "vId ", bestCandidateIdx,
+                         " device ", next->getDevices()[bestCandidateIdx]->getDevice()->getName()
+                       );
 
                   memoryFence();
                   tdata._statsLock.release();
@@ -1073,15 +1089,15 @@ namespace ext
                   records._numRecords++; // Should be '1' but in fact it is -1+1 = 0
                   records._lastElapsedTime = executionTime;
 
-                  debug("[versioning] First recording for key ("
-                        + toString<unsigned long>( currentWD.getVersionGroupId() )
-                        + ", " + toString<size_t>( currentWD.getParamsSize() )
-                        + ") {pe=" + toString<void *>( records._pe )
-                        + ", dev=" + currentWD.getDevices()[devIdx]->getDevice()->getName()
-                        + ", #=" + toString<int>( records._numRecords )
-                        + ", T=" + toString<double>( records._elapsedTime )
-                        + ", T2=" + toString<double>( records._lastElapsedTime )
-                        + "}; exec time = " + toString<double>( executionTime ) );
+                  debug( "[versioning] First recording for key "
+                         "(", currentWD.getVersionGroupId(), ", ", currentWD.getParamsSize(), ") "
+                         "{pe=", records._pe,
+                         ", dev=", currentWD.getDevices()[devIdx]->getDevice()->getName(),
+                         ", #=", records._numRecords,
+                         ", T=", records._elapsedTime,
+                         ", T2=", records._lastElapsedTime,
+                         "}; exec time = ", executionTime
+                       );
 
                } else {
                   WDExecRecord & records  = data[devIdx];
@@ -1090,16 +1106,15 @@ namespace ext
                   records._elapsedTime = ( time + executionTime ) / records._numRecords;
                   records._lastElapsedTime = executionTime;
 
-                  debug("[versioning] Recording for key ("
-                        + toString<unsigned long>( currentWD.getVersionGroupId() )
-                        + ", " + toString<size_t>( currentWD.getParamsSize() )
-                        + ") {pe=" + toString<void *>( records._pe )
-                        + ", dev=" + currentWD.getDevices()[devIdx]->getDevice()->getName()
-                        + ", #=" + toString<int>( records._numRecords )
-                        + ", T=" + toString<double>( records._elapsedTime )
-                        + ", T2=" + toString<double>( records._lastElapsedTime )
-                        + "}; exec time = " + toString<double>( executionTime ) );
-
+                  debug( "[versioning] Recording for key "
+                         "(", currentWD.getVersionGroupId(), ", ", currentWD.getParamsSize(), ") "
+                         "{pe=", records._pe,
+                         ", dev=", currentWD.getDevices()[devIdx]->getDevice()->getName(),
+                         ", #=", records._numRecords,
+                         ", T=", records._elapsedTime,
+                         ", T2=", records._lastElapsedTime,
+                         "}; exec time = ", executionTime
+                       );
                }
 
                memoryFence();
@@ -1116,8 +1131,11 @@ namespace ext
                   bestData._pe = pe;
                   bestData._elapsedTime = executionTime;
 
-                  debug("[versioning] New best time: {pe=" + toString<void *>( bestData._pe )
-                        + ", T=" + toString<double>( bestData._elapsedTime ) + "}" );
+                  debug( "[versioning] New best time: "
+                         "{pe=", bestData._pe, ","
+                         " T=", bestData._elapsedTime,
+                         "}"
+                       );
                }
 
                tdata._bestLock.release();

@@ -23,7 +23,7 @@
 #include <stdexcept>
 //Having system.hpp here generate too many circular dependences
 //but it's not really needed so we can delay it most times until the actual usage
-//#include "system.hpp"
+#include "system_decl.hpp"
 #include "xstring.hpp"
 #include <iostream>
 
@@ -51,50 +51,185 @@ namespace nanos
                   + " (" + file + ":" + toString<int>( line )+ ")" ) {}
 
    };
-
 #define _nanos_ostream ( /* myThread ? *(myThread->_file) : */ std::cerr )
 
-#define fatal(msg) { std::stringstream sts; sts<<msg ; throw nanos::FatalError(sts.str(),getMyThreadSafe()->getId()); }
-#define fatal0(msg)  { std::stringstream sts; sts<<msg ; throw nanos::FatalError(sts.str()); }
-#define fatal_cond(cond,msg) if ( cond ) fatal(msg);
-#define fatal_cond0(cond,msg) if ( cond ) fatal0(msg);
+static inline const std::ostream& join()
+{
+   std::stringstream sts;
+   return sts << std::endl;
+}
 
-#define warning(msg) { _nanos_ostream << "WARNING: [" << std::dec << getMyThreadSafe()->getId() << "]" << msg << std::endl; }
-#define warning0(msg) { _nanos_ostream << "WARNING: [?]" << msg << std::endl; }
+template <typename T, typename...Ts>
+static inline std::basic_ostream<char>& join( const T &first, const Ts&... rest)
+{
+   std::stringstream sts;
+   return sts << first << join( rest... );
+}
 
-#define message(msg) \
-   _nanos_ostream << "MSG: [" << std::dec << getMyThreadSafe()->getId() << "] " << msg << std::endl;
-#define message0(msg) \
-   _nanos_ostream << "MSG: [?] " << msg << std::endl;
+template <typename...Ts>
+inline void fatal( const Ts&... msg )
+{
+   std::stringstream sts;
+   sts << join( msg... );
+   throw nanos::FatalError( sts.str(), getMyThreadSafe()->getId() );
+}
 
-#define messageMaster(msg) \
-   do { if (sys.getNetwork()->getNodeNum() == 0) { _nanos_ostream << "MSG: m:[" << std::dec << getMyThreadSafe()->getId() << "] " << msg << std::endl; } } while (0)
-#define message0Master(msg) \
-   do { if (sys.getNetwork()->getNodeNum() == 0) { _nanos_ostream << "MSG: m:[?] " << msg << std::endl; } } while (0)
+template <typename...Ts>
+inline void fatal0( const Ts&... msg )
+{
+   std::stringstream sts;
+   sts << join( msg... );
+   throw nanos::FatalError( sts.str() );
+}
+
+template <typename...Ts>
+inline void fatal_cond( bool cond, const Ts&... msg )
+{
+   if( cond )
+      fatal( msg... );
+}
+
+template <typename...Ts>
+inline void fatal_cond0( bool cond, const Ts&... msg )
+{
+   if( cond )
+      fatal0( msg... );
+}
+
+template <typename...Ts>
+inline void warning( const Ts&... msg )
+{
+    _nanos_ostream << "WARNING: ["
+        << std::dec << getMyThreadSafe()->getId() 
+        << "] "
+        << join( msg... );
+}
+
+template <typename...Ts>
+inline void warning0( const Ts&... msg )
+{
+   _nanos_ostream << "WARNING: [?] "
+                  << join( msg... );
+}
+
+
+template <typename...Ts>
+inline void message( const Ts&... msg )
+{
+    _nanos_ostream << "MSG: ["
+        << std::dec << getMyThreadSafe()->getId() 
+        << "] "
+        << join( msg... );
+}
+
+template <typename...Ts>
+inline void message0( const Ts&... msg)
+{
+    _nanos_ostream << "MSG: [?] "
+       << join( msg... );
+}
+
+template <typename T>
+inline void messageMaster( T msg )
+{
+   do {
+//      if (sys.getNetwork()->getNodeNum() == 0) {
+         //_nanos_ostream << "MSG: m:[" << std::dec << getMyThreadSafe()->getId() << "] " 
+         //               << msg << std::endl; } 
+   } while (0);
+}
+
+template <typename T>
+inline void message0Master( T msg )
+{
+   _nanos_ostream << "MSG: [?] "
+                  << msg << std::endl;
+}
 
 #ifdef NANOS_DEBUG_ENABLED
-#define ensure(cond,msg) if ( !(cond) ) throw nanos::FailedAssertion(__FILE__, __LINE__ , #cond, msg, getMyThreadSafe()->getId());
-#define ensure0(cond,msg) if ( !(cond) ) throw nanos::FailedAssertion(__FILE__, __LINE__, #cond, msg );
 
-#define verbose(msg) \
-   if (sys.getVerbose()) _nanos_ostream << "[" << std::dec << getMyThreadSafe()->getId() << "]" << msg << std::endl;
-#define verbose0(msg) \
-   if (sys.getVerbose()) _nanos_ostream << "[?]" << msg << std::endl;
+template <typename...Ts>
+inline void ensure( bool cond, const Ts&... msg )
+{
+   if( cond ) {
+      std::stringstream sts;
+      sts << join( msg... );
+      throw nanos::FatalError( sts.str(), getMyThreadSafe()->getId() );
+   }
+}
 
-#define debug(msg) \
-   if (sys.getVerbose()) _nanos_ostream << "DBG: [" << std::dec << getMyThreadSafe()->getId() << "]" << msg << std::endl;
-#define debug0(msg) \
-   if (sys.getVerbose()) _nanos_ostream << "DBG: [?]" << msg << std::endl;
+template <typename...Ts>
+inline void ensure0( bool cond, const Ts&... msg )
+{
+   if( cond ) {
+      std::stringstream sts;
+      sts << join( msg... );
+      throw nanos::FatalError( sts.str() );
+   }
+}
+
+template <typename...Ts>
+inline void verbose( const Ts&... msg )
+{
+   if( sys.getVerbose() ) {
+      _nanos_ostream << "["
+          << std::dec << getMyThreadSafe()->getId() 
+          << "] "
+          << join( msg... );
+   }
+}
+
+template <typename...Ts>
+inline void verbose0( const Ts&... msg)
+{
+   if( sys.getVerbose() ) {
+      _nanos_ostream << "[?] "
+         << join( msg... );
+   }
+}
+
+template <typename...Ts>
+inline void debug( const Ts&... msg )
+{
+   if( sys.getVerbose() ) {
+      _nanos_ostream << "DBG ["
+          << std::dec << getMyThreadSafe()->getId() 
+          << "] "
+          << join( msg... );
+   }
+}
+
+template <typename...Ts>
+inline void debug0( const Ts&... msg)
+{
+   if( sys.getVerbose() ) {
+      _nanos_ostream << "DBG [?] "
+         << join( msg... );
+   }
+}
+
 #else
-#define ensure(cond,msg)
-#define ensure0(cond,msg)
-#define verbose(msg)
-#define verbose0(msg)
-#define debug(msg)
-#define debug0(msg)
-#endif
+
+template <typename...Ts>
+inline void ensure( bool cond, const Ts&... msg ) {}
+
+template <typename...Ts>
+inline void ensure0( bool cond, const Ts&... msg ) {}
+
+template <typename...Ts>
+inline void verbose( const Ts&... msg ) {}
+
+template <typename...Ts>
+inline void verbose0( const Ts&... msg) {}
+
+template <typename...Ts>
+inline void debug( const Ts&... msg ) {}
+
+template <typename...Ts>
+inline void debug0( const Ts&... msg) {}
+
+#endif // NANOS_DEBUG_ENABLED
 
 };
 
-
-#endif
+#endif // _NANOS_LIB_DEBUG

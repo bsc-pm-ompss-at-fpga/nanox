@@ -214,7 +214,7 @@ bool TaskException::handleCheckpointError ( WorkDescriptor const &initTask, bool
    // Try to recover the system from the failure (so we can continue with the execution)
    if(!task->getActiveDevice().recover( *this )) {
       // If we couldn't recover the system, we can't go on with the execution
-      fatal("Resiliency: An error was found and the system could not be recovered: " << what());
+      fatal("Resiliency: An error was found and the system could not be recovered: ", what());
    }
 
    // If the error was found in the destination address, we can try again as the recovery
@@ -235,7 +235,7 @@ bool TaskException::handleCheckpointError ( WorkDescriptor const &initTask, bool
    // Moreover, if we cannot recover, we shall finish the execution inmediatly.
    if( !recoverable_error ) {
       // Unrecoverable error: terminate execution
-      fatal("Resiliency: An error was found, but the task hasn't any recoverable ancestor: " << what());
+      fatal("Resiliency: An error was found, but the task hasn't any recoverable ancestor: ", what());
    } else {
       debug( what() );
    }
@@ -262,7 +262,7 @@ void TaskException::handleExecutionError ( ) const
    if( !recoverable_error )  
    {
       // Unrecoverable error: terminate execution
-      fatal("An error was found, but there isn't any recoverable ancestor." << std::endl << what());
+      fatal("An error was found, but there isn't any recoverable ancestor. ", what());
    } else {
       debug( what() );
    }
@@ -270,7 +270,7 @@ void TaskException::handleExecutionError ( ) const
    // Try to recover the system from the failure (so we can continue with the execution)
    if(!task->getActiveDevice().recover( *this )) {
       // If we couldn't recover the system, we can't go on with the execution
-      fatal("Resiliency: Unrecoverable error found." << std::endl << what());
+      fatal("Resiliency: Unrecoverable error found. ", what());
    }
 }
 
