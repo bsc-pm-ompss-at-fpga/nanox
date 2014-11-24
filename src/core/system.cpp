@@ -17,6 +17,9 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
+#include <exception>
+#include <mutex>
+
 #include "system.hpp"
 #include "config.hpp"
 #include "plugin.hpp"
@@ -74,7 +77,6 @@
 #include <config.h>
 #endif
 
-#include <mutex>
 
 using namespace nanos;
 
@@ -655,16 +657,24 @@ void System::start ()
       
    if ( _summary ) {
       environmentSummary();
-      std::set_terminate( []() { 
-                             static std::once_flag flag;
-                             std::call_once( flag, 
-                                             [](){
-                                                    sys.executionSummary();
-                                                 }
-                                           );
-                             std::abort();
-                          }
-      );
+#ifdef HAVE_CXX11
+      // If the summary is enabled, print the final execution summary
+      // even if the application is terminated by an error.
+      std::set_terminate( [](){
+         static std::once_flag called_once;
+         call_once( called_once, []() {
+            sys.executionSummary();
+#ifdef __GNUG__
+            // Call verbose terminate handler: prints exception information
+            // This is a gnu extension
+            __gnu_cxx::__verbose_terminate_handler();
+#else
+            message0( "An error was reported and this program will finish." );
+            std::abort();
+#endif
+         });
+      });
+#endif
    }
 }
 
