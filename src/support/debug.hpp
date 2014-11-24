@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2014 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -21,11 +21,27 @@
 #define _NANOS_LIB_DEBUG
 
 #include <stdexcept>
+#include <iostream>
+#include <sstream>
 //Having system.hpp here generate too many circular dependences
 //but it's not really needed so we can delay it most times until the actual usage
 #include "system_decl.hpp"
-#include "xstring.hpp"
-#include <iostream>
+
+#define _nanos_ostream ( /* myThread ? *(myThread->_file) : */ std::cerr )
+
+template <typename OStreamType>
+static inline OStreamType &join( OStreamType &os )
+{
+   os << std::endl;
+   return os;
+}
+
+template <typename OStreamType, typename T, typename...Ts>
+static inline OStreamType &join( OStreamType &&os, const T &first, const Ts&... rest)
+{
+   os << first;
+   return join( os, rest... );
+}
 
 namespace nanos
 {
@@ -35,7 +51,9 @@ namespace nanos
 
       public:
          FatalError ( const std::string &value, int peId=-1 ) :
-               runtime_error( std::string( "FATAL ERROR: [" ) + toString<int>( peId ) + "] " + value ) {}
+            runtime_error( join( std::stringstream("FATAL ERROR: ["), peId, "] ", value).str() )
+         {
+         }
 
    };
 
@@ -45,32 +63,17 @@ namespace nanos
       public:
          FailedAssertion ( const char *file, const int line, const std::string &value,
                            const std::string msg, int peId=-1 ) :
-               runtime_error(
-                  std::string( "ASSERT failed: [" )+ toString<int>( peId ) + "] "
-                  + value + ":" + msg
-                  + " (" + file + ":" + toString<int>( line )+ ")" ) {}
+            runtime_error( join( std::stringstream("ASSERT failed: ["), peId, "] ", value, ": ", msg, " (", file, ":", line, " )" ).str() )
+         {
+         }
 
    };
-#define _nanos_ostream ( /* myThread ? *(myThread->_file) : */ std::cerr )
-
-static inline const std::ostream& join()
-{
-   std::stringstream sts;
-   return sts << std::endl;
-}
-
-template <typename T, typename...Ts>
-static inline std::basic_ostream<char>& join( const T &first, const Ts&... rest)
-{
-   std::stringstream sts;
-   return sts << first << join( rest... );
-}
 
 template <typename...Ts>
 inline void fatal( const Ts&... msg )
 {
    std::stringstream sts;
-   sts << join( msg... );
+   join( sts, msg... );
    throw nanos::FatalError( sts.str(), getMyThreadSafe()->getId() );
 }
 
@@ -78,7 +81,7 @@ template <typename...Ts>
 inline void fatal0( const Ts&... msg )
 {
    std::stringstream sts;
-   sts << join( msg... );
+   join( sts, msg... );
    throw nanos::FatalError( sts.str() );
 }
 
@@ -99,51 +102,42 @@ inline void fatal_cond0( bool cond, const Ts&... msg )
 template <typename...Ts>
 inline void warning( const Ts&... msg )
 {
-    _nanos_ostream << "WARNING: ["
-        << std::dec << getMyThreadSafe()->getId() 
-        << "] "
-        << join( msg... );
+    join( _nanos_ostream, "WARNING: [", std::dec, getMyThreadSafe()->getId(), "] ", msg... );
 }
 
 template <typename...Ts>
 inline void warning0( const Ts&... msg )
 {
-   _nanos_ostream << "WARNING: [?] "
-                  << join( msg... );
+   join( _nanos_ostream, "WARNING: [?] ", msg... );
 }
 
 
 template <typename...Ts>
 inline void message( const Ts&... msg )
 {
-    _nanos_ostream << "MSG: ["
-        << std::dec << getMyThreadSafe()->getId() 
-        << "] "
-        << join( msg... );
+    join( _nanos_ostream, "MSG: [", std::dec, getMyThreadSafe()->getId(), "] ", msg... );
 }
 
 template <typename...Ts>
 inline void message0( const Ts&... msg)
 {
-    _nanos_ostream << "MSG: [?] "
-       << join( msg... );
+    join( _nanos_ostream, "MSG: [?] ", msg... );
 }
 
 template <typename T>
 inline void messageMaster( T msg )
 {
    do {
-//      if (sys.getNetwork()->getNodeNum() == 0) {
-         //_nanos_ostream << "MSG: m:[" << std::dec << getMyThreadSafe()->getId() << "] " 
-         //               << msg << std::endl; } 
+      if (sys.getNetwork()->getNodeNum() == 0) {
+         join( _nanos_ostream, "MSG: m:[", std::dec, getMyThreadSafe()->getId(), "] ", msg );
+      }
    } while (0);
 }
 
 template <typename T>
 inline void message0Master( T msg )
 {
-   _nanos_ostream << "MSG: [?] "
-                  << msg << std::endl;
+   join( _nanos_ostream, "MSG: m:[?] ", msg );
 }
 
 #ifdef NANOS_DEBUG_ENABLED
@@ -151,9 +145,9 @@ inline void message0Master( T msg )
 template <typename...Ts>
 inline void ensure( bool cond, const Ts&... msg )
 {
-   if( cond ) {
+   if( !cond ) {
       std::stringstream sts;
-      sts << join( msg... );
+      join( sts, msg... );
       throw nanos::FatalError( sts.str(), getMyThreadSafe()->getId() );
    }
 }
@@ -161,9 +155,9 @@ inline void ensure( bool cond, const Ts&... msg )
 template <typename...Ts>
 inline void ensure0( bool cond, const Ts&... msg )
 {
-   if( cond ) {
+   if( !cond ) {
       std::stringstream sts;
-      sts << join( msg... );
+      join( sts, msg... );
       throw nanos::FatalError( sts.str() );
    }
 }
@@ -172,10 +166,7 @@ template <typename...Ts>
 inline void verbose( const Ts&... msg )
 {
    if( sys.getVerbose() ) {
-      _nanos_ostream << "["
-          << std::dec << getMyThreadSafe()->getId() 
-          << "] "
-          << join( msg... );
+      join( _nanos_ostream, "[", std::dec, getMyThreadSafe()->getId(), "] ", msg... );
    }
 }
 
@@ -183,8 +174,7 @@ template <typename...Ts>
 inline void verbose0( const Ts&... msg)
 {
    if( sys.getVerbose() ) {
-      _nanos_ostream << "[?] "
-         << join( msg... );
+      join( _nanos_ostream, "[?] ", msg... );
    }
 }
 
@@ -192,10 +182,7 @@ template <typename...Ts>
 inline void debug( const Ts&... msg )
 {
    if( sys.getVerbose() ) {
-      _nanos_ostream << "DBG ["
-          << std::dec << getMyThreadSafe()->getId() 
-          << "] "
-          << join( msg... );
+      join( _nanos_ostream, "DBG [", std::dec, getMyThreadSafe()->getId(), "] ", msg... );
    }
 }
 
@@ -203,8 +190,7 @@ template <typename...Ts>
 inline void debug0( const Ts&... msg)
 {
    if( sys.getVerbose() ) {
-      _nanos_ostream << "DBG [?] "
-         << join( msg... );
+      join( _nanos_ostream, "DBG [?] ", msg... );
    }
 }
 
