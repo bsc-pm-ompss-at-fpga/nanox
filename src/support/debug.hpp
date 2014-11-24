@@ -30,7 +30,7 @@
 #define _nanos_ostream ( /* myThread ? *(myThread->_file) : */ std::cerr )
 
 template <typename OStreamType>
-static inline OStreamType &join( OStreamType &os )
+static inline OStreamType &join( OStreamType &&os )
 {
    os << std::endl;
    return os;
