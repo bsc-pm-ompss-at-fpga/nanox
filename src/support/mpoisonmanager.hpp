@@ -30,8 +30,8 @@
 namespace nanos {
 namespace vm {
 
-extern uint64_t page_size;
-extern uint64_t pn_mask;
+extern const uint64_t page_size;
+extern const uint64_t pn_mask;
 
 class MPoisonManager {
 

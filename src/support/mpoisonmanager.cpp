@@ -25,8 +25,8 @@
 namespace nanos {
 namespace vm {
 
-uint64_t page_size = sysconf(_SC_PAGESIZE);
-uint64_t pn_mask = ~(page_size - 1);
+const uint64_t page_size = sysconf(_SC_PAGESIZE);
+const uint64_t pn_mask = ~(page_size - 1);
 
 
 MPoisonManager::MPoisonManager( int seed ):

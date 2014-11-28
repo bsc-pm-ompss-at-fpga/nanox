@@ -23,6 +23,7 @@
  */
 #include "mpoison.hpp"
 #include "mpoison.h"
+#include "debug.hpp"
 #include "system.hpp"
 #include "vmentry.hpp"
 
@@ -87,7 +88,7 @@ int mpoison_unblock_page( uintptr_t page_addr ) {
 
 void mpoison_delay_start ( unsigned long* useconds ) {
    if( sys.isPoisoningEnabled() ) {
-      debug("Resiliency: MPoison: Creating mpoison thread");
+      debug("Memory error injection: Creating mpoison thread");
       pthread_create(&tid, NULL, nanos::vm::mpoison_run, (void*)useconds);
    }
 }
@@ -109,8 +110,7 @@ void mpoison_init ( )
    }
 }
 
-void
-mpoison_finalize ( )
+void mpoison_finalize ( )
 {
    if ( sys.isPoisoningEnabled() ) {
       run = false;
@@ -126,18 +126,30 @@ mpoison_finalize ( )
    }
 }
 
-void mpoison_user_defined ( size_t len, chunk_t* data_chunks )
+void mpoison_declare_region ( uintptr_t addr, size_t size )
 {
    using namespace nanos::vm;
    if( sys.isPoisoningEnabled() ) {
-      for( size_t i = 0; i < len; i++ ) {
-         uintptr_t addr = data_chunks[i].addr & ~(page_size-1);
-         size_t region_size = ((data_chunks[i].addr + data_chunks[i].size) & ~(page_size-1))// end of region
-                              - addr;// region aligned beginning
-         if( region_size < data_chunks[i].size )
-            region_size += page_size; 
-         mp_mgr->addAllocation( addr, region_size );
-      }
+
+      uintptr_t aligned_addr = addr & ~(page_size-1);
+      size_t aligned_size =( (addr + size) & ~(page_size-1) ) // end of region
+                           - addr;// region aligned beginning
+
+      if( addr != aligned_addr || size != aligned_size )
+         warning0( "Memory error injection: Adding a memory chunk that is not aligned "
+                   "(either starting address or length) to a memory page. "
+                   "This can make the execution unstable." );
+
+      ensure0( aligned_size > 0,
+               "Error injection memory chunk is null. "
+               "Make sure base address and size are properly aligned."
+             );
+
+      // If aligned_size < size we will still use aligned_size, as it is dangerous to inject
+      // errors in pages that can contain other data structures that are not taken in
+      // account by the user.
+
+      mp_mgr->addAllocation( aligned_addr, aligned_size );
    }
 }
 
@@ -150,7 +162,7 @@ void mpoison_scan ()
  
       std::ifstream maps("/proc/self/maps");
       if (!maps)
-        fatal("Mpoison: Can't open 'maps' file");
+        fatal("Memory error injection: Can't open 'maps' file");
  
       nanos::vm::VMEntry vme; // entry in maps file
       while (maps >> vme)
