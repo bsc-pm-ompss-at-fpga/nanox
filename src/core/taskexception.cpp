@@ -26,6 +26,26 @@ namespace nanos {
 
 TaskException::TaskException (
       WD *t, siginfo_t const &info,
+      ucontext_t const &context,
+      char** backtrace, size_t bt_size ) throw() :
+   TaskException(t, info, context)
+{
+   std::stringstream ss(error_msg);
+   ss << std::endl
+      << "Backtrace:"
+      <<std::endl;
+   // Skip the first entry (points to the signal handler)
+   for( int i = 1; i < bt_size; i++ )
+   {
+      ss << " * "
+         << backtrace[i] << std::endl;
+   }
+   error_msg = ss.str();
+}
+
+
+TaskException::TaskException (
+      WD *t, siginfo_t const &info,
       ucontext_t const &context ) throw () :
       task(t), signal_info(info), task_context(context)
 {

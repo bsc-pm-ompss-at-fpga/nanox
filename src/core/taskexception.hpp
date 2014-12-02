@@ -90,6 +90,10 @@ namespace nanos {
          TaskException ( WD *t, siginfo_t const &info,
                                   ucontext_t const &context ) throw ();
 
+         TaskException ( WD *t, siginfo_t const &info,
+                                  ucontext_t const &context,
+                                  char** backtrace, size_t bt_size ) throw ();
+
          /*!
           * Copy constructor for class TaskException
           */

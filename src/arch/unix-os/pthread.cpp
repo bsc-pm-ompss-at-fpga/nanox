@@ -28,9 +28,11 @@
 #include <signal.h>
 #include <assert.h>
 
-
-
-using namespace nanos;
+#ifdef NANOS_DEBUG_ENABLED
+#include <execinfo.h>
+#include <ucontext.h>
+#include <cstddef>
+#endif
 
 pthread_mutex_t PThread::_mutexWait = PTHREAD_MUTEX_INITIALIZER;
 
@@ -188,6 +190,24 @@ void taskErrorHandler ( int sig, siginfo_t* si, void* context )
     * we must unblock the signal or that signal will not be available to catch
     * in the future (this is done in at the catch clause).
     */
+
+#ifdef NANOS_DEBUG_ENABLED
+   void *trace[50];
+   char **messages = (char **)NULL;
+   int i, trace_size = 0;
+   ucontext_t *uc = (ucontext_t *)context;
+
+   /* Do something useful with siginfo_t */
+
+   trace_size = backtrace(trace, 50);
+   /* overwrite sigaction with caller's address */
+   trace[1] = (void *) uc->uc_mcontext.gregs[REG_RIP];
+
+   messages = backtrace_symbols(trace, trace_size);
+   // Store the backtrace into the exception's error_info
+   throw TaskException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context, messages, trace_size);
+#else
    throw TaskException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context);
+#endif
 }
 #endif
