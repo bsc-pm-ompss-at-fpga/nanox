@@ -51,7 +51,7 @@ namespace nanos
 
       public:
          FatalError ( const std::string &value, int peId=-1 ) :
-            runtime_error( join( std::stringstream("FATAL ERROR: ["), peId, "] ", value).str() )
+            runtime_error( join( std::stringstream(), "FATAL ERROR: [", peId, "] ", value).str() )
          {
          }
 
@@ -63,7 +63,7 @@ namespace nanos
       public:
          FailedAssertion ( const char *file, const int line, const std::string &value,
                            const std::string msg, int peId=-1 ) :
-            runtime_error( join( std::stringstream("ASSERT failed: ["), peId, "] ", value, ": ", msg, " (", file, ":", line, " )" ).str() )
+            runtime_error( join( std::stringstream(), "ASSERT failed: [", peId, "] ", value, ": ", msg, " (", file, ":", line, " )" ).str() )
          {
          }
 
