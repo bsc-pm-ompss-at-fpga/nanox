@@ -62,9 +62,9 @@ namespace nanos {
 
          virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace const& mem ) const;
 
-         virtual void rawCopyIn ( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) const;
+         virtual bool rawCopyIn ( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) const;
 
-         virtual void rawCopyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) const;
+         virtual bool rawCopyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) const;
 
          virtual void _copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) const;
 

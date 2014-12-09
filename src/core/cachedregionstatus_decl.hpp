@@ -10,6 +10,7 @@ namespace nanos {
       private:
          DeviceOps _ops;
          bool _dirty;
+         bool _valid;
       public:
          CachedRegionStatus();
          CachedRegionStatus( CachedRegionStatus const &rs );
@@ -22,6 +23,11 @@ namespace nanos {
          bool isDirty() const;
          void setDirty();
          void clearDirty();
+
+         bool isValid() const;
+         void setValid( bool flag );
+
+         void resetVersion();
    };
 }
 

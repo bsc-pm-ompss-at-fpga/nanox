@@ -35,6 +35,8 @@
 #include "regiondict.hpp"
 #include "memoryops_decl.hpp"
 
+#include "taskexception.hpp"
+
 #define VERBOSE_DEV_OPS ( sys.getVerboseDevOps() )
 #define VERBOSE_INVAL 0
 
@@ -117,6 +119,11 @@ bool AllocatedChunk::locked() const {
 void AllocatedChunk::copyRegionToHost( SeparateAddressSpaceOutOps &ops, reg_t reg, unsigned int version, WD const &wd, unsigned int copyIdx ) {
    NewNewRegionDirectory::RegionDirectoryKey key = _newRegions->getGlobalDirectoryKey();
    CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg );
+
+   if( !entry->isValid() ) {
+      throw InvalidatedRegionFound();
+   }
+
    if ( entry->getVersion() == version || entry->getVersion() == (version+1) ) {
       global_reg_t greg( reg, key );
       DeviceOps * dops = greg.getDeviceOps();
@@ -1130,6 +1137,18 @@ void RegionCache::NEWcopyIn( unsigned int srcLocation, global_reg_t const &reg, 
       origChunk->unlock();
    }
    copyIn( reg, origDevAddr, srcLocation, ops, NULL, wd );
+
+   CachedRegionStatus *entry = ( CachedRegionStatus * ) chunk->getNewRegions()->getRegionData( reg.id );
+   if ( entry != NULL ) { // does it really make sense that entry is null?
+      entry->setValid( ops->allCommited() );
+      if( !ops->allCommited() ) {// if there was an error, reset the version of the copy to 0
+         entry->resetVersion();
+      }
+   }
+   ensure( ops->allCommited() || entry != NULL, 
+              "RegionCache::NEWcopyIn: CachedRegionStatus is NULL"
+              " and we should have invalidated it!"
+         );
 }
 
 void RegionCache::NEWcopyOut( global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx, DeviceOps *givenOps, bool inval ) {

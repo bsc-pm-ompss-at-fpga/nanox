@@ -7,7 +7,7 @@ using namespace nanos;
 inline CachedRegionStatus::CachedRegionStatus() : Version(), _ops(), _dirty( false ) {
 }
 
-inline CachedRegionStatus::CachedRegionStatus( CachedRegionStatus const &rs ) : Version( rs ), _ops ( ), _dirty( rs._dirty ) {
+inline CachedRegionStatus::CachedRegionStatus( CachedRegionStatus const &rs ) : Version( rs ), _ops ( ), _dirty( rs._dirty ), _valid( rs._valid ) {
 }
 
 inline DeviceOps *CachedRegionStatus::getDeviceOps() {
@@ -17,10 +17,11 @@ inline DeviceOps *CachedRegionStatus::getDeviceOps() {
 inline CachedRegionStatus &CachedRegionStatus::operator=( CachedRegionStatus const &rs ) {
    Version::operator=(rs);
    _dirty = rs._dirty;
+   _valid = rs._valid;
    return *this;
 }
 
-inline CachedRegionStatus::CachedRegionStatus( CachedRegionStatus &rs ) : Version( rs ), _ops (), _dirty( rs._dirty ) {
+inline CachedRegionStatus::CachedRegionStatus( CachedRegionStatus &rs ) : Version( rs ), _ops (), _dirty( rs._dirty ), _valid( rs._valid ) {
 }
 
 inline CachedRegionStatus &CachedRegionStatus::operator=( CachedRegionStatus &rs ) {
@@ -38,4 +39,17 @@ inline void CachedRegionStatus::setDirty() {
 inline void CachedRegionStatus::clearDirty() {
    _dirty = false;
 }
+
+inline bool CachedRegionStatus::isValid() const {
+   return _valid;
+}
+inline void CachedRegionStatus::setValid( bool flag ) {
+   _valid = flag;
+}
+
+inline void CachedRegionStatus::resetVersion() {
+   Version::resetVersion();
+   _valid = true;
+}
+
 #endif /* CACHEDREGIONSTATUS_HPP */

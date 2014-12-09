@@ -66,7 +66,7 @@ namespace nanos {
          std::map<int, std::set<int> >     _refLoc;
          global_reg_t                      _allocatedRegion;
          
-         CacheRegionDictionary *_newRegions;
+         CacheRegionDictionary            *_newRegions;
 
       public:
          static Atomic<int> numCall;

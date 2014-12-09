@@ -32,6 +32,12 @@
 #include "xstring.hpp"
 
 namespace nanos {
+   class InvalidatedRegionFound : public std::runtime_error {
+      public:
+         InvalidatedRegionFound () : runtime_error( "Tried to read a corrupted memory region." ) {}
+         virtual ~InvalidatedRegionFound() {}
+   };
+
    class TaskExceptionStats
    {
       private:
@@ -138,7 +144,7 @@ namespace nanos {
           * \param destAddr Contains the address where the data was being copied to.
           * \return whether the checkpoint can be retried again safely or not.
           */
-         bool handleCheckpointError ( WorkDescriptor const &initTask, bool hasTrialsLeft, uint64_t srcAddr, uint64_t destAddr, size_t len ) const;
+         bool handleCheckpointError ( WorkDescriptor const &initTask, uint64_t srcAddr, uint64_t destAddr, size_t len ) const;
 
          /*!
           * Common actions to be taken when an error raises in execution. This task is invalidated.

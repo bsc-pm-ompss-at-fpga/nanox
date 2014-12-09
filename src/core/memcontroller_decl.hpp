@@ -19,6 +19,7 @@ class MemController {
    bool                        _dataRestored;
    bool                        _memoryAllocated;
    bool                        _mainWd;
+   bool                        _is_private_backup_aborted;
    WD                         &_wd;
    ProcessingElement          *_pe;
    Lock                        _provideLock;

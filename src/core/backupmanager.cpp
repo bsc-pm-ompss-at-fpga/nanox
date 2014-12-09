@@ -20,7 +20,6 @@
 #include "backupmanager.hpp"
 #include "deviceops.hpp"
 #include "taskexception.hpp"
-#include <signal.h>
 #include <sys/mman.h>
 
 BackupManager::BackupManager ( ) :
@@ -74,27 +73,21 @@ std::size_t BackupManager::getMemCapacity (
    return _managed_pool.get_size();
 }
 
-void BackupManager::rawCopyIn ( uint64_t devAddr, uint64_t hostAddr,
+bool BackupManager::rawCopyIn ( uint64_t devAddr, uint64_t hostAddr,
                               std::size_t len, SeparateMemoryAddressSpace &mem,
                               WorkDescriptor const& wd ) const
 {
    // This is called on restore operations. Data is copied from device to host.
-   bool retry = false;
-   int num_trials_left = sys.getTaskMaxRetrials();
-   do {
-      try {
-
-         // We cannot use memcpy (C). It has an empty exception specifier (noexcept).
-         std::copy((char*) hostAddr, (char*) hostAddr+len, (char*) devAddr);
-         retry = false;
-
-      } catch ( TaskException &e ) {
-         retry = e.handleCheckpointError( wd, (num_trials_left > 0), hostAddr, devAddr, len );
-         sys.getExceptionStats().incrInitializationErrors();
-
-         num_trials_left--;
-      }
-   } while ( retry );
+   try {
+      // We cannot use memcpy (C). It has an empty exception specifier (noexcept).
+      std::copy((char*) hostAddr, (char*) hostAddr+len, (char*) devAddr);
+      return true;
+   } catch ( TaskException &e ) {
+      e.handleCheckpointError( wd, hostAddr, devAddr, len );
+      sys.getExceptionStats().incrInitializationErrors();
+      debug("Resiliency: error detected during task ", wd.getId(), " data backup.");
+   }
+   return false;
 }
 
 void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
@@ -105,33 +98,29 @@ void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
 {
    ops->addOp();
 
-   rawCopyIn( devAddr, hostAddr, len, mem, wd );
-
-   ops->completeOp();
+   bool completed = rawCopyIn( devAddr, hostAddr, len, mem, wd );
+   if ( completed )
+      ops->completeOp();
+   else
+      ops->abortOp();
 }
 
-void BackupManager::rawCopyOut ( uint64_t hostAddr, uint64_t devAddr,
+bool BackupManager::rawCopyOut ( uint64_t hostAddr, uint64_t devAddr,
                                std::size_t len, SeparateMemoryAddressSpace &mem,
                                WorkDescriptor const& wd ) const
 {
 
    // This is called on restore operations. Data is copied from device to host.
-   bool retry = false;
-   int num_trials_left = sys.getTaskMaxRetrials();
-   do {
-      try {
-
-         // We cannot use memcpy (C). It has an empty exception specifier (noexcept).
-         std::copy((char*) devAddr, (char*) devAddr+len, (char*) hostAddr);
-         retry = false;
-
-      } catch ( TaskException &e ) {
-         retry = e.handleCheckpointError( wd, (num_trials_left > 0), devAddr, hostAddr, len );
-         sys.getExceptionStats().incrInitializationErrors();
-
-         num_trials_left--;
-      }
-   } while ( retry );
+   try {
+      // We cannot use memcpy (C). It has an empty exception specifier (noexcept).
+      std::copy((char*) devAddr, (char*) devAddr+len, (char*) hostAddr);
+      return true;
+   } catch ( TaskException &e ) {
+      e.handleCheckpointError( wd, devAddr, hostAddr, len );
+      sys.getExceptionStats().incrInitializationErrors();
+      debug("Resiliency: error detected during task ", wd.getId(), " data restore.");
+   }
+   return false;
 }
 
 void BackupManager::_copyOut ( uint64_t hostAddr, uint64_t devAddr,
@@ -142,9 +131,11 @@ void BackupManager::_copyOut ( uint64_t hostAddr, uint64_t devAddr,
 {
    ops->addOp();
 
-   rawCopyOut( hostAddr, devAddr, len, mem, wd );
-
-   ops->completeOp();
+   bool completed = rawCopyOut( hostAddr, devAddr, len, mem, wd );
+   if ( completed )
+      ops->completeOp();
+   else
+      ops->abortOp();
 }
 
 bool BackupManager::_copyDevToDev ( uint64_t devDestAddr, uint64_t devOrigAddr,
@@ -171,18 +162,24 @@ void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
 {
    char* hostAddresses = (char*) hostAddr;
    char* deviceAddresses = (char*) devAddr;
+
    ops->addOp();
    try {
+
       for (unsigned int i = 0; i < numChunks; i += 1) {
          //memcpy(&deviceAddresses[i * ld], &hostAddresses[i * ld], len);
          std::copy((char*) &hostAddresses[i * ld], (char*) &hostAddresses[i * ld]+len, (char*) &deviceAddresses[i * ld]);
       }
+      ops->completeOp();
+
    } catch ( TaskException &e ) {
-      e.handleCheckpointError( wd, false, hostAddr, devAddr, len );
+
+      e.handleCheckpointError( wd, hostAddr, devAddr, len );
       sys.getExceptionStats().incrInitializationErrors();
-      debug("Resiliency: error detected during task ", wd.getId(), " input data backup.");
+      debug("Resiliency: error detected during task ", wd.getId(), " data backup.");
+
+      ops->abortOp();
    }
-   ops->completeOp();
 }
 
 void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
@@ -202,12 +199,15 @@ void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
          //memcpy(&hostAddresses[i * ld], &deviceAddresses[i * ld], len);
          std::copy((char*) &deviceAddresses[i * ld], (char*) &deviceAddresses[i * ld]+len, (char*) &hostAddresses[i * ld]);
       }
+      ops->completeOp();
    } catch ( TaskException &e ) {
-      e.handleCheckpointError( wd, false, devAddr, hostAddr, len );
+
+      e.handleCheckpointError( wd, devAddr, hostAddr, len );
       sys.getExceptionStats().incrInitializationErrors();
       debug("Resiliency: error detected during task ", wd.getId(), " input data restoration.");
+
+      ops->abortOp();
    }
-   ops->completeOp();
 }
 
 bool BackupManager::_copyDevToDevStrided1D (

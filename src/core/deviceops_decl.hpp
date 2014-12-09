@@ -11,6 +11,7 @@ namespace nanos {
    class DeviceOps {
       private:
          Atomic<unsigned int> _pendingDeviceOps;
+         Atomic<bool> _aborted;
          Lock _pendingCacheOp;
          Lock _lock;
          /*debug:*/ int _owner;
@@ -19,9 +20,14 @@ namespace nanos {
       public:
          DeviceOps();
          ~DeviceOps();
+
+         void abortOp();
          void completeOp();
          void addOp();
-         bool allCompleted() ;
+
+         bool aborted();
+         bool allCommited();
+         bool allCompleted();
 
          bool addCacheOp( /* debug: */ WorkDescriptor const *wd, int loc = -1 );
          void completeCacheOp( /* debug: */WorkDescriptor const *wd );

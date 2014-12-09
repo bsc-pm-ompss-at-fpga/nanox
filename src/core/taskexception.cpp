@@ -35,7 +35,7 @@ TaskException::TaskException (
       << "Backtrace:"
       <<std::endl;
    // Skip the first entry (points to the signal handler)
-   for( int i = 1; i < bt_size; i++ )
+   for( size_t i = 1; i < bt_size; i++ )
    {
       ss << " * "
          << backtrace[i] << std::endl;
@@ -218,7 +218,7 @@ const ucontext_t TaskException::getExceptionContext ( ) const
    return task_context;
 }
 
-bool TaskException::handleCheckpointError ( WorkDescriptor const &initTask, bool hasTrialsLeft, uint64_t srcAddr, uint64_t destAddr, size_t len ) const
+bool TaskException::handleCheckpointError ( WorkDescriptor const &initTask, uint64_t srcAddr, uint64_t destAddr, size_t len ) const
 {
    /*
     * When a signal handler is executing, the delivery of the same signal
@@ -231,26 +231,18 @@ bool TaskException::handleCheckpointError ( WorkDescriptor const &initTask, bool
    sigaddset(&sigs, signal_info.si_signo);
    pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
 
+/*
    // Try to recover the system from the failure (so we can continue with the execution)
    if(!task->getActiveDevice().recover( *this )) {
       // If we couldn't recover the system, we can't go on with the execution
       fatal("Resiliency: An error was found and the system could not be recovered: ", what());
    }
 
-   // If the error was found in the destination address, we can try again as the recovery
-   // was able to restore the system and we can overwrite the corrupted data securely.
-   const uint64_t faultAddr = (uint64_t) signal_info.si_addr;
-   const bool retry = hasTrialsLeft // Don't keep trying forever...
-       && destAddr < faultAddr   // and check whether the faulty address was in the destination region
-       && faultAddr < (destAddr + len);
-
    // If we can recover directly (we were actually writing to the corrupted page)
    // we dont need to invalidate anything. Otherwise, we have to invalidate the parent
    // task if any.
-   const bool recoverable_error = retry ||
-                        ( initTask.getParent() &&
-                          initTask.getParent()->setInvalid(true)
-                        );
+   const bool recoverable_error = initTask.getParent()
+                               && initTask.getParent()->setInvalid(true);
 
    // Moreover, if we cannot recover, we shall finish the execution inmediatly.
    if( !recoverable_error ) {
@@ -259,8 +251,8 @@ bool TaskException::handleCheckpointError ( WorkDescriptor const &initTask, bool
    } else {
       debug( what() );
    }
-
-   return retry;
+*/
+   return true;
 }
 
 void TaskException::handleExecutionError ( ) const
@@ -290,7 +282,8 @@ void TaskException::handleExecutionError ( ) const
    // Try to recover the system from the failure (so we can continue with the execution)
    if(!task->getActiveDevice().recover( *this )) {
       // If we couldn't recover the system, we can't go on with the execution
-      fatal("Resiliency: Unrecoverable error found. ", what());
+      fatal("Resiliency: Unrecoverable error found. "
+            "System recovery was unsuccessful.", what());
    }
 }
 

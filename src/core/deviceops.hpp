@@ -10,7 +10,7 @@
 
 using namespace nanos;
 
-inline DeviceOps::DeviceOps() : _pendingDeviceOps ( 0 ), _lock() /* debug: */ , _owner( -1 ), _wd( NULL ), _loc( 0 ) {
+inline DeviceOps::DeviceOps() : _pendingDeviceOps ( 0 ), _aborted( false ), _lock() /* debug: */ , _owner( -1 ), _wd( NULL ), _loc( 0 ) {
 }
 
 inline DeviceOps::~DeviceOps() {
@@ -18,6 +18,14 @@ inline DeviceOps::~DeviceOps() {
 
 inline void DeviceOps::addOp() {
    _pendingDeviceOps++;
+}
+
+inline bool DeviceOps::aborted() {
+   return _aborted.value();
+}
+
+inline bool DeviceOps::allCommited() {
+   return !aborted() && allCompleted();
 }
 
 inline bool DeviceOps::allCompleted() {
@@ -53,6 +61,11 @@ inline void DeviceOps::resumeInvalidations() {
 
 inline void DeviceOps::completeOp() {
    _pendingDeviceOps--;
+}
+
+inline void DeviceOps::abortOp() {
+   _pendingDeviceOps--;
+   _aborted = true;
 }
 
 inline void DeviceOps::completeCacheOp( /* debug: */ WorkDescriptor const *wd ) {

@@ -194,7 +194,7 @@ void taskErrorHandler ( int sig, siginfo_t* si, void* context )
 #ifdef NANOS_DEBUG_ENABLED
    void *trace[50];
    char **messages = (char **)NULL;
-   int i, trace_size = 0;
+   int trace_size = 0;
    ucontext_t *uc = (ucontext_t *)context;
 
    /* Do something useful with siginfo_t */
