@@ -1175,7 +1175,7 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
         || ( wd->getParent() && wd->getParent()->isInvalid() ))
    {
       // Discard task, clean it and look for more work to do...
-      wd->finish();
+      //wd->finish(); <- this is not done as only copies output data back to host
       finishWork( wd, schedule );
       wd->~WorkDescriptor();
       delete[] (char *)wd;
@@ -1279,7 +1279,7 @@ void Scheduler::switchTo ( WD *to )
         || ( to->getParent() && to->getParent()->isInvalid() ))
    {
       // Discard task, clean it and look for more work to do...
-      to->finish();
+      //to->finish(); <- this is not done as only copies data back to host
       finishWork( to );
       to->~WorkDescriptor();
       delete[] (char *)to;
