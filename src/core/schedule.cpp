@@ -241,16 +241,16 @@ inline void Scheduler::idleLoop ()
       // descriptor in its stack frame
       if ( thread->isSleeping() && !behaviour::exiting() ) thread->wait();
 
-      myThread->getNextWDQueue().iterate<TestInputs>();
-      WD * next = myThread->getNextWD();
+      thread->getNextWDQueue().iterate<TestInputs>();
+      WD * next = thread->getNextWD();
       // This should be ideally performed in getNextWD, but it's const...
       if ( !sys.getSchedulerConf().getSchedulerEnabled() ) {
          // The thread is paused, mark it as so
-         myThread->pause();
+         thread->pause();
       }
       else {
          // The thread is not paused, mark it as so
-         myThread->unpause();
+         thread->unpause();
       }
 
       if ( !next && thread->getTeam() != NULL ) {
@@ -287,7 +287,7 @@ inline void Scheduler::idleLoop ()
 
          NANOS_INSTRUMENT( sys.getInstrumentation()->raisePointEvents(event_num, &Keys[event_start], &Values[event_start]); )
 
-         myThread->setIdle( false );
+         thread->setIdle( false );
          sys.getSchedulerStats()._idleThreads--;
 
          behaviour::switchWD(thread, current, next);
@@ -296,7 +296,7 @@ inline void Scheduler::idleLoop ()
          thread->step();
 
          sys.getSchedulerStats()._idleThreads++;
-         myThread->setIdle( true );
+         thread->setIdle( true );
 
          NANOS_INSTRUMENT (total_spins = 0; )
          NANOS_INSTRUMENT (total_blocks = 0; )
