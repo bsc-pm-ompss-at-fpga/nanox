@@ -179,8 +179,9 @@ void Network::put ( unsigned int remoteNode, uint64_t remoteAddr, void *localAdd
    {
       unsigned int seq = 0;
       _sentWdData.addSentData( wdId, size );
-      if ( !_forwardedRegions[remoteNode-1].isRegionForwarded( global_reg_t( hostRegId, (reg_key_t) hostObject ) ) ) {
-         global_reg_t reg( hostRegId, sys.getHostMemory().getRegionDirectoryKey( (uint64_t) hostObject ));
+      reg_key_t obj = sys.getHostMemory().getRegionDirectoryKey( (uint64_t) hostObject );
+      if ( !_forwardedRegions[remoteNode-1].isRegionForwarded( global_reg_t( hostRegId, obj ) ) ) {
+         global_reg_t reg( hostRegId, obj );
          CopyData cd;
          reg.fillCopyData( cd, remoteAddr - reg.getFirstAddress(0) );
          nanos_region_dimension_internal_t dims[cd.getNumDimensions()];
@@ -206,8 +207,9 @@ void Network::putStrided1D ( unsigned int remoteNode, uint64_t remoteAddr, void 
    {
       unsigned int seq = 0;
       _sentWdData.addSentData( wdId, size * count );
-      if ( !_forwardedRegions[remoteNode-1].isRegionForwarded( global_reg_t( hostRegId, (reg_key_t) hostObject ) ) ) {
-         global_reg_t reg( hostRegId, sys.getHostMemory().getRegionDirectoryKey( (uint64_t) hostObject ));
+      reg_key_t obj = sys.getHostMemory().getRegionDirectoryKey( (uint64_t) hostObject );
+      if ( !_forwardedRegions[remoteNode-1].isRegionForwarded( global_reg_t( hostRegId, obj ) ) ) {
+         global_reg_t reg( hostRegId, obj );
          CopyData cd;
          reg.fillCopyData( cd, remoteAddr - reg.getFirstAddress(0) );
          nanos_region_dimension_internal_t dims[cd.getNumDimensions()];
@@ -769,7 +771,7 @@ void Network::getDataFromDevice( uint64_t addr, std::size_t len, std::size_t cou
             }
          }
          outOps.issue( *( (WD *) NULL ) );
-         while ( !outOps.isDataReady( myThread->getThreadWD()) ) { myThread->idle(); }
+         while ( !outOps.isDataReady( myThread->getThreadWD()) ) { myThread->processTransfers(); }
       }
    }
 }

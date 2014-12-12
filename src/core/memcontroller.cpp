@@ -66,7 +66,7 @@ void MemController::preInit ( )
       if ( _wd.getParent() != NULL /* && !_wd.getParent()->_mcontrol._mainWd */ ) {
          for ( unsigned int parent_idx = 0; parent_idx < _wd.getParent()->getNumCopies(); parent_idx += 1 ) {
             if ( _wd.getParent()->_mcontrol.getAddress( parent_idx ) == (uint64_t) _wd.getCopies()[ index ].getBaseAddress() ) {
-               host_copy_addr = (uint64_t) _wd.getParent()->getCopies()[ parent_idx ].getBaseAddress();
+            host_copy_addr = (uint64_t) _wd.getParent()->getCopies()[ parent_idx ].getHostBaseAddress();
                //std::cerr << "TADAAAA this comes from a father's copy "<< std::hex << host_copy_addr << std::endl;
                _wd.getCopies()[ index ].setHostBaseAddress( host_copy_addr );
             }
@@ -77,8 +77,9 @@ void MemController::preInit ( )
       // o << "## " << (_wd.getCopies()[index].isInput() ? "in" : "") << (_wd.getCopies()[index].isOutput() ? "out" : "") << " " <<  _wd.getCopies()[index] << std::endl; 
 
       unsigned int predecessorsVersion;
-      if ( _providedRegions.hasVersionInfoForRegion( _memCacheCopies[ index ]._reg, predecessorsVersion, _memCacheCopies[ index ]._locations ) )
+      if ( _providedRegions.hasVersionInfoForRegion( _memCacheCopies[ index ]._reg, predecessorsVersion, _memCacheCopies[ index ]._locations ) ) {
          _memCacheCopies[ index ].setVersion( predecessorsVersion );
+      }
       if ( _memCacheCopies[ index ].getVersion() != 0 ) {
          if ( _VERBOSE_CACHE ) { *(myThread->_file) << "WD " << _wd.getId() << " copy "<< index <<" got location info from predecessor "<<  _memCacheCopies[ index ]._reg.id << " got version " << _memCacheCopies[ index ].getVersion()<< " "; }
          _memCacheCopies[ index ]._locationDataReady = true;
@@ -177,7 +178,7 @@ bool MemController::allocateTaskMemory() {
       for ( unsigned int idx = 0; idx < _wd.getNumCopies(); idx += 1 ) {
          if ( _memCacheCopies[idx]._reg.key->getKeepAtOrigin() ) {
             //std::cerr << "WD " << _wd.getId() << " rooting to memory space " << _pe->getMemorySpaceId() << std::endl;
-            _memCacheCopies[idx]._reg.setRooted();
+            _memCacheCopies[idx]._reg.setOwnedMemory( _pe->getMemorySpaceId() );
          }
       }
 #ifdef NANOS_RESILIENCY_ENABLED
@@ -197,7 +198,7 @@ void MemController::copyDataIn() {
    if ( _VERBOSE_CACHE || sys.getVerboseCopies() ) {
       //if ( sys.getNetwork()->getNodeNum() == 0 ) {
          std::ostream &o = (*myThread->_file);
-         o << "### copyDataIn wd " << std::dec << _wd.getId() << " running on " << std::dec << _pe->getMemorySpaceId() << " ops: "<< (void *) _inOps << std::endl;
+         o << "### copyDataIn wd " << std::dec << _wd.getId() << " (" << (_wd.getDescription()!=NULL?_wd.getDescription():"[no desc]")<< ") running on " << std::dec << _pe->getMemorySpaceId() << " ops: "<< (void *) _inOps << std::endl;
          for (unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
             NewNewDirectoryEntryData *d =
                   NewNewRegionDirectory::getDirectoryEntry(
@@ -221,10 +222,8 @@ void MemController::copyDataIn() {
       _memCacheCopies[ index ].generateInOps( *_inOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd, index );
    }
 
-   //NANOS_INSTRUMENT( InstrumentState inst5(NANOS_CC_CDIN_DO_OP); );
    _inOps->issue( _wd );
 
-   //NANOS_INSTRUMENT( inst5.close(); );
    if ( _VERBOSE_CACHE || sys.getVerboseCopies() ) {
       if ( sys.getNetwork()->getNodeNum() == 0 ) {
          std::cerr << "### copyDataIn wd " << std::dec << _wd.getId() << " done" << std::endl;
@@ -303,6 +302,22 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
    //   }
    //}
    if ( _VERBOSE_CACHE || sys.getVerboseCopies() ) { *(myThread->_file) << "### copyDataOut wd " << std::dec << _wd.getId() << " metadata set, not released yet" << std::endl; }
+
+   for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
+      if ( _wd.getCopies()[index].isOutput() ) {
+         if ( _wd.getParent() != NULL && _wd.getParent()->_mcontrol.ownsRegion( _memCacheCopies[index]._reg ) ) {
+            WD &parent = *(_wd.getParent());
+            for ( unsigned int parent_idx = 0; parent_idx < parent.getNumCopies(); parent_idx += 1) {
+               if ( parent._mcontrol._memCacheCopies[parent_idx]._reg.contains( _memCacheCopies[ index ]._reg ) ) {
+                  if ( parent._mcontrol._memCacheCopies[parent_idx].getChildrenProducedVersion() < _memCacheCopies[ index ].getChildrenProducedVersion() ) {
+                     parent._mcontrol._memCacheCopies[parent_idx].setChildrenProducedVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
+                  }
+               }
+            }
+         }
+      }
+   }
+
 
    if ( _pe->getMemorySpaceId() == 0 /* HOST_MEMSPACE_ID */) {
       //_outputDataReady = true;
@@ -439,18 +454,24 @@ uint64_t MemController::getAddress( unsigned int index ) const {
    if ( _pe->getMemorySpaceId() == 0 ) {
       addr = ((uint64_t) _wd.getCopies()[ index ].getBaseAddress());
    } else {
-      if ( _wd.getCopies()[ index ].isRemoteHost() || _wd.getCopies()[ index ].getHostBaseAddress() == 0 ) {
-         addr = sys.getSeparateMemory( _pe->getMemorySpaceId() ).getDeviceAddress( _memCacheCopies[ index ]._reg, (uint64_t) _wd.getCopies()[ index ].getBaseAddress(), _memCacheCopies[ index ]._chunk );
-      } else {
-         addr = sys.getSeparateMemory( _pe->getMemorySpaceId() ).getDeviceAddress( _memCacheCopies[ index ]._reg, (uint64_t) _wd.getCopies()[ index ].getHostBaseAddress(), _memCacheCopies[ index ]._chunk );
-      }
+      addr = sys.getSeparateMemory( _pe->getMemorySpaceId() ).getDeviceAddress( _memCacheCopies[ index ]._reg, (uint64_t) _wd.getCopies()[ index ].getBaseAddress(), _memCacheCopies[ index ]._chunk );
+      //std::cerr << "Hola: HostBaseAddr: " << (void*) _wd.getCopies()[ index ].getHostBaseAddress() << " BaseAddr: " << (void*)_wd.getCopies()[ index ].getBaseAddress() << std::endl;
+      //if ( _wd.getCopies()[ index ].isRemoteHost() || _wd.getCopies()[ index ].getHostBaseAddress() == 0 ) {
+      //   std::cerr << "Hola" << std::endl;
+      //   addr = sys.getSeparateMemory( _pe->getMemorySpaceId() ).getDeviceAddress( _memCacheCopies[ index ]._reg, (uint64_t) _wd.getCopies()[ index ].getBaseAddress(), _memCacheCopies[ index ]._chunk );
+      //} else {
+      //   std::cerr << "Hola1" << std::endl;
+      //   addr = sys.getSeparateMemory( _pe->getMemorySpaceId() ).getDeviceAddress( _memCacheCopies[ index ]._reg, (uint64_t) _wd.getCopies()[ index ].getHostBaseAddress(), _memCacheCopies[ index ]._chunk );
+      //}
    }
+   //std::cerr << "MemController::getAddress " << (_wd.getDescription()!=NULL?_wd.getDescription():"[no desc]") <<" index: " << index << " addr: " << (void *)addr << std::endl;
    return addr;
 }
 
 void MemController::getInfoFromPredecessor( MemController const &predecessorController ) {
    for( unsigned int index = 0; index < predecessorController._wd.getNumCopies(); index += 1) {
       unsigned int version = predecessorController._memCacheCopies[ index ].getChildrenProducedVersion();
+      //(*myThread->_file) << "getInfoFromPredecessor[ " << _wd.getId() << " : "<< _wd.getDescription()<< " key: " << (void*)predecessorController._memCacheCopies[ index ]._reg.key << " ] adding version " << version << " from wd " << predecessorController._wd.getId() << " : " << predecessorController._wd.getDescription() << " : " << index << std::endl;
       _providedRegions.addRegion( predecessorController._memCacheCopies[ index ]._reg, version );
    }
 #if 0
@@ -583,16 +604,20 @@ std::size_t MemController::getTotalAmountOfData() const {
 
 bool MemController::isRooted( memory_space_id_t &loc ) const {
    bool result = false;
-   unsigned int count = 0;
+   memory_space_id_t refLoc = (memory_space_id_t) -1;
    for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
-      //std::cout << "Copy " << index << " addr " << (void *) _wd.getCopies()[index].getBaseAddress() << std::endl;
-      if ( _memCacheCopies[ index ].isRooted( loc ) ) {
-         count += 1;
-         result = true; 
+      memory_space_id_t thisLoc;
+      if ( _memCacheCopies[ index ].isRooted( thisLoc ) ) {
+         thisLoc = thisLoc == 0 ? 0 : ( sys.getSeparateMemory( thisLoc ).getNodeNumber() != 0 ? thisLoc : 0 );
+         if ( refLoc == (memory_space_id_t) -1 ) {
+            refLoc = thisLoc;
+            result = true;
+         } else {
+            result = (refLoc == thisLoc);
+         }
       }
-      //std::cout << "Copy " << index << " addr " << (void *) _wd.getCopies()[index].getBaseAddress() << " count " << count << std::endl;
    }
-   ensure(count <= 1, "Invalid count of rooted copies! (> 1).");
+   if ( result ) loc = refLoc;
    return result;
 }
 
@@ -618,13 +643,15 @@ bool MemController::isMemoryAllocated() const {
 void MemController::setCacheMetaData() {
    for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
       if ( _wd.getCopies()[index].isOutput() ) {
-         unsigned int newVersion = _memCacheCopies[index].getVersion() +1;
-         _memCacheCopies[index]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion ); // update directory
-         _memCacheCopies[index].setChildrenProducedVersion( newVersion );
+         unsigned int newVersion = _memCacheCopies[ index ].getVersion() + 1;
+         _memCacheCopies[ index ]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion ); //update directory
+         _memCacheCopies[ index ].setChildrenProducedVersion( newVersion );
 
          if ( _pe->getMemorySpaceId() != 0 /* HOST_MEMSPACE_ID */) {
             sys.getSeparateMemory( _pe->getMemorySpaceId() ).setRegionVersion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() + 1, _wd, index );
          }
+      } else if ( _wd.getCopies()[index].isInput() ) {
+         _memCacheCopies[ index ].setChildrenProducedVersion( _memCacheCopies[ index ].getVersion() );
       }
    }
 }

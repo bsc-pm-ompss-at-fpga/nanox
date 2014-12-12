@@ -718,7 +718,7 @@ namespace nanos {
                
                
                // TODO Improve atomic condition
-               bool stealFromBig = deepTasksN < 1*sys.getSMPPlugin()->getCoresPerSocket() && !emptyBigTasks;
+               bool stealFromBig = deepTasksN < 1*sys.getSMPPlugin()->getCPUsPerSocket() && !emptyBigTasks;
                    /*&& ( tdata._activeMasters[socket].value() == 0 || tdata._activeMasters[socket].value() == thId )*/
                unsigned queueNumber = nodeToQueue( vNode, stealFromBig );
                
@@ -856,9 +856,9 @@ namespace nanos {
              * \param [in] successor DependableObject whose WD priority has to be
              * propagated.
              */
-            void successorFound( DependableObject *predecessor, DependableObject *successor )
+            void successorFound( DependableObject &successor, DependableObject *predecessor, int mode, int numPred )
             {
-               if ( !_smartPriority )
+               if ( !_smartPriority || mode )
                   return;
                
                debug( "SmartPriority::successorFound" );
@@ -866,10 +866,10 @@ namespace nanos {
                   debug( "SmartPriority::successorFound predecessor is NULL" );
                   return;
                }
-               if ( successor == NULL ) {
-                  debug( "SmartPriority::successorFound successor is NULL" );
-                  return;
-               }
+               //if ( successor == NULL ) {
+               //   debug( "SmartPriority::successorFound successor is NULL" );
+               //   return;
+               //}
                
                WD *pred = ( WD* ) predecessor->getRelatedObject();
                if ( pred == NULL ) {
@@ -877,7 +877,7 @@ namespace nanos {
                   return;
                }
                
-               WD *succ = ( WD* ) successor->getRelatedObject();
+               WD *succ = ( WD* ) successor.getRelatedObject();
                if ( succ == NULL ) {
                   fatal( "SmartPriority::successorFound  successor->getRelatedObject() is NULL" );
                }

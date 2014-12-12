@@ -50,6 +50,8 @@
 namespace nanos
 {
 
+typedef std::set<const Device *>  DeviceList;
+
    /*! \brief This class represents a device object
     */
    class Device
@@ -111,6 +113,14 @@ namespace nanos
          const Device *_architecture; /**< Related Device (architecture). */
       private:
          work_fct       _work;
+         
+         /*! \brief Indicates if DeviceData is compatible with a given ProcessingElement
+          * **REQUERIMENT** If pe == NULL, this function must return true
+          *
+          *  \param[pe] pe is the ProcessingElement which we have to compare to.
+          *  \return a boolean indicating if both elements (DeviceData and PE) are compatible.
+          */
+         virtual bool isCompatibleWithPE ( const ProcessingElement *pe ) ;
 
       public:
 
@@ -151,14 +161,6 @@ namespace nanos
           *  \return a boolean indicating if both elements (DeviceData and Device) are compatible.
           */
          bool isCompatible ( const Device &arch, const ProcessingElement *pe=NULL) ;
-         
-         /*! \brief Indicates if DeviceData is compatible with a given ProcessingElement
-          * **REQUERIMENT** If pe == NULL, this function must return true
-          *
-          *  \param[pe] pe is the ProcessingElement which we have to compare to.
-          *  \return a boolean indicating if both elements (DeviceData and Device) are compatible.
-          */
-         virtual bool isCompatibleWithPE ( const ProcessingElement *pe ) ;
 
          /*! \brief FIXME: (#170) documentation needed
           */
@@ -231,7 +233,7 @@ namespace nanos
    class WorkDescriptor
    {
       public: /* types */
-	      typedef enum { IsNotAUserLevelThread=false, IsAUserLevelThread=true } ULTFlag;
+         typedef enum { IsNotAUserLevelThread=false, IsAUserLevelThread=true } ULTFlag;
          typedef std::vector<WorkDescriptor **> WorkDescriptorPtrList;
          typedef TR1::unordered_map<void *, TR1::shared_ptr<WorkDescriptor *> > CommutativeOwnerMap;
          typedef struct {
@@ -272,6 +274,9 @@ namespace nanos
          unsigned char                 _numDevices;             //!< Number of suported devices for this workdescriptor
          DeviceData                  **_devices;                //!< Supported devices for this workdescriptor
          unsigned char                 _activeDeviceIdx;        //!< In _devices, index where we can find the current active DeviceData (if any)
+#ifdef GPU_DEV
+         int                           _cudaStreamIdx;          //!< FIXME: Only used in CUDA tasks, should not be here...
+#endif
          size_t                        _numCopies;              //!< Copy-in / Copy-out data
          CopyData                     *_copies;                 //!< Copy-in / Copy-out data
          size_t                        _paramsSize;             //!< Total size of WD's parameters
@@ -287,9 +292,10 @@ namespace nanos
          WorkDescriptorPtrList        *_commutativeOwners;      //!< Array of commutative target owners
          int                           _numaNode;               //!< FIXME:scheduler data. The NUMA node this WD was assigned to
          bool                          _copiesNotInChunk;       //!< States whether the buffer of the copies is allocated in the chunk of the WD
-         char                         *_description;            //!< WorkDescriptor description, usually user function name
+         const char                   *_description;            //!< WorkDescriptor description, usually user function name
          InstrumentationContextData    _instrumentationContextData; //!< Instrumentation Context Data (empty if no instr. enabled)
          Slicer                       *_slicer;                 //! Related slicer (NULL if does'nt apply)
+         int                           _criticality;
          //Atomic< std::list<GraphEntry *> * > _myGraphRepList;
          //bool _listed;
          void                        (*_notifyCopy)( WD &wd, BaseThread const &thread);
@@ -311,12 +317,12 @@ namespace nanos
          /*! \brief WorkDescriptor constructor - 1
           */
          WorkDescriptor ( int ndevices, DeviceData **devs, size_t data_size = 0, size_t data_align = 1, void *wdata=0,
-                          size_t numCopies = 0, CopyData *copies = NULL, nanos_translate_args_t translate_args = NULL, char *description = NULL );
+                          size_t numCopies = 0, CopyData *copies = NULL, nanos_translate_args_t translate_args = NULL, const char *description = NULL );
 
          /*! \brief WorkDescriptor constructor - 2
           */
          WorkDescriptor ( DeviceData *device, size_t data_size = 0, size_t data_align = 1, void *wdata=0,
-                          size_t numCopies = 0, CopyData *copies = NULL, nanos_translate_args_t translate_args = NULL, char *description = NULL );
+                          size_t numCopies = 0, CopyData *copies = NULL, nanos_translate_args_t translate_args = NULL, const char *description = NULL );
 
          /*! \brief WorkDescriptor copy constructor (using a given WorkDescriptor)
           *
@@ -328,7 +334,7 @@ namespace nanos
           *
           *  \see WorkDescriptor System::duplicateWD
           */
-         WorkDescriptor ( const WorkDescriptor &wd, DeviceData **devs, CopyData * copies, void *data = NULL, char *description = NULL );
+         WorkDescriptor ( const WorkDescriptor &wd, DeviceData **devs, CopyData * copies, void *data = NULL, const char *description = NULL );
 
          /*! \brief WorkDescriptor destructor
           *
@@ -449,6 +455,11 @@ namespace nanos
          void setActiveDeviceIdx( unsigned char idx );
          unsigned char getActiveDeviceIdx() const;
 
+#ifdef GPU_DEV
+         void setCudaStreamIdx( int idx );
+         int getCudaStreamIdx() const;
+#endif
+
          /*! \brief Sets specific internal data of the programming model
           * \param [in] data Pointer to internal data
           * \param [in] ownedByWD States if the pointer to internal data will be owned by this WD. 
@@ -527,7 +538,10 @@ namespace nanos
          // headers
          void submit ( bool force_queue = false );
 
+         bool isOutputDataReady();
+
          void finish ();
+         void preFinish ();
 
          void done ();
 
@@ -573,6 +587,10 @@ namespace nanos
           */
          DOSubmit * getDOSubmit();
 
+         /*! \brief Returns DOSubmit's number of predecessors
+          */
+         int getNumDepsPredecessors();
+
          /*! \brief Add a new WD to the domain of this WD.
           *  \param wd Must be a WD created by "this". wd will be submitted to the
           *  scheduler when its dependencies are satisfied.
@@ -587,7 +605,7 @@ namespace nanos
           */
          void waitOn( size_t numDeps, DataAccess* deps );
 
-         /*! If this WorkDescriptor has an immediate succesor (i.e., anothur WD that only depends on him)
+         /*! If this WorkDescriptor has an immediate successor (i.e., another WD that only depends on him)
              remove it from the dependence graph and return it. */
          WorkDescriptor * getImmediateSuccessor ( BaseThread &thread );
 
@@ -595,6 +613,10 @@ namespace nanos
           *  \paran wd Must be a wd created in this WD's context.
           */
          void workFinished(WorkDescriptor &wd);
+         
+         /*! \brief Early-release all the input dependencies of this WD
+          */
+         void releaseInputDependencies();
 
          /*! \brief Returns the DependenciesDomain object.
           */
@@ -659,7 +681,7 @@ namespace nanos
           */
          void setCopies(size_t numCopies, CopyData * copies);
 
-         char * getDescription ( void ) const;
+         const char * getDescription ( void ) const;
 
          //! \brief Removing work from current WorkDescriptor
          virtual void exitWork ( WorkDescriptor &work );
@@ -702,6 +724,9 @@ namespace nanos
 
          //! \brief Returns whether a WorkDescriptor is able to re-execute from the beginning if an error is detected.
          bool isRecoverable ( void ) const;
+
+         void setCriticality ( int cr );
+         int getCriticality ( void ) const;
    };
 
    typedef class WorkDescriptor WD;

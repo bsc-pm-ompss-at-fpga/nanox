@@ -79,7 +79,7 @@ public:
       for ( unsigned int openclC = 0; openclC < nanos::ext::OpenCLConfig::getOpenCLDevicesCount() ; openclC++ ) {
          memory_space_id_t id = sys.addSeparateMemoryAddressSpace( ext::OpenCLDev, nanos::ext::OpenCLConfig::getAllocWide() );
          SeparateMemoryAddressSpace &oclmemory = sys.getSeparateMemory( id );
-         oclmemory.setNodeNumber( 0 );
+         oclmemory.setAcceleratorNumber( sys.getNewAcceleratorId() );
 
          ext::SMPProcessor *core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
          if ( core == NULL ) {
@@ -152,6 +152,12 @@ virtual void addPEs( std::map<unsigned int, ProcessingElement *> &pes ) const {
    for ( std::vector<OpenCLProcessor *>::const_iterator it = _opencls->begin(); it != _opencls->end(); it++ ) {
       pes.insert( std::make_pair( (*it)->getId(), *it ) );
    }
+}
+
+virtual void addDevices( DeviceList &devices ) const
+{
+   if ( !_opencls->empty() )
+      devices.insert( ( *_opencls->begin() )->getDeviceType() );
 }
 
 

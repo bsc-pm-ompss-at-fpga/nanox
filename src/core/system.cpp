@@ -33,7 +33,7 @@
 #include "processingelement.hpp"
 #include "allocator.hpp"
 #include "debug.hpp"
-#include "dlb.hpp"
+#include "resourcemanager.hpp"
 #include <cassert>
 #include <cstring>
 #include <csignal>
@@ -88,7 +88,7 @@ System::System () :
       /*jb _numPEs( INT_MAX ), _numThreads( 0 ),*/ _deviceStackSize( 0 ), _profile( false ),
       _instrument( false ), _verboseMode( false ), _summary( false ), _executionMode( DEDICATED ), _initialMode( POOL ),
       _untieMaster( true ), _delayedStart( false ), _synchronizedStart( true ),
-      _enableDLB( false ), _throttlePolicy ( NULL ),
+      _enableDLB( false ), _predecessorLists( false ), _throttlePolicy ( NULL ),
       _schedStats(), _schedConf(), _defSchedule( "bf" ), _defThrottlePolicy( "hysteresis" ), 
       _defBarr( "centralized" ), _defInstr ( "empty_trace" ), _defDepsManager( "plain" ), _defArch( "smp" ),
       _initializedThreads ( 0 ), /*_targetThreads ( 0 ),*/ _pausedThreads( 0 ),
@@ -96,7 +96,7 @@ System::System () :
       _net(), _usingCluster( false ), _usingNode2Node( true ), _usingPacking( true ), _conduit( "udp" ),
       _instrumentation ( NULL ), _defSchedulePolicy( NULL ), _dependenciesManager( NULL ),
       _pmInterface( NULL ), _masterGpuThd( NULL ), _separateMemorySpacesCount(1), _separateAddressSpaces(1024), _hostMemory( ext::SMP ),
-      _regionCachePolicy( RegionCache::WRITE_BACK ), _regionCachePolicyStr(""), _clusterNodes(), _numaNodes()
+      _regionCachePolicy( RegionCache::WRITE_BACK ), _regionCachePolicyStr(""), _clusterNodes(), _numaNodes(), _acceleratorCount(0)
 #ifdef GPU_DEV
       , _pinnedMemoryCUDA( NEW CUDAPinnedMemoryManager() )
 #endif
@@ -502,9 +502,8 @@ void System::start ()
    {
       verbose0("addPEs for arch: ", (*it)->getName()); 
       (*it)->addPEs( _pes );
+      (*it)->addDevices( _devices );
    }
-
-   
    
    for ( PEList::iterator it = _pes.begin(); it != _pes.end(); it++ ) {
       _clusterNodes.insert( it->second->getClusterNode() );
@@ -610,9 +609,7 @@ void System::start ()
        }
    }
 
-   if ( getSynchronizedStart() )
-      threadReady();
-
+   if ( getSynchronizedStart() ) threadReady();
    switch ( getInitialMode() )
    {
       case POOL:
@@ -628,10 +625,7 @@ void System::start ()
          break;
    }
 
-   if ( usingCluster() )
-   {
-      _net.nodeBarrier();
-   }
+   if ( usingCluster() ) _net.nodeBarrier();
 
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
    NANOS_INSTRUMENT ( static nanos_event_key_t num_threads_key = ID->getEventKey("set-num-threads"); )
@@ -656,7 +650,7 @@ void System::start ()
    Config::deleteOrphanOptions();
       
    if ( _summary ) {
-      environmentSummary();
+
 #ifdef HAVE_CXX11
       // If the summary is enabled, print the final execution summary
       // even if the application is terminated by an error.
@@ -676,6 +670,8 @@ void System::start ()
       });
 #endif
    }
+
+   ResourceManager::init();
 }
 
 System::~System ()
@@ -685,7 +681,9 @@ System::~System ()
 
 void System::finish ()
 {
-   //! \note Instrumentation: first removing RUNNING state from top of the state statck
+   ResourceManager::finalize();
+
+   //! \note Instrumentation: first removing RUNNING state from top of the state stack
    //! and then pushing SHUTDOWN state in order to instrument this latest phase
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseStateEvent() );
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenStateEvent(NANOS_SHUTDOWN) );
@@ -696,11 +694,20 @@ void System::finish ()
    myThread->getCurrentWD()->waitCompletion( true );
 
    //! \note switching main work descriptor (current) to the main thread to shutdown the runtime 
-   if ( _workers[0]->isSleeping() ) _workers[0]->wakeup();
+   if ( _workers[0]->isSleeping() ) {
+      if ( !_workers[0]->hasTeam() ) {
+         acquireWorker( myThread->getTeam(), _workers[0], true, false, false );
+      }
+      _workers[0]->wakeup();
+   }
    getMyThreadSafe()->getCurrentWD()->tied().tieTo(*_workers[0]);
    Scheduler::switchToThread(_workers[0]);
+   myThread->getTeam()->getSchedulePolicy().atShutdown();
    
-   ensure( getMyThreadSafe()->isMainThread(), "Main thread not finishing the application!");
+   ensure( getMyThreadSafe()->isMainThread(), "Main thread is not finishing the application!");
+
+   ThreadTeam* team = getMyThreadSafe()->getTeam();
+   while ( !(team->isStable()) ) memoryFence();
 
    //! \note stopping all threads
    verbose ( "Joining threads..." );
@@ -708,6 +715,7 @@ void System::finish ()
       it->second->stopAllThreads();
    }
    verbose ( "...thread has been joined" );
+
 
    ensure( _schedStats._readyTasks == 0, "Ready task counter has an invalid value!");
 
@@ -756,6 +764,9 @@ void System::finish ()
       sys.getNetwork()->nodeBarrier();
    }
 
+   //! \note Master leaves team and finalizes thread structures (before insrumentation ends)
+   _workers[0]->finish();
+
    //! \note finalizing instrumentation (if active)
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseStateEvent() );
    NANOS_INSTRUMENT ( sys.getInstrumentation()->finalize() );
@@ -768,27 +779,22 @@ void System::finish ()
    delete[] _lockPool;
 
    //! \note deleting main work descriptor
-   delete (WorkDescriptor *) (getMyThreadSafe()->getCurrentWD());
+   delete ( WorkDescriptor * ) ( getMyThreadSafe()->getCurrentWD() );
 
    //! \note deleting loaded slicers
    for ( Slicers::const_iterator it = _slicers.begin(); it !=   _slicers.end(); it++ ) {
-      delete (Slicer *)  it->second;
+      delete ( Slicer * )  it->second;
    }
 
    //! \note deleting loaded worksharings
    for ( WorkSharings::const_iterator it = _worksharings.begin(); it !=   _worksharings.end(); it++ ) {
-      delete (WorkSharing *)  it->second;
+      delete ( WorkSharing * )  it->second;
    }
    
    //! \note  printing thread team statistics and deleting it
-   ThreadTeam* team = getMyThreadSafe()->getTeam();
-
    if ( team->getScheduleData() != NULL ) team->getScheduleData()->printStats();
 
-   myThread->leaveTeam();
-
    ensure(team->size() == 0, "Trying to finish execution, but team is still not empty");
-
    delete team;
 
    //! \note deleting processing elements (but main pe)
@@ -876,16 +882,14 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
                         nanos_region_dimension_internal_t **dimensions, nanos_translate_args_t translate_args,
                         const char *description, Slicer *slicer )
 {
-   ensure(num_devices > 0,"WorkDescriptor has no devices");
+   ensure( num_devices > 0, "WorkDescriptor has no devices" );
 
    unsigned int i;
    char *chunk = 0;
 
    size_t size_CopyData;
    size_t size_Data, offset_Data, size_DPtrs, offset_DPtrs, size_Copies, offset_Copies, size_Dimensions, offset_Dimensions, offset_PMD;
-   size_t offset_DESC, size_DESC;
    size_t offset_Sched;
-   char *desc;
    size_t total_size;
 
    // WD doesn't need to compute offset, it will always be the chunk allocated address
@@ -914,23 +918,14 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
       offset_Copies = offset_Dimensions = NANOS_ALIGNED_MEMORY_OFFSET(offset_DPtrs, size_DPtrs, 1);
    }
 
-   // Computing description char * + description
-   if ( description == NULL ) {
-      offset_DESC = offset_Dimensions;
-      size_DESC = size_Dimensions;
-   } else {
-      offset_DESC = NANOS_ALIGNED_MEMORY_OFFSET(offset_Dimensions, size_Dimensions, __alignof__ (void*) );
-      size_DESC = (strlen(description)+1) * sizeof(char);
-   }
-
    // Computing Internal Data info and total size
    static size_t size_PMD   = _pmInterface->getInternalDataSize();
    if ( size_PMD != 0 ) {
       static size_t align_PMD = _pmInterface->getInternalDataAlignment();
-      offset_PMD = NANOS_ALIGNED_MEMORY_OFFSET(offset_DESC, size_DESC, align_PMD);
+      offset_PMD = NANOS_ALIGNED_MEMORY_OFFSET(offset_Dimensions, size_Dimensions, align_PMD );
    } else {
-      offset_PMD = offset_DESC;
-      size_PMD = size_DESC;
+      offset_PMD = offset_Dimensions;
+      size_PMD = size_Dimensions;
    }
    
    // Compute Scheduling Data size
@@ -973,17 +968,9 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
       *dimensions = ( nanos_region_dimension_internal_t * ) ( chunk + offset_Dimensions );
    }
 
-   // Copying description string
-   if ( description == NULL ) desc = NULL;
-   else {
-      desc = (chunk + offset_DESC);
-      strncpy ( desc, description, size_DESC);
-//      desc[strlen(description)]='\0';
-   }
-
    WD * wd;
    wd =  new (*uwd) WD( num_devices, dev_ptrs, data_size, data_align, data != NULL ? *data : NULL,
-                        num_copies, (copies != NULL)? *copies : NULL, translate_args, desc );
+                        num_copies, (copies != NULL)? *copies : NULL, translate_args, description );
 
    if ( slicer ) wd->setSlicer(slicer);
 
@@ -1025,12 +1012,24 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
       wd->setFinal ( dyn_props->flags.is_final );
       wd->setRecoverable ( dyn_props->flags.is_recover);
    }
+
+   // Set dynamic properties
+   if ( dyn_props != NULL ) {
+      wd->setPriority( dyn_props->priority );
+      wd->setFinal ( dyn_props->flags.is_final );
+      wd->setRecoverable ( dyn_props->flags.is_recover);
+   }
+
    if ( dyn_props && dyn_props->tie_to ) wd->tieTo( *( BaseThread * )dyn_props->tie_to );
    
    /* DLB */
    // In case the master have been busy crating tasks 
-   // every 10 tasks created I'll check available cpus
-   if(_atomicWDSeed.value()%10==0)dlb_updateAvailableCpus();
+   // every 10 tasks created I'll check if I must return claimed cpus
+   // or there are available cpus idle
+   if(_atomicWDSeed.value()%10==0){
+      ResourceManager::returnClaimedCpus();
+      ResourceManager::acquireResourcesIfNeeded();
+   }
 
    if (_createLocalTasks) {
       wd->tieToLocation( 0 );
@@ -1278,28 +1277,6 @@ void System::inlineWork ( WD &work )
    else fatal ("System: Trying to execute inline a task violating basic constraints");
 }
 
-void System::createWorker( unsigned p )
-{
-   fatal0("Disabled");
-   //jb NANOS_INSTRUMENT( sys.getInstrumentation()->incrementMaxThreads(); )
-   //jb PE *pe = createPE ( "smp", getBindingId( p ), _pes.size() );
-   //jb _pes.push_back ( pe );
-   //jb BaseThread *thread = &pe->startWorker();
-   //jb _workers.push_back( thread );
-   //jb ++_targetThreads;
-
-   //jb CPU_SET( getBindingId( p ), &_smpPlugin->getActiveSet() );
-
-   //jb //Set up internal data
-   //jb WD & threadWD = thread->getThreadWD();
-   //jb if ( _pmInterface->getInternalDataSize() > 0 ) {
-   //jb    char *data = NEW char[_pmInterface->getInternalDataSize()];
-   //jb    _pmInterface->initInternalData( data );
-   //jb    threadWD.setInternalData( data );
-   //jb }
-   //jb _pmInterface->setupWD( threadWD );
-}
-
 BaseThread * System::getUnassignedWorker ( void )
 {
    BaseThread *thread;
@@ -1309,7 +1286,7 @@ BaseThread * System::getUnassignedWorker ( void )
       if ( !thread->hasTeam() && !thread->isSleeping() ) {
 
          // skip if the thread is not in the mask
-         if ( _smpPlugin->getBinding() && !CPU_ISSET( thread->getCpuId(), &_smpPlugin->getActiveSet() ) ) {
+         if ( _smpPlugin->getBinding() && !CPU_ISSET( thread->getCpuId(), &_smpPlugin->getCpuActiveMask() ) ) {
             continue;
          }
 
@@ -1331,6 +1308,53 @@ BaseThread * System::getUnassignedWorker ( void )
 
    return NULL;
 }
+
+#if 0
+BaseThread * System::getInactiveWorker ( void )
+{
+   BaseThread *thread;
+
+   for ( unsigned i = 0; i < _workers.size(); i++ ) {
+      thread = _workers[i];
+      if ( !thread->hasTeam() && thread->isWaiting() ) {
+         // recheck availability with exclusive access
+         thread->lock();
+         if ( thread->hasTeam() || !thread->isWaiting() ) {
+            // we lost it
+            thread->unlock();
+            continue;
+         }
+         thread->reserve(); // set team flag only
+         thread->wakeup();
+         thread->unlock();
+
+         return thread;
+      }
+   }
+   return NULL;
+}
+
+
+BaseThread * System::getAssignedWorker ( ThreadTeam *team )
+{
+   BaseThread *thread;
+
+   ThreadList::reverse_iterator rit;
+   for ( rit = _workers.rbegin(); rit != _workers.rend(); ++rit ) {
+      thread = *rit;
+      thread->lock();
+      //! \note Checking thread availabitity.
+      if ( (thread->getTeam() == team) && !thread->isSleeping() && !thread->isTeamCreator() ) {
+         thread->unlock();
+         return thread;
+      }
+      thread->unlock();
+   }
+
+   //! \note If no thread has found, return NULL.
+   return NULL;
+}
+#endif
 
 BaseThread * System::getWorker ( unsigned int n )
 {
@@ -1365,24 +1389,9 @@ void System::acquireWorker ( ThreadTeam * team, BaseThread * thread, bool enter,
    else thread->setNextTeamData( data );
 
    debug( "added thread ", thread,
-          " with id ", toString<int>(thId),
+          " with id ", thId,
           " to ", team
         );
-}
-
-void System::releaseWorker ( BaseThread * thread )
-{
-   ensure( myThread == thread, "Calling release worker from other thread context" );
-
-   //! \todo Destroy if too many?
-   debug("Releasing thread ", thread,
-         " from team ", thread->getTeam()
-        );
-
-   thread->lock();
-   thread->sleep();
-   thread->unlock();
-
 }
 
 int System::getNumWorkers( DeviceData *arch )
@@ -1442,7 +1451,10 @@ void System::endTeam ( ThreadTeam *team )
          " with size ", team->size()
         );
 
-   dlb_returnCpusIfNeeded();
+   /* For OpenMP applications
+      At the end of the parallel return the claimed cpus
+   */
+   ResourceManager::returnClaimedCpus();
    while ( team->size ( ) > 0 ) {
       // FIXME: Is it really necessary?
       memoryFence();
@@ -1477,23 +1489,8 @@ void System::addPEsAndThreadsToTeam(PE **pes, int num_pes, BaseThread** threads,
     }
 }
 
-void System::admitCurrentThread ( void )
-{
-   _smpPlugin->admitCurrentThread( _workers );
-}
-
-void System::expelCurrentThread ( void )
-{
-   int pe_id =  myThread->runningOn()->getId();
-   _pes.erase( pe_id );
-   _workers.erase ( myThread->getId() );
-}
-
 void System::environmentSummary( void )
 {
-   std::ostringstream mask;
-   _smpPlugin->getBindingMaskString( mask );
-
    /* Get Prog. Model string */
    std::string prog_model;
    switch ( getInitialMode() )
@@ -1514,7 +1511,7 @@ void System::environmentSummary( void )
    //message0( "=== Num. SMP threads:        ", _smpPlugin->getNumThreads() );
    //message0( "=== Num. SMP worker threads: ", _smpPlugin->getNumWorkers() );
    message0( "=== Num. worker threads: ", _workers.size() );
-   message0( "=== System CPUs:         ", mask.str() );
+   message0( "=== System CPUs:         ", _smpPlugin->getBindingMaskString() );
    message0( "=== Binding:             ", std::boolalpha, _smpPlugin->getBinding() );
    message0( "=== Prog. Model:         ", prog_model );
 
@@ -1583,26 +1580,35 @@ void System::ompss_nanox_main(){
 
 }
 
+void System::_registerMemoryChunk(memory_space_id_t loc, void *addr, std::size_t len) {
+   CopyData cd;
+   nanos_region_dimension_internal_t dim;
+   dim.lower_bound = 0;
+   dim.size = len;
+   dim.accessed_length = len;
+   cd.setBaseAddress( addr );
+   cd.setDimensions( &dim );
+   cd.setNumDimensions( 1 );
+   global_reg_t reg;
+   getHostMemory().getRegionId( cd, reg, *((WD *) 0), 0 );
+   reg.setOwnedMemory(loc);
+   //not really needed.., *it->registerOwnedMemory( reg );
+}
+
 void System::registerNodeOwnedMemory(unsigned int node, void *addr, std::size_t len) {
    memory_space_id_t loc = 0;
-   for ( std::vector<SeparateMemoryAddressSpace *>::iterator it = _separateAddressSpaces.begin(); it != _separateAddressSpaces.end(); it++ ) {
-      if ( *it != NULL ) {
-         if ((*it)->getNodeNumber() == node) {
-            CopyData cd;
-            nanos_region_dimension_internal_t dim;
-            dim.lower_bound = 0;
-            dim.size = len;
-            dim.accessed_length = len;
-            cd.setBaseAddress( addr );
-            cd.setDimensions( &dim );
-            cd.setNumDimensions( 1 );
-            global_reg_t reg;
-            getHostMemory().getRegionId( cd, reg, *((WD *) 0), 0 );
-            reg.setOwnedMemory(loc);
-           //not really needed.., *it->registerOwnedMemory( reg );
+   if ( node == 0 ) {
+      _registerMemoryChunk( loc, addr, len );
+   } else {
+      //_separateAddressSpaces[0] is always NULL (because loc = 0 is the local node memory)
+      for ( std::vector<SeparateMemoryAddressSpace *>::iterator it = _separateAddressSpaces.begin(); it != _separateAddressSpaces.end(); it++ ) {
+         if ( *it != NULL ) {
+            if ((*it)->getNodeNumber() == node) {
+               _registerMemoryChunk( loc, addr, len );
+            }
          }
+         loc++;
       }
-      loc++;
    }
 }
 
@@ -1631,4 +1637,10 @@ memory_space_id_t System::addSeparateMemoryAddressSpace( Device &arch, bool allo
    SeparateMemoryAddressSpace *mem = NEW SeparateMemoryAddressSpace( id, arch, allocWide );
    _separateAddressSpaces[ id ] = mem;
    return id;
+}
+
+void System::registerObject(int numObjects, nanos_copy_data_internal_t *obj) {
+   for ( int i = 0; i < numObjects; i += 1 ) {
+      _hostMemory.registerObject( &obj[i] );
+   }
 }

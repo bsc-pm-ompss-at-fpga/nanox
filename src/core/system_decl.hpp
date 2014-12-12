@@ -111,6 +111,8 @@ namespace nanos
          bool                 _synchronizedStart;
          //! Enable Dynamic Load Balancing library
          bool                 _enableDLB;
+         //! Maintain predecessors list, disabled by default, used by botlev and async threads (#1027)
+         bool                 _predecessorLists;
 
 
          //cutoff policy and related variables
@@ -145,6 +147,9 @@ namespace nanos
 
          PEList               _pes;
          ThreadList           _workers;
+
+         //! List of all supported architectures by _pes
+         DeviceList           _devices;
         
          /*! It counts how many threads have finalized their initialization */
          Atomic<unsigned int> _initializedThreads;
@@ -195,6 +200,8 @@ namespace nanos
 
          std::set<unsigned int>                        _clusterNodes;
          std::set<unsigned int>                        _numaNodes;
+
+         unsigned int                                  _acceleratorCount;
          //! Maps from a physical NUMA node to a user-selectable node
          std::vector<int>                              _numaNodeMap;
          
@@ -243,25 +250,6 @@ namespace nanos
          void loadModules();
          void unloadModules();
 
-         /*!
-          * \brief Creates a new PE and a new thread associated to it
-          * \param[in] p ID of the new PE
-          */
-         void createWorker( unsigned p );
-
-         /*!
-          * \brief Updates team members so that it matches with system's _cpu_active_set
-          */
-         void applyCpuMask();
-
-         /*!
-          * \brief Processes the system's _cpu_active_set for later update the threads
-          *
-          * Depending on the system binding configuration, this function will update _bindings to be able
-          * later to create new PE's or just update the raw number of threads if binding is disabled
-          */
-         void processCpuMask( void );
-         
          Atomic<int> _atomicSeedWg;
          Atomic<unsigned int> _affinityFailureCount;
          bool                      _createLocalTasks;
@@ -325,10 +313,9 @@ namespace nanos
          void setupWD( WD &work, WD *parent );
 
          /*!
-          * \brief Add mas to the current system's _cpu_active_set
-          * \param[in] mask
+          * \brief Method to get the device types of all the architectures running
           */
-         void addCpuMask ( const cpu_set_t *mask );
+         DeviceList & getSupportedDevices();
 
          void setDeviceStackSize ( int stackSize );
 
@@ -371,13 +358,18 @@ namespace nanos
          void setSynchronizedStart ( bool value );
          bool getSynchronizedStart ( void ) const;
 
+         //! \brief Enables or disables the use of predecessor lists
+         void setPredecessorLists ( bool value );
+         //! \brief Checks if predecessor lists are enabled
+         bool getPredecessorLists ( void ) const;
+
          int nextThreadId ();
          unsigned int nextPEId ();
 
          bool isSummaryEnabled() const;
          
          /*!
-          * \brief Returns whether DLB is enabled or not
+          * \brief Returns whether DLB is enabled
           */
          bool dlbEnabled() const;
 
@@ -454,16 +446,6 @@ namespace nanos
          BaseThread * getUnassignedWorker ( void );
 
          /*!
-          * \brief Returns, if any, the worker thread with upper ID that has team and still has not been tagged to sleep
-          */
-         //BaseThread * getAssignedWorker ( ThreadTeam *team );
-
-         /*!
-          * \brief Returns, if any, the worker thread is inactive
-          */
-         //BaseThread * getInactiveWorker ( void );
-  
-         /*!
           * \brief Returns a new team of threads 
           * \param[in] nthreads Number of threads in the team.
           * \param[in] constraints This parameter is not used.
@@ -477,16 +459,56 @@ namespace nanos
          void endTeam ( ThreadTeam *team );
 
          /*!
-          * \brief Releases a worker thread from its team
-          * \param[in,out] thread
-          */
-         void releaseWorker ( BaseThread * thread );
-
-         /*!
           * \brief Updates the number of active worker threads and adds them to the main team
           * \param[in] nthreads
           */
          void updateActiveWorkers ( int nthreads );
+
+         /*!
+          * \brief Get the process mask of active CPUs by reference
+          */
+         const cpu_set_t& getCpuProcessMask () const;
+
+         /*!
+          * \brief Get the process mask of active CPUs
+          * \param[out] mask
+          */
+         void getCpuProcessMask ( cpu_set_t *mask ) const;
+
+         /*!
+          * \brief Set the process mask
+          * \param[in] mask
+          */
+         void setCpuProcessMask ( const cpu_set_t *mask );
+
+         /*!
+          * \brief Add the CPUs in mask into the current process mask
+          * \param[in] mask
+          */
+         void addCpuProcessMask ( const cpu_set_t *mask );
+
+         /*!
+          * \brief Get the current mask of active CPUs by reference
+          */
+         const cpu_set_t& getCpuActiveMask () const;
+
+         /*!
+          * \brief Get the current mask of active CPUs
+          * \param[out] mask
+          */
+         void getCpuActiveMask ( cpu_set_t *mask ) const;
+
+         /*!
+          * \brief Set the mask of active CPUs
+          * \param[in] mask
+          */
+         void setCpuActiveMask ( const cpu_set_t *mask );
+
+         /*!
+          * \brief Add the CPUs in mask into the current mask of active CPUs
+          * \param[in] mask
+          */
+         void addCpuActiveMask ( const cpu_set_t *mask );
 
          void setThrottlePolicy( ThrottlePolicy * policy );
 
@@ -684,13 +706,14 @@ namespace nanos
 
          /*! \brief Active current thread (i.e. pthread ) and include it into the main team
           */
-         void admitCurrentThread ( void );
-         void expelCurrentThread ( void );
+         void admitCurrentThread ( bool isWorker );
+         void expelCurrentThread ( bool isWorker );
          
          //This main will do nothing normally
          //It will act as an slave and call exit(0) when we need slave behaviour
          //in offload or cluster version
          void ompss_nanox_main ();         
+         void _registerMemoryChunk(memory_space_id_t loc, void *addr, std::size_t len);
          void registerNodeOwnedMemory(unsigned int node, void *addr, std::size_t len);
          void stickToProducer(void *addr, std::size_t len);
          void setCreateLocalTasks(bool value);
@@ -712,6 +735,10 @@ namespace nanos
          memory_space_id_t getMemorySpaceIdOfClusterNode( unsigned int node ) const;
          int getUserDefinedNUMANode() const;
          void setUserDefinedNUMANode( int nodeId );
+         void registerObject( int numObjects, nanos_copy_data_internal_t *obj );
+
+         unsigned int getNumAccelerators() const;
+         unsigned int getNewAcceleratorId();
    };
 
    extern System sys;

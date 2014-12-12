@@ -30,6 +30,7 @@ struct global_reg_t {
    void fillDimensionData( nanos_region_dimension_internal_t region[]) const;
    bool operator<( global_reg_t const &reg ) const;
    memory_space_id_t getFirstLocation() const;
+   memory_space_id_t getPreferedSourceLocation( memory_space_id_t dest ) const;
    unsigned int getVersion() const;
    unsigned int getHostVersion( bool increaseVersion ) const;
    reg_t getFitRegionId() const;
@@ -42,8 +43,9 @@ struct global_reg_t {
    void fillCopyData( CopyData &cd, uint64_t baseAddress ) const;
    bool isRegistered() const;
    std::set< memory_space_id_t > const &getLocations() const;
-   void setRooted() const;
+   //void setRooted() const;
    bool isRooted() const;
+   memory_space_id_t getRootedLocation() const;
    void setOwnedMemory( memory_space_id_t loc ) const;
    unsigned int getNumLocations() const;
    ProcessingElement *getFirstWriterPE() const;

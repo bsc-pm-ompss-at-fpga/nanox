@@ -493,6 +493,17 @@ namespace nanos {
             registerEventValue("in-cuda-runtime", "NANOS_GPU_CUDA_GET_LAST_ERROR_EVENT", "cudaGetLastError()" );                       /* 18 */
             registerEventValue("in-cuda-runtime", "NANOS_GPU_CUDA_GENERIC_EVENT", "CUDA generic event" );                              /* 19 */
             registerEventValue("in-cuda-runtime", "NANOS_GPU_MEMCOPY_EVENT", "memcpy()" );                                             /* 20 */
+            registerEventValue("in-cuda-runtime", "NANOS_GPU_CUDA_EVENT_CREATE_EVENT", "cudaEventCreate()" );                          /* 21 */
+            registerEventValue("in-cuda-runtime", "NANOS_GPU_CUDA_EVENT_DESTROY_EVENT", "cudaEventDestroy()" );                        /* 22 */
+            registerEventValue("in-cuda-runtime", "NANOS_GPU_CUDA_EVENT_RECORD_EVENT", "cudaEventRecord()" );                          /* 23 */
+            registerEventValue("in-cuda-runtime", "NANOS_GPU_CUDA_EVENT_QUERY_EVENT", "cudaEventQuery()" );                            /* 24 */
+            registerEventValue("in-cuda-runtime", "NANOS_GPU_CUDA_EVENT_SYNC_EVENT", "cudaEventSynchronize()" );                       /* 25 */
+            registerEventValue("in-cuda-runtime", "NANOS_GPU_CUDA_KERNEL_LAUNCH_EVENT", "Launching CUDA kernel(s) in task" );          /* 26 */
+            registerEventValue("in-cuda-runtime", "NANOS_GPU_CUDA_STREAM_CREATE_EVENT", "cudaStreamCreate()" );                        /* 27 */
+            registerEventValue("in-cuda-runtime", "NANOS_GPU_CUDA_STREAM_DESTROY_EVENT", "cudaStreamDestroy" );                        /* 28 */
+            registerEventValue("in-cuda-runtime", "NANOS_GPU_CUDA_GET_PCI_BUS_EVENT", "cudaDeviceGetPCIBusId()" );                     /* 29 */
+
+
             /* 28 */ registerEventKey("xfer-size","Transfer size", true);
 
             /* 29 */ registerEventKey("cache-wait","Cache waiting for something", true);
@@ -568,8 +579,11 @@ namespace nanos {
             /* 46 */ registerEventKey("cache-copy-data-out","WD id that is copying data in");
             /* 47 */ registerEventKey("sched-affinity-constraint","Constraint used by affinity scheduler");
 
+            /* 48 */ registerEventKey("wd-ready", "Work descriptor becomes ready", false);
+            /* 49 */ registerEventKey("wd-blocked", "Work descriptor becomes blocked", false);
+            /* 50 */ registerEventKey("concurrent-tasks", "Number of concurrent tasks in the ready queue", false);
                      
-            /* 48*/ registerEventKey("in-mpi-runtime","Inside MPI runtime", true);
+            /* 51*/ registerEventKey("in-mpi-runtime","Inside MPI runtime", true);
             registerEventValue("in-mpi-runtime", "NANOS_MPI_ALLOC_EVENT", "malloc()" );                                     /* 1 */
             registerEventValue("in-mpi-runtime", "NANOS_MPI_FREE_EVENT", "free()" );                                         /* 2 */
             registerEventValue("in-mpi-runtime", "NANOS_MPI_DEEP_BOOSTER_ALLOC_EVENT", "deep_booster_alloc(...)" );                            /* 3 */
@@ -597,9 +611,40 @@ namespace nanos {
             registerEventValue("in-mpi-runtime", "NANOS_MPI_ISEND_EVENT", "Async send" );  /* 25 */
             registerEventValue("in-mpi-runtime", "NANOS_MPI_GENERIC_EVENT", "MPI generic event" );                /* 26 */
 
-            /* 49 */ registerEventKey("wd-ready", "Work descriptor becomes ready", false);
-            /* 50 */ registerEventKey("wd-blocked", "Work descriptor becomes blocked", false);
-            /* 51 */ registerEventKey("parallel-outline-fct", "Parallel Outline Function", false);
+            /* 52 */ registerEventKey("wd-ready", "Work descriptor becomes ready", false);
+            /* 53 */ registerEventKey("wd-blocked", "Work descriptor becomes blocked", false);
+            /* 54 */ registerEventKey("parallel-outline-fct", "Parallel Outline Function", false);
+
+            /* 52 */ registerEventKey("async-thread","Asynchronous thread state events", true);
+            registerEventValue("async-thread", "ASYNC_THREAD_INLINE_WORK_DEP_EVENT", "inlineWorkDependent()" );  /* 1 */
+            registerEventValue("async-thread", "ASYNC_THREAD_PRE_RUN_EVENT", "WD pre-run" );                     /* 2 */
+            registerEventValue("async-thread", "ASYNC_THREAD_RUN_EVENT", "Running WD" );                         /* 3 */
+            registerEventValue("async-thread", "ASYNC_THREAD_POST_RUN_EVENT", "WD post-run" );                   /* 4 */
+            registerEventValue("async-thread", "ASYNC_THREAD_SCHEDULE_EVENT", "Scheduling tasks" );              /* 5 */
+            //registerEventValue("async-thread", "ASYNC_THREAD_WAIT_INPUTS_EVENT", "Waiting for inputs" );         /* 5 */
+            registerEventValue("async-thread", "ASYNC_THREAD_CHECK_WD_INPUTS_EVENT", "Checking for inputs" );    /* 6 */
+            registerEventValue("async-thread", "ASYNC_THREAD_CHECK_WD_OUTPUTS_EVENT", "Checking for outputs" );  /* 7 */
+            registerEventValue("async-thread", "ASYNC_THREAD_CP_DATA_IN_EVENT", "Copy data in" );                /* 8 */
+            registerEventValue("async-thread", "ASYNC_THREAD_CP_DATA_OUT_EVENT", "Copy data out" );              /* 9 */
+            registerEventValue("async-thread", "ASYNC_THREAD_CHECK_EVTS_EVENT", "Check events" );                /* 10 */
+            registerEventValue("async-thread", "ASYNC_THREAD_PROCESS_EVT_EVENT", "Processing finished event" );  /* 11 */
+            registerEventValue("async-thread", "ASYNC_THREAD_SYNCHRONIZE_EVENT", "Synchronize copy" );           /* 12 */
+
+            /* 53 */ registerEventKey("copy-in-gpu", "Asynchronous memory copy from host to device", true);
+
+            /* 54 */ registerEventKey("copy-out-gpu", "Asynchronous memory copy from device to host", true);
+
+            /* 55 */ registerEventKey("gpu-wd-id","GPU Work Descriptor id:", true, true, true);
+
+            /* 56 */ registerEventKey("wd-criticality","Work descriptor criticality");
+            /* 57 */ registerEventKey("blev-overheads", "Total overheads of botlev scheduler");
+            /* 58 */ registerEventKey("blev-overheads-breakdown", "Overheads of botlev scheduler broken down");
+            /* 59 */ registerEventKey("critical-wd-id", "A critical work descriptor is submitted");
+
+            /* 60 */ registerEventKey("copy-dir-devices", "Asynchronous memory copy between host and devices", true);
+            registerEventValue("copy-dir-devices", "NANOS_DEVS_CPDIR_H2D_GPU_EVENT", "Host to GPU device transfer (CUDA)" );                     /* 1 */
+            registerEventValue("copy-dir-devices", "NANOS_DEVS_CPDIR_D2H_GPU_EVENT", "GPU device to host transfer (CUDA)" );                     /* 2 */
+
 
             /* 53 */ registerEventKey("ft-checkpoint", "Fault tolerance task checkpoint/restore." );
             registerEventValue("ft-checkpoint", "NANOS_FT_CP_IN", "Making task's input data backup." );   /* 1 */
@@ -998,6 +1043,12 @@ namespace nanos {
          /*! \brief Used when creating a work descriptor (initializes instrumentation context associated to a WD)
           */
          virtual void wdCreate( WorkDescriptor* newWD );
+
+         /*! \brief Flush the deferred events (if any) of the given work descriptor
+          *
+          *  \param[in] wd, this work descriptor's deferred events will be flushed
+          */
+         virtual void flushDeferredEvents ( WorkDescriptor* wd );
 
          /*! \brief Used in work descriptor context switch (oldWD has finished completely its execution
           *

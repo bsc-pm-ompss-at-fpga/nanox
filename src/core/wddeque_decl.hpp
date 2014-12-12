@@ -22,9 +22,10 @@
 
 #include <list>
 #include <functional>
+#include <map>
 #include "atomic_decl.hpp"
 #include "debug_decl.hpp"
-#include "workdescriptor_fwd.hpp"
+#include "workdescriptor_decl.hpp"
 #include "basethread_fwd.hpp"
 
 #define NANOS_ABA_MASK (15)
@@ -105,10 +106,14 @@ namespace nanos
    {
       private:
          typedef std::list<WorkDescriptor *> BaseContainer;
+         typedef std::map< const Device *, Atomic<unsigned int> > WDDeviceCounter;
 
          BaseContainer     _dq;
          Lock              _lock;
          size_t            _nelems;
+         WDDeviceCounter   _ndevs;
+         bool              _deviceCounter;
+
 
       private:
          /*! \brief WDDeque copy constructor (private)
@@ -117,10 +122,15 @@ namespace nanos
          /*! \brief WDDeque copy assignment operator (private)
           */
          const WDDeque & operator= ( const WDDeque & );
+
+         /*! \brief Initialization function for WD device counter
+          */
+         void initDeviceList();
+
       public:
          /*! \brief WDDeque default constructor
           */
-         WDDeque() : _dq(), _lock(), _nelems(0) {}
+         WDDeque( bool enableDeviceCounter = true );
          /*! \brief WDDeque destructor
           */
          ~WDDeque() {}
@@ -149,6 +159,12 @@ namespace nanos
 
          void increaseTasksInQueues( int tasks, int increment = 1 );
          void decreaseTasksInQueues( int tasks, int decrement = 1 );
+
+         /*! \brief Returns the number of ready tasks that could be ran simultaneously
+          * Tied and commutative WDs in the queue could decrease this number.
+          */
+         int getPotentiallyParallelWDs( void );
+
          void transferElemsFrom( WDDeque &dq );
          template <typename Test>
          void iterate ();
@@ -377,6 +393,11 @@ namespace nanos
 
          void increaseTasksInQueues( int tasks, int increment = 1 );
          void decreaseTasksInQueues( int tasks, int decrement = 1 );
+
+         /*! \brief Returns the number of ready tasks that could be ran simultaneously
+          * Tied and commutative WDs in the queue could decrease this number.
+          */
+         int getPotentiallyParallelWDs( void );
    };
 
 

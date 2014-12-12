@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2013 Barcelona Supercomputing Center                               */
+/*      Copyright 2009 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -16,44 +16,12 @@
 /*      You should have received a copy of the GNU Lesser General Public License     */
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
+#ifndef _ASYNC_THREAD_ELEMENT_FWD_H
+#define _ASYNC_THREAD_ELEMENT_FWD_H
 
-#ifndef _NANOS_DLB
-#define _NANOS_DLB
+namespace nanos
+{
+   class AsyncThread;
+};
 
-
-using namespace nanos;
-
-extern "C" {
-   void DLB_UpdateResources_max( int max_resources ) __attribute__(( weak ));
-   void DLB_UpdateResources( void ) __attribute__(( weak ));
-   void DLB_ReturnClaimedCpus( void ) __attribute__(( weak ));
-}
-
-namespace nanos {
-
-   inline void dlb_returnCpusIfNeeded ( void )
-   {
-      if ( sys.dlbEnabled() && DLB_ReturnClaimedCpus && getMyThreadSafe()->getId() == 0 && sys.getPMInterface().isMalleable() )
-         DLB_ReturnClaimedCpus();
-   }
-
-   inline void dlb_updateAvailableCpus ( void )
-   {
-      if ( sys.dlbEnabled() && DLB_UpdateResources_max && getMyThreadSafe()->getId() == 0 ) {
-            DLB_ReturnClaimedCpus();
-
-         if ( sys.getPMInterface().isMalleable() ) {
-            int needed_resources = sys.getSchedulerStats().getReadyTasks() - sys.getSMPPlugin()->getNumWorkers();
-            if ( needed_resources > 0 )
-               DLB_UpdateResources_max( needed_resources );
-
-         } else {
-            DLB_UpdateResources();
-         }
-
-
-      }
-
-   }
-}
-#endif
+#endif //_ASYNC_THREAD_ELEMENT_FWD_H

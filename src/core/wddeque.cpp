@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2012 Barcelona Supercomputing Center                               */
+/*      Copyright 2009 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -16,12 +16,20 @@
 /*      You should have received a copy of the GNU Lesser General Public License     */
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
-#ifndef _NANOS_DEPSREGION_FWD_H
-#define _NANOS_DEPSREGION_FWD_H
 
-namespace nanos
+#include "wddeque.hpp"
+#include "system.hpp"
+
+using namespace nanos;
+
+
+void WDDeque::initDeviceList()
 {
-   class DepsRegion;
-};
+   DeviceList devs = sys.getSupportedDevices();
 
-#endif
+   for ( DeviceList::iterator it = devs.begin(); it != devs.end(); it++ ) {
+      const Device * dev = *it;
+      Atomic<unsigned int> num = 0;
+      _ndevs.insert( std::make_pair( dev, num ) );
+   }
+}

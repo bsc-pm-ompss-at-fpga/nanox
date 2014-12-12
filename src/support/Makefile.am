@@ -20,7 +20,15 @@
 include ../common.am
 
 devinclude_HEADERS = \
-	dlb.hpp\
+	containeradapter_fwd.hpp \
+	bitcounter_fwd.hpp \
+	region_fwd.hpp \
+	regionbuilder_fwd.hpp \
+	regioncollection_fwd.hpp \
+	regionpart_fwd.hpp \
+	regiontree_fwd.hpp \
+	regiontreenode_fwd.hpp \
+	resourcemanager.hpp\
 	new_decl.hpp\
 	allocator_fwd.hpp\
 	allocator_decl.hpp\
@@ -89,6 +97,7 @@ devinclude_HEADERS = \
 	printbt_decl.hpp \
         smpbaseplugin_decl.hpp \
 	pinnedallocator_decl.hpp \
+	genericevent_decl.hpp \
 	$(END) 
 
 if fault_injection_enabled
@@ -97,7 +106,8 @@ devinclude_HEADERS += \
 endif
 
 support_sources = \
-	dlb.hpp\
+	resourcemanager.hpp\
+	resourcemanager.cpp\
 	new_decl.hpp\
 	new.cpp\
 	allocator_fwd.hpp\
@@ -154,6 +164,8 @@ support_sources = \
 	region_decl.hpp \
 	region.hpp \
 	region.cpp \
+	depsregion.hpp \
+	depsregion_decl.hpp \
 	regionbuilder_fwd.hpp \
 	regionbuilder_decl.hpp \
 	regionbuilder.hpp \
@@ -175,6 +187,8 @@ support_sources = \
 	requestqueue.hpp \
 	printbt_decl.hpp \
 	printbt.cpp \
+	genericevent_decl.hpp \
+	genericevent.cpp \
 	$(END) 
 
 debug_sources = \
@@ -184,15 +198,18 @@ debug_sources = \
 	memtracker.cpp
 	$(END)
 
+if GPU_SUPPORT
 gpu_support_sources = \
 	pinnedallocator_decl.hpp \
 	pinnedallocator.hpp \
 	pinnedallocator.cpp \
 	$(END)
+endif
 	
 
 noinst_LTLIBRARIES =
 
+if fault_injection_enabled
 libmpoison_sources = \
 	vmentry.hpp \
 	vmentry.cpp \
@@ -201,77 +218,40 @@ libmpoison_sources = \
 	mpoison.cpp \
 	mpoisonmanager.hpp \
 	mpoisonmanager.cpp
-
+endif
 
 if DEBUG_VERSION
 noinst_LTLIBRARIES += debug/libsupport.la
 
-nanos_debug_cxxflags=$(common_includes) $(common_debug_cxxflags) 
+debug_libsupport_la_CXXFLAGS=$(common_includes) $(common_debug_cxxflags)
+debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources) $(gpu_support_sources) $(libmpoison_sources)
+debug_libsupport_la_LDFLAGS=$(dlb_debug_ldflags)
 
-debug_libsupport_la_CXXFLAGS=$(nanos_debug_cxxflags)
-
-debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources)
-
-if GPU_SUPPORT
-debug_libsupport_la_SOURCES+=$(gpu_support_sources)
-endif
-
-if fault_injection_enabled
-debug_libsupport_la_SOURCES+=$(libmpoison_sources)
-endif
 endif
 
 if INSTRUMENTATION_VERSION
 noinst_LTLIBRARIES += instrumentation/libsupport.la
 
-nanos_instr_cxxflags=$(common_includes) $(common_instr_cxxflags) 
+instrumentation_libsupport_la_CXXFLAGS=$(common_includes) $(common_instr_cxxflags)
+instrumentation_libsupport_la_SOURCES=$(support_sources) $(gpu_support_sources) $(libmpoison_sources)
+instrumentation_libsupport_la_LDFLAGS=$(dlb_instr_ldflags)
 
-instrumentation_libsupport_la_CXXFLAGS=$(nanos_instr_cxxflags)
-
-instrumentation_libsupport_la_SOURCES=$(support_sources)
-
-if GPU_SUPPORT
-instrumentation_libsupport_la_SOURCES+=$(gpu_support_sources)
-endif
-
-if fault_injection_enabled
-instrumentation_libsupport_la_SOURCES+=$(libmpoison_sources)
-endif
 endif
 
 if INSTRUMENTATION_DEBUG_VERSION
 noinst_LTLIBRARIES += instrumentation-debug/libsupport.la
 
-nanos_instrdebug_cxxflags=$(common_includes) $(common_instrdebug_cxxflags) 
+instrumentation_debug_libsupport_la_CXXFLAGS=$(common_includes) $(common_instrdebug_cxxflags)
+instrumentation_debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources) $(gpu_support_sources) $(libmpoison_sources)
+instrumentation_debug_libsupport_la_LDFLAGS=$(dlb_instrdebug_ldflags)
 
-instrumentation_debug_libsupport_la_CXXFLAGS=$(nanos_instrdebug_cxxflags)
-
-instrumentation_debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources)
-
-if GPU_SUPPORT
-instrumentation_debug_libsupport_la_SOURCES+=$(gpu_support_sources)
-endif
-
-if fault_injection_enabled
-instrumentation_debug_libsupport_la_SOURCES+=$(libmpoison_sources)
-endif
 endif
 
 if PERFORMANCE_VERSION
 noinst_LTLIBRARIES += performance/libsupport.la
 
-nanos_perfo_cxxflags=$(common_includes) $(common_perfo_cxxflags) 
+performance_libsupport_la_CXXFLAGS=$(common_includes) $(common_perfo_cxxflags)
+performance_libsupport_la_SOURCES=$(support_sources) $(gpu_support_sources) $(libmpoison_sources)
+performance_libsupport_la_LDFLAGS=$(dlb_perfo_ldflags)
 
-performance_libsupport_la_CXXFLAGS=$(nanos_perfo_cxxflags)
-
-performance_libsupport_la_SOURCES=$(support_sources)
-
-if GPU_SUPPORT
-performance_libsupport_la_SOURCES+=$(gpu_support_sources)
 endif
-
-if fault_injection_enabled
-performance_libsupport_la_SOURCES+=$(libmpoison_sources)
-endif
-endif
-

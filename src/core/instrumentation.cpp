@@ -306,7 +306,7 @@ void Instrumentation::raiseCloseStateAndBurst ( nanos_event_key_t key, nanos_eve
 
 void Instrumentation::wdCreate( WorkDescriptor* newWD )
 {
-   Event e1,e2,e3; /* Event */
+   Event e1,e2,e3,e4; /* Event */
 
    /* Gets key for wd-id bursts and wd->id as value*/
    InstrumentationContextData *icd = newWD->getInstrumentationContextData();
@@ -322,7 +322,7 @@ void Instrumentation::wdCreate( WorkDescriptor* newWD )
    static nanos_event_key_t priorityKey = getInstrumentationDictionary()->getEventKey("wd-priority");
    nanos_event_value_t wd_priority = (nanos_event_value_t) newWD->getPriority() + 1;
    createBurstEvent( &e3, priorityKey, wd_priority, icd );
-   
+ 
    /* Create event: STATE */
    if ( _emitStateEvents == true ) createStateEvent( &e1, NANOS_RUNTIME, icd );
 
@@ -332,6 +332,30 @@ void Instrumentation::wdCreate( WorkDescriptor* newWD )
       if ( key != 0 ) _instrumentationContext.insertDeferredEvent( icd, e2 );
       if ( priorityKey != 0 )_instrumentationContext.insertDeferredEvent( icd, e3 );
    }
+}
+
+void Instrumentation::flushDeferredEvents ( WorkDescriptor* wd )
+{
+
+   if ( !wd ) return;
+
+   InstrumentationContextData *icd = wd->getInstrumentationContextData();
+   int numEvents = _instrumentationContext.getNumDeferredEvents ( icd );
+
+   if ( numEvents == 0 ) return;
+
+   Event *e = (Event *) alloca( sizeof( Event ) * numEvents );
+
+   int i = 0;
+   InstrumentationContextData::EventIterator itDE;
+   for ( itDE  = _instrumentationContext.beginDeferredEvents( icd );
+         itDE != _instrumentationContext.endDeferredEvents( icd ); itDE++ ) {
+      e[i++] = *itDE;
+   }
+   _instrumentationContext.clearDeferredEvents( icd );
+
+   addEventList ( numEvents, e );
+
 }
 
 void Instrumentation::wdSwitch( WorkDescriptor* oldWD, WorkDescriptor* newWD, bool last )

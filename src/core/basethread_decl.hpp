@@ -128,6 +128,8 @@ namespace nanos
             bool has_team:1;
             bool has_joined:1;
             bool is_waiting:1;
+            bool can_get_work:1;    /**< Set whether the thread can get more WDs to run or not */
+
             StatusFlags_t() { memset( this, 0, sizeof(*this)); }
          } StatusFlags;
       private:
@@ -207,13 +209,12 @@ namespace nanos
          void stop();
          virtual void sleep();
          virtual void wakeup();
-         virtual void block() {};
-         virtual void unblock() {};
-         
+
          void pause ();
          void unpause ();
 
          virtual void idle( bool debug = false ) {};
+         virtual void processTransfers();
          virtual void yield() {};
 
          virtual void join() = 0;
@@ -221,6 +222,8 @@ namespace nanos
 
          virtual void wait();
          virtual void resume();
+
+         virtual bool canBlock() { return false; }
 
          // set/get methods
          void setCurrentWD ( WD &current );
@@ -233,9 +236,13 @@ namespace nanos
          int getMaxPrefetch () const;
          void setMaxPrefetch ( int max );
          bool canPrefetch () const;
-         void addNextWD ( WD *next );
-         WD * getNextWD ();
-         bool hasNextWD () const;
+         virtual void addNextWD ( WD *next );
+         virtual WD * getNextWD ();
+         virtual bool hasNextWD () const;
+
+         // Set whether the thread will schedule WDs or not used by getImmediateSuccessor()
+         // If so, WD's dependencies should be kept till WD is finished
+         virtual bool keepWDDeps() { return false; }
 
          ext::SMPMultiThread *getParent() ;
          virtual BaseThread *getNextThread() = 0;
@@ -274,11 +281,17 @@ namespace nanos
          //! \brief Is the thread paused as the result of stopping the scheduler?
          bool isPaused () const;
 
+         virtual bool canGetWork ();
+
+         void enableGettingWork ();
+
+         void disableGettingWork ();
+
          ProcessingElement * runningOn() const;
          
          void setRunningOn(ProcessingElement* element);
          
-         void associate();
+         void associate( WD *wd = NULL );
 
          int getId() const;
 
@@ -334,7 +347,8 @@ namespace nanos
          virtual void setupSignalHandlers() = 0;
 
 #endif
-         bool tryWakeUp();
+         //! \brief Wake up a thread and add it to the team, considering all the possible thread states
+         void tryWakeUp( ThreadTeam *team );
 
          unsigned int getOsId() const;
 

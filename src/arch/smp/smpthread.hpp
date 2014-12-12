@@ -46,7 +46,7 @@ namespace ext
       public:
          // constructor
          SMPThread( WD &w, PE *pe, SMPProcessor *core ) :
-               BaseThread( sys.getSMPPlugin()->getNewSMPThreadId(), w, pe, NULL ), _useUserThreads( true ), _pthread( core ) {}
+               BaseThread( sys.getSMPPlugin()->getNewSMPThreadId(), w, pe, NULL ), _useUserThreads( true ), _pthread(core) {}
 
          // named parameter idiom
          SMPThread & stackSize( size_t size );
@@ -61,8 +61,8 @@ namespace ext
          virtual void runDependent ( void );
 
          virtual bool inlineWorkDependent( WD &work );
-         virtual void preOutlineWorkDependent( WD &work ) {fatal( "SMPThread does not support preOutlineWorkDependent()" ); } ;
-         virtual void outlineWorkDependent( WD &work ) {fatal( "SMPThread does not support outlineWorkDependent()" ); } ;
+         virtual void preOutlineWorkDependent( WD &work ) { fatal( "SMPThread does not support preOutlineWorkDependent()" ); }
+         virtual void outlineWorkDependent( WD &work ) { fatal( "SMPThread does not support outlineWorkDependent()" ); }
          virtual void switchTo( WD *work, SchedulerHelper *helper );
          virtual void exitTo( WD *work, SchedulerHelper *helper );
 
@@ -74,17 +74,24 @@ namespace ext
          virtual void switchToNextThread() {
             fatal( "SMPThread does not support switchToNextThread()" );
          }
+
          virtual BaseThread *getNextThread()
          {
             return this;
          }
+
          virtual bool isCluster() { return false; }
 
          //virtual int checkStateDependent( int numPe ) {
          //   fatal( "SMPThread does not support checkStateDependent()" );
          //}
 
+         /*!
+          * \brief Set the flag
+          */
+         virtual void sleep();
          // PThread functions
+         virtual void initMain() { _pthread.initMain(); };
          virtual void start() { _pthread.start( this ); }
          virtual void finish() { _pthread.finish(); BaseThread::finish(); }
          virtual void join() { _pthread.join(); joined(); }
@@ -95,7 +102,8 @@ namespace ext
          virtual void wait();
          /** \brief Unset the flag */
          virtual void wakeup();
-         virtual void block() { _pthread.block(); }
+         virtual bool canBlock() { return true;}
+
          virtual int getCpuId() const;
 #ifdef NANOS_RESILIENCY_ENABLED
          virtual void setupSignalHandlers() { _pthread.setupSignalHandlers(); }
@@ -136,9 +144,5 @@ namespace ext
    };
 }
 }
-
-void * smp_bootthread ( void *arg );
-
-
 
 #endif

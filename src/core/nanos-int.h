@@ -20,7 +20,7 @@
 #define __NANOS_INT_H
 
 //! \file nanos_c_api_macros.h
-//! \brief 
+//! \brief
 //
 //! \defgroup core Nanos++ Core
 
@@ -137,7 +137,7 @@ typedef struct {
    // declaration would be a pointer to a scalar, not a pointer to an array
    void* dimensions;
 #else
-   nanos_region_dimension_internal_t const *dimensions;
+   nanos_region_dimension_internal_t *dimensions;
 #endif
    ptrdiff_t offset;
    uint64_t host_base_address;
@@ -282,17 +282,16 @@ typedef unsigned long long   nanos_event_value_t; /**< Value (on key-value pair)
 
 typedef enum { NANOS_NOT_CREATED, NANOS_NOT_RUNNING, NANOS_STARTUP, NANOS_SHUTDOWN, NANOS_ERROR, NANOS_IDLE,
                NANOS_RUNTIME, NANOS_RUNNING, NANOS_SYNCHRONIZATION, NANOS_SCHEDULING, NANOS_CREATION,
-               NANOS_MEM_TRANSFER_IN, NANOS_MEM_TRANSFER_OUT, NANOS_MEM_TRANSFER_LOCAL,
-               NANOS_MEM_TRANSFER_DEVICE_IN, NANOS_MEM_TRANSFER_DEVICE_OUT, NANOS_MEM_TRANSFER_DEVICE_LOCAL,
-               NANOS_CACHE, NANOS_YIELD, NANOS_ACQUIRING_LOCK, NANOS_CONTEXT_SWITCH, NANOS_DEBUG, 
- /*22*/        NANOS_EVENT_STATE_TYPES
+               NANOS_MEM_TRANSFER_ISSUE, NANOS_CACHE, NANOS_YIELD, NANOS_ACQUIRING_LOCK, NANOS_CONTEXT_SWITCH,
+               NANOS_FILL1, NANOS_WAKINGUP, NANOS_STOPPED, 
+               NANOS_DEBUG, NANOS_EVENT_STATE_TYPES
 } nanos_event_state_value_t; /**< State enum values */
 
 typedef enum { NANOS_WD_DOMAIN, NANOS_WD_DEPENDENCY, NANOS_WAIT, NANOS_XFER_DATA, NANOS_XFER_REQ, NANOS_WD_REMOTE,
                NANOS_AM_WORK, NANOS_AM_WORK_DONE, NANOS_XFER_WAIT_REQ_PUT, NANOS_XFER_FREE_TMP_BUFF } nanos_event_domain_t; /**< Specifies a domain */
 
 typedef long long  nanos_event_id_t; /**< Used as unique id within a given domain */
-  
+
 typedef struct {
    nanos_event_type_t   type;
    nanos_event_key_t    key;

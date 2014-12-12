@@ -80,33 +80,33 @@ namespace nanos {
              * \param [in] successor DependableObject whose WD priority has to be
              * propagated.
              */
-            void successorFound( DependableObject *predecessor, DependableObject *successor )
+            void atSuccessor   ( DependableObject &successor, DependableObject &predecessor )
             {
                //debug( "Scheduler::successorFound" );
 
                if ( ! _useSmartPriority ) return;
 
 
-               if ( predecessor == NULL || successor == NULL ) return;
-               
-               WD *pred = ( WD* ) predecessor->getRelatedObject();
+ //              if ( predecessor == NULL || successor == NULL ) return;
+
+               WD *pred = ( WD* ) predecessor.getRelatedObject();
                if ( pred == NULL ) return;
 
-               WD *succ = ( WD* ) successor->getRelatedObject();
+               WD *succ = ( WD* ) successor.getRelatedObject();
                if ( succ == NULL ) {
                   fatal( "SmartPriority::successorFound  successor->getRelatedObject() is NULL" );
                }
-               
+
                debug ( "Propagating priority from ", (void*)succ, ":", succ->getId(), 
                        " to ", (void*)pred, ":", pred->getId(), ", "
                        "old priority: ", pred->getPriority(), ", "
                        "new priority: ", std::max( pred->getPriority(), succ->getPriority() )
                      );
-               
+
                // Propagate priority
                if ( pred->getPriority() < succ->getPriority() ) {
                   pred->setPriority( succ->getPriority() );
-                  
+
                   // Reorder
                   ThreadData &tdata = (ThreadData &) *myThread->getTeam()->getScheduleData();
                   WDPriorityQueue<> *q = (WDPriorityQueue<> *) tdata._readyQueue;
@@ -202,10 +202,10 @@ namespace nanos {
             do {
                thid = ( thid + 1 ) % size;
 
-               BaseThread *victim = &thread->getTeam()->getThread(thid);
+               BaseThread &victim = thread->getTeam()->getThread(thid);
 
-               if ( victim && victim->getTeam() != NULL ) {
-                 ThreadData &tdata = ( ThreadData & ) *victim->getTeamData()->getScheduleData();
+               if ( victim.getTeam() != NULL ) {
+                 ThreadData &tdata = ( ThreadData & ) *victim.getTeamData()->getScheduleData();
                  wd = tdata._readyQueue->pop_back ( thread );
                }
 

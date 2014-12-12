@@ -36,7 +36,14 @@ using namespace nanos;
 
 inline bool Scheduler::checkBasicConstraints ( WD &wd, BaseThread const &thread )
 {
-   return wd.canRunIn(*thread.runningOn()) && ( !wd.isTied() || wd.isTiedTo() == &thread ) && ( !wd.isTiedLocation() || wd.isTiedToLocation() == thread.runningOn()->getMemorySpaceId() ) && wd.tryAcquireCommutativeAccesses();
+   unsigned int this_node = thread.runningOn()->getMemorySpaceId() != 0 ? sys.getSeparateMemory( thread.runningOn()->getMemorySpaceId() ).getNodeNumber() : 0;
+   unsigned int tied_node = wd.isTiedLocation() ? ( wd.isTiedToLocation() != 0 ? sys.getSeparateMemory( wd.isTiedToLocation() ).getNodeNumber() : 0 ) : (unsigned int) -1; 
+   bool result = wd.canRunIn(*thread.runningOn()) &&
+      ( !wd.isTied() || wd.isTiedTo() == &thread ) &&
+      ( !wd.isTiedLocation() || tied_node == this_node ) &&
+      wd.tryAcquireCommutativeAccesses();
+   //if ( thread.getId() > 0 ) *thread._file << "checkBasicConstraints says " << result << " this_node " << this_node << " tied_node " << tied_node << " isTiedToLocation " << wd.isTiedToLocation()<< std::endl;
+   return result;
 }
 
 inline void SchedulerConf::setUseYield ( const bool value )
@@ -109,6 +116,11 @@ inline WD * SchedulePolicy::atYield       ( BaseThread *thread, WD *current)
    return atIdle( thread );
 }
 
+inline void SchedulePolicy::atCreate ( DependableObject &depObj )
+{
+   return;
+}
+
 inline WD * SchedulePolicy::atWakeUp      ( BaseThread *thread, WD &wd )
 {
    // Ticket #716: execute earlier tasks that have been waiting for children
@@ -147,12 +159,27 @@ inline void SchedulePolicy::atSupport    ( BaseThread *thread )
    return;
 }
 
+inline void SchedulePolicy::atShutdown   ( void )
+{
+   return;
+}
+
+inline void SchedulePolicy::atSuccessor  ( DependableObject &depObj, DependableObject &pred )
+{
+   return;
+}
+
 inline void SchedulePolicy::queue ( BaseThread ** threads, WD ** wds, size_t numElems )
 {
    for( size_t i = 0; i < numElems; ++i )
    {
       queue( threads[i], *wds[i] );
    }
+}
+
+inline int SchedulePolicy::getPotentiallyParallelWDs ( void )
+{
+   return sys.getReadyNum();
 }
 
 inline void SchedulePolicySuccessorFunctor::operator() ( DependableObject *predecessor, DependableObject *successor )

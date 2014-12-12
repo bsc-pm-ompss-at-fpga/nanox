@@ -52,7 +52,7 @@ class MPIPlugin : public ArchPlugin
         return ( _preinitialized || !isSlave ) && ( offload_trace_on == NULL || _extraeInitialized );
     }    
 
-    virtual void init() {
+    virtual void init() {    
        char *offload_trace_on = getenv(const_cast<char*> ("NX_OFFLOAD_INSTRUMENTATION"));       
        char* isSlave = getenv(const_cast<char*> ("OMPSS_OFFLOAD_SLAVE"));
               
@@ -124,6 +124,8 @@ class MPIPlugin : public ArchPlugin
        
     virtual void addPEs( std::map<unsigned int, ProcessingElement *> &pes ) const {
     }
+
+    virtual void addDevices( DeviceList &devices ) const {}
 
     virtual void startSupportThreads() {
     }

@@ -284,7 +284,7 @@ class InstrumentationExtrae: public Instrumentation
         }
 
         /* Keep current number of threads */
-        _maxThreads = sys.getSMPPlugin()->getNumPEs();
+        _maxThreads = sys.getSMPPlugin()->getNumThreads();
       }
       void doLs(std::string dest)
       {
@@ -381,9 +381,8 @@ class InstrumentationExtrae: public Instrumentation
             static std::string nanos_event_state_value_str[] = {"NOT CREATED", "NOT RUNNING", 
                "STARTUP", "SHUTDOWN", "ERROR", "IDLE",
                "RUNTIME", "RUNNING", "SYNCHRONIZATION", "SCHEDULING", "CREATION",
-               "DATA TRANSFER TO DEVICE", "DATA TRANSFER TO HOST", "LOCAL DATA TRANSFER IN DEVICE",
-               "DATA TRANSFER TO DEVICE", "DATA TRANSFER TO HOST", "LOCAL DATA TRANSFER IN DEVICE",
-               "CACHE ALLOC/FREE", "YIELD", "ACQUIRING LOCK", "CONTEXT SWITCH", "DEBUG"};
+               "DATA TRANSFER ISSUE", "CACHE ALLOC/FREE", "YIELD", "ACQUIRING LOCK", "CONTEXT SWITCH",
+               "FILL COLOR", "WAKING UP", "STOPPED" , "DEBUG"};
 
             for ( i = 0; i < (nval - 1); i++ ) { // Do not show the DEBUG state
                values[i] = i;
@@ -418,7 +417,7 @@ class InstrumentationExtrae: public Instrumentation
          extrae_combined_events_t ce;
          InstrumentationDictionary *iD = sys.getInstrumentation()->getInstrumentationDictionary();
 
-         ce.HardwareCounters = 1;
+         ce.HardwareCounters = 0;
          ce.Callers = 0;
          ce.UserFunction = EXTRAE_USER_FUNCTION_NONE;
          ce.nEvents = 0;
@@ -505,6 +504,9 @@ class InstrumentationExtrae: public Instrumentation
                      ce.Types[j] = _eventBase + ckey;
                      ce.Values[j++] = cvalue;
                   }
+                  // Add hwc only for user-funct events
+                  if ( ckey ==  getInstrumentationDictionary()->getEventKey("user-funct-location") )
+                     ce.HardwareCounters = 1;
                   break;
                case NANOS_BURST_END:
                   ckey = e.getKey();
@@ -512,6 +514,8 @@ class InstrumentationExtrae: public Instrumentation
                      ce.Types[j] = _eventBase + ckey;
                      ce.Values[j++] = 0; // end
                   }
+                  if ( ckey ==  getInstrumentationDictionary()->getEventKey("user-funct-location") )
+                     ce.HardwareCounters = 1;
                   break;
                default: break;
             }

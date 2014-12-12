@@ -40,7 +40,7 @@
 using namespace nanos;
 
 inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t data_size, size_t data_align, void *wdata,
-                                 size_t numCopies, CopyData *copies, nanos_translate_args_t translate_args, char *description )
+                                 size_t numCopies, CopyData *copies, nanos_translate_args_t translate_args, const char *description )
                                : _id( sys.getWorkDescriptorId() ), _components( 0 ), 
                                  _componentsSyncCond( EqualConditionChecker<int>( &_components.override(), 0 ) ), _parent(NULL), _forcedParent(NULL),
                                  _data_size ( data_size ), _data_align( data_align ),  _data ( wdata ), _totalSize(0),
@@ -48,6 +48,9 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
                                  _flags(), _tiedTo ( NULL ), _tiedToLocation( (memory_space_id_t) -1 ),
                                  _state( INIT ), _syncCond( NULL ),  _myQueue ( NULL ), _depth ( 0 ),
                                  _numDevices ( ndevices ), _devices ( devs ), _activeDeviceIdx( ndevices == 1 ? 0 : ndevices ),
+#ifdef GPU_DEV
+                                 _cudaStreamIdx( -1 ),
+#endif
                                  _numCopies( numCopies ), _copies( copies ), _paramsSize( 0 ),
                                  _versionGroupId( 0 ), _executionTime( 0.0 ), _estimatedExecTime( 0.0 ),
                                  _doSubmit(NULL), _doWait(), _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ), 
@@ -69,7 +72,7 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
                                  }
 
 inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, size_t data_align, void *wdata,
-                                 size_t numCopies, CopyData *copies, nanos_translate_args_t translate_args, char *description )
+                                 size_t numCopies, CopyData *copies, nanos_translate_args_t translate_args, const char *description )
                                : _id( sys.getWorkDescriptorId() ), _components( 0 ), 
                                  _componentsSyncCond( EqualConditionChecker<int>( &_components.override(), 0 ) ), _parent(NULL), _forcedParent(NULL),
                                  _data_size ( data_size ), _data_align ( data_align ), _data ( wdata ), _totalSize(0),
@@ -77,6 +80,9 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                  _flags(), _tiedTo ( NULL ), _tiedToLocation( (memory_space_id_t) -1 ),
                                  _state( INIT ), _syncCond( NULL ), _myQueue ( NULL ), _depth ( 0 ),
                                  _numDevices ( 1 ), _devices ( NULL ), _activeDeviceIdx( 0 ),
+#ifdef GPU_DEV
+                                 _cudaStreamIdx( -1 ),
+#endif
                                  _numCopies( numCopies ), _copies( copies ), _paramsSize( 0 ),
                                  _versionGroupId( 0 ), _executionTime( 0.0 ), _estimatedExecTime( 0.0 ), 
                                  _doSubmit(NULL), _doWait(), _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ),
@@ -99,7 +105,7 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                     }
                                  }
 
-inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **devs, CopyData * copies, void *data, char *description )
+inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **devs, CopyData * copies, void *data, const char *description )
                                : _id( sys.getWorkDescriptorId() ), _components( 0 ), 
                                  _componentsSyncCond( EqualConditionChecker<int>(&_components.override(), 0 ) ), _parent(NULL), _forcedParent(wd._forcedParent),
                                  _data_size( wd._data_size ), _data_align( wd._data_align ), _data ( data ), _totalSize(0),
@@ -107,6 +113,9 @@ inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **d
                                  _flags(), _tiedTo ( wd._tiedTo ), _tiedToLocation( wd._tiedToLocation ),
                                  _state ( INIT ), _syncCond( NULL ), _myQueue ( NULL ), _depth ( wd._depth ),
                                  _numDevices ( wd._numDevices ), _devices ( devs ), _activeDeviceIdx( wd._numDevices == 1 ? 0 : wd._numDevices ),
+#ifdef GPU_DEV
+                                 _cudaStreamIdx( wd._cudaStreamIdx ),
+#endif
                                  _numCopies( wd._numCopies ), _copies( wd._numCopies == 0 ? NULL : copies ), _paramsSize( wd._paramsSize ),
                                  _versionGroupId( wd._versionGroupId ), _executionTime( wd._executionTime ),
                                  _estimatedExecTime( wd._estimatedExecTime ), _doSubmit(NULL), _doWait(),
@@ -183,7 +192,12 @@ inline bool WorkDescriptor::isEnqueued() { return ( _myQueue != NULL ); }
 
 inline WorkDescriptor & WorkDescriptor::tied () { _flags.to_tie = true; return *this; }
 
-inline WorkDescriptor & WorkDescriptor::tieTo ( BaseThread &pe ) { _tiedTo = &pe; _flags.to_tie=false; return *this; }
+inline WorkDescriptor & WorkDescriptor::tieTo ( BaseThread &thread )
+{
+   _tiedTo = &thread;
+   _flags.to_tie = false;
+   return *this;
+}
 
 inline WorkDescriptor & WorkDescriptor::tieToLocation ( memory_space_id_t loc ) { _tiedToLocation = loc; _flags.to_tie=false; return *this; }
 
@@ -225,6 +239,7 @@ inline void WorkDescriptor::setReady ()
    NANOS_INSTRUMENT ( nanos_event_value_t Values = (nanos_event_value_t) this; )
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &Keys, &Values); )
    NANOS_INSTRUMENT ( } )
+
    _flags.is_ready = true;
 }
 
@@ -247,6 +262,12 @@ inline bool WorkDescriptor::hasActiveDevice() const { return _activeDeviceIdx !=
 inline void WorkDescriptor::setActiveDeviceIdx( unsigned char idx ) { _activeDeviceIdx = idx; }
 
 inline unsigned char WorkDescriptor::getActiveDeviceIdx() const { return _activeDeviceIdx; }
+
+#ifdef GPU_DEV
+inline void WorkDescriptor::setCudaStreamIdx( int idx ) { _cudaStreamIdx = idx; }
+
+inline int WorkDescriptor::getCudaStreamIdx() const { return _cudaStreamIdx; }
+#endif
 
 inline void WorkDescriptor::setInternalData ( void *data, bool ownedByWD ) { 
     union { void* p; intptr_t i; } u = { data };
@@ -323,6 +344,8 @@ inline void WorkDescriptor::setEstimatedExecutionTime( double time ) { _estimate
 
 inline DOSubmit * WorkDescriptor::getDOSubmit() { return _doSubmit; }
 
+inline int WorkDescriptor::getNumDepsPredecessors() { return ( _doSubmit == NULL ? 0 : _doSubmit->numPredecessors() ); }
+
 inline void WorkDescriptor::submitWithDependencies( WorkDescriptor &wd, size_t numDeps, DataAccess* deps )
 {
    wd._doSubmit = NEW DOSubmit();
@@ -363,15 +386,15 @@ inline WorkDescriptor * WorkDescriptor::getImmediateSuccessor ( BaseThread &thre
 {
    if ( _doSubmit == NULL ) return NULL;
    else {
-        DOIsSchedulable predicate(thread);
-        DependableObject * found = _doSubmit->releaseImmediateSuccessor(predicate);
-        if ( found ) {
-           WD *successor = (WD *) found->getRelatedObject();
-           successor->predecessorFinished( this );
-           return successor;
-        } else {
-           return NULL;
-        }
+      DOIsSchedulable predicate( thread );
+      DependableObject * found = _doSubmit->releaseImmediateSuccessor( predicate, thread.keepWDDeps() );
+      if ( found ) {
+         WD *successor = found->getWD();
+         //successor->predecessorFinished( this );
+         return successor;
+      } else {
+         return NULL;
+      }
    }
 }
 
@@ -381,6 +404,13 @@ inline void WorkDescriptor::workFinished(WorkDescriptor &wd)
       wd._doSubmit->finished();
       delete wd._doSubmit;
       wd._doSubmit = NULL;
+   }
+}
+
+inline void WorkDescriptor::releaseInputDependencies()
+{
+   if ( _doSubmit != NULL ){
+      _doSubmit->releaseReadDependencies();
    }
 }
 
@@ -427,7 +457,7 @@ inline void WorkDescriptor::setImplicit( bool b )
 
 inline bool WorkDescriptor::isImplicit( void ) { return _flags.is_implicit; } 
 
-inline char * WorkDescriptor::getDescription ( void ) const  { return _description; }
+inline const char * WorkDescriptor::getDescription ( void ) const  { return _description; }
 
 inline void WorkDescriptor::addWork ( WorkDescriptor &work )
 {
@@ -510,5 +540,9 @@ inline bool WorkDescriptor::isInvalid() const { return _flags.is_invalid; }
 inline void WorkDescriptor::setRecoverable( bool flag ) { _flags.is_recoverable = flag; }
 
 inline bool WorkDescriptor::isRecoverable() const { return _flags.is_recoverable; }
+
+inline void WorkDescriptor::setCriticality ( int cr ) { _criticality = cr; }
+
+inline int  WorkDescriptor::getCriticality () const { return _criticality; }
 #endif
 
