@@ -134,7 +134,7 @@ int MPoisonManager::unblockPage( uintptr_t page_addr ) {
   if( blocked_pages.erase( page_addr ) > 0 ) {
       return mprotect( (void*)page_addr, page_size, PROT_READ | PROT_WRITE );
   }
-  return -1;// page didn't exist
+  return 0;// Page didn't exist. Don't report error cause another thread could have unblocked it.
 }
 
 }//namespace vm

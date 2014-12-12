@@ -1551,13 +1551,13 @@ void System::executionSummary( void )
    time_t seconds = time(NULL) -_summaryStartTime;
    message0( "============ Nanos++ Final Execution Summary ==================" );
    message0( "=== Application ended in ", seconds, " seconds" );
-   message0( "=== ", getCreatedTasks(),         " tasks have been executed" );
+   message0( "=== ", std::dec, getCreatedTasks(),         " tasks have been executed" );
 #ifdef NANOS_RESILIENCY_ENABLED
-   message0( "=== ", getInjectedErrors(),       " errors injected" );
-   message0( "=== ", getInitializationErrors(), " tasks could not be initialized (backup failed)" );
-   message0( "=== ", getExecutionErrors(),      " task executions failed" );
-   message0( "=== ", getRecoveredTasks(),       " tasks have been reexecuted" );
-   message0( "=== ", getDiscardedTasks(),       " tasks have been discarded (initialization, parent or sibling(s) failed" );
+   message0( "=== ", std::dec, getInjectedErrors(),       " errors injected" );
+   message0( "=== ", std::dec, getInitializationErrors(), " tasks could not be initialized (backup failed)" );
+   message0( "=== ", std::dec, getExecutionErrors(),      " task executions failed" );
+   message0( "=== ", std::dec, getRecoveredTasks(),       " tasks have been reexecuted" );
+   message0( "=== ", std::dec, getDiscardedTasks(),       " tasks have been discarded (initialization, parent or sibling(s) failed" );
 #endif // NANOS_RESILIENCY_ENABLED
    message0( "===============================================================" );
 }

@@ -28,11 +28,13 @@
 #include <unistd.h>
 
 #ifdef NANOS_RESILIENCY_ENABLED
-#include <stdint.h>
+#include <cstdint>
 #include "taskexception.hpp"
 #include "memcontroller_decl.hpp"
 
 #ifdef NANOS_FAULT_INJECTION
+#include <cstring>
+#include <cerrno>
 #include "mpoison.h"
 #endif
 #endif
@@ -207,25 +209,22 @@ bool SMPDD::recover( TaskException const& err ) {
 
          switch(err.getSignalInfo().si_code) {
             case SEGV_MAPERR: /* Address not mapped to object.  */
-               // SEGV_MAPERR error recovery is not fully supported
-               break;// case SEGV_MAPERR
+               message( "SEGV_MAPERR error recovery is not supported yet." );
+               return false;
             case SEGV_ACCERR: /* Invalid permissions for mapped object.  */
                uintptr_t page_addr = (uintptr_t)err.getSignalInfo().si_addr;
                // Align faulting address with virtual page address
                page_addr &= ~(page_size - 1);
 #ifdef NANOS_FAULT_INJECTION
                if( sys.isPoisoningEnabled() ) {
-                  if( mpoison_unblock_page(page_addr) == 0 ) {
-                     debug("Resiliency: Page restored! Address: 0x", std::hex, page_addr);
-                     result = true;
-                  } else {
-                     debug("Resiliency: Error while restoring page. Address: 0x", std::hex, page_addr);
-                     result = false;
-                  }
+                  result = mpoison_unblock_page(page_addr) == 0;
                } else {
+                 message( "Recover function called but fault injection is disabled. This might be produced by a real error." );
                  result = false;// TODO Page unimplemented for real errors (not simulations)
                }
 #else
+               // We still don't know how to recover from failures other than those injected.
+               message( "Recover function called but fault injection is disabled. This might be produced by a real error." );
                result = false;
 #endif
                break;// case SEGV_ACCERR

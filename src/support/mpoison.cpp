@@ -27,6 +27,7 @@
 #include "system.hpp"
 #include "vmentry.hpp"
 
+#include <cerrno>
 #include <unistd.h>
 
 /* Variables used to manage and synchronize with mpoison thread */
@@ -83,12 +84,20 @@ void mpoison_continue(){
 }
 
 int mpoison_unblock_page( uintptr_t page_addr ) {
-   return mp_mgr->unblockPage(page_addr);
+   if ( mp_mgr->unblockPage(page_addr) == 0 ) {
+      debug("Resiliency: Page restored! Address: 0x", std::hex, page_addr);
+      return 0;
+   } else {    
+      warning("Resiliency: Error while restoring page. "
+              "Address: 0x", std::hex, page_addr,
+              " Reason: ", strerror(errno) );
+      return -1;
+   }
 }
 
 void mpoison_delay_start ( unsigned long* useconds ) {
    if( sys.isPoisoningEnabled() ) {
-      debug("Memory error injection: Creating mpoison thread");
+      warning("Memory fault injection: Creating injection thread");
       pthread_create(&tid, NULL, nanos::vm::mpoison_run, (void*)useconds);
    }
 }
