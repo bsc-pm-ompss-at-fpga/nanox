@@ -1201,6 +1201,9 @@ if test "x$fault_injection" = "xyes"; then
     fi
 
     AC_DEFINE([NANOS_FAULT_INJECTION],[1],[Defined when page corruption injection module is enabled by the user.])
+else
+    # Debug messages are not compatible with C++0x (usage of variadic macros)	
+    AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 fi
 AM_CONDITIONAL([fault_injection_enabled],[test "x$fault_injection" = "xyes"])
 
