@@ -1018,11 +1018,10 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
    if ( wd->isInvalid() 
         || ( wd->getParent() && wd->getParent()->isInvalid() ))
    {
-      // Discard task, clean it and look for more work to do...
-      //wd->finish(); <- this is not done as only copies output data back to host
+      // Discard task and look for more work to do...
+      // The delete is not necessary at this level
+      // because it will be done at a higher call level
       finishWork( wd, schedule );
-      wd->~WorkDescriptor();
-      delete[] (char *)wd;
 
       sys.getExceptionStats().incrDiscardedTasks();
 
@@ -1032,6 +1031,7 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
 
       return true;
    }
+
    // else (if task is valid)
 
    BaseThread *thread = getMyThreadSafe();
@@ -1049,22 +1049,24 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
 
    // Initializing wd if necessary
    // It will be started later in inlineWorkDependent call
-   
    if ( !wd->started() ) { 
       if ( !wd->_mcontrol.isMemoryAllocated() ) {
          wd->_mcontrol.initialize( *thread->runningOn() );
          bool result;
          do {
+            debug("Allocating task memory");
             result = wd->_mcontrol.allocateTaskMemory();
          } while( result == false );
       }
       wd->init();
    }
 
+   debug("InlineWork checking workdescriptor tying");
    // This ensures that when we return from the inlining is still the same thread
    // and we don't violate rules about tied WD
    if ( oldwd->isTiedTo() != NULL && (wd->isTiedTo() == NULL)) wd->tieTo(*oldwd->isTiedTo());
 
+   debug("InlineWork setting current WD ");
    thread->setCurrentWD( *wd );
 
    /* Instrumenting context switch: wd enters cpu (last = n/a) */
@@ -1188,10 +1190,15 @@ void Scheduler::switchTo ( WD *to )
         || ( to->getParent() && to->getParent()->isInvalid() ))
    {
       // Discard task, clean it and look for more work to do...
-      //to->finish(); <- this is not done as only copies data back to host
+      
       finishWork( to );
       to->~WorkDescriptor();
       delete[] (char *)to;
+
+      GenericSyncCond *syncCond = myThread->getCurrentWD()->getSyncCond();
+      if ( syncCond != NULL ) {
+         syncCond->unlock();
+      }
 
       sys.getExceptionStats().incrDiscardedTasks();
 

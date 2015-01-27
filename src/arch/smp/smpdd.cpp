@@ -134,7 +134,8 @@ void SMPDD::execute ( WD &wd ) throw ()
 
       sys.getExceptionStats().incrDiscardedTasks();
    } else {
-      while (true) {
+      bool restart = true;
+      do {
          try {
             // Call to the user function
             getWorkFct()( wd.getData() );
@@ -165,31 +166,44 @@ void SMPDD::execute ( WD &wd ) throw ()
           * 3) The task parent is not invalid (it doesn't make sense to recover ourselves if our parent is going to undo our work)
           * 4) The task has not run out of trials (a limit is set to avoid infinite loop)
           */ 
-         if ( wd.isInvalid() 
-            && wd.isRecoverable() // Execution invalid and task recoverable
-            && ( wd.getParent() == NULL || !wd.getParent()->isInvalid() ) // Our parent is not invalid (if we got one)
-         ){
-            if ( num_tries < sys.getTaskMaxRetrials() ) {// We are still able to retry
-               sys.getExceptionStats().incrRecoveredTasks();
-               num_tries++;
-               restore(wd);
+         try {
+            if ( wd.isInvalid() 
+               && wd.isRecoverable() // Execution invalid and task recoverable
+               && ( wd.getParent() == NULL || !wd.getParent()->isInvalid() ) // Our parent is not invalid (if we got one)
+            ){
+               if ( num_tries < sys.getTaskMaxRetrials() ) {// We are still able to retry
+                  sys.getExceptionStats().incrRecoveredTasks();
+                  num_tries++;
+                  restore(wd);
+               } else {
+                  debug( "Task ", wd.getId(), " is not being recovered again. Number of trials exhausted." );
+                  // Giving up retrying...
+                  wd.getParent()->setInvalid( true );
+                  restart = false;
+               }
             } else {
-               // Giving up retrying...
-               wd.getParent()->setInvalid( true );
-               return;
+               debug( "Exiting task ", wd.getId(), "." );
+               // Nothing left to do, either task execution was OK or the recovery has to be done by an ancestor.
+               restart = false;
             }
-         } else {
-            debug( "Exiting task ", wd.getId(), "." );
-            // Nothing left to do, either task execution was OK or the recovery has to be done by an ancestor.
-            return;
+         } catch ( std::exception &ex ) {
+            bool recoverable_error = wd.getParent() && wd.getParent()->setInvalid(true);
+            if( !recoverable_error )
+            {
+               // Unrecoverable error: terminate execution
+               fatal("An error was found, but there isn't any recoverable ancestor. ");
+            }
+         
+            restart = false;
          }
-         debug( "Task ", wd.getId(), " is being re-executed." );
+         if(restart) {
+            debug( "Task ", wd.getId(), " is being re-executed." );
 
-         NANOS_INSTRUMENT ( static nanos_event_key_t task_reexec_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
-         NANOS_INSTRUMENT ( nanos_event_value_t task_reexec_val = (nanos_event_value_t ) NANOS_FT_RESTART );
-         NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_reexec_key, &task_reexec_val) );
-
-      }
+            NANOS_INSTRUMENT ( static nanos_event_key_t task_reexec_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
+            NANOS_INSTRUMENT ( nanos_event_value_t task_reexec_val = (nanos_event_value_t ) NANOS_FT_RESTART );
+            NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_reexec_key, &task_reexec_val) );
+         }
+      } while (restart);
    }
 #else
    // Workdescriptor execution
@@ -236,7 +250,6 @@ bool SMPDD::recover( TaskException const& err ) {
    return result;
 }
 
-
 void SMPDD::restore( WD & wd ) {
 
    debug ( "Resiliency: Task ", wd.getId(), " is being recovered to be re-executed further on.");
@@ -249,10 +262,8 @@ void SMPDD::restore( WD & wd ) {
    while ( !wd._mcontrol.isDataRestored( wd ) ) {
       myThread->idle();
    }
-
    debug ( "Resiliency: Task ", wd.getId(), " recovery complete.");
    // Reset invalid state
    wd.setInvalid(false);
-
 }
 #endif

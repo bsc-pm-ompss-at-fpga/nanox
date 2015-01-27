@@ -347,6 +347,7 @@ void AllocatedChunk::prepareRegion( reg_t reg, unsigned int version ) {
 //}
 
 void AllocatedChunk::setRegionVersion( reg_t reg, unsigned int version, WD const &wd, unsigned int copyIdx ) {
+   RecursiveLockBlock lb(_lock);
    unsigned int currentVersion = 0;
    CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg );
    ensure(entry != NULL, "CacheEntry not found!");
@@ -360,6 +361,7 @@ void AllocatedChunk::setRegionVersion( reg_t reg, unsigned int version, WD const
 }
 
 void AllocatedChunk::NEWaddWriteRegion( reg_t reg, unsigned int version ) {
+   RecursiveLockBlock lb(_lock);
    unsigned int currentVersion = 0;
    std::list< std::pair< reg_t, reg_t > > components;
    _newRegions->registerRegion( reg, components, currentVersion );
@@ -793,6 +795,7 @@ unsigned int AllocatedChunk::getVersion( global_reg_t const &reg ) {
 }
 
 DeviceOps *AllocatedChunk::getDeviceOps( global_reg_t const &reg ) {
+   RecursiveLockBlock lb(_lock);
    CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg.id );
    ensure(entry != NULL, "CacheEntry not found!");
    return entry->getDeviceOps();
@@ -1130,7 +1133,8 @@ AllocatedChunk *RegionCache::_getAllocatedChunk( global_reg_t const &reg, bool c
    return allocChunkPtr;
 }
 
-void RegionCache::NEWcopyIn( unsigned int srcLocation, global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx, DeviceOps *givenOps, AllocatedChunk *chunk ) {
+void RegionCache::NEWcopyIn( unsigned int srcLocation, global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx, DeviceOps *givenOps, AllocatedChunk *chunk ) throw() {
+   RecursiveLockBlock lb( _lock );
    //AllocatedChunk *chunk = getAllocatedChunk( reg );
    //std::cerr << " NEWcopyIn for reg: "; reg.key->printRegion( std::cerr, reg.id ); std::cerr << std::endl;
    uint64_t origDevAddr = chunk->getAddress() + ( reg.getRealFirstAddress() - chunk->getHostAddress() );
@@ -1158,6 +1162,7 @@ void RegionCache::NEWcopyIn( unsigned int srcLocation, global_reg_t const &reg, 
 }
 
 void RegionCache::NEWcopyOut( global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx, DeviceOps *givenOps, bool inval ) {
+   RecursiveLockBlock lb( _lock );
    AllocatedChunk *origChunk = getAllocatedChunk( reg, wd, copyIdx );
    uint64_t origDevAddr = origChunk->getAddress() + ( reg.getRealFirstAddress() - origChunk->getHostAddress() );
    DeviceOps *ops = ( givenOps != NULL ) ? givenOps : reg.getDeviceOps();

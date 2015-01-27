@@ -83,7 +83,7 @@ namespace nanos {
 void * os_bootthread ( void *arg );
 
 #ifdef NANOS_RESILIENCY_ENABLED
-void taskErrorHandler(int sig, siginfo_t* si, void* context);
+void taskErrorHandler(int sig, siginfo_t* si, void* context) __attribute__ ((noreturn));
 #endif
 
 #endif

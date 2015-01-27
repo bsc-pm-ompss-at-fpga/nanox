@@ -650,6 +650,7 @@ void System::start ()
    Config::deleteOrphanOptions();
       
    if ( _summary ) {
+      environmentSummary();
 
 #ifdef HAVE_CXX11
       // If the summary is enabled, print the final execution summary
