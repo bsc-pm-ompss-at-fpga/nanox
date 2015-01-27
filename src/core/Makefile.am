@@ -279,17 +279,20 @@ common_sources=\
 	hwloc_decl.hpp \
 	hwloc.cpp \
 	regionset_decl.hpp \
-	regionset.cpp
+	regionset.cpp \
+        $(END)
+
 if RESILIENCY
-common_sources+=\
+common_sources+= \
 	taskexception_fwd.hpp \
 	taskexception.hpp \
 	taskexception.cpp \
 	backupmanager.hpp \
 	backupmanager.cpp \
-        $(END)
-else
-common_sources+=\
+	$(END)
+
+resiliency_aux_sources=\
+	backupmanager_aux.cpp \
         $(END)
 endif
 
@@ -303,18 +306,17 @@ debug_LTLIBRARIES=
 instrumentation_LTLIBRARIES=
 instrumentation_debug_LTLIBRARIES=
 performance_LTLIBRARIES=
-
-
+noinst_LTLIBRARIES=
 
 if DEBUG_VERSION
 debug_LTLIBRARIES+=debug/libnanox.la
 
 debug_libnanox_la_CPPFLAGS=$(BOOST_CPPFLAGS)
 debug_libnanox_la_CFLAGS=$(common_cflags) $(common_debug_cflags)
-debug_libnanox_la_CXXFLAGS=$(common_includes) $(common_debug_cxxflags) $(hwloc_cxxflags)
+debug_libnanox_la_CXXFLAGS =$(common_includes) $(common_debug_cxxflags) $(hwloc_cxxflags)
 debug_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(debugdir) $(ignore_muldefs) $(hwloc_ldflags)
 debug_libnanox_la_LIBADD=$(common_libadd) @NANOS_CONFIG_LIBS_DEBUG@
-debug_libnanox_la_SOURCES=$(common_sources)
+debug_libnanox_la_SOURCES=$(common_sources) $(resiliency_aux_sources)
 debug_libnanox_la_DEPENDENCIES=$(common_libadd) @NANOS_CONFIG_LIBS_DEBUG@
 endif
 
@@ -322,13 +324,21 @@ endif
 if INSTRUMENTATION_VERSION
 instrumentation_LTLIBRARIES+=instrumentation/libnanox.la
 
+if RESILIENCY # workaround for gcc bug
+noinst_LTLIBRARIES+=instrumentation/libresiliency.la # Need this to compile some source files with specific optimizations disabled
+instrumentation_libresiliency_la_CPPFLAGS=$(BOOST_CPPFLAGS)
+instrumentation_libresiliency_la_CFLAGS=$(common_cflags) $(common_instr_cflags)
+instrumentation_libresiliency_la_CXXFLAGS =-fno-inline -fno-ipa-pure-const $(common_instr_cxxflags) $(common_includes)
+instrumentation_libresiliency_la_LDFLAGS=-Wl,-rpath,$(instrumentationdir) $(ignore_muldefs)
+instrumentation_libresiliency_la_SOURCES=$(resiliency_aux_sources)
+endif
+
 instrumentation_libnanox_la_CPPFLAGS=$(BOOST_CPPFLAGS)
 instrumentation_libnanox_la_CFLAGS=$(common_cflags) $(common_instr_cflags)
-instrumentation_libnanox_la_CXXFLAGS=$(common_includes) $(common_instr_cxxflags) $(hwloc_cxxflags)
+instrumentation_libnanox_la_CXXFLAGS =$(common_includes) $(common_instr_cxxflags) $(hwloc_cxxflags)
 instrumentation_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(instrumentationdir) $(ignore_muldefs) $(hwloc_ldflags)
-instrumentation_libnanox_la_LIBADD=$(common_libadd) @NANOS_CONFIG_LIBS_INSTR@
-instrumentation_libnanox_la_SOURCES=$(common_sources) $(instr_sources)
-instrumentation_libnanox_la_DEPENDENCIES=$(common_libadd) @NANOS_CONFIG_LIBS_INSTR@
+instrumentation_libnanox_la_LIBADD=$(common_libadd) instrumentation/libresiliency.la @NANOS_CONFIG_LIBS_INSTR@
+instrumentation_libnanox_la_DEPENDENCIES=$(common_libadd) instrumentation/libresiliency.la @NANOS_CONFIG_LIBS_INSTR@
 endif
 
 if INSTRUMENTATION_DEBUG_VERSION
@@ -336,22 +346,35 @@ instrumentation_debug_LTLIBRARIES+=instrumentation-debug/libnanox.la
 
 instrumentation_debug_libnanox_la_CPPFLAGS=$(BOOST_CPPFLAGS)
 instrumentation_debug_libnanox_la_CFLAGS=$(common_cflags) $(common_instrdebug_cflags)
-instrumentation_debug_libnanox_la_CXXFLAGS=$(common_includes) $(common_instrdebug_cxxflags) $(hwloc_cxxflags)
+instrumentation_debug_libnanox_la_CXXFLAGS =$(common_includes) $(common_instrdebug_cxxflags) $(hwloc_cxxflags)
 instrumentation_debug_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(instrumentation_debugdir) $(ignore_muldefs) $(hwloc_ldflags)
 instrumentation_debug_libnanox_la_LIBADD=$(common_libadd) @NANOS_CONFIG_LIBS_INSTRDEBUG@
-instrumentation_debug_libnanox_la_SOURCES=$(common_sources) $(instr_sources)
+instrumentation_debug_libnanox_la_SOURCES=$(common_sources) $(instr_sources) $(resiliency_aux_sources)
 instrumentation_debug_libnanox_la_DEPENDENCIES=$(common_libadd) @NANOS_CONFIG_LIBS_INSTRDEBUG@
 endif
 
 if PERFORMANCE_VERSION
 performance_LTLIBRARIES+=performance/libnanox.la
 
+if RESILIENCY # workaround for gcc bug
+noinst_LTLIBRARIES+=performance/libresiliency.la #performance/libcore.la# Need this to compile some source files with specific optimizations disabled
+performance_libresiliency_la_CPPFLAGS=$(BOOST_CPPFLAGS)
+performance_libresiliency_la_CFLAGS=$(common_cflags) $(common_perfo_cflags)
+performance_libresiliency_la_CXXFLAGS =-fno-inline -fno-ipa-pure-const $(common_perfo_cxxflags) $(common_includes)
+performance_libresiliency_la_LDFLAGS=-Wl,-rpath,$(performancedir) $(ignore_muldefs)
+performance_libresiliency_la_SOURCES=$(resiliency_aux_sources)
+endif
+
 performance_libnanox_la_CPPFLAGS=$(BOOST_CPPFLAGS)
 performance_libnanox_la_CFLAGS=$(common_cflags) $(common_perfo_cflags)
-performance_libnanox_la_CXXFLAGS=$(common_includes) $(common_perfo_cxxflags) $(hwloc_cxxflags)
+performance_libnanox_la_CXXFLAGS =$(common_includes) $(common_perfo_cxxflags) $(hwloc_cxxflags)
 performance_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(performancedir) $(ignore_muldefs) $(hwloc_ldflags)
-performance_libnanox_la_LIBADD=$(common_libadd) @NANOS_CONFIG_LIBS_PERFO@
+performance_libnanox_la_LIBADD=$(common_libadd) @NANOS_CONFIG_LIBS_PERFO@ performance/libresiliency.la #this library already includes the rest of the required libraries
 performance_libnanox_la_SOURCES=$(common_sources)
-performance_libnanox_la_DEPENDENCIES=$(common_libadd) @NANOS_CONFIG_LIBS_PERFO@
+performance_libnanox_la_DEPENDENCIES=$(common_libadd) @NANOS_CONFIG_LIBS_PERFO@ performance/libresiliency.la #this library already includes the rest of the required libraries
+
+#performance_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(performancedir) $(ignore_muldefs) $(hwloc_ldflags)
+#performance_libnanox_la_LIBADD=performance/libresiliency.la performance/libcore.la#this library already includes the rest of the required libraries
+#performance_libnanox_la_DEPENDENCIES=performance/libcore.la performance/libresiliency.la #this library already includes the rest of the required libraries
 endif
 

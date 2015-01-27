@@ -251,7 +251,7 @@ void MemController::copyDataIn() {
             // FIXME Maybe it would be better to store is_private_backup_aborted value inside _backupInOutCopies...
             new (&_backupInOutCopies[index]) Chunk( dev_addr, host_addr, size );
 
-            _is_private_backup_aborted |= !dev.rawCopyIn( dev_addr, host_addr, size, sys.getBackupMemory(), _wd );
+            _is_private_backup_aborted |= !dev.checkpointCopy( dev_addr, host_addr, size, sys.getBackupMemory(), _wd );
          // Note: we dont want to make the regular backup for inouts, as children tasks' "in" 
          // parameters will always do the backup later if they exist no matter if now we perform the copy or not
          } else if ( _wd.getCopies()[index].isInput() ) {
@@ -419,7 +419,7 @@ void MemController::restoreBackupData ( )
                if( _is_private_backup_aborted ) {
                   throw InvalidatedRegionFound();
                } else {
-                  all_commited &= dev.rawCopyOut( host_addr, dev_addr, size,
+                  all_commited &= dev.restoreCopy( host_addr, dev_addr, size,
                                                   sys.getBackupMemory(), _wd );
                }
             } else if (_wd.getCopies()[index].isInput()) {
