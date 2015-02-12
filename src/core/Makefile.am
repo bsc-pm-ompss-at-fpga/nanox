@@ -338,6 +338,7 @@ instrumentation_libnanox_la_CFLAGS=$(common_cflags) $(common_instr_cflags)
 instrumentation_libnanox_la_CXXFLAGS =$(common_includes) $(common_instr_cxxflags) $(hwloc_cxxflags)
 instrumentation_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(instrumentationdir) $(ignore_muldefs) $(hwloc_ldflags)
 instrumentation_libnanox_la_LIBADD=$(common_libadd) instrumentation/libresiliency.la @NANOS_CONFIG_LIBS_INSTR@
+instrumentation_libnanox_la_SOURCES=$(common_sources) $(instr_sources)
 instrumentation_libnanox_la_DEPENDENCIES=$(common_libadd) instrumentation/libresiliency.la @NANOS_CONFIG_LIBS_INSTR@
 endif
 

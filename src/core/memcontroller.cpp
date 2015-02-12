@@ -219,7 +219,9 @@ void MemController::copyDataIn() {
    
    //if( sys.getNetwork()->getNodeNum()== 0)std::cerr << "MemController::copyDataIn for wd " << _wd.getId() << std::endl;
    for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
-      _memCacheCopies[ index ].generateInOps( *_inOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd, index );
+      if ( _wd.getCopies()[index].isInput() ) {
+         _memCacheCopies[ index ].generateInOps( *_inOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd, index );
+      }
    }
 
    _inOps->issue( _wd );
@@ -239,24 +241,35 @@ void MemController::copyDataIn() {
 
       bool queuedOps = false;
       for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
-         if ( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
-            // For inout parameters, make a temporary independent backup. We have to do this privately, without
-            // the cache being noticed, because this backup is for exclusive use of this workdescriptor only.
-            BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
+         if ( _wd.getCopies()[index].isInput() ) {
+            //_backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
+            _backupCacheCopies[index]._locations.clear();
 
-            std::size_t size = _wd.getCopies()[index].getSize();
-            uint64_t host_addr = _wd.getCopies()[index].getFitAddress();
-            uint64_t dev_addr = (uint64_t) dev.memAllocate(size, sys.getBackupMemory(), _wd, index);
+            if ( _wd.getCopies()[index].isOutput() ) {
+               // For inout parameters, make a temporary independent backup. We have to do this privately, without
+               // the cache being noticed, because this backup is for exclusive use of this workdescriptor only.
+               BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
 
-            // FIXME Maybe it would be better to store is_private_backup_aborted value inside _backupInOutCopies...
-            new (&_backupInOutCopies[index]) Chunk( dev_addr, host_addr, size );
+               std::size_t size = _wd.getCopies()[index].getSize();
+               uint64_t host_addr = _wd.getCopies()[index].getFitAddress();
+               uint64_t dev_addr = (uint64_t) dev.memAllocate(size, sys.getBackupMemory(), _wd, index);
 
-            _is_private_backup_aborted |= !dev.checkpointCopy( dev_addr, host_addr, size, sys.getBackupMemory(), _wd );
-         // Note: we dont want to make the regular backup for inouts, as children tasks' "in" 
-         // parameters will always do the backup later if they exist no matter if now we perform the copy or not
-         } else if ( _wd.getCopies()[index].isInput() ) {
-            _backupCacheCopies[ index ].generateInOps( *_backupOpsIn, true, false, _wd, index);
-            queuedOps = true;
+               // FIXME Maybe it would be better to store is_private_backup_aborted value inside _backupInOutCopies...
+               new (&_backupInOutCopies[index]) Chunk( dev_addr, host_addr, size );
+
+               // Note: we dont want to make the regular backup for inouts, as children tasks' "in" 
+               // parameters will always do the backup later if they exist no matter if now we perform the copy or not
+               //if(sys.getVerboseCopies()) //message( "Private copyIn (inout) wd:", std::dec, _wd.getId() );
+               _is_private_backup_aborted |= !dev.checkpointCopy( dev_addr, host_addr, size, sys.getBackupMemory(), _wd );
+               //if(sys.getVerboseCopies()) //message( "Private copyIn (inout) wd:", std::dec, _wd.getId(), " done. Private backup aborted?: ", _is_private_backup_aborted );
+
+            } else {
+               _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
+               _backupCacheCopies[index]._locationDataReady = true;
+
+               _backupCacheCopies[ index ].generateInOps( *_backupOpsIn, true, false, _wd, index);
+               queuedOps = true;
+            }
          }
       }
 
@@ -637,14 +650,23 @@ bool MemController::isMemoryAllocated() const {
 void MemController::setCacheMetaData() {
    for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
       if ( _wd.getCopies()[index].isOutput() ) {
-         unsigned int newVersion = _memCacheCopies[ index ].getVersion() + 1;
-         _memCacheCopies[ index ]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion ); //update directory
+         //unsigned int newVersion = _memCacheCopies[ index ].getVersion() + 1;
+         //_memCacheCopies[ index ]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion ); //update directory
+         unsigned int newVersion = 0;
+         if( _memCacheCopies[index].getVersion() > _memCacheCopies[index].getChildrenProducedVersion() ){
+            //message("Setting memCacheCopies[",index,"] version to " , _memCacheCopies[index].getVersion()+1 );
+            newVersion = _memCacheCopies[ index ].getVersion() + 1;
+         } else {
+            //message("Setting memCacheCopies[",index,"] version to " , _memCacheCopies[index].getChildrenProducedVersion()+1 );
+            newVersion = _memCacheCopies[ index ].getChildrenProducedVersion() + 1;
+         }
+         _memCacheCopies[ index ]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion );//update directory
          _memCacheCopies[ index ].setChildrenProducedVersion( newVersion );
 
          if ( _pe->getMemorySpaceId() != 0 /* HOST_MEMSPACE_ID */) {
             sys.getSeparateMemory( _pe->getMemorySpaceId() ).setRegionVersion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() + 1, _wd, index );
          }
-      } else if ( _wd.getCopies()[index].isInput() ) {
+      } else //if ( _wd.getCopies()[index].isInput() ) { // if it is not an output then it should be an input. otherwise ther would be no copy
          _memCacheCopies[ index ].setChildrenProducedVersion( _memCacheCopies[ index ].getVersion() );
       }
    }
