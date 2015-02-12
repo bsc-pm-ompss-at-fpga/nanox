@@ -53,6 +53,11 @@ void mpoison_start ( void );
 
 void mpoison_delay_start ( unsigned long* );
 
+void mpoison_set_fail( bool value );
+
+void mpoison_do_fail();
+
+int mpoison_should_fail();
 #ifdef __cplusplus
 }//extern C
 #endif

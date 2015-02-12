@@ -29,12 +29,14 @@ const uint64_t page_size = sysconf(_SC_PAGESIZE);
 const uint64_t pn_mask = ~(page_size - 1);
 
 
-MPoisonManager::MPoisonManager( int seed ):
-  mgr_lock(),
-  alloc_list(),
-  blocked_pages(),
-  total_size(0),
-  generator(seed)
+MPoisonManager::MPoisonManager( int seed, size_t size, float rate ):
+   mgr_lock(),
+   alloc_list(),
+   blocked_pages(),
+   total_size(0),
+   generator(seed),
+   page_fault_dist(0, size),
+   wait_time_dist(rate)
 {
 }
 
@@ -73,7 +75,6 @@ void MPoisonManager::deleteAllocation( uintptr_t addr )
                fatal0( "Error while unblocking page ", std::hex, page_addr,
                        strerror(errno)
                      );
-            break;// Once we found it, finish.
          }
       }
    }
@@ -94,22 +95,34 @@ void MPoisonManager::clearAllocations( )
    blocked_pages.clear();
 }
 
+void MPoisonManager::resetRndPageDist()
+{
+   page_fault_dist = std::uniform_int_distribution<size_t>(0, total_size);
+   page_fault_dist.reset();
+}
+
 uintptr_t MPoisonManager::getRandomPage(){
 
-  std::uniform_int_distribution<size_t> distribution(0, total_size);
-  size_t pos = distribution(generator);
+   size_t pos = page_fault_dist(generator);
 
-  std::deque<alloc_t>::iterator it;
-  for( it = alloc_list.begin(); it != alloc_list.end() && pos >= it->size; it++ ) {
-     pos -= it->size;
-  }
+   std::deque<alloc_t>::iterator it;
+   for( it = alloc_list.begin(); it != alloc_list.end() && pos >= it->size; it++ ) {
+      pos -= it->size;
+   }
 
-  if( total_size > 0 && it != alloc_list.end() )
-    return (it->addr + pos) & pn_mask;
-  else {
-    debug0( "Mpoison: There isn't any page to block." );
-    return 0;
-  }
+   if( total_size > 0 && it != alloc_list.end() )
+     return (it->addr + pos) & pn_mask;
+   else {
+      debug0( "Mpoison: There isn't any page to block." );
+      return 0;
+   }
+}
+
+unsigned MPoisonManager::getWaitTime( )
+{
+   // Note: wait times are in us
+   unsigned t = unsigned( wait_time_dist(generator) * 1000000 );
+   return t;
 }
 
 int MPoisonManager::blockPage() {
