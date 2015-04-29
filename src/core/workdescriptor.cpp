@@ -322,6 +322,14 @@ void WorkDescriptor::done ()
    NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); )
 #endif
 
+   // Storing result in resilience tree.
+   if( _numCopies > 0 && !isInvalid() )
+       _resNode->storeResult( _copies, _numCopies );
+   _resNode->restartLastDescVisited();
+   //If this WD is the parent, destroy resilience tree.
+   //if( getParent() == NULL )
+   //    delete _resNode;
+
    // Waiting for children (just to keep structures)
    if ( _components != 0 ) waitCompletion();
 

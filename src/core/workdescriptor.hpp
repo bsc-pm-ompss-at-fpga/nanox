@@ -69,6 +69,21 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
                                           copies[i].setRemoteHost( false );
                                        }
                                     }
+
+                                    /*  I assume masterWD always has _id 1. If the first resilience node is inUse, it corresponds to a past execution
+                                     *  so we have to recover it instead of creating a new one.
+                                     *  This check is only needed in this constructor because masterWD always call this one.
+                                     */
+                                    if( _id == 1 && sys.getResilienceNode( 1 )->isInUse() )
+                                        _resNode = sys.getResilienceNode( 1 );
+                                    /*  If the WD creation order is always the same, sys.getResilienceNode( id ) will return the RN of the last execution, if exists.
+                                     *  So we have reconstructed the tree of the last execution.
+                                     */
+                                    else if( sys.getResilienceNode( _id )->isInUse() )
+                                        _resNode = sys.getResilienceNode( _id );
+                                    else 
+                                        //It must be the same than sys.getResilienceNode( 1 ), but this is the correct way to get it.
+                                        _resNode = sys.getFreeResilienceNode();
                                  }
 
 inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, size_t data_align, void *wdata,
@@ -103,6 +118,21 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                           copies[i].setRemoteHost( false );
                                        }
                                     }
+
+                                    /*  I assume masterWD always has _id 1. If the first resilience node is inUse, it corresponds to a past execution
+                                     *  so we have to recover it instead of creating a new one.
+                                     *  This check is only needed in this constructor because masterWD always call this one.
+                                     */
+                                    if( _id == 1 && sys.getResilienceNode( 1 )->isInUse() )
+                                        _resNode = sys.getResilienceNode( 1 );
+                                    /*  If the WD creation order is always the same, sys.getResilienceNode( id ) will return the RN of the last execution, if exists.
+                                     *  So we have reconstructed the tree of the last execution.
+                                     */
+                                    else if( sys.getResilienceNode( _id )->isInUse() )
+                                        _resNode = sys.getResilienceNode( _id );
+                                    else 
+                                        //It must be the same than sys.getResilienceNode( 1 ), but this is the correct way to get it.
+                                        _resNode = sys.getFreeResilienceNode();
                                  }
 
 inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **devs, CopyData * copies, void *data, const char *description )
@@ -136,6 +166,21 @@ inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **d
                                     _flags.is_invalid = false;
 
                                     _mcontrol.preInit();
+
+                                    /*  I assume masterWD always has _id 1. If the first resilience node is inUse, it corresponds to a past execution
+                                     *  so we have to recover it instead of creating a new one.
+                                     *  This check is only needed in this constructor because masterWD always call this one.
+                                     */
+                                    if( _id == 1 && sys.getResilienceNode( 1 )->isInUse() )
+                                        _resNode = sys.getResilienceNode( 1 );
+                                    /*  If the WD creation order is always the same, sys.getResilienceNode( id ) will return the RN of the last execution, if exists.
+                                     *  So we have reconstructed the tree of the last execution.
+                                     */
+                                    else if( sys.getResilienceNode( _id )->isInUse() )
+                                        _resNode = sys.getResilienceNode( _id );
+                                    else 
+                                        //It must be the same than sys.getResilienceNode( 1 ), but this is the correct way to get it.
+                                        _resNode = sys.getFreeResilienceNode();
                                  }
 
 inline WorkDescriptor::~WorkDescriptor()
@@ -165,6 +210,9 @@ inline WorkDescriptor::~WorkDescriptor()
 
     if (_copiesNotInChunk)
         delete[] _copies;
+
+    //if( getParent() == NULL )
+    //    delete _resNode;
 }
 
 /* DeviceData inlined functions */
@@ -560,6 +608,9 @@ inline bool WorkDescriptor::isRecoverable() const { return _flags.is_recoverable
 inline void WorkDescriptor::setCriticality ( int cr ) { _criticality = cr; }
 
 inline int  WorkDescriptor::getCriticality () const { return _criticality; }
+
+inline void WorkDescriptor::setResilienceNode( ResilienceNode * rn ) { _resNode = rn; }
+inline ResilienceNode * WorkDescriptor::getResilienceNode() { return _resNode; }
 
 #endif
 

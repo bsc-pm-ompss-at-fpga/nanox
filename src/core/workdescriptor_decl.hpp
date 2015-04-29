@@ -42,6 +42,7 @@
 #include "task_reduction_decl.hpp"
 #include "simpleallocator_decl.hpp"
 #include "schedule_fwd.hpp"   // ScheduleWDData
+#include "resilience_decl.hpp"
 
 namespace nanos
 {
@@ -276,6 +277,7 @@ typedef std::set<const Device *>  DeviceList;
          void                        (*_notifyCopy)( WD &wd, BaseThread const &thread);
          BaseThread const             *_notifyThread;
          void                         *_remoteAddr;
+         ResilienceNode               *_resNode;                //!< Tree equivalent to task tree to perform resilience when needed.
       public:
          MemController                 _mcontrol;
       private: /* private methods */
@@ -729,6 +731,10 @@ typedef std::set<const Device *>  DeviceList;
 
          void setCriticality ( int cr );
          int getCriticality ( void ) const;
+
+         //I think the setter is not needed.
+         void setResilienceNode ( ResilienceNode * rn );
+         ResilienceNode * getResilienceNode();
    };
 
    typedef class WorkDescriptor WD;

@@ -34,7 +34,9 @@
 #include "regioncache.hpp"
 #include <cmath>
 #include <climits>
+#include "resilience.hpp"
 
+#define RESILIENCE_MAX_FILE_SIZE 1024*1024*100
 
 using namespace nanos;
 
@@ -640,6 +642,37 @@ inline bool System::isImmediateSuccessorEnabled() const {
 inline bool System::usePredecessorCopyInfo() const {
    return !_predecessorCopyInfoDisabled;
 }
+
+inline ResilienceNode * System::getFreeResilienceNode() {
+   //There is no more space in file.
+   //if( ( _resilienceTreeSize + 1 ) * sizeof( ResilienceNode ) > RESILIENCE_MAX_FILE_SIZE )
+   //    return NULL;
+   //_resilienceTreeSize++;
+   //return &_persistentResilienceTree[_resilienceTreeSize];
+
+   //Iterate through the structure until find a free node.
+   while( _persistentResilienceTree[_resilienceTreeSize].isInUse() ) {
+      _resilienceTreeSize++;
+      //There is no more space in file, so we cannot provide a node.
+      //TODO: FIXME: Maybe, when there is no more space in file I should throw a fatal error.
+      if( _resilienceTreeSize * sizeof(ResilienceNode) > RESILIENCE_MAX_FILE_SIZE )
+         return NULL;
+   }
+   //Mark it as used.
+   _persistentResilienceTree[_resilienceTreeSize].setInUse( true );
+   return &_persistentResilienceTree[_resilienceTreeSize++];
+}
+
+inline ResilienceNode * System::getResilienceNode( int offset ) { if( offset < 1 ) return NULL; return _persistentResilienceTree+offset-1; }
+
+inline void * System::getResilienceResultsFreeSpace( size_t size ) { 
+    void * res = _freePersistentResilienceResults; 
+    char * aux = ( char * ) _freePersistentResilienceResults + size;
+    _freePersistentResilienceResults = ( void * ) aux; 
+    //std::cerr << "getResilienceResultsFreeSpace: " << res << std::endl;
+    return res;
+}
+inline void * System::getResilienceResults( int offset ) { return ( char * )_persistentResilienceResults + offset; }
 
 #endif
 

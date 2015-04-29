@@ -30,6 +30,7 @@
 #include "plugin.hpp"
 #include "instrumentation.hpp"
 #include "instrumentationmodule_decl.hpp"
+#include "resilience.hpp"
 
 //! \defgroup capi_wd WorkDescriptor services.
 //! \ingroup capi
@@ -88,6 +89,17 @@ NANOS_API_DEF(nanos_err_t, nanos_get_wd_description, ( const char **description,
 
    return NANOS_OK;
 }
+
+NANOS_API_DEF(bool, nanos_is_wd_invalid, (nanos_wd_t wd))
+{
+   if ( wd != NULL ) {
+      WD * work = ( WD * ) wd;
+      return work->isInvalid();
+   }
+   //If wd is null, it is also invalid.
+   return true;
+}
+
 
 /*! \brief Creates a new WorkDescriptor
  *
@@ -594,6 +606,27 @@ NANOS_API_DEF(nanos_err_t, nanos_is_tied, ( bool *result ))
        return e;
     }
     return NANOS_OK;
+}
+
+//RESILIENCE
+NANOS_API_DEF(bool, nanos_resilience_is_computed, ( nanos_wd_t wd ))
+{
+    WD * work = (WD *) wd;
+    ResilienceNode * rn = work->getResilienceNode();
+    if( rn != NULL) {
+        ResilienceNode * currentDescNode = rn->getCurrentDescNode();
+        //ResilienceNode * currentDesc = rn->getCurrentDescList();
+        //std::cerr << "CurrentDesc " << currentDesc << " , CurrentDescNode " << currentDescNode << std::endl;
+        if( currentDescNode != NULL) 
+            return currentDescNode->isComputed();
+    }
+    return false;
+}
+
+NANOS_API_DEF(void, nanos_resilience_load_result, ( nanos_wd_t wd, nanos_copy_data_t *copies, size_t numCopies ))
+{
+    WD * work = (WD *) wd;
+    work->getResilienceNode()->getCurrentDescNode()->loadResult( copies, numCopies );
 }
 
 //! \}

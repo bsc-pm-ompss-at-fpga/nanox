@@ -114,11 +114,13 @@ void SMPDD::execute ( WD &wd ) throw ()
       wd.setInvalid(true);
       debug ( "Task " << wd.getId() << " is flagged as invalid.");
    } else {
+      //bool taskFailed = false;
       while (true) {
          try {
             // Call to the user function
             getWorkFct()( wd.getData() );
          } catch (TaskExecutionException& e) {
+            //taskFailed = true;
             /*
              * When a signal handler is executing, the delivery of the same signal
              * is blocked, and it does not become unblocked until the handler returns.
@@ -130,6 +132,8 @@ void SMPDD::execute ( WD &wd ) throw ()
             sigaddset(&sigs, e.getSignal());
             pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
 
+            wd.getResilienceNode()->restartAllLastDescVisited();
+            //wd.setInvalid(true);
             if(!wd.setInvalid(true)) { // If the error isn't recoverable (i.e., no recoverable ancestor exists)
                message(e.what());
                // Unrecoverable error: terminate execution
@@ -138,6 +142,7 @@ void SMPDD::execute ( WD &wd ) throw ()
                debug( e.what() );
             }
          } catch (std::exception& e) {
+            //taskFailed = true;
             std::stringstream ss;
             ss << "Uncaught exception "
                << typeid(e).name()
@@ -149,6 +154,7 @@ void SMPDD::execute ( WD &wd ) throw ()
             // Unexpected error: terminate execution
             std::terminate();
          } catch (...) {
+            //taskFailed = true;
             message("Uncaught exception (unknown type). Thrown in task " << wd.getId() << ". ");
             // Unexpected error: terminate execution
             std::terminate();
@@ -157,12 +163,17 @@ void SMPDD::execute ( WD &wd ) throw ()
          retry = wd.isInvalid()// ... the execution failed,
          && wd.isRecoverable()// and the task is able to recover (pragma),
          && (wd.getParent() == NULL || !wd.getParent()->isInvalid())// and there is not an invalid parent.
-         && num_tries < sys.getTaskMaxRetries();// This last condition avoids unbounded re-execution.
+         && num_tries < 3;
+         //&& num_tries < sys.getTaskMaxRetries();// This last condition avoids unbounded re-execution.
 
-         if (!retry)
-         break;
+         //message("Task " << wd.getId() << "reexecute: " << retry << ". ");
 
-         // This is exceuted only on re-execution
+         if (!retry) 
+             break;
+
+         // This is executed only on re-execution
+         std::cerr << "Reexecuting task " << &wd << "  with ResilienceNode " << wd.getResilienceNode() << std::endl;
+         wd.getResilienceNode()->restartLastDescVisited();
          num_tries++;
          recover(wd);
       }
@@ -175,6 +186,7 @@ void SMPDD::execute ( WD &wd ) throw ()
 
 #ifdef NANOS_RESILIENCY_ENABLED
 void SMPDD::recover( WD & wd ) {
+   std::cerr << "Recovering " << &wd << std::endl;
    // Wait for successors to finish.
    wd.waitCompletion();
 

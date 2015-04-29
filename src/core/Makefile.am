@@ -143,6 +143,8 @@ devinclude_HEADERS = \
 	router.hpp \
    task_reduction_decl.hpp \
    task_reduction.hpp \
+    resilience_decl.hpp \
+    resilience.hpp \
 	$(END)
 
 common_sources=\
@@ -288,6 +290,9 @@ common_sources=\
 	threadmanager.cpp \
    task_reduction_decl.hpp \
    task_reduction.hpp \
+    resilience_decl.hpp \
+    resilience.hpp \
+    resilience.cpp \
 	$(END)
 
 instr_sources = \

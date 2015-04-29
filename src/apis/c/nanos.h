@@ -196,6 +196,8 @@ NANOS_API_DECL(void, nanos_set_wd_priority, (nanos_wd_t wd, int p));
 
 NANOS_API_DECL(nanos_err_t, nanos_get_wd_description, ( const char **description, nanos_wd_t wd ));
 
+NANOS_API_DECL(bool, nanos_is_wd_invalid, (nanos_wd_t wd));
+
 // Finder functions
 NANOS_API_DECL(nanos_slicer_t, nanos_find_slicer, ( const char * slicer ));
 NANOS_API_DECL(nanos_ws_t, nanos_find_worksharing, ( const char * label ) );
@@ -384,6 +386,10 @@ NANOS_API_DECL(nanos_err_t, nanos_scheduler_set_stealing, ( bool value ));
 //funtion which will be called by mercurium
 //on first line of user main (in some cases, offload and cluster)
 NANOS_API_DECL(void, ompss_nanox_main, ());
+
+//Resilience
+NANOS_API_DECL(bool, nanos_resilience_is_computed, ( nanos_wd_t wd ));
+NANOS_API_DECL(void, nanos_resilience_load_result, ( nanos_wd_t wd, nanos_copy_data_t *copies, size_t numCopies ));
 
 // utility macros
 
