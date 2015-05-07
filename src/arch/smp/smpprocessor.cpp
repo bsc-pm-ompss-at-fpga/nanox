@@ -52,6 +52,12 @@ WorkDescriptor & SMPProcessor::getWorkerWD () const
    dd_ptr[0] = (DeviceData*)dd;
 
    WD *wd = NEW WD( 1, dd_ptr );
+   if( sys.getResilienceNode( wd->getId() )->isInUse() )
+       wd->setResilienceNode( sys.getResilienceNode( wd->getId() ) );
+   else {
+       wd->setResilienceNode( sys.getFreeResilienceNode() );
+       wd->getResilienceNode()->setId( wd->getId() );
+   }
 
    return *wd;
 }
@@ -74,6 +80,12 @@ WorkDescriptor & SMPProcessor::getMasterWD () const
    dd_ptr[0] = (DeviceData*)dd;
 
    WD * wd = NEW WD( 1, dd_ptr );
+   if( sys.getResilienceNode( 1 )->isInUse() )
+       wd->setResilienceNode( sys.getResilienceNode( 1 ) );
+   else {
+       wd->setResilienceNode( sys.getFreeResilienceNode() );
+       wd->getResilienceNode()->setId( wd->getId() );
+   }
 
    return *wd;
 }

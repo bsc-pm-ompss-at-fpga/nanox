@@ -644,12 +644,8 @@ inline bool System::usePredecessorCopyInfo() const {
 }
 
 inline ResilienceNode * System::getFreeResilienceNode() {
-   //There is no more space in file.
-   //if( ( _resilienceTreeSize + 1 ) * sizeof( ResilienceNode ) > RESILIENCE_MAX_FILE_SIZE )
-   //    return NULL;
-   //_resilienceTreeSize++;
-   //return &_persistentResilienceTree[_resilienceTreeSize];
-
+   //TODO: FIXME: Atomic increment
+   _persistentResilienceTreeLock.acquire();
    //Iterate through the structure until find a free node.
    while( _persistentResilienceTree[_resilienceTreeSize].isInUse() ) {
       _resilienceTreeSize++;
@@ -658,18 +654,32 @@ inline ResilienceNode * System::getFreeResilienceNode() {
       if( _resilienceTreeSize * sizeof(ResilienceNode) > RESILIENCE_MAX_FILE_SIZE )
          return NULL;
    }
+   if( _resilienceTreeSize * sizeof(ResilienceNode) > RESILIENCE_MAX_FILE_SIZE )
+      return NULL;
    //Mark it as used.
    _persistentResilienceTree[_resilienceTreeSize].setInUse( true );
-   return &_persistentResilienceTree[_resilienceTreeSize++];
+   ResilienceNode * res = &_persistentResilienceTree[_resilienceTreeSize++];
+   _persistentResilienceTreeLock.release();
+   return res; 
 }
 
 inline ResilienceNode * System::getResilienceNode( int offset ) { if( offset < 1 ) return NULL; return _persistentResilienceTree+offset-1; }
 
 inline void * System::getResilienceResultsFreeSpace( size_t size ) { 
-    void * res = _freePersistentResilienceResults; 
-    char * aux = ( char * ) _freePersistentResilienceResults + size;
-    _freePersistentResilienceResults = ( void * ) aux; 
-    //std::cerr << "getResilienceResultsFreeSpace: " << res << std::endl;
+    //void * res =  __sync_fetch_and_add( &_freePersistentResilienceResults, size );
+    _persistentResilienceResultsLock.acquire();
+    char * res = ( char * ) _freePersistentResilienceResults;
+    char * aux = res + size;
+    _freePersistentResilienceResults = ( void * ) aux;
+    //std::stringstream ss;
+    //ss << "**********getResilienceResultsFreeSpace**********"
+    //   << " Given " << size << " bytes in results["
+    //   << res - (char *)_persistentResilienceResults
+    //   << "]. Now, free space starts in " 
+    //   << aux - (char *)_persistentResilienceResults
+    //   << "**********getResilienceResultsFreeSpace**********";
+    //std::cerr << ss.str() << std::endl;
+    _persistentResilienceResultsLock.release();
     return res;
 }
 inline void * System::getResilienceResults( int offset ) { return ( char * )_persistentResilienceResults + offset; }

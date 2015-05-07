@@ -284,6 +284,23 @@ NANOS_API_DEF( nanos_err_t, nanos_create_wd_and_run_compact, ( nanos_const_wd_de
 
       wd.copyReductions (myThread->getCurrentWD() );
 
+      /* RESILIENCE BASED ON MEMOIZATION */
+
+      if( wd.getParent() != NULL && wd.getParent()->getResilienceNode() != NULL ) {
+          if( wd.getResilienceNode() == NULL ) {
+              ResilienceNode * desc = wd.getParent()->getResilienceNode()->getNextDesc( true );
+              if( desc != NULL )
+                  wd.setResilienceNode( desc );
+              else {
+                  desc = sys.getFreeResilienceNode();
+                  desc->setParent( wd.getParent()->getResilienceNode() );
+                  wd.setResilienceNode( desc );
+              }
+          }
+      }
+
+      /* RESILIENCE BASED ON MEMOIZATION */
+
       if ( wd.getNUMANode() >= (int)sys.getNumNumaNodes() )
          throw NANOS_INVALID_PARAM;
 
@@ -614,11 +631,9 @@ NANOS_API_DEF(bool, nanos_resilience_is_computed, ( nanos_wd_t wd ))
     WD * work = (WD *) wd;
     ResilienceNode * rn = work->getResilienceNode();
     if( rn != NULL) {
-        ResilienceNode * currentDescNode = rn->getCurrentDescNode();
-        //ResilienceNode * currentDesc = rn->getCurrentDescList();
-        //std::cerr << "CurrentDesc " << currentDesc << " , CurrentDescNode " << currentDescNode << std::endl;
-        if( currentDescNode != NULL) 
-            return currentDescNode->isComputed();
+        ResilienceNode * desc = rn->getNextDesc();
+        if( desc != NULL) 
+            return desc->isComputed();
     }
     return false;
 }
@@ -626,7 +641,7 @@ NANOS_API_DEF(bool, nanos_resilience_is_computed, ( nanos_wd_t wd ))
 NANOS_API_DEF(void, nanos_resilience_load_result, ( nanos_wd_t wd, nanos_copy_data_t *copies, size_t numCopies ))
 {
     WD * work = (WD *) wd;
-    work->getResilienceNode()->getCurrentDescNode()->loadResult( copies, numCopies );
+    work->getResilienceNode()->getNextDesc()->loadResult( copies, numCopies, work->getId() );
 }
 
 //! \}

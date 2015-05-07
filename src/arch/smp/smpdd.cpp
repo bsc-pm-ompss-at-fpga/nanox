@@ -118,7 +118,10 @@ void SMPDD::execute ( WD &wd ) throw ()
       while (true) {
          try {
             // Call to the user function
-            getWorkFct()( wd.getData() );
+            if( wd.getResilienceNode()->isComputed() )
+                wd.getResilienceNode()->loadResult( wd.getCopies(), wd.getNumCopies(), wd.getId() );
+            else
+                getWorkFct()( wd.getData() );
          } catch (TaskExecutionException& e) {
             //taskFailed = true;
             /*
@@ -132,10 +135,15 @@ void SMPDD::execute ( WD &wd ) throw ()
             sigaddset(&sigs, e.getSignal());
             pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
 
-            wd.getResilienceNode()->restartAllLastDescVisited();
+            //I am restarting these counters at the start of the execution.
+            //wd.getResilienceNode()->restartAllLastDescVisited();
+            //wd.getResilienceNode()->restartAllLastDescRestored();
             //wd.setInvalid(true);
             if(!wd.setInvalid(true)) { // If the error isn't recoverable (i.e., no recoverable ancestor exists)
-               message(e.what());
+               std::stringstream ss;
+               ss << e.what() << std::endl << std::endl << std::endl;
+               message( ss.str() );
+               //message(e.what());
                // Unrecoverable error: terminate execution
                std::terminate();
             } else { // The error is recoverable. However, print a message for debugging purposes (do not make the error silent).
@@ -163,17 +171,12 @@ void SMPDD::execute ( WD &wd ) throw ()
          retry = wd.isInvalid()// ... the execution failed,
          && wd.isRecoverable()// and the task is able to recover (pragma),
          && (wd.getParent() == NULL || !wd.getParent()->isInvalid())// and there is not an invalid parent.
-         && num_tries < 3;
-         //&& num_tries < sys.getTaskMaxRetries();// This last condition avoids unbounded re-execution.
-
-         //message("Task " << wd.getId() << "reexecute: " << retry << ". ");
+         && num_tries < sys.getTaskMaxRetries();// This last condition avoids unbounded re-execution.
 
          if (!retry) 
              break;
 
          // This is executed only on re-execution
-         std::cerr << "Reexecuting task " << &wd << "  with ResilienceNode " << wd.getResilienceNode() << std::endl;
-         wd.getResilienceNode()->restartLastDescVisited();
          num_tries++;
          recover(wd);
       }

@@ -245,13 +245,17 @@ namespace nanos
          int _userDefinedNUMANode;
          Router _router;
          //Resilience persistence
+         Lock _persistentResilienceTreeLock;
+         Lock _persistentResilienceResultsLock;
          ResilienceNode * _persistentResilienceTree;
          void * _persistentResilienceResults;
          void * _freePersistentResilienceResults;
          size_t _resilienceTreeSize;
          int _resilienceTreeFileDescriptor;
          int _resilienceResultsFileDescriptor;
-         //TODO: FIXME: FILEPATH AND FILESIZE SHOULD BE DEFINED
+         char * _resilienceTreeFilepath;
+         char * _resilienceResultsFilepath;
+         //TODO: FIXME: FILESIZE SHOULD BE DEFINED
       public:
          Hwloc _hwloc;
          bool _immediateSuccessorDisabled;

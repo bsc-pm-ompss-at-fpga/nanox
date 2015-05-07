@@ -323,9 +323,16 @@ void WorkDescriptor::done ()
 #endif
 
    // Storing result in resilience tree.
-   if( _numCopies > 0 && !isInvalid() )
-       _resNode->storeResult( _copies, _numCopies );
-   _resNode->restartLastDescVisited();
+   if( _resNode != NULL) {
+      if( _numCopies > 0 && !isInvalid() && !_resNode->isComputed() )
+         _resNode->storeResult( _copies, _numCopies, _id );
+      _resNode->restartLastDescVisited();
+      _resNode->restartLastDescRestored();
+   }
+   else {
+      fatal( "ResilienceNode not found. Cannot store result." );
+   }
+   //TODO: FIXME: else, throw fatal error.
    //If this WD is the parent, destroy resilience tree.
    //if( getParent() == NULL )
    //    delete _resNode;

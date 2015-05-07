@@ -68,8 +68,6 @@
 #include "openclprocessor.hpp"
 #endif
 
-#define RESILIENCE_TREE_FILEPATH "/home/marcos/resilience.txt"
-#define RESILIENCE_RESULTS_FILEPATH "/home/marcos/results.txt"
 #define RESILIENCE_MAX_FILE_SIZE 1024*1024*100
 
 using namespace nanos;
@@ -459,96 +457,123 @@ void System::start ()
       }
    }
 
+   /* Get path of executable file. With this path, the files for store the persistent resilience tree and the persistent resilience results are created 
+    * with the same name of the executable, in the same path, terminating with ".tree" and ".results" respectively.
+    */
+   char link[32];
+   sprintf( link, "/proc/%d/exe", getpid() );
+   char path[256];
+   int pos = readlink ( link, path, sizeof( path ) );
+   if( pos <= 0 )
+      fatal0( "Resilience: Error getting path of executable file" );
+   _resilienceTreeFilepath = NEW char[pos+sizeof(".tree")];
+   _resilienceResultsFilepath = NEW char[pos+sizeof(".results")];
+   strncpy( _resilienceTreeFilepath, path, pos );
+   strncpy( _resilienceResultsFilepath, path, pos );
+   strcat( _resilienceTreeFilepath, ".tree" );
+   strcat( _resilienceResultsFilepath, ".results" );
+
    //Resilience tree mmapped file must be created before any WD because in WD constructor we will use the memory mapped.
    if( _persistentResilienceTree == NULL ) {
-       // Check if we have a file with the resilience tree from past executions.
-       _resilienceTreeFileDescriptor = open( RESILIENCE_TREE_FILEPATH, O_RDWR );
+      // Check if we have a file with the resilience tree from past executions.
+      _resilienceTreeFileDescriptor = open( _resilienceTreeFilepath, O_RDWR );
 
-       //If there isn't a file from past executions.
-       if( _resilienceTreeFileDescriptor == -1 ) {
-           // Create the file. Give RW permissions.
-           //_resilienceTreeFileDescriptor = creat( RESILIENCE_TREE_FILEPATH, (mode_t) 06000 );
-           _resilienceTreeFileDescriptor = open( RESILIENCE_TREE_FILEPATH, O_RDWR | O_CREAT, (mode_t) 0600 );
-           if( _resilienceTreeFileDescriptor == -1 )
-               fatal( "Resilience: Error creating persistentTree." );
+      //If there isn't a file from past executions.
+      if( _resilienceTreeFileDescriptor == -1 ) {
+         _resilienceTreeFileDescriptor = open( _resilienceTreeFilepath, O_RDWR | O_CREAT, (mode_t) 0600 );
+         if( _resilienceTreeFileDescriptor == -1 )
+            fatal0( "Resilience: Error creating persistentTree." );
 
-           //Stretch file.
-           int res = lseek( _resilienceTreeFileDescriptor, RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
-           if( res == -1 ) {
-               close( _resilienceTreeFileDescriptor );
-               fatal( "Resilience: Error calling lseek." );
-           }
+         //Stretch file.
+         int res = lseek( _resilienceTreeFileDescriptor, RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
+         if( res == -1 ) {
+            close( _resilienceTreeFileDescriptor );
+            fatal0( "Resilience: Error calling lseek." );
+         }
 
-           /* Something needs to be written at the end of the file to force the file have actually the new size.
-            * Just writing an empty string at the current file position will do.
-            *
-            * Note:
-            *  - The current position in the file is at the end of the stretched file due to the call to lseek().
-            *  - An empty string is actually a single '\0' character, so a zero-byte will be written at the last byte of the file.
-            */
-           res = write(_resilienceTreeFileDescriptor, "", 1);
-           if (res != 1) {
-               close( _resilienceTreeFileDescriptor );
-               fatal( "Error resizing file" );
-           }
+         /* Something needs to be written at the end of the file to force the file have actually the new size.
+          * Just writing an empty string at the current file position will do.
+          *
+          * Note:
+          *  - The current position in the file is at the end of the stretched file due to the call to lseek().
+          *  - An empty string is actually a single '\0' character, so a zero-byte will be written at the last byte of the file.
+          */
+         res = write(_resilienceTreeFileDescriptor, "", 1);
+         if (res != 1) {
+            close( _resilienceTreeFileDescriptor );
+            fatal0( "Error resizing file" );
+         }
+      }
 
-           //Initialize file with zeros.
-           //memset( _persistentResilienceTree, 0, RESILIENCE_MAX_FILE_SIZE );
-       }
-
-       //Now the file is ready to be mmaped.
-       _persistentResilienceTree = ( ResilienceNode * ) mmap( 0, RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceTreeFileDescriptor, 0 );
-       if( _persistentResilienceTree == MAP_FAILED ) {
-           close( _resilienceTreeFileDescriptor );
-           fatal( "Error mmaping file" );
-       }
+      //Now the file is ready to be mmaped.
+      _persistentResilienceTree = ( ResilienceNode * ) mmap( 0, RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceTreeFileDescriptor, 0 );
+      if( _persistentResilienceTree == MAP_FAILED ) {
+         close( _resilienceTreeFileDescriptor );
+         fatal0( "Error mmaping file" );
+      }
    }
 
    //Resilience results mmapped file must be created before any WD because in WD constructor we will use the memory mapped.
    if( _persistentResilienceResults == NULL ) {
-       // Check if we have a file with the resilience tree from past executions.
-       _resilienceResultsFileDescriptor = open( RESILIENCE_RESULTS_FILEPATH, O_RDWR );
+      // Check if we have a file with the resilience tree from past executions.
+      _resilienceResultsFileDescriptor = open( _resilienceResultsFilepath, O_RDWR );
 
-       //If there isn't a file from past executions.
-       if( _resilienceResultsFileDescriptor == -1 ) {
-           // Create the file. Give RW permissions.
-           //_resilienceResultsFileDescriptor = creat( RESILIENCE_RESULTS_FILEPATH, (mode_t) 06000 );
-           _resilienceResultsFileDescriptor = open( RESILIENCE_RESULTS_FILEPATH, O_RDWR | O_CREAT, (mode_t) 0600 );
-           if( _resilienceResultsFileDescriptor == -1 )
-               fatal( "Resilience: Error creating persistentTree." );
+      //If there isn't a file from past executions.
+      if( _resilienceResultsFileDescriptor == -1 ) {
+         _resilienceResultsFileDescriptor = open( _resilienceResultsFilepath, O_RDWR | O_CREAT, (mode_t) 0600 );
+         if( _resilienceResultsFileDescriptor == -1 )
+            fatal0( "Resilience: Error creating persistentTree." );
 
-           //Stretch file.
-           int res = lseek( _resilienceResultsFileDescriptor, RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
-           if( res == -1 ) {
-               close( _resilienceResultsFileDescriptor );
-               fatal( "Resilience: Error calling lseek." );
-           }
+         //Stretch file.
+         int res = lseek( _resilienceResultsFileDescriptor, RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
+         if( res == -1 ) {
+            close( _resilienceResultsFileDescriptor );
+            fatal0( "Resilience: Error calling lseek." );
+         }
 
-           /* Something needs to be written at the end of the file to force the file have actually the new size.
-            * Just writing an empty string at the current file position will do.
-            *
-            * Note:
-            *  - The current position in the file is at the end of the stretched file due to the call to lseek().
-            *  - An empty string is actually a single '\0' character, so a zero-byte will be written at the last byte of the file.
-            */
-           res = write(_resilienceResultsFileDescriptor, "", 1);
-           if (res != 1) {
-               close( _resilienceResultsFileDescriptor );
-               fatal( "Error resizing file" );
-           }
+         /* Something needs to be written at the end of the file to force the file have actually the new size.
+          * Just writing an empty string at the current file position will do.
+          *
+          * Note:
+          *  - The current position in the file is at the end of the stretched file due to the call to lseek().
+          *  - An empty string is actually a single '\0' character, so a zero-byte will be written at the last byte of the file.
+          */
+         res = write(_resilienceResultsFileDescriptor, "", 1);
+         if (res != 1) {
+            close( _resilienceResultsFileDescriptor );
+            fatal0( "Error resizing file" );
+         }
+      }
 
-           //Initialize file with zeros.
-           //memset( _persistenceResilienceResults, 0, RESILIENCE_MAX_FILE_SIZE );
-       }
-
-       //Now the file is ready to be mmaped.
-       _persistentResilienceResults = ( ResilienceNode * ) mmap( 0, RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceResultsFileDescriptor, 0 );
-       if( _persistentResilienceResults == MAP_FAILED ) {
-           close( _resilienceResultsFileDescriptor );
-           fatal( "Error mmaping file" );
-       }
-       _freePersistentResilienceResults = _persistentResilienceResults;
+      //Now the file is ready to be mmaped.
+      _persistentResilienceResults = ( ResilienceNode * ) mmap( 0, RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceResultsFileDescriptor, 0 );
+      if( _persistentResilienceResults == MAP_FAILED ) {
+         close( _resilienceResultsFileDescriptor );
+         fatal0( "Error mmaping file" );
+      }
+      _freePersistentResilienceResults = _persistentResilienceResults;
    }
+
+   //Update _freePersistentResilienceResults with the restored tree.
+   int offset = 0;
+   size_t nodes = 0;
+   ResilienceNode * rn = &_persistentResilienceTree[nodes];
+   int max = rn->getResultIndex();
+   //TODO: FIXME: Now it works because all the RN in use are consecutive. In the future this may not happen so the condition might change.
+   while( rn->isInUse() ) {
+      if( rn->isComputed() && rn->getResultIndex() > max ) {
+          max = rn->getResultIndex();
+          size_t results_size = rn->getResultsSize();
+          offset = max + results_size; 
+      }
+      rn->restartLastDescVisited();
+      rn->restartLastDescRestored();
+      rn = &_persistentResilienceTree[++nodes];
+   }
+   getResilienceResultsFreeSpace( offset );
+   _resilienceTreeSize = nodes;
+   //int freeRes = (char *) getResilienceResultsFreeSpace( 0 ) - (char *) getResilienceResults(0);
+   //std::cerr << offset << " bytes from results are used. Now free space starts at results[" << freeRes << "]." << std::endl; 
 
    //This creates masterWD.
    _smpPlugin->associateThisThread( getUntieMaster() );
@@ -836,17 +861,21 @@ void System::finish ()
 
    //Restart desc counter of masterWD.
    getMyThreadSafe()->getCurrentWD()->getResilienceNode()->restartLastDescVisited();
+   getMyThreadSafe()->getCurrentWD()->getResilienceNode()->restartLastDescRestored();
 
    //Free mapped file for resilience tree.
    int res = munmap( _persistentResilienceTree, RESILIENCE_MAX_FILE_SIZE );
-   if( res == -1 )
+   if( res == -1 ) {
+       perror("Error unmapping file: ");
        fatal( "Error unmapping file." );
+   }
    close( _resilienceTreeFileDescriptor );
    //Free mapped file for resilience results.
-   //TODO:FIXME: change _persistentResilienceTree for the correct.
    res = munmap( _persistentResilienceResults, RESILIENCE_MAX_FILE_SIZE );
-   if( res == -1 )
+   if( res == -1 ) {
+       perror("Error unmapping file: ");
        fatal( "Error unmapping file." );
+   }
    close( _resilienceResultsFileDescriptor );
    //! \note deleting ResilienceNode root associated to main work descriptor
    //delete getMyThreadSafe()->getCurrentWD()->getResilienceNode();
@@ -1109,8 +1138,35 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    wd->copyReductions((WorkDescriptor *)uwg);
 
 
-   if ( wd->getParent() != NULL  && wd->getParent()->getResilienceNode() != NULL && wd->getResilienceNode()->getParent() == NULL )
-       wd->getResilienceNode()->setParent( wd->getParent()->getResilienceNode() );
+   /* RESILIENCE BASED ON MEMOIZATION */
+
+   if( wd->getParent() != NULL && wd->getParent()->getResilienceNode() != NULL ) {
+      //std::stringstream ss;
+      if( wd->getResilienceNode() == NULL ) {
+         ResilienceNode * desc = wd->getParent()->getResilienceNode()->getNextDescToRestore();
+         if( desc != NULL ) {
+            wd->setResilienceNode( desc );
+            if( desc->isComputed() ) {
+                //ss << "Task " << wd->getId() << " restoring RN from past execution with _result " << wd->getResilienceNode()->_result << std::endl;
+                //message(ss.str());
+            }
+         }
+         else {
+            desc = sys.getFreeResilienceNode();
+            desc->setParent( wd->getParent()->getResilienceNode() );
+            desc->setId( wd->getId() );
+            //ss << "Task " << wd->getId() << " is requesting new RN" << std::endl;
+            //message(ss.str());
+            wd->setResilienceNode( desc );
+         }
+      }
+      else {
+         //ss << "Task " << wd->getId() << " had RN " << wd->getResilienceNode()->getId() << std::endl;
+         //message(ss.str());
+      }
+   }
+
+   /* RESILIENCE BASED ON MEMOIZATION */
 }
 
 /*! \brief Duplicates the whole structure for a given WD

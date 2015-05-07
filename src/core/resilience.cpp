@@ -7,31 +7,17 @@
 
 namespace nanos {
 
-    ResilienceNode::ResilienceNode( ResilienceNode * parent, CopyData * copies, size_t numCopies ) 
-        : _parent( 0 ), _desc( 0 ), _next( 0 ), _computed( false ), _lastDescVisited( 0 )
-    {
-        if( parent != NULL ) {
-            /*  Indexing starts from 1. So I get the difference between the argument passed and the 
-             *  first element, +1, to be coherent with the indexing starting from 1. If I don't 
-             *  make the increment, then parent will be 0.
-             */
-            _parent = parent - sys.getResilienceNode( 1 ) + 1; 
-            sys.getResilienceNode( _parent )->addDescNode( this );
-            std::cerr << "My parent is " << _parent << std::endl;
-        }
-    }
-
     ResilienceNode::~ResilienceNode() {
         //if( _desc != 0 )
             //removeAllDescsNode();
 
         //I have to break the association with _parent. In other words, remove this node from the parent _desc list.
         if ( _parent != -1 ) {
-            sys.getResilienceNode( _parent )->removeDescNode(this);
+            sys.getResilienceNode( _parent )->removeDesc(this);
         }
     }
 
-    void ResilienceNode::removeAllDescsNode() {
+    void ResilienceNode::removeAllDescs() {
         ResilienceNode * current = sys.getResilienceNode( _desc );
         while( current != NULL ){
             ResilienceNode * toDelete = current;
@@ -42,28 +28,25 @@ namespace nanos {
     }
 
 
-    void ResilienceNode::loadResult( CopyData * copies, size_t numCopies ) { 
-        //Increment wd.id generator to maintain coherence with RN.
-        sys.getWorkDescriptorId();
-        //std::cerr << "Loading result from ResilienceNode " << this << std::endl;
+    void ResilienceNode::loadResult( CopyData * copies, size_t numCopies, int task_id ) { 
+        //std::cerr << "Loading result from RN " << this << std::endl;
         char * aux = ( char * ) sys.getResilienceResults( _result );
         for( unsigned int i = 0; i < numCopies; i++ ) {
             if( copies[i].isOutput() ) {
                 size_t copy_size = copies[i].getDimensions()->accessed_length;
-                //Works for arrays.
                 void * copy_address = ( char * ) copies[i].getBaseAddress() + copies[i].getOffset();
-                //std::cerr << "Load result =  " << *(int *)aux << std::endl;
                 memcpy( copy_address, aux, copy_size );
-                //Only works for basic types.
-                //memcpy( copies[i].getBaseAddress(), aux, copy_size );
+                //std::stringstream ss;
+                //ss << std::dec << "Task " << task_id << " with RN " << _id << " has loaded " << *(int *)aux << " in x[" << copies[i].getOffset()/copy_size 
+                //   << "] from " << sys.getResilienceResults( _result ) << " (results[" << _result << "])" << std::endl;
+                //message(ss.str());
                 aux += copy_size;
             }
         }
-        sys.getResilienceNode( _parent )->incLastDescVisited();
+        sys.getResilienceNode( _parent )->_lastDescVisited++;
     }
 
-    void ResilienceNode::storeResult( CopyData * copies, size_t numCopies ) {
-        //std::cerr << "Storing result in RN " << this << std::endl;
+    void ResilienceNode::storeResult( CopyData * copies, size_t numCopies, int task_id ) {
         //Calculate outputs size
         size_t outputs_size = 0;
         for( unsigned int i = 0; i < numCopies; i++ ) {
@@ -72,19 +55,20 @@ namespace nanos {
             }
         }
         //Get result from resilience results mmaped file.
-        _result = ( char * )sys.getResilienceResultsFreeSpace( outputs_size ) - ( char * )sys.getResilienceResults( 0 );
+        _resultsSize = outputs_size;
+        _result = ( char * )sys.getResilienceResultsFreeSpace( _resultsSize ) - ( char * )sys.getResilienceResults( 0 );
 
         //Copy the result
         char * aux = ( char * ) sys.getResilienceResults( _result );
         for( unsigned int i = 0; i < numCopies; i++ ) {
             if( copies[i].isOutput() ) {
                 size_t copy_size = copies[i].getDimensions()->accessed_length;
-                //Works for arrays.
                 void * copy_address = ( char * ) copies[i].getBaseAddress() + copies[i].getOffset();
-                //std::cerr << "Store result =  " << *(int *)copy_address << std::endl;
                 memcpy( aux, copy_address, copy_size );
-                //Only works for basic types.
-                //memcpy( aux, copies[i].getBaseAddress(), copy_size );
+                //std::stringstream ss;
+                //ss << std::dec << "Task " << task_id << " with RN " << _id << " has stored " << *(int *)copy_address << " in x[" << copies[i].getOffset()/copy_size
+                //   << "] to " << sys.getResilienceResults( _result ) << "(results[" << _result << "])" << std::endl;
+                //message(ss.str());
                 aux += copy_size;
             }
         }
@@ -93,10 +77,10 @@ namespace nanos {
         _computed = true;
 
         //Remove all descendents. They are not needed anymore.
-        //removeAllDescsNode();
+        //removeAllDescs();
     }
 
-    void ResilienceNode::addDescNode( ResilienceNode * rn ) { 
+    void ResilienceNode::addDesc( ResilienceNode * rn ) { 
         if( rn == NULL )
             return;
 
@@ -104,18 +88,21 @@ namespace nanos {
             _desc = rn - sys.getResilienceNode( 1 ) + 1;
         else
             sys.getResilienceNode( _desc )->addNext( rn );
+
         _descSize++;
     }
 
-    void ResilienceNode::removeDescNode( ResilienceNode * rn ) { 
+    void ResilienceNode::removeDesc( ResilienceNode * rn ) { 
         if( _desc == 0 || rn == NULL )
             return;
 
-        if( _desc == rn - sys.getResilienceNode( 1 ) ) 
+        if( _desc == rn - sys.getResilienceNode( 1 ) + 1 ) 
             _desc = sys.getResilienceNode( _desc )->_next;
         else 
             sys.getResilienceNode( _desc )->removeNext( rn );
+
         _descSize--;
+        memset( rn, 0, sizeof(ResilienceNode) );
     }
 
     void ResilienceNode::addNext( ResilienceNode * rn ) {
@@ -134,37 +121,74 @@ namespace nanos {
         if( _next == 0 )
             return;
 
-        if( _next == rn - sys.getResilienceNode( 1 ) )
+        if( _next == rn - sys.getResilienceNode( 1 ) + 1 )
             _next = sys.getResilienceNode( _next )->_next;
         else {
             ResilienceNode * current = sys.getResilienceNode( _next );
-            while( current->_next != 0 && current->_next != rn - sys.getResilienceNode( 1 ) ) {
+            while( current->_next != 0 && current->_next != rn - sys.getResilienceNode( 1 ) + 1 ) {
                 current = sys.getResilienceNode( current->_next );
             }
-            if( current->_next == rn - sys.getResilienceNode( 1 ) )
+            if( current->_next == rn - sys.getResilienceNode( 1 ) + 1 )
                 current->_next = sys.getResilienceNode( current->_next )->_next;
         }
     }
 
-    ResilienceNode* ResilienceNode::getCurrentDescNode() {
+    ResilienceNode* ResilienceNode::getNextDesc( bool inc ) {
+        //TODO: FIXME: Maybe, this should throw FATAL ERROR.
         if( _desc == 0 || _lastDescVisited >= _descSize ) {
-            //std::cerr << "No descendent" << std::endl;
-            incLastDescVisited();
+            _lastDescVisited++;
             return NULL;
         }
-        ResilienceNode * currentDesc = sys.getResilienceNode( _desc );
-        for( unsigned int i = 0; i < _lastDescVisited; i++)
-            currentDesc = sys.getResilienceNode( currentDesc->_next );
-        if( currentDesc != NULL && !currentDesc->isComputed() ) {
-            incLastDescVisited();
+
+        ResilienceNode * desc = sys.getResilienceNode( _desc );
+        for( unsigned int i = 0; i < _lastDescVisited; i++) {
+            //TODO: FIXME: Maybe, this should throw FATAL ERROR.
+            if( desc->_next == 0 ) {
+                _lastDescVisited++;
+                return NULL;
+            }
+            desc = sys.getResilienceNode( desc->_next );
         }
-        return currentDesc;
+
+        if( desc != NULL && !desc->isComputed() )
+            _lastDescVisited++;
+
+        return desc;
     }
 
-    void ResilienceNode::restartAllLastDescVisited() { 
-        _lastDescVisited = 0; 
-        if( _parent != 0 ) 
-            sys.getResilienceNode( _parent )->restartAllLastDescVisited();
+    ResilienceNode* ResilienceNode::getNextDescToRestore( bool inc ) {
+        //TODO: FIXME: Maybe, this should throw FATAL ERROR.
+        if( _desc == 0 || _lastDescRestored >= _descSize ) {
+            _lastDescRestored++;
+            return NULL;
+        }
+
+        ResilienceNode * desc = sys.getResilienceNode( _desc );
+        for( unsigned int i = 0; i < _lastDescRestored; i++) {
+            //TODO: FIXME: Maybe, this should throw FATAL ERROR.
+            if( desc->_next == 0 ) {
+                _lastDescRestored++;
+                return NULL;
+            }
+            desc = sys.getResilienceNode( desc->_next );
+        }
+
+        if( desc != NULL )
+            _lastDescRestored++;
+
+        return desc;
     }
+
+    //void ResilienceNode::restartAllLastDescVisited() { 
+    //    _lastDescVisited = 0; 
+    //    if( _parent != 0 ) 
+    //        sys.getResilienceNode( _parent )->restartAllLastDescVisited();
+    //}
+
+    //void ResilienceNode::restartAllLastDescRestored() { 
+    //    _lastDescRestored = 0; 
+    //    if( _parent != 0 ) 
+    //        sys.getResilienceNode( _parent )->restartAllLastDescRestored();
+    //}
 
 }

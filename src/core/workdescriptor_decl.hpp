@@ -278,6 +278,7 @@ typedef std::set<const Device *>  DeviceList;
          BaseThread const             *_notifyThread;
          void                         *_remoteAddr;
          ResilienceNode               *_resNode;                //!< Tree equivalent to task tree to perform resilience when needed.
+         unsigned int                 _resilienceId;            //!< Number of descendents of the parent in the creation of this WD.
       public:
          MemController                 _mcontrol;
       private: /* private methods */
@@ -732,7 +733,6 @@ typedef std::set<const Device *>  DeviceList;
          void setCriticality ( int cr );
          int getCriticality ( void ) const;
 
-         //I think the setter is not needed.
          void setResilienceNode ( ResilienceNode * rn );
          ResilienceNode * getResilienceNode();
    };
