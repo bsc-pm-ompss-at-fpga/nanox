@@ -249,8 +249,8 @@ namespace nanos
          Lock _persistentResilienceResultsLock;
          ResilienceNode * _persistentResilienceTree;
          void * _persistentResilienceResults;
-         void * _freePersistentResilienceResults;
-         size_t _resilienceTreeSize;
+         Atomic<void *> _freePersistentResilienceResults;
+         Atomic<size_t> _resilienceTreeSize;
          int _resilienceTreeFileDescriptor;
          int _resilienceResultsFileDescriptor;
          char * _resilienceTreeFilepath;

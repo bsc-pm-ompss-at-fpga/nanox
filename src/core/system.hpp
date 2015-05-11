@@ -644,42 +644,17 @@ inline bool System::usePredecessorCopyInfo() const {
 }
 
 inline ResilienceNode * System::getFreeResilienceNode() {
-   //TODO: FIXME: Atomic increment
-   _persistentResilienceTreeLock.acquire();
-   //Iterate through the structure until find a free node.
-   while( _persistentResilienceTree[_resilienceTreeSize].isInUse() ) {
-      _resilienceTreeSize++;
-      //There is no more space in file, so we cannot provide a node.
-      //TODO: FIXME: Maybe, when there is no more space in file I should throw a fatal error.
-      if( _resilienceTreeSize * sizeof(ResilienceNode) > RESILIENCE_MAX_FILE_SIZE )
-         return NULL;
-   }
-   if( _resilienceTreeSize * sizeof(ResilienceNode) > RESILIENCE_MAX_FILE_SIZE )
+   if( _resilienceTreeSize.value() * sizeof(ResilienceNode) > RESILIENCE_MAX_FILE_SIZE )
       return NULL;
-   //Mark it as used.
-   _persistentResilienceTree[_resilienceTreeSize].setInUse( true );
    ResilienceNode * res = &_persistentResilienceTree[_resilienceTreeSize++];
-   _persistentResilienceTreeLock.release();
+   res->setInUse( true );
    return res; 
 }
 
 inline ResilienceNode * System::getResilienceNode( int offset ) { if( offset < 1 ) return NULL; return _persistentResilienceTree+offset-1; }
 
 inline void * System::getResilienceResultsFreeSpace( size_t size ) { 
-    //void * res =  __sync_fetch_and_add( &_freePersistentResilienceResults, size );
-    _persistentResilienceResultsLock.acquire();
-    char * res = ( char * ) _freePersistentResilienceResults;
-    char * aux = res + size;
-    _freePersistentResilienceResults = ( void * ) aux;
-    //std::stringstream ss;
-    //ss << "**********getResilienceResultsFreeSpace**********"
-    //   << " Given " << size << " bytes in results["
-    //   << res - (char *)_persistentResilienceResults
-    //   << "]. Now, free space starts in " 
-    //   << aux - (char *)_persistentResilienceResults
-    //   << "**********getResilienceResultsFreeSpace**********";
-    //std::cerr << ss.str() << std::endl;
-    _persistentResilienceResultsLock.release();
+    void * res = _freePersistentResilienceResults.fetchAndAdd( ( void * ) size );
     return res;
 }
 inline void * System::getResilienceResults( int offset ) { return ( char * )_persistentResilienceResults + offset; }
