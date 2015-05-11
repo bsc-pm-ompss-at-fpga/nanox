@@ -30,7 +30,6 @@
 #include "plugin.hpp"
 #include "instrumentation.hpp"
 #include "instrumentationmodule_decl.hpp"
-#include "resilience.hpp"
 
 //! \defgroup capi_wd WorkDescriptor services.
 //! \ingroup capi
@@ -623,25 +622,6 @@ NANOS_API_DEF(nanos_err_t, nanos_is_tied, ( bool *result ))
        return e;
     }
     return NANOS_OK;
-}
-
-//RESILIENCE
-NANOS_API_DEF(bool, nanos_resilience_is_computed, ( nanos_wd_t wd ))
-{
-    WD * work = (WD *) wd;
-    ResilienceNode * rn = work->getResilienceNode();
-    if( rn != NULL) {
-        ResilienceNode * desc = rn->getNextDesc();
-        if( desc != NULL) 
-            return desc->isComputed();
-    }
-    return false;
-}
-
-NANOS_API_DEF(void, nanos_resilience_load_result, ( nanos_wd_t wd, nanos_copy_data_t *copies, size_t numCopies ))
-{
-    WD * work = (WD *) wd;
-    work->getResilienceNode()->getNextDesc()->loadResult( copies, numCopies, work->getId() );
 }
 
 //! \}

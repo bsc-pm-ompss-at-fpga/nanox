@@ -387,10 +387,6 @@ NANOS_API_DECL(nanos_err_t, nanos_scheduler_set_stealing, ( bool value ));
 //on first line of user main (in some cases, offload and cluster)
 NANOS_API_DECL(void, ompss_nanox_main, ());
 
-//Resilience
-NANOS_API_DECL(bool, nanos_resilience_is_computed, ( nanos_wd_t wd ));
-NANOS_API_DECL(void, nanos_resilience_load_result, ( nanos_wd_t wd, nanos_copy_data_t *copies, size_t numCopies ));
-
 // utility macros
 
 #define NANOS_SAFE( call ) \
