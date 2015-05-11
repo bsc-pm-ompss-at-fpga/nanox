@@ -572,8 +572,6 @@ void System::start ()
    }
    getResilienceResultsFreeSpace( offset );
    _resilienceTreeSize = nodes;
-   //int freeRes = (char *) getResilienceResultsFreeSpace( 0 ) - (char *) getResilienceResults(0);
-   //std::cerr << offset << " bytes from results are used. Now free space starts at results[" << freeRes << "]." << std::endl; 
 
    //This creates masterWD.
    _smpPlugin->associateThisThread( getUntieMaster() );
@@ -593,6 +591,14 @@ void System::start ()
       mainWD.setInternalData( data );
    }
    _pmInterface->setupWD( mainWD );
+
+   //RESILIENCE BASED ON MEMOIZATION
+   if( sys.getResilienceNode( mainWD.getId() )->isInUse() )
+       mainWD.setResilienceNode( sys.getResilienceNode( mainWD.getId() ) );
+   else {
+       mainWD.setResilienceNode( sys.getFreeResilienceNode() );
+       mainWD.getResilienceNode()->setId( mainWD.getId() );
+   }
 
    if ( _defSchedulePolicy->getWDDataSize() > 0 ) {
       char *data = NEW char[ _defSchedulePolicy->getWDDataSize() ];
@@ -685,6 +691,14 @@ void System::start ()
          ScheduleWDData *schedData = reinterpret_cast<ScheduleWDData*>( NEW char[schedDataSize] );
          _defSchedulePolicy->initWDData( schedData );
          threadWD.setSchedulerData( schedData, true );
+      }
+
+      //RESILIENCE BASED ON MEMOIZATION
+      if( sys.getResilienceNode( threadWD.getId() )->isInUse() )
+          threadWD.setResilienceNode( sys.getResilienceNode( threadWD.getId() ) );
+      else {
+          threadWD.setResilienceNode( sys.getFreeResilienceNode() );
+          threadWD.getResilienceNode()->setId( threadWD.getId() );
       }
 
    }
