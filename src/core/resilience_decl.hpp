@@ -34,8 +34,6 @@ namespace nanos {
         void loadResult( CopyData * copies, size_t numCopies, int task_id );
         void restartLastDescVisited();
         void restartLastDescRestored();
-        //void restartAllLastDescVisited();
-        //void restartAllLastDescRestored();
         bool isInUse() const;
         void setInUse( bool flag );
         int getId() const;

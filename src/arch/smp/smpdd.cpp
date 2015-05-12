@@ -135,20 +135,12 @@ void SMPDD::execute ( WD &wd ) throw ()
             sigaddset(&sigs, e.getSignal());
             pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
 
-            //I am restarting these counters at the start of the execution.
-            //wd.getResilienceNode()->restartAllLastDescVisited();
-            //wd.getResilienceNode()->restartAllLastDescRestored();
-            //wd.setInvalid(true);
-            if(!wd.setInvalid(true)) { // If the error isn't recoverable (i.e., no recoverable ancestor exists)
-               std::stringstream ss;
-               ss << e.what() << std::endl << std::endl << std::endl;
-               message( ss.str() );
-               //message(e.what());
-               // Unrecoverable error: terminate execution
-               std::terminate();
-            } else { // The error is recoverable. However, print a message for debugging purposes (do not make the error silent).
-               debug( e.what() );
-            }
+            std::stringstream ss;
+            ss << e.what() << std::endl << std::endl << std::endl;
+            message( ss.str() );
+            //message(e.what());
+            // Unrecoverable error: terminate execution
+            std::terminate();
          } catch (std::exception& e) {
             //taskFailed = true;
             std::stringstream ss;

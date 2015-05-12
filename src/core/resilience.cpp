@@ -29,17 +29,12 @@ namespace nanos {
 
 
     void ResilienceNode::loadResult( CopyData * copies, size_t numCopies, int task_id ) { 
-        //std::cerr << "Loading result from RN " << this << std::endl;
         char * aux = ( char * ) sys.getResilienceResults( _result );
         for( unsigned int i = 0; i < numCopies; i++ ) {
             if( copies[i].isOutput() ) {
                 size_t copy_size = copies[i].getDimensions()->accessed_length;
                 void * copy_address = ( char * ) copies[i].getBaseAddress() + copies[i].getOffset();
                 memcpy( copy_address, aux, copy_size );
-                //std::stringstream ss;
-                //ss << std::dec << "Task " << task_id << " with RN " << _id << " has loaded " << *(int *)aux << " in x[" << copies[i].getOffset()/copy_size 
-                //   << "] from " << sys.getResilienceResults( _result ) << " (results[" << _result << "])" << std::endl;
-                //message(ss.str());
                 aux += copy_size;
             }
         }
@@ -65,10 +60,6 @@ namespace nanos {
                 size_t copy_size = copies[i].getDimensions()->accessed_length;
                 void * copy_address = ( char * ) copies[i].getBaseAddress() + copies[i].getOffset();
                 memcpy( aux, copy_address, copy_size );
-                //std::stringstream ss;
-                //ss << std::dec << "Task " << task_id << " with RN " << _id << " has stored " << *(int *)copy_address << " in x[" << copies[i].getOffset()/copy_size
-                //   << "] to " << sys.getResilienceResults( _result ) << "(results[" << _result << "])" << std::endl;
-                //message(ss.str());
                 aux += copy_size;
             }
         }
@@ -178,17 +169,4 @@ namespace nanos {
 
         return desc;
     }
-
-    //void ResilienceNode::restartAllLastDescVisited() { 
-    //    _lastDescVisited = 0; 
-    //    if( _parent != 0 ) 
-    //        sys.getResilienceNode( _parent )->restartAllLastDescVisited();
-    //}
-
-    //void ResilienceNode::restartAllLastDescRestored() { 
-    //    _lastDescRestored = 0; 
-    //    if( _parent != 0 ) 
-    //        sys.getResilienceNode( _parent )->restartAllLastDescRestored();
-    //}
-
 }

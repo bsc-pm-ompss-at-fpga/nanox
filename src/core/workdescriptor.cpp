@@ -332,10 +332,6 @@ void WorkDescriptor::done ()
    else {
       fatal( "ResilienceNode not found. Cannot store result." );
    }
-   //TODO: FIXME: else, throw fatal error.
-   //If this WD is the parent, destroy resilience tree.
-   //if( getParent() == NULL )
-   //    delete _resNode;
 
    // Waiting for children (just to keep structures)
    if ( _components != 0 ) waitCompletion();

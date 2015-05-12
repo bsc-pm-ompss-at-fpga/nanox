@@ -592,7 +592,7 @@ void System::start ()
    }
    _pmInterface->setupWD( mainWD );
 
-   //RESILIENCE BASED ON MEMOIZATION
+   // Set ResilienceNode to mainWD.
    if( sys.getResilienceNode( mainWD.getId() )->isInUse() )
        mainWD.setResilienceNode( sys.getResilienceNode( mainWD.getId() ) );
    else {
@@ -693,7 +693,7 @@ void System::start ()
          threadWD.setSchedulerData( schedData, true );
       }
 
-      //RESILIENCE BASED ON MEMOIZATION
+      // Set ResilienceNode to each worker.
       if( sys.getResilienceNode( threadWD.getId() )->isInUse() )
           threadWD.setResilienceNode( sys.getResilienceNode( threadWD.getId() ) );
       else {
@@ -879,20 +879,15 @@ void System::finish ()
 
    //Free mapped file for resilience tree.
    int res = munmap( _persistentResilienceTree, RESILIENCE_MAX_FILE_SIZE );
-   if( res == -1 ) {
-       perror("Error unmapping file: ");
+   if( res == -1 )
        fatal( "Error unmapping file." );
-   }
    close( _resilienceTreeFileDescriptor );
+
    //Free mapped file for resilience results.
    res = munmap( _persistentResilienceResults, RESILIENCE_MAX_FILE_SIZE );
-   if( res == -1 ) {
-       perror("Error unmapping file: ");
+   if( res == -1 )
        fatal( "Error unmapping file." );
-   }
    close( _resilienceResultsFileDescriptor );
-   //! \note deleting ResilienceNode root associated to main work descriptor
-   //delete getMyThreadSafe()->getCurrentWD()->getResilienceNode();
 
    //! \note deleting main work descriptor
    delete ( WorkDescriptor * ) ( getMyThreadSafe()->getCurrentWD() );

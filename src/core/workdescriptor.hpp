@@ -165,9 +165,6 @@ inline WorkDescriptor::~WorkDescriptor()
 
     if (_copiesNotInChunk)
         delete[] _copies;
-
-    //if( getParent() == NULL )
-    //    delete _resNode;
 }
 
 /* DeviceData inlined functions */
