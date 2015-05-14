@@ -36,8 +36,6 @@
 #include <climits>
 #include "resilience.hpp"
 
-#define RESILIENCE_MAX_FILE_SIZE 1024*1024*100
-
 using namespace nanos;
 
 // methods to access configuration variable         
@@ -644,20 +642,39 @@ inline bool System::usePredecessorCopyInfo() const {
 }
 
 inline ResilienceNode * System::getFreeResilienceNode() {
-   if( _resilienceTreeSize.value() * sizeof(ResilienceNode) > RESILIENCE_MAX_FILE_SIZE )
+   _resilienceTreeLock.acquire();
+   if( _freeResilienceNodes.size() == 0 ) {
+      _resilienceTreeLock.release();
       return NULL;
-   ResilienceNode * res = &_persistentResilienceTree[_resilienceTreeSize++];
+   }
+   int index = _freeResilienceNodes.front();
+   ResilienceNode * res = &_resilienceTree[index];
    res->setInUse( true );
-   return res; 
+   _usedResilienceNodes.push_back( index ); 
+   _freeResilienceNodes.pop();
+   _resilienceTreeLock.release();
+   return res;
 }
 
-inline ResilienceNode * System::getResilienceNode( int offset ) { if( offset < 1 ) return NULL; return _persistentResilienceTree+offset-1; }
+inline void System::freeResilienceNode( int index ) {
+   _resilienceTreeLock.acquire();
+   _usedResilienceNodes.remove( index - 1 );
+   _freeResilienceNodes.push( index - 1 );
+   memset( getResilienceNode( index ), 0, sizeof(ResilienceNode) );
+   _resilienceTreeLock.release();
+}
+
+inline ResilienceNode * System::getResilienceNode( int offset ) { if( offset < 1 ) return NULL; return _resilienceTree+offset-1; }
 
 inline void * System::getResilienceResultsFreeSpace( size_t size ) { 
-    void * res = _freePersistentResilienceResults.fetchAndAdd( ( void * ) size );
-    return res;
+   void * res = _freeResilienceResults.fetchAndAdd( ( void * ) size );
+   if( res > getResilienceResults( _RESILIENCE_MAX_FILE_SIZE ) )
+      fatal0( "Not enough space in file." );
+   return res;
 }
-inline void * System::getResilienceResults( int offset ) { return ( char * )_persistentResilienceResults + offset; }
+
+
+inline void * System::getResilienceResults( int offset ) { return ( char * )_resilienceResults + offset; }
 
 #endif
 

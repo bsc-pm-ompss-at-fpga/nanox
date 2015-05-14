@@ -68,8 +68,6 @@
 #include "openclprocessor.hpp"
 #endif
 
-#define RESILIENCE_MAX_FILE_SIZE 1024*1024*100
-
 using namespace nanos;
 
 System nanos::sys;
@@ -111,9 +109,15 @@ System::System () :
       , _splitOutputForThreads( false )
       , _userDefinedNUMANode( -1 )
       , _router()
-      , _persistentResilienceTree( NULL )
-      , _resilienceTreeSize( 0 )
+      , _resilienceTree( NULL )
+      , _resilienceResults( NULL )
+      , _freeResilienceResults( NULL )
+      //, _resilienceTreeSize( 0 )
       , _resilienceTreeFileDescriptor( -1 )
+      , _resilienceResultsFileDescriptor( -1 )
+      , _resilienceTreeFilepath( NULL )
+      , _resilienceResultsFilepath( NULL )
+      , _RESILIENCE_MAX_FILE_SIZE( 1024*1024*sizeof( ResilienceNode ) )
       , _hwloc()
       , _immediateSuccessorDisabled( false )
       , _predecessorCopyInfoDisabled( false )
@@ -460,6 +464,7 @@ void System::start ()
    /* Get path of executable file. With this path, the files for store the persistent resilience tree and the persistent resilience results are created 
     * with the same name of the executable, in the same path, terminating with ".tree" and ".results" respectively.
     */
+   bool restoreTree = true;
    char link[32];
    sprintf( link, "/proc/%d/exe", getpid() );
    char path[256];
@@ -474,18 +479,19 @@ void System::start ()
    strcat( _resilienceResultsFilepath, ".results" );
 
    //Resilience tree mmapped file must be created before any WD because in WD constructor we will use the memory mapped.
-   if( _persistentResilienceTree == NULL ) {
+   if( _resilienceTree == NULL ) {
       // Check if we have a file with the resilience tree from past executions.
       _resilienceTreeFileDescriptor = open( _resilienceTreeFilepath, O_RDWR );
 
       //If there isn't a file from past executions.
       if( _resilienceTreeFileDescriptor == -1 ) {
+         restoreTree = false;
          _resilienceTreeFileDescriptor = open( _resilienceTreeFilepath, O_RDWR | O_CREAT, (mode_t) 0600 );
          if( _resilienceTreeFileDescriptor == -1 )
             fatal0( "Resilience: Error creating persistentTree." );
 
          //Stretch file.
-         int res = lseek( _resilienceTreeFileDescriptor, RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
+         int res = lseek( _resilienceTreeFileDescriptor, _RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
          if( res == -1 ) {
             close( _resilienceTreeFileDescriptor );
             fatal0( "Resilience: Error calling lseek." );
@@ -506,15 +512,15 @@ void System::start ()
       }
 
       //Now the file is ready to be mmaped.
-      _persistentResilienceTree = ( ResilienceNode * ) mmap( 0, RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceTreeFileDescriptor, 0 );
-      if( _persistentResilienceTree == MAP_FAILED ) {
+      _resilienceTree = ( ResilienceNode * ) mmap( 0, _RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceTreeFileDescriptor, 0 );
+      if( _resilienceTree == MAP_FAILED ) {
          close( _resilienceTreeFileDescriptor );
          fatal0( "Error mmaping file" );
       }
    }
 
    //Resilience results mmapped file must be created before any WD because in WD constructor we will use the memory mapped.
-   if( _persistentResilienceResults == NULL ) {
+   if( _resilienceResults == NULL ) {
       // Check if we have a file with the resilience tree from past executions.
       _resilienceResultsFileDescriptor = open( _resilienceResultsFilepath, O_RDWR );
 
@@ -525,7 +531,7 @@ void System::start ()
             fatal0( "Resilience: Error creating persistentTree." );
 
          //Stretch file.
-         int res = lseek( _resilienceResultsFileDescriptor, RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
+         int res = lseek( _resilienceResultsFileDescriptor, _RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
          if( res == -1 ) {
             close( _resilienceResultsFileDescriptor );
             fatal0( "Resilience: Error calling lseek." );
@@ -546,32 +552,42 @@ void System::start ()
       }
 
       //Now the file is ready to be mmaped.
-      _persistentResilienceResults = ( ResilienceNode * ) mmap( 0, RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceResultsFileDescriptor, 0 );
-      if( _persistentResilienceResults == MAP_FAILED ) {
+      _resilienceResults = ( ResilienceNode * ) mmap( 0, _RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceResultsFileDescriptor, 0 );
+      if( _resilienceResults == MAP_FAILED ) {
          close( _resilienceResultsFileDescriptor );
          fatal0( "Error mmaping file" );
       }
-      _freePersistentResilienceResults = _persistentResilienceResults;
+      _freeResilienceResults = _resilienceResults;
    }
 
-   //Update _freePersistentResilienceResults with the restored tree.
-   int offset = 0;
-   size_t nodes = 0;
-   ResilienceNode * rn = &_persistentResilienceTree[nodes];
-   int max = rn->getResultIndex();
-   //TODO: FIXME: Now it works because all the RN in use are consecutive. In the future this may not happen so the condition might change.
-   while( rn->isInUse() ) {
-      if( rn->isComputed() && rn->getResultIndex() > max ) {
-          max = rn->getResultIndex();
-          size_t results_size = rn->getResultsSize();
-          offset = max + results_size; 
+   //Update _freeResilienceResults with the restored tree.
+
+   size_t treeSize = _RESILIENCE_MAX_FILE_SIZE / sizeof( ResilienceNode );
+   if( restoreTree ) {
+      int offset = 0;
+      int max = 0;
+      for( unsigned int i = 0; i < treeSize; i++ ) {
+         ResilienceNode * rn = &_resilienceTree[i];
+         if( rn->isInUse() ) {
+            _usedResilienceNodes.push_back( i );
+            if( rn->isComputed() && rn->getResultIndex() >= max ) {
+               max = rn->getResultIndex();
+               size_t results_size = rn->getResultsSize();
+               offset = max + results_size; 
+            }
+            rn->restartLastDescVisited();
+            rn->restartLastDescRestored();
+         }
+         else {
+            _freeResilienceNodes.push( i );
+         }
       }
-      rn->restartLastDescVisited();
-      rn->restartLastDescRestored();
-      rn = &_persistentResilienceTree[++nodes];
+      getResilienceResultsFreeSpace( offset );
    }
-   getResilienceResultsFreeSpace( offset );
-   _resilienceTreeSize = nodes;
+   else {
+      for( unsigned int i = 0; i < treeSize; i++)
+         _freeResilienceNodes.push( i );
+   }
 
    //This creates masterWD.
    _smpPlugin->associateThisThread( getUntieMaster() );
@@ -691,14 +707,6 @@ void System::start ()
          ScheduleWDData *schedData = reinterpret_cast<ScheduleWDData*>( NEW char[schedDataSize] );
          _defSchedulePolicy->initWDData( schedData );
          threadWD.setSchedulerData( schedData, true );
-      }
-
-      // Set ResilienceNode to each worker.
-      if( sys.getResilienceNode( threadWD.getId() )->isInUse() )
-          threadWD.setResilienceNode( sys.getResilienceNode( threadWD.getId() ) );
-      else {
-          threadWD.setResilienceNode( sys.getFreeResilienceNode() );
-          threadWD.getResilienceNode()->setId( threadWD.getId() );
       }
 
    }
@@ -878,13 +886,13 @@ void System::finish ()
    getMyThreadSafe()->getCurrentWD()->getResilienceNode()->restartLastDescRestored();
 
    //Free mapped file for resilience tree.
-   int res = munmap( _persistentResilienceTree, RESILIENCE_MAX_FILE_SIZE );
+   int res = munmap( _resilienceTree, _RESILIENCE_MAX_FILE_SIZE );
    if( res == -1 )
        fatal( "Error unmapping file." );
    close( _resilienceTreeFileDescriptor );
 
    //Free mapped file for resilience results.
-   res = munmap( _persistentResilienceResults, RESILIENCE_MAX_FILE_SIZE );
+   res = munmap( _resilienceResults, _RESILIENCE_MAX_FILE_SIZE );
    if( res == -1 )
        fatal( "Error unmapping file." );
    close( _resilienceResultsFileDescriptor );

@@ -118,7 +118,7 @@ void SMPDD::execute ( WD &wd ) throw ()
       while (true) {
          try {
             // Call to the user function
-            if( wd.getResilienceNode()->isComputed() )
+            if( wd.getResilienceNode() != NULL && wd.getResilienceNode()->isComputed() )
                 wd.getResilienceNode()->loadResult( wd.getCopies(), wd.getNumCopies(), wd.getId() );
             else
                 getWorkFct()( wd.getData() );

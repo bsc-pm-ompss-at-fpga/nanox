@@ -7,24 +7,23 @@
 
 namespace nanos {
 
-    ResilienceNode::~ResilienceNode() {
-        //if( _desc != 0 )
-            //removeAllDescsNode();
-
-        //I have to break the association with _parent. In other words, remove this node from the parent _desc list.
-        if ( _parent != -1 ) {
-            sys.getResilienceNode( _parent )->removeDesc(this);
-        }
-    }
-
     void ResilienceNode::removeAllDescs() {
+        if( _descSize == 0 ) 
+            return;
+
         ResilienceNode * current = sys.getResilienceNode( _desc );
-        while( current != NULL ){
-            ResilienceNode * toDelete = current;
+        int prev = _desc;
+        while( current != NULL ) {
+            int toDelete = prev;
+            current->removeAllDescs();
+            prev = current->_next;
             current = sys.getResilienceNode( current->_next );
-            delete toDelete;
+            sys.freeResilienceNode( toDelete );
+            _descSize--;
         }
-        _descSize = 0;
+
+        ensure( _descSize == 0, "There are still descs" );
+        _desc = 0;
     }
 
 
@@ -49,9 +48,11 @@ namespace nanos {
                 outputs_size += copies[i].getDimensions()->accessed_length;
             }
         }
+        ensure( outputs_size > 0, "Store result of 0 bytes makes no sense." );
         //Get result from resilience results mmaped file.
         _resultsSize = outputs_size;
         _result = ( char * )sys.getResilienceResultsFreeSpace( _resultsSize ) - ( char * )sys.getResilienceResults( 0 );
+        //std::cerr << "RN " << _id << " has " << _resultsSize << " bytes in results[" << _result << "]." << std::endl;
 
         //Copy the result
         char * aux = ( char * ) sys.getResilienceResults( _result );
@@ -68,7 +69,7 @@ namespace nanos {
         _computed = true;
 
         //Remove all descendents. They are not needed anymore.
-        //removeAllDescs();
+        removeAllDescs();
     }
 
     void ResilienceNode::addDesc( ResilienceNode * rn ) { 
@@ -83,19 +84,6 @@ namespace nanos {
         _descSize++;
     }
 
-    void ResilienceNode::removeDesc( ResilienceNode * rn ) { 
-        if( _desc == 0 || rn == NULL )
-            return;
-
-        if( _desc == rn - sys.getResilienceNode( 1 ) + 1 ) 
-            _desc = sys.getResilienceNode( _desc )->_next;
-        else 
-            sys.getResilienceNode( _desc )->removeNext( rn );
-
-        _descSize--;
-        memset( rn, 0, sizeof(ResilienceNode) );
-    }
-
     void ResilienceNode::addNext( ResilienceNode * rn ) {
         if( _next == 0 )
             _next = rn - sys.getResilienceNode( 1 ) + 1;
@@ -105,22 +93,6 @@ namespace nanos {
                 current = sys.getResilienceNode( current->_next );
             }
             current->_next = rn - sys.getResilienceNode( 1 ) + 1;
-        }
-    }
-
-    void ResilienceNode::removeNext( ResilienceNode * rn ) {
-        if( _next == 0 )
-            return;
-
-        if( _next == rn - sys.getResilienceNode( 1 ) + 1 )
-            _next = sys.getResilienceNode( _next )->_next;
-        else {
-            ResilienceNode * current = sys.getResilienceNode( _next );
-            while( current->_next != 0 && current->_next != rn - sys.getResilienceNode( 1 ) + 1 ) {
-                current = sys.getResilienceNode( current->_next );
-            }
-            if( current->_next == rn - sys.getResilienceNode( 1 ) + 1 )
-                current->_next = sys.getResilienceNode( current->_next )->_next;
         }
     }
 

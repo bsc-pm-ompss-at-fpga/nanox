@@ -22,10 +22,8 @@ namespace nanos {
         void addDesc( ResilienceNode * rn );
         void removeAllDescs();
         void addNext( ResilienceNode * rn );
-        void removeNext( ResilienceNode * rn );
 
         public:
-        ~ResilienceNode();
         void setParent( ResilienceNode * parent );
         ResilienceNode * getParent();
         size_t getNumDescendants();
@@ -43,8 +41,6 @@ namespace nanos {
 
         ResilienceNode* getNextDesc( bool inc = false );
         ResilienceNode* getNextDescToRestore( bool inc = false );
-
-        void removeDesc( ResilienceNode * rn );
     };
 
 }

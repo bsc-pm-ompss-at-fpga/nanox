@@ -24,6 +24,7 @@
 #include "throttle_decl.hpp"
 #include <vector>
 #include <string>
+#include <queue>
 #include "schedule_decl.hpp"
 #include "threadteam_decl.hpp"
 #include "slicer_decl.hpp"
@@ -245,17 +246,19 @@ namespace nanos
          int _userDefinedNUMANode;
          Router _router;
          //Resilience persistence
-         Lock _persistentResilienceTreeLock;
-         Lock _persistentResilienceResultsLock;
-         ResilienceNode * _persistentResilienceTree;
-         void * _persistentResilienceResults;
-         Atomic<void *> _freePersistentResilienceResults;
-         Atomic<size_t> _resilienceTreeSize;
+         Lock _resilienceTreeLock;
+         Lock _resilienceResultsLock;
+         ResilienceNode * _resilienceTree;
+         void * _resilienceResults;
+         Atomic<void *> _freeResilienceResults;
+         //Atomic<size_t> _resilienceTreeSize;
+         std::queue<int> _freeResilienceNodes;
+         std::list<int> _usedResilienceNodes;
          int _resilienceTreeFileDescriptor;
          int _resilienceResultsFileDescriptor;
          char * _resilienceTreeFilepath;
          char * _resilienceResultsFilepath;
-         //TODO: FIXME: FILESIZE SHOULD BE DEFINED
+         size_t _RESILIENCE_MAX_FILE_SIZE;
       public:
          Hwloc _hwloc;
          bool _immediateSuccessorDisabled;
@@ -689,6 +692,7 @@ namespace nanos
          //RESILIENCE
          ResilienceNode * getFreeResilienceNode();
          ResilienceNode * getResilienceNode( int offset );
+         void freeResilienceNode( int index );
          void * getResilienceResultsFreeSpace( size_t size );
          void * getResilienceResults( int offset );
    };
