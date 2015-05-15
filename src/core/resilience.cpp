@@ -17,7 +17,6 @@ namespace nanos {
       , _resilienceTreeFileDescriptor( -1 )
       , _resilienceTreeFilepath( NULL )
       , _resilienceResults( NULL )
-      , _freeResilienceResults( NULL )
       , _resilienceResultsFileDescriptor( -1 )
       , _resilienceResultsFilepath( NULL )
       , _RESILIENCE_MAX_FILE_SIZE( 1024*1024*sizeof( ResilienceNode ) )
@@ -120,23 +119,19 @@ namespace nanos {
                 close( _resilienceResultsFileDescriptor );
                 fatal0( "Error mmaping file" );
             }
-            _freeResilienceResults = _resilienceResults;
+            _freeResilienceResults.insert( std::make_pair( 0, _RESILIENCE_MAX_FILE_SIZE ) );
         }
 
         //Update _freeResilienceResults with the restored tree.
 
         size_t treeSize = _RESILIENCE_MAX_FILE_SIZE / sizeof( ResilienceNode );
         if( restoreTree ) {
-            int offset = 0;
-            int max = 0;
             for( unsigned int i = 0; i < treeSize; i++ ) {
                 ResilienceNode * rn = &_resilienceTree[i];
                 if( rn->isInUse() ) {
                     _usedResilienceNodes.push_back( i );
-                    if( rn->isComputed() && rn->getResultIndex() >= max ) {
-                        max = rn->getResultIndex();
-                        size_t results_size = rn->getResultsSize();
-                        offset = max + results_size; 
+                    if( rn->isComputed() ) {
+                        restoreResilienceResultsSpace( rn->getResultIndex(), rn->getResultSize() );
                     }
                     rn->restartLastDescVisited();
                     rn->restartLastDescRestored();
@@ -145,12 +140,25 @@ namespace nanos {
                     _freeResilienceNodes.push( i );
                 }
             }
-            getResilienceResultsFreeSpace( offset );
         }
         else {
             for( unsigned int i = 0; i < treeSize; i++)
                 _freeResilienceNodes.push( i );
         }
+
+        // JUST FOR DEBUG PURPOSES
+        //std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
+        //size_t free_results = 0;
+        //for( std::map<int, size_t>::iterator it = _freeResilienceResults.begin();
+        //        it != _freeResilienceResults.end();
+        //        it++ )
+        //{
+        //    free_results += it->second;
+        //    std::cerr << "There are " << it->second << " bytes free starting at results[" << it->first << "]." << std::endl;
+        //}
+        //std::cerr << "There are " << free_results << " bytes free in results." << std::endl;
+        //std::cerr << "There are " << _RESILIENCE_MAX_FILE_SIZE - free_results << " bytes used in results." << std::endl;
+        //std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
     }
 
     ResiliencePersistence::~ResiliencePersistence() {
@@ -188,7 +196,7 @@ namespace nanos {
 
 
     void ResilienceNode::loadResult( CopyData * copies, size_t numCopies, int task_id ) { 
-        char * aux = ( char * ) sys.getResiliencePersistence()->getResilienceResults( _result );
+        char * aux = ( char * ) sys.getResiliencePersistence()->getResilienceResults( _resultIndex );
         for( unsigned int i = 0; i < numCopies; i++ ) {
             if( copies[i].isOutput() ) {
                 size_t copy_size = copies[i].getDimensions()->accessed_length;
@@ -210,11 +218,11 @@ namespace nanos {
         }
         ensure( outputs_size > 0, "Store result of 0 bytes makes no sense." );
         //Get result from resilience results mmaped file.
-        _resultsSize = outputs_size;
-        _result = ( char * )sys.getResiliencePersistence()->getResilienceResultsFreeSpace( _resultsSize ) 
+        _resultSize = outputs_size;
+        _resultIndex = ( char * )sys.getResiliencePersistence()->getResilienceResultsFreeSpace( _resultSize ) 
             - ( char * )sys.getResiliencePersistence()->getResilienceResults( 0 );
         //Copy the result
-        char * aux = ( char * ) sys.getResiliencePersistence()->getResilienceResults( _result );
+        char * aux = ( char * ) sys.getResiliencePersistence()->getResilienceResults( _resultIndex );
         for( unsigned int i = 0; i < numCopies; i++ ) {
             if( copies[i].isOutput() ) {
                 size_t copy_size = copies[i].getDimensions()->accessed_length;

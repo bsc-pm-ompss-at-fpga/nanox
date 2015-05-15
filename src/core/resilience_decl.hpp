@@ -5,6 +5,7 @@
 #include "resilience_fwd.hpp"
 #include <queue>
 #include <list>
+#include <map>
 #include "atomic_decl.hpp"
 
 namespace nanos {
@@ -21,7 +22,8 @@ namespace nanos {
 
         // RELATED TO RESILIENCE RESULTS
         void * _resilienceResults;
-        Atomic<void *> _freeResilienceResults;
+        Lock _resilienceResultsLock;
+        std::map<int, size_t> _freeResilienceResults;
         int _resilienceResultsFileDescriptor;
         char * _resilienceResultsFilepath;
 
@@ -39,6 +41,8 @@ namespace nanos {
         // RELATED TO RESILIENCE RESULTS
         void * getResilienceResultsFreeSpace( size_t size );
         void * getResilienceResults( int offset );
+        void freeResilienceResultsSpace( int offset, size_t size);
+        void restoreResilienceResultsSpace( int offset, size_t size );
 
     };
 
@@ -50,9 +54,9 @@ namespace nanos {
         int _parent;
         int _desc;
         int _next;
-        int _result;
+        int _resultIndex;
         size_t _descSize;
-        size_t _resultsSize;
+        size_t _resultSize;
         unsigned int _lastDescVisited;
         unsigned int _lastDescRestored;
 
@@ -73,7 +77,7 @@ namespace nanos {
         void setInUse( bool flag );
         int getId() const;
         void setId( int id );
-        size_t getResultsSize() const;
+        size_t getResultSize() const;
         int getResultIndex() const;
 
         ResilienceNode* getNextDesc( bool inc = false );
