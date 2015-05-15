@@ -291,7 +291,7 @@ NANOS_API_DEF( nanos_err_t, nanos_create_wd_and_run_compact, ( nanos_const_wd_de
               if( desc != NULL )
                   wd.setResilienceNode( desc );
               else {
-                  desc = sys.getFreeResilienceNode();
+                  desc = sys.getResiliencePersistence()->getFreeResilienceNode();
                   desc->setParent( wd.getParent()->getResilienceNode() );
                   wd.setResilienceNode( desc );
               }

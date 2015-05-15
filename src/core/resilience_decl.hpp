@@ -1,12 +1,49 @@
 #ifndef NANOS_RESILIENCE_DECL_H
 #define NANOS_RESILIENCE_DECL_H
 
-#include "workdescriptor_fwd.hpp"
 #include "copydata_decl.hpp"
+#include "resilience_fwd.hpp"
+#include <queue>
+#include <list>
+#include "atomic_decl.hpp"
 
 namespace nanos {
 
+    class ResiliencePersistence {
+
+        // RELATED TO RESILIENCE TREE
+        ResilienceNode * _resilienceTree;
+        Lock _resilienceTreeLock;
+        std::queue<int> _freeResilienceNodes;
+        std::list<int> _usedResilienceNodes;
+        int _resilienceTreeFileDescriptor;
+        char * _resilienceTreeFilepath;
+
+        // RELATED TO RESILIENCE RESULTS
+        void * _resilienceResults;
+        Atomic<void *> _freeResilienceResults;
+        int _resilienceResultsFileDescriptor;
+        char * _resilienceResultsFilepath;
+
+        // COMMON
+        size_t _RESILIENCE_MAX_FILE_SIZE;
+
+        public:
+        ResiliencePersistence();
+        ~ResiliencePersistence();
+        // RELATED TO RESILIENCE TREE
+        ResilienceNode * getFreeResilienceNode();
+        ResilienceNode * getResilienceNode( int offset );
+        void freeResilienceNode( int index );
+
+        // RELATED TO RESILIENCE RESULTS
+        void * getResilienceResultsFreeSpace( size_t size );
+        void * getResilienceResults( int offset );
+
+    };
+
     class ResilienceNode {
+
         bool _inUse;
         bool _computed;
         int _id;
@@ -41,6 +78,7 @@ namespace nanos {
 
         ResilienceNode* getNextDesc( bool inc = false );
         ResilienceNode* getNextDescToRestore( bool inc = false );
+
     };
 
 }

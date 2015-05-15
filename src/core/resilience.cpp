@@ -4,21 +4,181 @@
 #include <stdlib.h>
 #include <string.h>
 #include "copydata.hpp"
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 namespace nanos {
+
+    ResiliencePersistence::ResiliencePersistence() :
+      _resilienceTree( NULL )
+      , _resilienceTreeFileDescriptor( -1 )
+      , _resilienceTreeFilepath( NULL )
+      , _resilienceResults( NULL )
+      , _freeResilienceResults( NULL )
+      , _resilienceResultsFileDescriptor( -1 )
+      , _resilienceResultsFilepath( NULL )
+      , _RESILIENCE_MAX_FILE_SIZE( 1024*1024*sizeof( ResilienceNode ) )
+    {
+        /* Get path of executable file. With this path, the files for store the persistent resilience tree and the persistent resilience results are created 
+         * with the same name of the executable, in the same path, terminating with ".tree" and ".results" respectively.
+         */
+        bool restoreTree = true;
+        char link[32];
+        sprintf( link, "/proc/%d/exe", getpid() );
+        char path[256];
+        int pos = readlink ( link, path, sizeof( path ) );
+        if( pos <= 0 )
+            fatal0( "Resilience: Error getting path of executable file" );
+        _resilienceTreeFilepath = NEW char[pos+sizeof(".tree")];
+        _resilienceResultsFilepath = NEW char[pos+sizeof(".results")];
+        memset( _resilienceTreeFilepath, 0, pos+sizeof(".tree") );
+        memset( _resilienceResultsFilepath, 0, pos+sizeof(".results") );
+        strncpy( _resilienceTreeFilepath, path, pos );
+        strncpy( _resilienceResultsFilepath, _resilienceTreeFilepath, pos );
+        strcat( _resilienceTreeFilepath, ".tree" );
+        strcat( _resilienceResultsFilepath, ".results" );
+
+        //Resilience tree mmapped file must be created before any WD because in WD constructor we will use the memory mapped.
+        if( _resilienceTree == NULL ) {
+            // Check if we have a file with the resilience tree from past executions.
+            _resilienceTreeFileDescriptor = open( _resilienceTreeFilepath, O_RDWR );
+
+            //If there isn't a file from past executions.
+            if( _resilienceTreeFileDescriptor == -1 ) {
+                restoreTree = false;
+                _resilienceTreeFileDescriptor = open( _resilienceTreeFilepath, O_RDWR | O_CREAT, (mode_t) 0600 );
+                if( _resilienceTreeFileDescriptor == -1 )
+                    fatal0( "Resilience: Error creating persistentTree." );
+
+                //Stretch file.
+                int res = lseek( _resilienceTreeFileDescriptor, _RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
+                if( res == -1 ) {
+                    close( _resilienceTreeFileDescriptor );
+                    fatal0( "Resilience: Error calling lseek." );
+                }
+
+                /* Something needs to be written at the end of the file to force the file have actually the new size.
+                 * Just writing an empty string at the current file position will do.
+                 *
+                 * Note:
+                 *  - The current position in the file is at the end of the stretched file due to the call to lseek().
+                 *  - An empty string is actually a single '\0' character, so a zero-byte will be written at the last byte of the file.
+                 */
+                res = write(_resilienceTreeFileDescriptor, "", 1);
+                if (res != 1) {
+                    close( _resilienceTreeFileDescriptor );
+                    fatal0( "Error resizing file" );
+                }
+            }
+
+            //Now the file is ready to be mmaped.
+            _resilienceTree = ( ResilienceNode * ) mmap( 0, _RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceTreeFileDescriptor, 0 );
+            if( _resilienceTree == MAP_FAILED ) {
+                close( _resilienceTreeFileDescriptor );
+                fatal0( "Error mmaping file" );
+            }
+        }
+
+        //Resilience results mmapped file must be created before any WD because in WD constructor we will use the memory mapped.
+        if( _resilienceResults == NULL ) {
+            // Check if we have a file with the resilience tree from past executions.
+            _resilienceResultsFileDescriptor = open( _resilienceResultsFilepath, O_RDWR );
+
+            //If there isn't a file from past executions.
+            if( _resilienceResultsFileDescriptor == -1 ) {
+                _resilienceResultsFileDescriptor = open( _resilienceResultsFilepath, O_RDWR | O_CREAT, (mode_t) 0600 );
+                if( _resilienceResultsFileDescriptor == -1 )
+                    fatal0( "Resilience: Error creating persistentTree." );
+
+                //Stretch file.
+                int res = lseek( _resilienceResultsFileDescriptor, _RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
+                if( res == -1 ) {
+                    close( _resilienceResultsFileDescriptor );
+                    fatal0( "Resilience: Error calling lseek." );
+                }
+
+                /* Something needs to be written at the end of the file to force the file have actually the new size.
+                 * Just writing an empty string at the current file position will do.
+                 *
+                 * Note:
+                 *  - The current position in the file is at the end of the stretched file due to the call to lseek().
+                 *  - An empty string is actually a single '\0' character, so a zero-byte will be written at the last byte of the file.
+                 */
+                res = write(_resilienceResultsFileDescriptor, "", 1);
+                if (res != 1) {
+                    close( _resilienceResultsFileDescriptor );
+                    fatal0( "Error resizing file" );
+                }
+            }
+
+            //Now the file is ready to be mmaped.
+            _resilienceResults = ( ResilienceNode * ) mmap( 0, _RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceResultsFileDescriptor, 0 );
+            if( _resilienceResults == MAP_FAILED ) {
+                close( _resilienceResultsFileDescriptor );
+                fatal0( "Error mmaping file" );
+            }
+            _freeResilienceResults = _resilienceResults;
+        }
+
+        //Update _freeResilienceResults with the restored tree.
+
+        size_t treeSize = _RESILIENCE_MAX_FILE_SIZE / sizeof( ResilienceNode );
+        if( restoreTree ) {
+            int offset = 0;
+            int max = 0;
+            for( unsigned int i = 0; i < treeSize; i++ ) {
+                ResilienceNode * rn = &_resilienceTree[i];
+                if( rn->isInUse() ) {
+                    _usedResilienceNodes.push_back( i );
+                    if( rn->isComputed() && rn->getResultIndex() >= max ) {
+                        max = rn->getResultIndex();
+                        size_t results_size = rn->getResultsSize();
+                        offset = max + results_size; 
+                    }
+                    rn->restartLastDescVisited();
+                    rn->restartLastDescRestored();
+                }
+                else {
+                    _freeResilienceNodes.push( i );
+                }
+            }
+            getResilienceResultsFreeSpace( offset );
+        }
+        else {
+            for( unsigned int i = 0; i < treeSize; i++)
+                _freeResilienceNodes.push( i );
+        }
+    }
+
+    ResiliencePersistence::~ResiliencePersistence() {
+        //Free mapped file for resilience tree.
+        int res = munmap( _resilienceTree, _RESILIENCE_MAX_FILE_SIZE );
+        if( res == -1 )
+            fatal( "Error unmapping file." );
+        close( _resilienceTreeFileDescriptor );
+
+        //Free mapped file for resilience results.
+        res = munmap( _resilienceResults, _RESILIENCE_MAX_FILE_SIZE );
+        if( res == -1 )
+            fatal( "Error unmapping file." );
+        close( _resilienceResultsFileDescriptor );
+    }
 
     void ResilienceNode::removeAllDescs() {
         if( _descSize == 0 ) 
             return;
 
-        ResilienceNode * current = sys.getResilienceNode( _desc );
+        ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( _desc );
         int prev = _desc;
         while( current != NULL ) {
             int toDelete = prev;
             current->removeAllDescs();
             prev = current->_next;
-            current = sys.getResilienceNode( current->_next );
-            sys.freeResilienceNode( toDelete );
+            current = sys.getResiliencePersistence()->getResilienceNode( current->_next );
+            sys.getResiliencePersistence()->freeResilienceNode( toDelete );
             _descSize--;
         }
 
@@ -28,7 +188,7 @@ namespace nanos {
 
 
     void ResilienceNode::loadResult( CopyData * copies, size_t numCopies, int task_id ) { 
-        char * aux = ( char * ) sys.getResilienceResults( _result );
+        char * aux = ( char * ) sys.getResiliencePersistence()->getResilienceResults( _result );
         for( unsigned int i = 0; i < numCopies; i++ ) {
             if( copies[i].isOutput() ) {
                 size_t copy_size = copies[i].getDimensions()->accessed_length;
@@ -37,7 +197,7 @@ namespace nanos {
                 aux += copy_size;
             }
         }
-        sys.getResilienceNode( _parent )->_lastDescVisited++;
+        sys.getResiliencePersistence()->getResilienceNode( _parent )->_lastDescVisited++;
     }
 
     void ResilienceNode::storeResult( CopyData * copies, size_t numCopies, int task_id ) {
@@ -51,11 +211,10 @@ namespace nanos {
         ensure( outputs_size > 0, "Store result of 0 bytes makes no sense." );
         //Get result from resilience results mmaped file.
         _resultsSize = outputs_size;
-        _result = ( char * )sys.getResilienceResultsFreeSpace( _resultsSize ) - ( char * )sys.getResilienceResults( 0 );
-        //std::cerr << "RN " << _id << " has " << _resultsSize << " bytes in results[" << _result << "]." << std::endl;
-
+        _result = ( char * )sys.getResiliencePersistence()->getResilienceResultsFreeSpace( _resultsSize ) 
+            - ( char * )sys.getResiliencePersistence()->getResilienceResults( 0 );
         //Copy the result
-        char * aux = ( char * ) sys.getResilienceResults( _result );
+        char * aux = ( char * ) sys.getResiliencePersistence()->getResilienceResults( _result );
         for( unsigned int i = 0; i < numCopies; i++ ) {
             if( copies[i].isOutput() ) {
                 size_t copy_size = copies[i].getDimensions()->accessed_length;
@@ -77,22 +236,22 @@ namespace nanos {
             return;
 
         if( _desc == 0 ) 
-            _desc = rn - sys.getResilienceNode( 1 ) + 1;
+            _desc = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
         else
-            sys.getResilienceNode( _desc )->addNext( rn );
+            sys.getResiliencePersistence()->getResilienceNode( _desc )->addNext( rn );
 
         _descSize++;
     }
 
     void ResilienceNode::addNext( ResilienceNode * rn ) {
         if( _next == 0 )
-            _next = rn - sys.getResilienceNode( 1 ) + 1;
+            _next = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
         else {
-            ResilienceNode * current = sys.getResilienceNode( _next );
+            ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( _next );
             while( current->_next != 0 ) {
-                current = sys.getResilienceNode( current->_next );
+                current = sys.getResiliencePersistence()->getResilienceNode( current->_next );
             }
-            current->_next = rn - sys.getResilienceNode( 1 ) + 1;
+            current->_next = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
         }
     }
 
@@ -103,14 +262,14 @@ namespace nanos {
             return NULL;
         }
 
-        ResilienceNode * desc = sys.getResilienceNode( _desc );
+        ResilienceNode * desc = sys.getResiliencePersistence()->getResilienceNode( _desc );
         for( unsigned int i = 0; i < _lastDescVisited; i++) {
             //TODO: FIXME: Maybe, this should throw FATAL ERROR.
             if( desc->_next == 0 ) {
                 _lastDescVisited++;
                 return NULL;
             }
-            desc = sys.getResilienceNode( desc->_next );
+            desc = sys.getResiliencePersistence()->getResilienceNode( desc->_next );
         }
 
         if( desc != NULL && !desc->isComputed() )
@@ -126,14 +285,14 @@ namespace nanos {
             return NULL;
         }
 
-        ResilienceNode * desc = sys.getResilienceNode( _desc );
+        ResilienceNode * desc = sys.getResiliencePersistence()->getResilienceNode( _desc );
         for( unsigned int i = 0; i < _lastDescRestored; i++) {
             //TODO: FIXME: Maybe, this should throw FATAL ERROR.
             if( desc->_next == 0 ) {
                 _lastDescRestored++;
                 return NULL;
             }
-            desc = sys.getResilienceNode( desc->_next );
+            desc = sys.getResiliencePersistence()->getResilienceNode( desc->_next );
         }
 
         if( desc != NULL )

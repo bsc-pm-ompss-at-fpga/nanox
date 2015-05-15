@@ -3,6 +3,7 @@
 
 namespace nanos
 {
+   class ResiliencePersistence;
    class ResilienceNode;
 };
 

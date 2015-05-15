@@ -245,20 +245,7 @@ namespace nanos
          bool _splitOutputForThreads;
          int _userDefinedNUMANode;
          Router _router;
-         //Resilience persistence
-         Lock _resilienceTreeLock;
-         Lock _resilienceResultsLock;
-         ResilienceNode * _resilienceTree;
-         void * _resilienceResults;
-         Atomic<void *> _freeResilienceResults;
-         //Atomic<size_t> _resilienceTreeSize;
-         std::queue<int> _freeResilienceNodes;
-         std::list<int> _usedResilienceNodes;
-         int _resilienceTreeFileDescriptor;
-         int _resilienceResultsFileDescriptor;
-         char * _resilienceTreeFilepath;
-         char * _resilienceResultsFilepath;
-         size_t _RESILIENCE_MAX_FILE_SIZE;
+         ResiliencePersistence * _resilience;
       public:
          Hwloc _hwloc;
          bool _immediateSuccessorDisabled;
@@ -689,12 +676,7 @@ namespace nanos
          bool isImmediateSuccessorEnabled() const;
          bool usePredecessorCopyInfo() const;
 
-         //RESILIENCE
-         ResilienceNode * getFreeResilienceNode();
-         ResilienceNode * getResilienceNode( int offset );
-         void freeResilienceNode( int index );
-         void * getResilienceResultsFreeSpace( size_t size );
-         void * getResilienceResults( int offset );
+         ResiliencePersistence * getResiliencePersistence();
    };
 
    extern System sys;
