@@ -12,6 +12,8 @@
 
 namespace nanos {
 
+    /********** RESILIENCE PERSISTENCE **********/
+
     ResiliencePersistence::ResiliencePersistence() :
       _resilienceTree( NULL )
       , _resilienceTreeFileDescriptor( -1 )
@@ -132,8 +134,9 @@ namespace nanos {
                     _usedResilienceNodes.push_back( i );
                     if( rn->isComputed() ) {
                         restoreResilienceResultsSpace( rn->getResultIndex(), rn->getResultSize() );
+                        if( rn->getNumDescendants() > 0 )
+                            rn->removeAllDescs();
                     }
-                    rn->restartLastDescVisited();
                     rn->restartLastDescRestored();
                 }
                 else {
@@ -147,18 +150,19 @@ namespace nanos {
         }
 
         // JUST FOR DEBUG PURPOSES
-        //std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
-        //size_t free_results = 0;
-        //for( std::map<int, size_t>::iterator it = _freeResilienceResults.begin();
-        //        it != _freeResilienceResults.end();
-        //        it++ )
-        //{
-        //    free_results += it->second;
-        //    std::cerr << "There are " << it->second << " bytes free starting at results[" << it->first << "]." << std::endl;
-        //}
-        //std::cerr << "There are " << free_results << " bytes free in results." << std::endl;
-        //std::cerr << "There are " << _RESILIENCE_MAX_FILE_SIZE - free_results << " bytes used in results." << std::endl;
-        //std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
+        std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
+        size_t free_results = 0;
+        for( std::map<int, size_t>::iterator it = _freeResilienceResults.begin();
+                it != _freeResilienceResults.end();
+                it++ )
+        {
+            free_results += it->second;
+            std::cerr << "There are " << it->second << " bytes free starting at results[" << it->first << "]." << std::endl;
+        }
+        std::cerr << "There are " << free_results << " bytes free in results." << std::endl;
+        std::cerr << "There are " << _RESILIENCE_MAX_FILE_SIZE - free_results << " bytes used in results." << std::endl;
+        std::cerr << "There are " << _usedResilienceNodes.size() << " resilience nodes in use." << std::endl;
+        std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
     }
 
     ResiliencePersistence::~ResiliencePersistence() {
@@ -175,38 +179,23 @@ namespace nanos {
         close( _resilienceResultsFileDescriptor );
     }
 
-    void ResilienceNode::removeAllDescs() {
-        if( _descSize == 0 ) 
-            return;
+    /********** RESILIENCE PERSISTENCE **********/
+    
 
-        ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( _desc );
-        int prev = _desc;
-        while( current != NULL ) {
-            int toDelete = prev;
-            current->removeAllDescs();
-            prev = current->_next;
-            current = sys.getResiliencePersistence()->getResilienceNode( current->_next );
-            sys.getResiliencePersistence()->freeResilienceNode( toDelete );
-            _descSize--;
-        }
+    /********** RESILIENCE NODE **********/
 
-        ensure( _descSize == 0, "There are still descs" );
-        _desc = 0;
-    }
-
-
-    void ResilienceNode::loadResult( CopyData * copies, size_t numCopies, int task_id ) { 
-        char * aux = ( char * ) sys.getResiliencePersistence()->getResilienceResults( _resultIndex );
-        for( unsigned int i = 0; i < numCopies; i++ ) {
-            if( copies[i].isOutput() ) {
-                size_t copy_size = copies[i].getDimensions()->accessed_length;
-                void * copy_address = ( char * ) copies[i].getBaseAddress() + copies[i].getOffset();
-                memcpy( copy_address, aux, copy_size );
-                aux += copy_size;
+    void ResilienceNode::addNext( ResilienceNode * rn ) {
+        if( _next == 0 )
+            _next = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
+        else {
+            ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( _next );
+            while( current->_next != 0 ) {
+                current = sys.getResiliencePersistence()->getResilienceNode( current->_next );
             }
+            current->_next = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
         }
-        sys.getResiliencePersistence()->getResilienceNode( _parent )->_lastDescVisited++;
     }
+
 
     void ResilienceNode::storeResult( CopyData * copies, size_t numCopies, int task_id ) {
         //Calculate outputs size
@@ -216,7 +205,11 @@ namespace nanos {
                 outputs_size += copies[i].getDimensions()->accessed_length;
             }
         }
-        ensure( outputs_size > 0, "Store result of 0 bytes makes no sense." );
+
+        if( outputs_size <= 0 )
+            return;
+            //fatal( "Store result of 0 bytes makes no sense." );
+
         //Get result from resilience results mmaped file.
         _resultSize = outputs_size;
         _resultIndex = ( char * )sys.getResiliencePersistence()->getResilienceResultsFreeSpace( _resultSize ) 
@@ -239,54 +232,19 @@ namespace nanos {
         removeAllDescs();
     }
 
-    void ResilienceNode::addDesc( ResilienceNode * rn ) { 
-        if( rn == NULL )
-            return;
-
-        if( _desc == 0 ) 
-            _desc = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
-        else
-            sys.getResiliencePersistence()->getResilienceNode( _desc )->addNext( rn );
-
-        _descSize++;
-    }
-
-    void ResilienceNode::addNext( ResilienceNode * rn ) {
-        if( _next == 0 )
-            _next = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
-        else {
-            ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( _next );
-            while( current->_next != 0 ) {
-                current = sys.getResiliencePersistence()->getResilienceNode( current->_next );
+    void ResilienceNode::loadResult( CopyData * copies, size_t numCopies, int task_id ) { 
+        char * aux = ( char * ) sys.getResiliencePersistence()->getResilienceResults( _resultIndex );
+        for( unsigned int i = 0; i < numCopies; i++ ) {
+            if( copies[i].isOutput() ) {
+                size_t copy_size = copies[i].getDimensions()->accessed_length;
+                void * copy_address = ( char * ) copies[i].getBaseAddress() + copies[i].getOffset();
+                memcpy( copy_address, aux, copy_size );
+                aux += copy_size;
             }
-            current->_next = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
         }
     }
 
-    ResilienceNode* ResilienceNode::getNextDesc( bool inc ) {
-        //TODO: FIXME: Maybe, this should throw FATAL ERROR.
-        if( _desc == 0 || _lastDescVisited >= _descSize ) {
-            _lastDescVisited++;
-            return NULL;
-        }
-
-        ResilienceNode * desc = sys.getResiliencePersistence()->getResilienceNode( _desc );
-        for( unsigned int i = 0; i < _lastDescVisited; i++) {
-            //TODO: FIXME: Maybe, this should throw FATAL ERROR.
-            if( desc->_next == 0 ) {
-                _lastDescVisited++;
-                return NULL;
-            }
-            desc = sys.getResiliencePersistence()->getResilienceNode( desc->_next );
-        }
-
-        if( desc != NULL && !desc->isComputed() )
-            _lastDescVisited++;
-
-        return desc;
-    }
-
-    ResilienceNode* ResilienceNode::getNextDescToRestore( bool inc ) {
+    ResilienceNode* ResilienceNode::getNextDescToRestore() {
         //TODO: FIXME: Maybe, this should throw FATAL ERROR.
         if( _desc == 0 || _lastDescRestored >= _descSize ) {
             _lastDescRestored++;
@@ -308,4 +266,41 @@ namespace nanos {
 
         return desc;
     }
+
+    void ResilienceNode::addDesc( ResilienceNode * rn ) { 
+        if( rn == NULL )
+            return;
+
+        if( _desc == 0 ) 
+            _desc = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
+        else
+            sys.getResiliencePersistence()->getResilienceNode( _desc )->addNext( rn );
+
+        _descSize++;
+    }
+
+    void ResilienceNode::removeAllDescs() {
+        if( _descSize == 0 ) 
+            return;
+
+        ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( _desc );
+        int prev = _desc;
+        while( current != NULL ) {
+            int toDelete = prev;
+            current->removeAllDescs();
+            prev = current->_next;
+            _desc = current->_next;
+            current = sys.getResiliencePersistence()->getResilienceNode( current->_next );
+            sys.getResiliencePersistence()->freeResilienceNode( toDelete );
+            _descSize--;
+        }
+
+        if( _descSize != 0 )
+            fatal0( "There are still descs" );
+
+        _desc = 0;
+    }
+
+    /********** RESILIENCE NODE **********/
+
 }

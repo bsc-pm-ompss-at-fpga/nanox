@@ -323,10 +323,9 @@ void WorkDescriptor::done ()
 #endif
 
    // Storing result in resilience tree.
-   if( _resNode != NULL) {
+   if( _resNode != NULL ) {
       if( _numCopies > 0 && !isInvalid() && !_resNode->isComputed() )
          _resNode->storeResult( _copies, _numCopies, _id );
-      _resNode->restartLastDescVisited();
       _resNode->restartLastDescRestored();
    }
    else {

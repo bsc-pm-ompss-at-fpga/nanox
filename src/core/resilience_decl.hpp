@@ -33,8 +33,9 @@ namespace nanos {
         public:
         ResiliencePersistence();
         ~ResiliencePersistence();
+
         // RELATED TO RESILIENCE TREE
-        ResilienceNode * getFreeResilienceNode();
+        ResilienceNode * getFreeResilienceNode( ResilienceNode * parent = NULL );
         ResilienceNode * getResilienceNode( int offset );
         void freeResilienceNode( int index );
 
@@ -50,39 +51,44 @@ namespace nanos {
 
         bool _inUse;
         bool _computed;
-        int _id;
-        int _parent;
         int _desc;
         int _next;
         int _resultIndex;
-        size_t _descSize;
         size_t _resultSize;
-        unsigned int _lastDescVisited;
+        size_t _descSize;
         unsigned int _lastDescRestored;
 
-        void addDesc( ResilienceNode * rn );
-        void removeAllDescs();
         void addNext( ResilienceNode * rn );
 
         public:
-        void setParent( ResilienceNode * parent );
-        ResilienceNode * getParent();
-        size_t getNumDescendants();
-        bool isComputed() const;
-        void storeResult( CopyData * copies, size_t numCopies, int task_id );
-        void loadResult( CopyData * copies, size_t numCopies, int task_id );
-        void restartLastDescVisited();
-        void restartLastDescRestored();
+
+        //_inUse
         bool isInUse() const;
         void setInUse( bool flag );
-        int getId() const;
-        void setId( int id );
-        size_t getResultSize() const;
+
+        //_computed
+        bool isComputed() const;
+
+        //_resultIndex
         int getResultIndex() const;
 
-        ResilienceNode* getNextDesc( bool inc = false );
-        ResilienceNode* getNextDescToRestore( bool inc = false );
+        //_resultSize
+        size_t getResultSize() const;
 
+        //_descSize
+        size_t getNumDescendants();
+
+        // METHODS RELATED TO RESULT
+        void storeResult( CopyData * copies, size_t numCopies, int task_id );
+        void loadResult( CopyData * copies, size_t numCopies, int task_id );
+
+        // METHODS RELATED TO RESTORE
+        void restartLastDescRestored();
+        ResilienceNode* getNextDescToRestore();
+
+        // METHODS RELATED TO TREE
+        void addDesc( ResilienceNode * rn );
+        void removeAllDescs();
     };
 
 }

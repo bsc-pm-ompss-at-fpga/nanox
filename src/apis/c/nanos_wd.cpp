@@ -286,16 +286,16 @@ NANOS_API_DEF( nanos_err_t, nanos_create_wd_and_run_compact, ( nanos_const_wd_de
       /* RESILIENCE BASED ON MEMOIZATION */
 
       if( wd.getParent() != NULL && wd.getParent()->getResilienceNode() != NULL ) {
-          if( wd.getResilienceNode() == NULL ) {
-              ResilienceNode * desc = wd.getParent()->getResilienceNode()->getNextDesc( true );
-              if( desc != NULL )
-                  wd.setResilienceNode( desc );
-              else {
-                  desc = sys.getResiliencePersistence()->getFreeResilienceNode();
-                  desc->setParent( wd.getParent()->getResilienceNode() );
-                  wd.setResilienceNode( desc );
-              }
-          }
+         if( wd.getResilienceNode() == NULL ) {
+            ResilienceNode * desc = wd.getParent()->getResilienceNode()->getNextDescToRestore();
+            if( desc != NULL ) {
+               wd.setResilienceNode( desc );
+            }
+            else {
+               desc = sys.getResiliencePersistence()->getFreeResilienceNode( wd.getParent()->getResilienceNode() );
+               wd.setResilienceNode( desc );
+            }
+         }
       }
 
       /* RESILIENCE BASED ON MEMOIZATION */

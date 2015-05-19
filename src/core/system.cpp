@@ -472,7 +472,6 @@ void System::start ()
        mainWD.setResilienceNode( sys.getResiliencePersistence()->getResilienceNode( mainWD.getId() ) );
    else {
        mainWD.setResilienceNode( sys.getResiliencePersistence()->getFreeResilienceNode() );
-       mainWD.getResilienceNode()->setId( mainWD.getId() );
    }
 
    if ( _defSchedulePolicy->getWDDataSize() > 0 ) {
@@ -741,7 +740,6 @@ void System::finish ()
    delete[] _lockPool;
 
    //Restart desc counter of masterWD.
-   getMyThreadSafe()->getCurrentWD()->getResilienceNode()->restartLastDescVisited();
    getMyThreadSafe()->getCurrentWD()->getResilienceNode()->restartLastDescRestored();
 
    // Destroy ResiliencePersistence
@@ -1014,9 +1012,7 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
             wd->setResilienceNode( desc );
          }
          else {
-            desc = sys.getResiliencePersistence()->getFreeResilienceNode();
-            desc->setParent( wd->getParent()->getResilienceNode() );
-            desc->setId( wd->getId() );
+            desc = sys.getResiliencePersistence()->getFreeResilienceNode( wd->getParent()->getResilienceNode() );
             wd->setResilienceNode( desc );
          }
       }
