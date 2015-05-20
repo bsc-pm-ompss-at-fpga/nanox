@@ -15,15 +15,15 @@ namespace nanos {
         // RELATED TO RESILIENCE TREE
         ResilienceNode * _resilienceTree;
         Lock _resilienceTreeLock;
-        std::queue<int> _freeResilienceNodes;
-        std::list<int> _usedResilienceNodes;
+        std::queue<unsigned int> _freeResilienceNodes;
+        std::list<unsigned int> _usedResilienceNodes;
         int _resilienceTreeFileDescriptor;
         char * _resilienceTreeFilepath;
 
         // RELATED TO RESILIENCE RESULTS
         void * _resilienceResults;
         Lock _resilienceResultsLock;
-        std::map<int, size_t> _freeResilienceResults;
+        std::map<unsigned int, size_t> _freeResilienceResults;
         int _resilienceResultsFileDescriptor;
         char * _resilienceResultsFilepath;
 
@@ -36,18 +36,19 @@ namespace nanos {
 
         // RELATED TO RESILIENCE TREE
         ResilienceNode * getFreeResilienceNode( ResilienceNode * parent = NULL );
-        ResilienceNode * getResilienceNode( int offset );
-        void freeResilienceNode( int index );
+        ResilienceNode * getResilienceNode( unsigned int offset );
+        void freeResilienceNode( unsigned int offset );
 
         // RELATED TO RESILIENCE RESULTS
         void * getResilienceResultsFreeSpace( size_t size );
-        void * getResilienceResults( int offset );
-        void freeResilienceResultsSpace( int offset, size_t size);
-        void restoreResilienceResultsSpace( int offset, size_t size );
+        void * getResilienceResults( unsigned int offset );
+        void freeResilienceResultsSpace( unsigned int offset, size_t size);
+        void restoreResilienceResultsSpace( unsigned int offset, size_t size );
 
     };
 
     class ResilienceNode {
+        friend class ResiliencePersistence;
 
         bool _inUse;
         bool _computed;
@@ -58,7 +59,7 @@ namespace nanos {
         size_t _descSize;
         unsigned int _lastDescRestored;
 
-        void addNext( ResilienceNode * rn );
+        bool addNext( int next );
 
         public:
 
@@ -87,7 +88,7 @@ namespace nanos {
         ResilienceNode* getNextDescToRestore();
 
         // METHODS RELATED TO TREE
-        void addDesc( ResilienceNode * rn );
+        bool addDesc( int desc );
         void removeAllDescs();
     };
 

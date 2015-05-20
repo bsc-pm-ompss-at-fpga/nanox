@@ -1016,6 +1016,9 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
             wd->setResilienceNode( desc );
          }
       }
+      else {
+          fatal( "A new WD cannot already have ResilienceNode." );
+      }
    }
 
    /* RESILIENCE BASED ON MEMOIZATION */

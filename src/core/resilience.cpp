@@ -134,8 +134,24 @@ namespace nanos {
                     _usedResilienceNodes.push_back( i );
                     if( rn->isComputed() ) {
                         restoreResilienceResultsSpace( rn->getResultIndex(), rn->getResultSize() );
-                        if( rn->getNumDescendants() > 0 )
-                            rn->removeAllDescs();
+                        if( rn->getNumDescendants() > 0 ) {
+                            /* If RN is computed it shouldn't have descs, so it's necessary remove them. 
+                             * However, it's not possible to use ResilienceNode::removeAllDescs() because
+                             * this method uses sys._resilience which is being created here.
+                             */
+                            ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( rn->_desc );
+                            while( current != NULL ) {
+                                int toDelete = rn->_desc;
+                                current->removeAllDescs();
+                                rn->_desc = current->_next;
+                                current = getResilienceNode( current->_next );
+                                freeResilienceNode( toDelete );
+                                rn->_descSize--;
+                            }
+
+                            if( rn->_descSize != 0 || rn->_desc != 0 )
+                                fatal0( "There are still descs" );
+                        }
                     }
                     rn->restartLastDescRestored();
                 }
@@ -152,7 +168,7 @@ namespace nanos {
         // JUST FOR DEBUG PURPOSES
         std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
         size_t free_results = 0;
-        for( std::map<int, size_t>::iterator it = _freeResilienceResults.begin();
+        for( std::map<unsigned int, size_t>::iterator it = _freeResilienceResults.begin();
                 it != _freeResilienceResults.end();
                 it++ )
         {
@@ -184,16 +200,18 @@ namespace nanos {
 
     /********** RESILIENCE NODE **********/
 
-    void ResilienceNode::addNext( ResilienceNode * rn ) {
-        if( _next == 0 )
-            _next = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
-        else {
-            ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( _next );
-            while( current->_next != 0 ) {
-                current = sys.getResiliencePersistence()->getResilienceNode( current->_next );
-            }
-            current->_next = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
+    bool ResilienceNode::addNext( int next ) {
+        if( _next == 0 ) {
+            _next = next; 
+            return true;
         }
+
+        ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( _next );
+        while( current->_next != 0 ) {
+            current = sys.getResiliencePersistence()->getResilienceNode( current->_next );
+        }
+        current->_next = next; 
+        return true;
     }
 
 
@@ -267,16 +285,17 @@ namespace nanos {
         return desc;
     }
 
-    void ResilienceNode::addDesc( ResilienceNode * rn ) { 
-        if( rn == NULL )
-            return;
+    bool ResilienceNode::addDesc( int desc ) { 
+        if( desc == 0 )
+            fatal0( "Trying to add null descendent." ); 
 
         if( _desc == 0 ) 
-            _desc = rn - sys.getResiliencePersistence()->getResilienceNode( 1 ) + 1;
+            _desc = desc; 
         else
-            sys.getResiliencePersistence()->getResilienceNode( _desc )->addNext( rn );
+            sys.getResiliencePersistence()->getResilienceNode( _desc )->addNext( desc );
 
         _descSize++;
+        return true;
     }
 
     void ResilienceNode::removeAllDescs() {
@@ -284,21 +303,17 @@ namespace nanos {
             return;
 
         ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( _desc );
-        int prev = _desc;
         while( current != NULL ) {
-            int toDelete = prev;
+            int toDelete = _desc;
             current->removeAllDescs();
-            prev = current->_next;
             _desc = current->_next;
             current = sys.getResiliencePersistence()->getResilienceNode( current->_next );
             sys.getResiliencePersistence()->freeResilienceNode( toDelete );
             _descSize--;
         }
 
-        if( _descSize != 0 )
+        if( _descSize != 0 || _desc != 0 )
             fatal0( "There are still descs" );
-
-        _desc = 0;
     }
 
     /********** RESILIENCE NODE **********/

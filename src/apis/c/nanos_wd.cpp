@@ -296,6 +296,9 @@ NANOS_API_DEF( nanos_err_t, nanos_create_wd_and_run_compact, ( nanos_const_wd_de
                wd.setResilienceNode( desc );
             }
          }
+         else {
+             fatal( "A new WD cannot already have ResilienceNode." );
+         }
       }
 
       /* RESILIENCE BASED ON MEMOIZATION */
