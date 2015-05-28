@@ -8,6 +8,8 @@
 #include <map>
 #include "atomic_decl.hpp"
 
+extern void mpi_get_rank( int * rank );
+
 namespace nanos {
 
     class ResiliencePersistence {
@@ -31,7 +33,7 @@ namespace nanos {
         size_t _RESILIENCE_MAX_FILE_SIZE;
 
         public:
-        ResiliencePersistence();
+        ResiliencePersistence( int rank );
         ~ResiliencePersistence();
 
         // RELATED TO RESILIENCE TREE

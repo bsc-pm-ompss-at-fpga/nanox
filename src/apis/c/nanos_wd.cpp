@@ -627,4 +627,10 @@ NANOS_API_DEF(nanos_err_t, nanos_is_tied, ( bool *result ))
     return NANOS_OK;
 }
 
+//RESILIENCE BASED ON MEMOIZATION
+NANOS_API_DEF( void, nanos_init_resilience, ( int rank ) )
+{
+    sys.initResiliencePersistence( rank );
+}
+
 //! \}

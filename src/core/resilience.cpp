@@ -1,8 +1,8 @@
-#include "resilience_decl.hpp"
-#include "resilience.hpp"
 #include <iostream>
 #include <stdlib.h>
 #include <string.h>
+#include "resilience_decl.hpp"
+#include "resilience.hpp"
 #include "copydata.hpp"
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -14,14 +14,14 @@ namespace nanos {
 
     /********** RESILIENCE PERSISTENCE **********/
 
-    ResiliencePersistence::ResiliencePersistence() :
+    ResiliencePersistence::ResiliencePersistence( int rank ) :
       _resilienceTree( NULL )
       , _resilienceTreeFileDescriptor( -1 )
       , _resilienceTreeFilepath( NULL )
       , _resilienceResults( NULL )
       , _resilienceResultsFileDescriptor( -1 )
       , _resilienceResultsFilepath( NULL )
-      , _RESILIENCE_MAX_FILE_SIZE( 1024*1024*sizeof( ResilienceNode ) )
+      , _RESILIENCE_MAX_FILE_SIZE( 16*1024*1024*sizeof( ResilienceNode ) )
     {
         /* Get path of executable file. With this path, the files for store the persistent resilience tree and the persistent resilience results are created 
          * with the same name of the executable, in the same path, terminating with ".tree" and ".results" respectively.
@@ -33,12 +33,19 @@ namespace nanos {
         int pos = readlink ( link, path, sizeof( path ) );
         if( pos <= 0 )
             fatal0( "Resilience: Error getting path of executable file" );
-        _resilienceTreeFilepath = NEW char[pos+sizeof(".tree")];
-        _resilienceResultsFilepath = NEW char[pos+sizeof(".results")];
+        _resilienceTreeFilepath = NEW char[pos+8+sizeof(".tree")];
+        _resilienceResultsFilepath = NEW char[pos+8+sizeof(".results")];
         memset( _resilienceTreeFilepath, 0, pos+sizeof(".tree") );
         memset( _resilienceResultsFilepath, 0, pos+sizeof(".results") );
         strncpy( _resilienceTreeFilepath, path, pos );
         strncpy( _resilienceResultsFilepath, _resilienceTreeFilepath, pos );
+
+        // MPI
+        if( rank != -1 ) {
+            sprintf( _resilienceTreeFilepath, "%s.%d", _resilienceTreeFilepath, rank );
+            sprintf( _resilienceResultsFilepath, "%s.%d", _resilienceResultsFilepath, rank );
+        }
+        // /MPI
         strcat( _resilienceTreeFilepath, ".tree" );
         strcat( _resilienceResultsFilepath, ".results" );
 
@@ -166,19 +173,19 @@ namespace nanos {
         }
 
         // JUST FOR DEBUG PURPOSES
-        std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
+        //std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
         size_t free_results = 0;
         for( std::map<unsigned int, size_t>::iterator it = _freeResilienceResults.begin();
                 it != _freeResilienceResults.end();
                 it++ )
         {
             free_results += it->second;
-            std::cerr << "There are " << it->second << " bytes free starting at results[" << it->first << "]." << std::endl;
+            //std::cerr << "There are " << it->second << " bytes free starting at results[" << it->first << "]." << std::endl;
         }
-        std::cerr << "There are " << free_results << " bytes free in results." << std::endl;
-        std::cerr << "There are " << _RESILIENCE_MAX_FILE_SIZE - free_results << " bytes used in results." << std::endl;
-        std::cerr << "There are " << _usedResilienceNodes.size() << " resilience nodes in use." << std::endl;
-        std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
+        //std::cerr << "There are " << free_results << " bytes free in results." << std::endl;
+        //std::cerr << "There are " << _RESILIENCE_MAX_FILE_SIZE - free_results << " bytes used in results." << std::endl;
+        //std::cerr << "There are " << _usedResilienceNodes.size() << " resilience nodes in use." << std::endl;
+        //std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
     }
 
     ResiliencePersistence::~ResiliencePersistence() {
@@ -206,9 +213,13 @@ namespace nanos {
             return true;
         }
 
+        int cont = 0;
+
         ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( _next );
         while( current->_next != 0 ) {
             current = sys.getResiliencePersistence()->getResilienceNode( current->_next );
+            //cont++;
+            //if( cont == 500 ) fatal0( "There is a cycle in the resilience tree." ); 
         }
         current->_next = next; 
         return true;

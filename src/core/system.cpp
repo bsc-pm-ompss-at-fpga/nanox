@@ -116,7 +116,6 @@ System::System () :
    config();
 
    _lockPool = NEW Lock[_lockPoolSize];
-   _resilience = new ResiliencePersistence();
 
    if ( !_delayedStart ) {
       //std::cerr << "NX_ARGS is:" << (char *)(OS::getEnvironmentVariable( "NX_ARGS" ) != NULL ? OS::getEnvironmentVariable( "NX_ARGS" ) : "NO NX_ARGS: GG!") << std::endl;
@@ -466,13 +465,6 @@ void System::start ()
       mainWD.setInternalData( data );
    }
    _pmInterface->setupWD( mainWD );
-
-   // Set ResilienceNode to mainWD.
-   if( sys.getResiliencePersistence()->getResilienceNode( mainWD.getId() )->isInUse() )
-       mainWD.setResilienceNode( sys.getResiliencePersistence()->getResilienceNode( mainWD.getId() ) );
-   else {
-       mainWD.setResilienceNode( sys.getResiliencePersistence()->getFreeResilienceNode() );
-   }
 
    if ( _defSchedulePolicy->getWDDataSize() > 0 ) {
       char *data = NEW char[ _defSchedulePolicy->getWDDataSize() ];

@@ -676,6 +676,8 @@ namespace nanos
          bool isImmediateSuccessorEnabled() const;
          bool usePredecessorCopyInfo() const;
 
+         //void initResiliencePersistence( int rank = -1 );
+         void initResiliencePersistence( int rank );
          ResiliencePersistence * getResiliencePersistence();
    };
 
