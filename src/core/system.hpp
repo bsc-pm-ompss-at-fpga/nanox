@@ -642,7 +642,7 @@ inline bool System::usePredecessorCopyInfo() const {
 }
 
 inline void System::initResiliencePersistence( int rank ) { 
-   _resilience = new ResiliencePersistence( rank ); 
+   _resilience = new ResiliencePersistence( rank, _resilienceFileSize ); 
    WD &mainWD = *myThread->getCurrentWD();
    if( sys.getResiliencePersistence()->getResilienceNode( mainWD.getId() )->isInUse() )
        mainWD.setResilienceNode( sys.getResiliencePersistence()->getResilienceNode( mainWD.getId() ) );

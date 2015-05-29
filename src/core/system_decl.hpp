@@ -246,6 +246,7 @@ namespace nanos
          int _userDefinedNUMANode;
          Router _router;
          ResiliencePersistence * _resilience;
+         size_t _resilienceFileSize;
       public:
          Hwloc _hwloc;
          bool _immediateSuccessorDisabled;
@@ -676,7 +677,6 @@ namespace nanos
          bool isImmediateSuccessorEnabled() const;
          bool usePredecessorCopyInfo() const;
 
-         //void initResiliencePersistence( int rank = -1 );
          void initResiliencePersistence( int rank );
          ResiliencePersistence * getResiliencePersistence();
    };

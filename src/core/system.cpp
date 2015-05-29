@@ -392,6 +392,9 @@ void System::config ()
    cfg.registerConfigOption( "disable-predecessor-info", NEW Config::FlagOption( _predecessorCopyInfoDisabled ),
                              "Disables sending the copy_data info to successor WDs." );
    cfg.registerArgOption( "disable-predecessor-info", "disable-predecessor-info" );
+   cfg.registerConfigOption( "resilience-filesize", NEW Config::SizeVar( _resilienceFileSize ),
+                             "Defines the size of the file where resilience persistence will be stored." );
+   cfg.registerArgOption( "resilience-filesize", "resilience-filesize" );
 
    _schedConf.config( cfg );
 

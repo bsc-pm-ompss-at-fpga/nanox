@@ -14,15 +14,23 @@ namespace nanos {
 
     /********** RESILIENCE PERSISTENCE **********/
 
-    ResiliencePersistence::ResiliencePersistence( int rank ) :
+    ResiliencePersistence::ResiliencePersistence( int rank, size_t resilienceFileSize ) :
       _resilienceTree( NULL )
       , _resilienceTreeFileDescriptor( -1 )
       , _resilienceTreeFilepath( NULL )
       , _resilienceResults( NULL )
       , _resilienceResultsFileDescriptor( -1 )
       , _resilienceResultsFilepath( NULL )
-      , _RESILIENCE_MAX_FILE_SIZE( 16*1024*1024*sizeof( ResilienceNode ) )
     {
+        // Make resilience file size multiple of sizeof(ResilienceNode).
+        if( resilienceFileSize % sizeof(ResilienceNode) != 0 ) {
+            _RESILIENCE_MAX_FILE_SIZE = resilienceFileSize/sizeof(ResilienceNode);
+            _RESILIENCE_MAX_FILE_SIZE *= sizeof(ResilienceNode);
+            _RESILIENCE_MAX_FILE_SIZE += sizeof(ResilienceNode);
+        }
+        else {
+            _RESILIENCE_MAX_FILE_SIZE = resilienceFileSize;
+        }
         /* Get path of executable file. With this path, the files for store the persistent resilience tree and the persistent resilience results are created 
          * with the same name of the executable, in the same path, terminating with ".tree" and ".results" respectively.
          */
@@ -173,7 +181,7 @@ namespace nanos {
         }
 
         // JUST FOR DEBUG PURPOSES
-        //std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
+        std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
         size_t free_results = 0;
         for( std::map<unsigned int, size_t>::iterator it = _freeResilienceResults.begin();
                 it != _freeResilienceResults.end();
@@ -182,10 +190,10 @@ namespace nanos {
             free_results += it->second;
             //std::cerr << "There are " << it->second << " bytes free starting at results[" << it->first << "]." << std::endl;
         }
-        //std::cerr << "There are " << free_results << " bytes free in results." << std::endl;
-        //std::cerr << "There are " << _RESILIENCE_MAX_FILE_SIZE - free_results << " bytes used in results." << std::endl;
-        //std::cerr << "There are " << _usedResilienceNodes.size() << " resilience nodes in use." << std::endl;
-        //std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
+        std::cerr << "There are " << free_results << " bytes free in results." << std::endl;
+        std::cerr << "There are " << _RESILIENCE_MAX_FILE_SIZE - free_results << " bytes used in results." << std::endl;
+        std::cerr << "There are " << _usedResilienceNodes.size() << " resilience nodes in use." << std::endl;
+        std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
     }
 
     ResiliencePersistence::~ResiliencePersistence() {
@@ -213,13 +221,9 @@ namespace nanos {
             return true;
         }
 
-        int cont = 0;
-
         ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( _next );
         while( current->_next != 0 ) {
             current = sys.getResiliencePersistence()->getResilienceNode( current->_next );
-            //cont++;
-            //if( cont == 500 ) fatal0( "There is a cycle in the resilience tree." ); 
         }
         current->_next = next; 
         return true;
@@ -289,9 +293,6 @@ namespace nanos {
             }
             desc = sys.getResiliencePersistence()->getResilienceNode( desc->_next );
         }
-
-        if( desc != NULL )
-            _lastDescRestored++;
 
         return desc;
     }

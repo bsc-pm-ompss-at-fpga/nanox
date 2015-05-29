@@ -31,7 +31,7 @@ inline ResilienceNode * ResiliencePersistence::getFreeResilienceNode( Resilience
 }
 
 inline ResilienceNode * ResiliencePersistence::getResilienceNode( unsigned int offset ) { 
-    if( offset < 1 || offset >= _RESILIENCE_MAX_FILE_SIZE/sizeof(ResilienceNode) ) return NULL; 
+    if( offset < 1 || offset > _RESILIENCE_MAX_FILE_SIZE/sizeof(ResilienceNode) ) return NULL; 
     return _resilienceTree+offset-1;
 }
 

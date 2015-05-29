@@ -33,7 +33,7 @@ namespace nanos {
         size_t _RESILIENCE_MAX_FILE_SIZE;
 
         public:
-        ResiliencePersistence( int rank );
+        ResiliencePersistence( int rank, size_t resilienceFileSize );
         ~ResiliencePersistence();
 
         // RELATED TO RESILIENCE TREE
