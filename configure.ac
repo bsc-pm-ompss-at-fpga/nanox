@@ -992,7 +992,8 @@ AC_SUBST([USED_VERSION])
 
 
 # Check for atomic builtins in GCC
-AC_CHECK_GXX_ATOMIC_BUILTINS()
+AC_CHECK_GXX_LEGACY_ATOMIC_BUILTINS()
+AC_CHECK_GXX_NEW_ATOMIC_BUILTINS()
 
 MPITRACE_HOME=""
 MPITRACE_INC=""
@@ -1077,8 +1078,9 @@ AC_ARG_WITH([hwloc],
                 if test -e $hwloc_h ;
                 then
                    hwloc_version_string=`sed -ne '/^\s*#\s*define\s\+HWLOC_API_VERSION .*$/p' $hwloc_h`
-                   hwloc_version=`echo $hwloc_version_string | sed -e 's/#define HWLOC_API_VERSION 0x[0]\+\([0-9]\+\).*$/\1/'`
-                   if test "$hwloc_version" -ge 10200;
+                   hwloc_version=`echo $hwloc_version_string | sed -e 's/#define HWLOC_API_VERSION //'`
+
+                   if test $(($hwloc_version)) -ge $((0x10200))
                    then
                       HWLOC_HOME="$withval"
                       HWLOC_INC="$withval/include"
@@ -1250,6 +1252,14 @@ echo "Host arch:               " $SMP_ARCH
 echo "User level threading:    " $smp_ult
 echo "Configured architectures:" $ARCHITECTURES
 echo "Configured versions:     " $VERSIONS
+gcc_builtins_used="unknown"
+if test "$new_gcc_builtins" = yes;
+then
+    gcc_builtins_used="new gcc __atomic builtins"
+else
+    gcc_builtins_used="legacy gcc __sync builtins"
+fi
+echo "GCC atomics:             " $gcc_builtins_used
 if test x$memtracker_enabled = xyes ; then
    echo "Memory tracker:           enabled"
 else

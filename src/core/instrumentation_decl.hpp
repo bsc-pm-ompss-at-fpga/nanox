@@ -649,7 +649,9 @@ namespace nanos {
             /* 61 */ registerEventKey("concurrent-tasks", "Number of concurrent tasks in the ready queue", false, EVENT_DEVELOPER );
             /* 62 */ registerEventKey("network-transfer", "Network transfer to node ", false, EVENT_DEVELOPER);
             /* 63 */ registerEventKey("team-ptr", "Team info", false, EVENT_DEVELOPER);
-            /* 64 */ registerEventKey("resilience","Copying result from last execution", true, EVENT_ALL);
+            /* 64 */ registerEventKey("thread-numa-node","Thread NUMA node", true, EVENT_ADVANCED);
+            /* 65 */ registerEventKey("wd-numa-node","WD NUMA node", true, EVENT_ADVANCED);
+            /* 66 */ registerEventKey("resilience","Copying result from last execution", true, EVENT_ALL);
                      
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }

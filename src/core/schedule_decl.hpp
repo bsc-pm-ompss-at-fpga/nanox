@@ -20,6 +20,10 @@
 #ifndef _NANOS_SCHEDULE_DECL_H
 #define _NANOS_SCHEDULE_DECL_H
 
+#ifdef HAVE_CONFIG_H
+  #include <config.h>
+#endif
+
 #include <stddef.h>
 #include <string>
 
@@ -52,8 +56,8 @@ namespace nanos
          static void prePreOutlineWork ( WD *work );
          static void preOutlineWorkWithThread ( BaseThread *thread, WD *work );
          static void postOutlineWork ( WD *work, bool schedule, BaseThread *owner );
-         static bool inlineWork ( WD *work, bool schedule = false );
-         static bool inlineWorkAsync ( WD *wd, bool schedule = false );
+         static bool inlineWork ( WD *work, bool schedule );
+         static bool inlineWorkAsync ( WD *wd, bool schedule );
          static void outlineWork( BaseThread *currentThread, WD *wd ); 
 
          static void submit ( WD &wd, bool force_queue = false  );
@@ -64,7 +68,7 @@ namespace nanos
          static void switchTo ( WD *to );
          static void exitTo ( WD *next );
          static void switchToThread ( BaseThread * thread );
-         static void finishWork( WD * wd, bool schedule = false );
+         static void finishWork( WD * wd, bool schedule );
 
          static void workerLoop ( void );
          static void asyncWorkerLoop ( void );
@@ -157,8 +161,17 @@ namespace nanos
 
          int getCreatedTasks();
          int getReadyTasks();
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+         int * getReadyTasksAddr( void ) { return &_readyTasks.override(); }
+#else
+         volatile int * getReadyTasksAddr( void ) { return &_readyTasks.override(); }
+#endif
          int getTotalTasks();
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+         int * getTotalTasksAddr( void ) { return &_totalTasks.override(); }
+#else
          volatile int * getTotalTasksAddr( void ) { return &_totalTasks.override(); }
+#endif
    };
 
    class ScheduleTeamData {

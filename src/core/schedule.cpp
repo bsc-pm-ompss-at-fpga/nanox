@@ -238,7 +238,7 @@ inline void Scheduler::idleLoop ()
       //! \note thread can only wait if not in exit behaviour, meaning that it has no user's work
       // descriptor in its stack frame
       //if ( thread->isSleeping() && !behaviour::exiting() && !thread_manager->lastActiveThread() ) {
-      if ( thread->isSleeping() && !thread_manager->lastActiveThread() ) {
+      if ( thread->isSleeping() && !thread_manager->lastActiveThread() && !thread->hasNextWD() ) {
          NANOS_INSTRUMENT (total_spins+= (init_spins - spins); )
 
          NANOS_INSTRUMENT ( nanos_event_value_t Values[7]; )
@@ -382,8 +382,10 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
    
    bool supportULT = thread->runningOn()->supportsUserLevelThreads();
 
+   verbose("Wait on condition");
    while ( !condition->check() /* FIXME:xteruel do we needed? && thread->isRunning() */) {
       if ( checks == 0 ) {
+         verbose("   starting idle loop"); //FIXME:xteruel
          condition->lock();
          if ( !( condition->check() ) ) {
 
@@ -408,15 +410,8 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
 
             //! If found a wd to switch to, execute it
             if ( next ) {
-               if ( next->started() || next->getParent() != current ){
-                  switchTo ( next );
-               } else {
-                  condition->unlock();
-                  if ( Scheduler::inlineWork ( next, true ) ) {
-                     next->~WorkDescriptor();
-                     delete[] (char *)next;
-                  }
-               }
+               verbose("   switching to " << next->getId() ); //FIXME:xteruel
+               switchTo ( next );
                thread = getMyThreadSafe();
                supportULT = thread->runningOn()->supportsUserLevelThreads();
                thread->step();
@@ -534,9 +529,10 @@ void Scheduler::workerClusterLoop ()
       if ( parent != current_thread ) // if parent == myThread, then there are no "soft" threads and just do nothing but polling.
       {
          ext::ClusterThread *myClusterThread = ( ext::ClusterThread * ) current_thread;
+
          if ( myClusterThread->tryLock() ) {
             ext::ClusterNode *thisNode = ( ext::ClusterNode * ) current_thread->runningOn();
-            thisNode->setCurrentDevice( 0 ); 
+            thisNode->setCurrentDevice( 0 );
             myClusterThread->clearCompletedWDsSMP2();
 
             if ( myClusterThread->hasWaitingDataWDs() ) {
@@ -1100,20 +1096,19 @@ void Scheduler::finishWork( WD * wd, bool schedule )
 
 bool Scheduler::inlineWork ( WD *wd, bool schedule )
 {
+   // Getting current thread and WD
    BaseThread *thread = getMyThreadSafe();
-
-   // run it in the current frame
    WD *oldwd = thread->getCurrentWD();
 
+   // If old WD have Synchronized Condition, unlock it
    GenericSyncCond *syncCond = oldwd->getSyncCond();
    if ( syncCond != NULL ) syncCond->unlock();
 
+   // Debug information
    debug( "switching(inlined) from task " << oldwd << ":" << oldwd->getId() <<
           " to " << wd << ":" << wd->getId() << " at node " << sys.getNetwork()->getNodeNum() );
 
-   // Initializing wd if necessary
-   // It will be started later in inlineWorkDependent call
-   
+   // Initializing wd if necessary. It will be started later in inlineWorkDependent call
    if ( !wd->started() ) { 
       if ( !wd->_mcontrol.isMemoryAllocated() ) {
          wd->_mcontrol.initialize( *(thread->runningOn()) );
@@ -1129,43 +1124,38 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
    // and we don't violate rules about tied WD
    if ( oldwd->isTiedTo() != NULL && (wd->isTiedTo() == NULL)) wd->tieTo(*oldwd->isTiedTo());
 
+   // Set current WD to new WD
    thread->setCurrentWD( *wd );
 
-   /* Instrumenting context switch: wd enters cpu (last = n/a) */
+   // Instrumenting context switch: wd enters cpu (last = n/a)
    NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldwd, wd, false) );
 
    bool done = thread->inlineWorkDependent(*wd);
 
-   // reload thread after running WD due wd may be not tied to thread if
+   // Reload current thread after running WD due wd may be not tied to thread if
    // both work descriptor were not tied to any thread
    thread = getMyThreadSafe();
 
+   // If WD have already executed (done == true), finishWork
    if ( done ) {
       wd->finish();
-
       finishWork( wd, schedule );
-      /* Instrumenting context switch: wd leaves cpu and will not come back (last = true) and new_wd enters */
+      // Instrumenting context switch: wd leaves cpu and will not come back (last = true) and new_wd enters
       NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, oldwd, true) );
    }
+
+   // Debug information
    debug( "exiting(inlined) from task " << wd << ":" << wd->getId() <<
           " to " << oldwd << ":" << oldwd->getId() << " at node " << sys.getNetwork()->getNodeNum() );
 
+   // Restore current WD to old WD
    thread->setCurrentWD( *oldwd );
 
-   // While we tie the inlined tasks this is not needed
-   // as we will always return to the current thread
-   #if 0
-   if ( oldwd->isTiedTo() != NULL )
-      switchToThread(oldwd->isTiedTo());
-   #endif
-
+   // Tiedness rules
    ensure(oldwd->isTiedTo() == NULL || thread == oldwd->isTiedTo(),
            "Violating tied rules " + toString<BaseThread*>(thread) + "!=" + toString<BaseThread*>(oldwd->isTiedTo()));
 
-   /* If DLB, perform the adjustment of resources
-         If master: Return claimed cpus
-         claim cpus and update_resources 
-   */
+   // Perform the adjustment of resources: Return claimed cpus, claim cpus and update resources
    sys.getThreadManager()->returnClaimedCpus();
    if ( sys.getPMInterface().isMalleable() ) {
       sys.getThreadManager()->acquireResourcesIfNeeded();
@@ -1176,9 +1166,8 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
 
 bool Scheduler::inlineWorkAsync ( WD *wd, bool schedule )
 {
+   // Getting current thread and wd
    BaseThread *thread = getMyThreadSafe();
-
-   // run it in the current frame
    WD *oldwd = thread->getCurrentWD();
 
    GenericSyncCond *syncCond = oldwd->getSyncCond();
@@ -1255,12 +1244,12 @@ void Scheduler::switchTo ( WD *to )
             " to " << to << ":" << to->getId() );
 
       NANOS_INSTRUMENT( WD *oldWD = myThread->getCurrentWD(); )
-         NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, to, false ) );
+      NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, to, false ) );
 
       myThread->switchTo( to, switchHelper );
 
    } else {
-      if (inlineWork(to)) {
+      if (inlineWork(to, /*schedule*/ true)) {
          to->~WorkDescriptor();
          delete[] (char *)to;
       }
@@ -1280,12 +1269,17 @@ void Scheduler::switchToThread ( BaseThread *thread )
    {
       NANOS_INSTRUMENT( InstrumentState inst(NANOS_SCHEDULING, true) );
 
+      // Tie wd to target thread
+      WD *wd = myThread->getCurrentWD();
+      wd->tieTo( *thread );
 
-      WD *next = myThread->getTeam()->getSchedulePolicy().atYield( myThread, myThread->getCurrentWD() );
+      // Get a candidate to execute in current thread
+      WD *next = myThread->getTeam()->getSchedulePolicy().atYield( myThread, wd );
       if ( next == NULL ) next = &(myThread->getThreadWD());
       if ( next ) switchTo(next);
-    //We must notify the thread manager to wake up the thread in case it is sleeping
-     sys.getThreadManager()->acquireThread(thread);
+
+      // We must notify the thread manager to wake up the thread in case it is sleeping
+      sys.getThreadManager()->unblockThread(thread);
    }
 }
 
@@ -1310,7 +1304,7 @@ struct ExitBehaviour
         Scheduler::exitTo(next);
       }
       else {
-        if ( Scheduler::inlineWork ( next /*jb merge */, true ) ) {
+        if ( Scheduler::inlineWork ( next /*jb merge */, /*schedule*/ true ) ) {
           next->~WorkDescriptor();
           delete[] (char *)next;
         }
