@@ -14,7 +14,7 @@ namespace nanos {
 
     /********** RESILIENCE PERSISTENCE **********/
 
-    ResiliencePersistence::ResiliencePersistence( int rank, size_t resilienceFileSize ) :
+    ResiliencePersistence::ResiliencePersistence( int rank, size_t resilienceTreeFileSize, size_t resilienceResultsFileSize ) :
       _resilienceTree( NULL )
       , _resilienceTreeFileDescriptor( -1 )
       , _resilienceTreeFilepath( NULL )
@@ -22,38 +22,67 @@ namespace nanos {
       , _resilienceResultsFileDescriptor( -1 )
       , _resilienceResultsFilepath( NULL )
     {
-        // Make resilience file size multiple of sizeof(ResilienceNode).
-        if( resilienceFileSize % sizeof(ResilienceNode) != 0 ) {
-            _RESILIENCE_MAX_FILE_SIZE = resilienceFileSize/sizeof(ResilienceNode);
-            _RESILIENCE_MAX_FILE_SIZE *= sizeof(ResilienceNode);
-            _RESILIENCE_MAX_FILE_SIZE += sizeof(ResilienceNode);
+        if( resilienceTreeFileSize == 0 ) { 
+            message0( "Resilience tree filesize not defined. Using default filesize." );
+            resilienceTreeFileSize = 1024*1024*sizeof(ResilienceNode);
+        }
+        if( resilienceResultsFileSize == 0 ) { 
+            message0( "Resilience results filesize not defined. Using default filesize." );
+            resilienceResultsFileSize = 1024*1024*sizeof(ResilienceNode);
+        }
+        // Make resilience tree filesize multiple of sizeof(ResilienceNode).
+        if( resilienceTreeFileSize % sizeof(ResilienceNode) != 0 ) {
+            _RESILIENCE_TREE_MAX_FILE_SIZE = resilienceTreeFileSize/sizeof(ResilienceNode);
+            _RESILIENCE_TREE_MAX_FILE_SIZE *= sizeof(ResilienceNode);
+            _RESILIENCE_TREE_MAX_FILE_SIZE += sizeof(ResilienceNode);
         }
         else {
-            _RESILIENCE_MAX_FILE_SIZE = resilienceFileSize;
+            _RESILIENCE_TREE_MAX_FILE_SIZE = resilienceTreeFileSize;
         }
+
+        _RESILIENCE_RESULTS_MAX_FILE_SIZE = resilienceResultsFileSize;
+
         /* Get path of executable file. With this path, the files for store the persistent resilience tree and the persistent resilience results are created 
-         * with the same name of the executable, in the same path, terminating with ".tree" and ".results" respectively.
+         * with the same name of the executable, in $TMPDIR, terminating with ".tree" and ".results" respectively. If there is MPI, before the termination
+         * is added the rank.
+         * Example without MPI: ./example generates $TMPDIR/example.tree and $TMPDIR/example.results
+         * Example with MPI (rank 0) : ./example generates $TMPDIR/example.0.tree and $TMPDIR/example.0.results
          */
+
+        // Get path of executable file.
         bool restoreTree = true;
         char link[32];
         sprintf( link, "/proc/%d/exe", getpid() );
         char path[256];
         int pos = readlink ( link, path, sizeof( path ) );
         if( pos <= 0 )
-            fatal0( "Resilience: Error getting path of executable file" );
-        _resilienceTreeFilepath = NEW char[pos+8+sizeof(".tree")];
-        _resilienceResultsFilepath = NEW char[pos+8+sizeof(".results")];
-        memset( _resilienceTreeFilepath, 0, pos+sizeof(".tree") );
-        memset( _resilienceResultsFilepath, 0, pos+sizeof(".results") );
-        strncpy( _resilienceTreeFilepath, path, pos );
-        strncpy( _resilienceResultsFilepath, _resilienceTreeFilepath, pos );
+           fatal0( "Resilience: Error getting path of executable file" );
 
-        // MPI
+        // Get $TMPDIR
+        char * tmpdir = getenv( "TMPDIR" );
+        if( tmpdir == NULL )
+           fatal0( "Resilience: Cannot find tmp directory." );
+
+        // From the path of executable file, get just the name.
+        std::string aux( path, pos ); 
+        std::string name( tmpdir );
+        name.append( aux.substr( aux.find_last_of( '/' ) ) );
+
+        // Construct _resilienceTreeFilepath and _resilienceResultsFilepath
+        _resilienceTreeFilepath = NEW char[name.length()+8+sizeof(".tree")];
+        _resilienceResultsFilepath = NEW char[name.length()+8+sizeof(".results")];
+        memset( _resilienceTreeFilepath, 0, name.length()+8+sizeof(".tree") );
+        memset( _resilienceResultsFilepath, 0, name.length()+8+sizeof(".results") );
+        strcpy( _resilienceTreeFilepath, name.c_str() );
+        strcpy( _resilienceResultsFilepath, name.c_str() );
+
+        // Append MPI_Rank if needed.
         if( rank != -1 ) {
             sprintf( _resilienceTreeFilepath, "%s.%d", _resilienceTreeFilepath, rank );
             sprintf( _resilienceResultsFilepath, "%s.%d", _resilienceResultsFilepath, rank );
         }
-        // /MPI
+
+        // Append termination depending of the file content.
         strcat( _resilienceTreeFilepath, ".tree" );
         strcat( _resilienceResultsFilepath, ".results" );
 
@@ -70,7 +99,7 @@ namespace nanos {
                     fatal0( "Resilience: Error creating persistentTree." );
 
                 //Stretch file.
-                int res = lseek( _resilienceTreeFileDescriptor, _RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
+                int res = lseek( _resilienceTreeFileDescriptor, _RESILIENCE_TREE_MAX_FILE_SIZE - 1, SEEK_SET );
                 if( res == -1 ) {
                     close( _resilienceTreeFileDescriptor );
                     fatal0( "Resilience: Error calling lseek." );
@@ -91,7 +120,7 @@ namespace nanos {
             }
 
             //Now the file is ready to be mmaped.
-            _resilienceTree = ( ResilienceNode * ) mmap( 0, _RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceTreeFileDescriptor, 0 );
+            _resilienceTree = ( ResilienceNode * ) mmap( 0, _RESILIENCE_TREE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceTreeFileDescriptor, 0 );
             if( _resilienceTree == MAP_FAILED ) {
                 close( _resilienceTreeFileDescriptor );
                 fatal0( "Error mmaping file" );
@@ -110,7 +139,7 @@ namespace nanos {
                     fatal0( "Resilience: Error creating persistentTree." );
 
                 //Stretch file.
-                int res = lseek( _resilienceResultsFileDescriptor, _RESILIENCE_MAX_FILE_SIZE - 1, SEEK_SET );
+                int res = lseek( _resilienceResultsFileDescriptor, _RESILIENCE_RESULTS_MAX_FILE_SIZE - 1, SEEK_SET );
                 if( res == -1 ) {
                     close( _resilienceResultsFileDescriptor );
                     fatal0( "Resilience: Error calling lseek." );
@@ -131,42 +160,27 @@ namespace nanos {
             }
 
             //Now the file is ready to be mmaped.
-            _resilienceResults = ( ResilienceNode * ) mmap( 0, _RESILIENCE_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceResultsFileDescriptor, 0 );
+            _resilienceResults = ( ResilienceNode * ) mmap( 0, _RESILIENCE_RESULTS_MAX_FILE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, _resilienceResultsFileDescriptor, 0 );
             if( _resilienceResults == MAP_FAILED ) {
                 close( _resilienceResultsFileDescriptor );
                 fatal0( "Error mmaping file" );
             }
-            _freeResilienceResults.insert( std::make_pair( 0, _RESILIENCE_MAX_FILE_SIZE ) );
+            _freeResilienceResults.insert( std::make_pair( 0, _RESILIENCE_RESULTS_MAX_FILE_SIZE ) );
         }
 
         //Update _freeResilienceResults with the restored tree.
 
-        size_t treeSize = _RESILIENCE_MAX_FILE_SIZE / sizeof( ResilienceNode );
+        size_t treeSize = _RESILIENCE_TREE_MAX_FILE_SIZE / sizeof( ResilienceNode );
         if( restoreTree ) {
             for( unsigned int i = 0; i < treeSize; i++ ) {
                 ResilienceNode * rn = &_resilienceTree[i];
                 if( rn->isInUse() ) {
                     _usedResilienceNodes.push_back( i );
                     if( rn->isComputed() ) {
+                        //std::cerr << "Trying to restore " << rn->getResultSize() << " bytes." << std::endl;
                         restoreResilienceResultsSpace( rn->getResultIndex(), rn->getResultSize() );
-                        if( rn->getNumDescendants() > 0 ) {
-                            /* If RN is computed it shouldn't have descs, so it's necessary remove them. 
-                             * However, it's not possible to use ResilienceNode::removeAllDescs() because
-                             * this method uses sys._resilience which is being created here.
-                             */
-                            ResilienceNode * current = sys.getResiliencePersistence()->getResilienceNode( rn->_desc );
-                            while( current != NULL ) {
-                                int toDelete = rn->_desc;
-                                current->removeAllDescs();
-                                rn->_desc = current->_next;
-                                current = getResilienceNode( current->_next );
-                                freeResilienceNode( toDelete );
-                                rn->_descSize--;
-                            }
-
-                            if( rn->_descSize != 0 || rn->_desc != 0 )
-                                fatal0( "There are still descs" );
-                        }
+                        if( rn->getNumDescendants() > 0 )
+                            removeAllDescs( rn );
                     }
                     rn->restartLastDescRestored();
                 }
@@ -180,8 +194,51 @@ namespace nanos {
                 _freeResilienceNodes.push( i );
         }
 
+        if( sys.printResilienceInfo() )
+            printResilienceInfo();
+    }
+
+    ResiliencePersistence::~ResiliencePersistence() {
+        //Free mapped file for resilience tree.
+        int res = munmap( _resilienceTree, _RESILIENCE_TREE_MAX_FILE_SIZE );
+        if( res == -1 )
+            fatal( "Error unmapping file." );
+        close( _resilienceTreeFileDescriptor );
+
+        //Free mapped file for resilience results.
+        res = munmap( _resilienceResults, _RESILIENCE_RESULTS_MAX_FILE_SIZE );
+        if( res == -1 )
+            fatal( "Error unmapping file." );
+        close( _resilienceResultsFileDescriptor );
+
+        //Remove resilience files.
+        if( sys.removeResilienceFiles() ) {
+            res = remove( _resilienceTreeFilepath );
+            if( res != 0 )
+                fatal( "Error removing file." );
+            res = remove( _resilienceResultsFilepath );
+            if( res != 0 )
+                fatal( "Error removing file." );
+        }
+    }
+
+    void ResiliencePersistence::removeAllDescs( ResilienceNode * rn ) {
+        ResilienceNode * current = getResilienceNode( rn->_desc );
+        while( current != NULL ) {
+            int toDelete = rn->_desc;
+            removeAllDescs( current );
+            rn->_desc = current->_next;
+            current = getResilienceNode( current->_next );
+            freeResilienceNode( toDelete );
+            rn->_descSize--;
+        }
+
+        if( rn->_descSize != 0 || rn->_desc != 0 )
+            fatal0( "There are still descs" );
+    }
+
+    void ResiliencePersistence::printResilienceInfo() {
         // JUST FOR DEBUG PURPOSES
-        std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
         size_t free_results = 0;
         for( std::map<unsigned int, size_t>::iterator it = _freeResilienceResults.begin();
                 it != _freeResilienceResults.end();
@@ -190,24 +247,9 @@ namespace nanos {
             free_results += it->second;
             //std::cerr << "There are " << it->second << " bytes free starting at results[" << it->first << "]." << std::endl;
         }
-        std::cerr << "There are " << free_results << " bytes free in results." << std::endl;
-        std::cerr << "There are " << _RESILIENCE_MAX_FILE_SIZE - free_results << " bytes used in results." << std::endl;
+        //std::cerr << "There are " << free_results << " bytes free in results." << std::endl;
+        std::cerr << "There are " << _RESILIENCE_RESULTS_MAX_FILE_SIZE - free_results << " bytes used in results." << std::endl;
         std::cerr << "There are " << _usedResilienceNodes.size() << " resilience nodes in use." << std::endl;
-        std::cerr << "-------------------- EXECUTION START --------------------" << std::endl;
-    }
-
-    ResiliencePersistence::~ResiliencePersistence() {
-        //Free mapped file for resilience tree.
-        int res = munmap( _resilienceTree, _RESILIENCE_MAX_FILE_SIZE );
-        if( res == -1 )
-            fatal( "Error unmapping file." );
-        close( _resilienceTreeFileDescriptor );
-
-        //Free mapped file for resilience results.
-        res = munmap( _resilienceResults, _RESILIENCE_MAX_FILE_SIZE );
-        if( res == -1 )
-            fatal( "Error unmapping file." );
-        close( _resilienceResultsFileDescriptor );
     }
 
     /********** RESILIENCE PERSISTENCE **********/
@@ -245,6 +287,7 @@ namespace nanos {
 
         //Get result from resilience results mmaped file.
         _resultSize = outputs_size;
+        //std::cerr << "Trying to reserve " << _resultSize << " bytes." << std::endl;
         _resultIndex = ( char * )sys.getResiliencePersistence()->getResilienceResultsFreeSpace( _resultSize ) 
             - ( char * )sys.getResiliencePersistence()->getResilienceResults( 0 );
         //Copy the result
@@ -293,6 +336,8 @@ namespace nanos {
             }
             desc = sys.getResiliencePersistence()->getResilienceNode( desc->_next );
         }
+
+        _lastDescRestored++;
 
         return desc;
     }

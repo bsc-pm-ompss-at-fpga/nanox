@@ -284,6 +284,8 @@ NANOS_API_DEF( nanos_err_t, nanos_create_wd_and_run_compact, ( nanos_const_wd_de
       wd.copyReductions (myThread->getCurrentWD() );
 
       /* RESILIENCE BASED ON MEMOIZATION */
+      if( sys.getResiliencePersistence() == NULL )
+         sys.initResiliencePersistence( -1 );
 
       if( wd.getParent() != NULL && wd.getParent()->getResilienceNode() != NULL ) {
          if( wd.getResilienceNode() == NULL ) {

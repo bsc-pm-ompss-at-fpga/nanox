@@ -11,7 +11,8 @@ inline ResilienceNode * ResiliencePersistence::getFreeResilienceNode( Resilience
 
     if( _freeResilienceNodes.size() == 0 ) {
         _resilienceTreeLock.release();
-        fatal0( "Not enough space in file." );
+        std::cerr << "Not enough space in tree file." << std::endl;
+        fatal0( "Not enough space in tree file." );
     }
 
     unsigned int index = _freeResilienceNodes.front();
@@ -31,7 +32,7 @@ inline ResilienceNode * ResiliencePersistence::getFreeResilienceNode( Resilience
 }
 
 inline ResilienceNode * ResiliencePersistence::getResilienceNode( unsigned int offset ) { 
-    if( offset < 1 || offset > _RESILIENCE_MAX_FILE_SIZE/sizeof(ResilienceNode) ) return NULL; 
+    if( offset < 1 || offset > _RESILIENCE_TREE_MAX_FILE_SIZE/sizeof(ResilienceNode) ) return NULL; 
     return _resilienceTree+offset-1;
 }
 
@@ -44,36 +45,48 @@ inline void ResiliencePersistence::freeResilienceNode( unsigned int offset ) {
 }
 
 inline void * ResiliencePersistence::getResilienceResultsFreeSpace( size_t size ) { 
-    if( size > _RESILIENCE_MAX_FILE_SIZE ) 
-        fatal( "Not enough space in file." ); 
+    if( size > _RESILIENCE_RESULTS_MAX_FILE_SIZE ) { 
+        std::cerr << "Not enough space in results file" << std::endl;
+        fatal( "Not enough space in results file." ); 
+    }
 
     _resilienceResultsLock.acquire(); 
 
     if( _freeResilienceResults.size() == 0 ) {
         _resilienceResultsLock.release(); 
-        fatal( "Not enough space in file." ); 
+        std::cerr << "Not enough space in results file (1)" << std::endl;
+        std::cerr << "Trying to reserve " << size << " bytes." << std::endl;
+        fatal( "Not enough space in results file." ); 
     }
 
     for( std::map<unsigned int, size_t>::iterator it = _freeResilienceResults.begin();
             it != _freeResilienceResults.end();
             it++ ) 
     {
-        if( size <= it->second ) {
+        if( size < it->second ) {
             std::pair<unsigned int, size_t> p( it->first, it->second );
             _freeResilienceResults.erase( it );
-            if( size < it->second )
-                _freeResilienceResults.insert( std::make_pair( p.first + size, p.second - size ) );
+            _freeResilienceResults.insert( std::make_pair( p.first + size, p.second - size ) );
+            //message( "There are " << p.second-size << " bytes free starting at position " << p.first+size );
+            _resilienceResultsLock.release(); 
+            return getResilienceResults( p.first );
+        }
+        else if( size == it->second ) {
+            std::pair<unsigned int, size_t> p( it->first, it->second );
+            _freeResilienceResults.erase( it );
+            //message( "There is no more free space in results file." );
             _resilienceResultsLock.release(); 
             return getResilienceResults( p.first );
         }
     }
 
     _resilienceResultsLock.release(); 
+    std::cerr << "Trying to reserve " << size << " bytes. But there are only " << _freeResilienceResults.begin()->second << " bytes free." << std::endl;
     fatal( "Cannot reserve such space in results." );
 }
 
 inline void * ResiliencePersistence::getResilienceResults( unsigned int offset ) { 
-    if( offset >= _RESILIENCE_MAX_FILE_SIZE ) return NULL;
+    if( offset >= _RESILIENCE_RESULTS_MAX_FILE_SIZE ) return NULL;
     return ( char * )_resilienceResults + offset;
 }
 

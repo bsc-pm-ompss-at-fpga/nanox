@@ -642,7 +642,7 @@ inline bool System::usePredecessorCopyInfo() const {
 }
 
 inline void System::initResiliencePersistence( int rank ) { 
-   _resilience = new ResiliencePersistence( rank, _resilienceFileSize ); 
+   _resilience = new ResiliencePersistence( rank, _resilienceTreeFileSize, _resilienceResultsFileSize ); 
    WD &mainWD = *myThread->getCurrentWD();
    if( sys.getResiliencePersistence()->getResilienceNode( mainWD.getId() )->isInUse() )
        mainWD.setResilienceNode( sys.getResiliencePersistence()->getResilienceNode( mainWD.getId() ) );
@@ -650,7 +650,12 @@ inline void System::initResiliencePersistence( int rank ) {
        mainWD.setResilienceNode( sys.getResiliencePersistence()->getFreeResilienceNode() );
    }
 }
+
 inline ResiliencePersistence * System::getResiliencePersistence() { return _resilience; }
+
+inline bool System::removeResilienceFiles() { return _removeResilienceFiles; }
+inline bool System::printResilienceInfo() { return _printResilienceInfo; }
+inline int System::faultInjectionThreshold() { return _faultInjectionThreshold; }
 
 #endif
 

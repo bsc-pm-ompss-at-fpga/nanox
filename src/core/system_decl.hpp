@@ -246,7 +246,11 @@ namespace nanos
          int _userDefinedNUMANode;
          Router _router;
          ResiliencePersistence * _resilience;
-         size_t _resilienceFileSize;
+         size_t _resilienceTreeFileSize;
+         size_t _resilienceResultsFileSize;
+         bool _removeResilienceFiles;
+         bool _printResilienceInfo;
+         int _faultInjectionThreshold;
       public:
          Hwloc _hwloc;
          bool _immediateSuccessorDisabled;
@@ -679,6 +683,9 @@ namespace nanos
 
          void initResiliencePersistence( int rank );
          ResiliencePersistence * getResiliencePersistence();
+         bool removeResilienceFiles();
+         bool printResilienceInfo(); 
+         int faultInjectionThreshold();
    };
 
    extern System sys;

@@ -329,6 +329,7 @@ void WorkDescriptor::done ()
       _resNode->restartLastDescRestored();
    }
    else {
+      std::cerr << "WD " << _id << " has no RN." << std::endl;
       fatal( "ResilienceNode not found. Cannot store result." );
    }
 

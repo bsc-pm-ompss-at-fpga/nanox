@@ -17,6 +17,8 @@
 #      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             #
 #####################################################################################
 
+SUBDIRS = errorgen
+
 include ../common.am
 
 devinclude_HEADERS = \
@@ -185,7 +187,7 @@ debug_sources = \
 	memtracker_decl.hpp\
 	memtracker.hpp\
 	memtracker.cpp
-        $(END)
+	$(END)
 
 if GPU_SUPPORT
 gpu_support_sources = \
@@ -202,7 +204,7 @@ if DEBUG_VERSION
 noinst_LTLIBRARIES += debug/libsupport.la
 
 debug_libsupport_la_CXXFLAGS=$(common_includes) $(common_debug_cxxflags)
-debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources) $(gpu_support_sources)
+debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources) $(gpu_support_sources) 
 debug_libsupport_la_LDFLAGS=$(dlb_debug_ldflags)
 endif
 

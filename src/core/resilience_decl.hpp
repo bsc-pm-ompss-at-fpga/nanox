@@ -8,8 +8,6 @@
 #include <map>
 #include "atomic_decl.hpp"
 
-extern void mpi_get_rank( int * rank );
-
 namespace nanos {
 
     class ResiliencePersistence {
@@ -21,6 +19,7 @@ namespace nanos {
         std::list<unsigned int> _usedResilienceNodes;
         int _resilienceTreeFileDescriptor;
         char * _resilienceTreeFilepath;
+        size_t _RESILIENCE_TREE_MAX_FILE_SIZE;
 
         // RELATED TO RESILIENCE RESULTS
         void * _resilienceResults;
@@ -28,12 +27,13 @@ namespace nanos {
         std::map<unsigned int, size_t> _freeResilienceResults;
         int _resilienceResultsFileDescriptor;
         char * _resilienceResultsFilepath;
+        size_t _RESILIENCE_RESULTS_MAX_FILE_SIZE;
 
-        // COMMON
-        size_t _RESILIENCE_MAX_FILE_SIZE;
+        void removeAllDescs( ResilienceNode * rn );
+        void printResilienceInfo();
 
         public:
-        ResiliencePersistence( int rank, size_t resilienceFileSize );
+        ResiliencePersistence( int rank, size_t resilienceTreeFileSize, size_t resilienceResultsFileSize );
         ~ResiliencePersistence();
 
         // RELATED TO RESILIENCE TREE

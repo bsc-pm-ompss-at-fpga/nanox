@@ -1219,6 +1219,7 @@ AC_CONFIG_FILES([Makefile
                  src/Makefile
                  src/core/Makefile
                  src/support/Makefile
+                 src/support/errorgen/Makefile
                  src/plugins/Makefile
                  src/apis/Makefile
                  src/pms/Makefile

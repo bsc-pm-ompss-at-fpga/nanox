@@ -25,6 +25,7 @@
 #include "instrumentation.hpp"
 #include "taskexecutionexception.hpp"
 #include <string>
+//#include "errorgen.hpp"
 
 using namespace nanos;
 using namespace nanos::ext;
@@ -32,6 +33,8 @@ using namespace nanos::ext;
 SMPDevice nanos::ext::SMP("SMP");
 
 size_t SMPDD::_stackSize = 32 * 1024;
+
+Atomic<bool> error_injected = false;
 
 /*!
  \brief Registers the Device's configuration options
@@ -118,10 +121,29 @@ void SMPDD::execute ( WD &wd ) throw ()
       while (true) {
          try {
             // Call to the user function
-            if( wd.getResilienceNode() != NULL && wd.getResilienceNode()->isComputed() )
-                wd.getResilienceNode()->loadResult( wd.getCopies(), wd.getNumCopies(), wd.getId() );
-            else
+            if( wd.getResilienceNode() != NULL && wd.getResilienceNode()->isComputed() ) {
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+               NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("resilience") );
+               NANOS_INSTRUMENT ( nanos_event_value_t val = wd.getId() );
+               NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenStateAndBurst ( NANOS_RUNNING, key, val ) );
+#endif
+               wd.getResilienceNode()->loadResult( wd.getCopies(), wd.getNumCopies(), wd.getId() );
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+               NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseStateAndBurst ( key, val ) );
+#endif
+            }
+            else {
+                // Introduce errors only in created tasks, not in implicit tasks.
+                if( error_injected == false && wd.getParent() != NULL && sys.faultInjectionThreshold() ) { 
+                   int executedTasks = sys.getSchedulerStats().getCreatedTasks() - sys.getSchedulerStats().getTotalTasks(); 
+                   if( executedTasks >= sys.faultInjectionThreshold() ) {
+                      error_injected = true;
+                      throw std::runtime_error( "Injected error." );
+                   }
+                }
+                   //gen_fail();
                 getWorkFct()( wd.getData() );
+            }
          } catch (TaskExecutionException& e) {
             //taskFailed = true;
             /*

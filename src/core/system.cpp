@@ -104,6 +104,8 @@ System::System () :
       , _splitOutputForThreads( false )
       , _userDefinedNUMANode( -1 )
       , _router()
+      , _removeResilienceFiles( true )
+      , _faultInjectionThreshold( 0 )
       , _hwloc()
       , _immediateSuccessorDisabled( false )
       , _predecessorCopyInfoDisabled( false )
@@ -392,9 +394,21 @@ void System::config ()
    cfg.registerConfigOption( "disable-predecessor-info", NEW Config::FlagOption( _predecessorCopyInfoDisabled ),
                              "Disables sending the copy_data info to successor WDs." );
    cfg.registerArgOption( "disable-predecessor-info", "disable-predecessor-info" );
-   cfg.registerConfigOption( "resilience-filesize", NEW Config::SizeVar( _resilienceFileSize ),
-                             "Defines the size of the file where resilience persistence will be stored." );
-   cfg.registerArgOption( "resilience-filesize", "resilience-filesize" );
+   cfg.registerConfigOption( "resilience-tree-filesize", NEW Config::SizeVar( _resilienceTreeFileSize ),
+                             "Defines the size of the file where resilience tree will be stored." );
+   cfg.registerArgOption( "resilience-tree-filesize", "resilience-tree-filesize" );
+   cfg.registerConfigOption( "resilience-results-filesize", NEW Config::SizeVar( _resilienceResultsFileSize ),
+                             "Defines the size of the file where resilience results will be stored." );
+   cfg.registerArgOption( "resilience-results-filesize", "resilience-results-filesize" );
+   cfg.registerConfigOption( "resilience-keep-files", NEW Config::FlagOption( _removeResilienceFiles, false ),
+                             "Disables the removal of the resilience files at the end of a successful execution." );
+   cfg.registerArgOption( "resilience-keep-files", "resilience-keep-files" );
+   cfg.registerConfigOption( "resilience-print-info", NEW Config::FlagOption( _printResilienceInfo ),
+                             "Enables debug messages of resilience." );
+   cfg.registerArgOption( "resilience-print-info", "resilience-print-info" );
+   cfg.registerConfigOption( "fault-injection-threshold", NEW Config::PositiveVar( _faultInjectionThreshold ),
+                             "Defines the number of tasks executed before injecting an error. By default, no errors will be injected." );
+   cfg.registerArgOption( "fault-injection-threshold", "fault-injection-threshold" );
 
    _schedConf.config( cfg );
 
@@ -735,7 +749,8 @@ void System::finish ()
    delete[] _lockPool;
 
    //Restart desc counter of masterWD.
-   getMyThreadSafe()->getCurrentWD()->getResilienceNode()->restartLastDescRestored();
+   if( getMyThreadSafe()->getCurrentWD()->getResilienceNode() != NULL )
+       getMyThreadSafe()->getCurrentWD()->getResilienceNode()->restartLastDescRestored();
 
    // Destroy ResiliencePersistence
    delete _resilience;
@@ -999,6 +1014,8 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
 
 
    /* RESILIENCE BASED ON MEMOIZATION */
+   if( getResiliencePersistence() == NULL )
+      initResiliencePersistence( -1 );
 
    if( wd->getParent() != NULL && wd->getParent()->getResilienceNode() != NULL ) {
       if( wd->getResilienceNode() == NULL ) {

@@ -97,6 +97,7 @@ nanos_debug_cxxflags=$(common_includes) $(common_debug_cxxflags) $(smp_ult_flags
 
 debug_libsmp_la_CXXFLAGS=$(nanos_debug_cxxflags)
 debug_libsmp_la_CCASFLAGS=$(nanos_debug_cxxflags)
+debug_libsmp_la_LIBADD=$(common_libadd) $(top_builddir)/src/support/errorgen/debug/liberrorgen.la
 debug_libsmp_la_SOURCES=$(smp_sources) $(smp_ult_sources)
 
 debug_libnanox_pe_smp_la_CXXFLAGS=$(nanos_debug_cxxflags)
@@ -113,6 +114,7 @@ nanos_instr_cxxflags=$(common_includes) $(common_instr_cxxflags) $(smp_ult_flags
 
 instrumentation_libsmp_la_CXXFLAGS=$(nanos_instr_cxxflags)
 instrumentation_libsmp_la_CCASFLAGS=$(nanos_instr_cxxflags)
+instrumentation_libsmp_la_LIBADD=$(common_libadd) $(top_builddir)/src/support/errorgen/instrumentation/liberrorgen.la
 instrumentation_libsmp_la_SOURCES=$(smp_sources) $(smp_ult_sources)
 
 instrumentation_libnanox_pe_smp_la_CXXFLAGS=$(nanos_instr_cxxflags)
@@ -129,6 +131,7 @@ nanos_instrdebug_cxxflags=$(common_includes) $(common_instrdebug_cxxflags) $(smp
 
 instrumentation_debug_libsmp_la_CXXFLAGS=$(nanos_instrdebug_cxxflags)
 instrumentation_debug_libsmp_la_CCASFLAGS=$(nanos_instrdebug_cxxflags)
+instrumentation_debug_libsmp_la_LIBADD=$(common_libadd) $(top_builddir)/src/support/errorgen/instrumentation-debug/liberrorgen.la
 instrumentation_debug_libsmp_la_SOURCES=$(smp_sources) $(smp_ult_sources)
 
 instrumentation_debug_libnanox_pe_smp_la_CXXFLAGS=$(nanos_instrdebug_cxxflags)
@@ -145,6 +148,7 @@ nanos_perfo_cxxflags=$(common_includes) $(common_perfo_cxxflags) $(smp_ult_flags
 
 performance_libsmp_la_CXXFLAGS=$(nanos_perfo_cxxflags)
 performance_libsmp_la_CCASFLAGS=$(nanos_perfo_cxxflags)
+performance_libsmp_la_LIBADD=$(common_libadd) $(top_builddir)/src/support/errorgen/performance/liberrorgen.la
 performance_libsmp_la_SOURCES=$(smp_sources) $(smp_ult_sources)
 
 performance_libnanox_pe_smp_la_CXXFLAGS=$(nanos_perfo_cxxflags)

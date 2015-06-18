@@ -71,7 +71,7 @@ inline bool DependenciesDomain::haveDependencePendantWrites ( void *addr )
 }
 inline void DependenciesDomain::finalizeAllReductions ( void ) 
 {
-   fatal("finalizeAllReduction service has not been implemented in that dependence plugin!");
+   //fatal("finalizeAllReduction service has not been implemented in that dependence plugin!");
 
 }
 
