@@ -112,12 +112,15 @@ void SMPDD::execute ( WD &wd ) throw ()
       while (true) {
          try {
             // Call to the user function
-            if( wd.getResilienceNode() != NULL && wd.getResilienceNode()->isComputed() ) {
+            if( wd.getResilienceNode() != NULL && wd.getResilienceNode()->isComputed() ) { 
+                   ///* && wd.getDescription() != NULL && /*TODO:FIXME*/ strcmp( wd.getDescription(), "exchange_particles" ) != 0 */) {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
                NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("resilience") );
                NANOS_INSTRUMENT ( nanos_event_value_t val = wd.getId() );
                NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenStateAndBurst ( NANOS_RUNNING, key, val ) );
 #endif
+               //std::cerr << "Loading result of RN " << wd.getResilienceNode() - sys.getResiliencePersistence()->getResilienceNode( 1 )
+               //    << std::endl;
                wd.getResilienceNode()->loadResult( wd.getCopies(), wd.getNumCopies(), wd.getId() );
 #ifdef NANOS_INSTRUMENTATION_ENABLED
                NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseStateAndBurst ( key, val ) );
@@ -126,13 +129,17 @@ void SMPDD::execute ( WD &wd ) throw ()
             else {
                 // Introduce errors only in created tasks, not in implicit tasks.
                 if( error_injected == false && wd.getParent() != NULL && sys.faultInjectionThreshold() ) { 
-                   int executedTasks = sys.getSchedulerStats().getCreatedTasks() - sys.getSchedulerStats().getTotalTasks(); 
+                   int totalTasks = sys.getSchedulerStats().getTotalTasks();
+                   int createdTasks = sys.getSchedulerStats().getCreatedTasks(); 
+                   int executedTasks =  createdTasks-totalTasks;
                    if( executedTasks >= sys.faultInjectionThreshold() ) {
                       error_injected = true;
                       throw std::runtime_error( "Injected error." );
                    }
                 }
                    //gen_fail();
+               //std::cerr << "Executing RN " << wd.getResilienceNode() - sys.getResiliencePersistence()->getResilienceNode( 1 )
+               //    << std::endl;
                 getWorkFct()( wd.getData() );
             }
          } catch (TaskExecutionException& e) {
@@ -153,6 +160,7 @@ void SMPDD::execute ( WD &wd ) throw ()
             message( ss.str() );
             //message(e.what());
             // Unrecoverable error: terminate execution
+            sys.printResilienceInfo();
             std::terminate();
          } catch (std::exception& e) {
             //taskFailed = true;
@@ -170,6 +178,7 @@ void SMPDD::execute ( WD &wd ) throw ()
             //taskFailed = true;
             message("Uncaught exception (unknown type). Thrown in task " << wd.getId() << ". ");
             // Unexpected error: terminate execution
+            sys.printResilienceInfo();
             std::terminate();
          }
          // Only retry when ...

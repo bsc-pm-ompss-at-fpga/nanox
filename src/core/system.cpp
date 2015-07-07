@@ -75,6 +75,9 @@ namespace PMInterfaceType
 }
 }
 
+//Atomic<int> nodes_requested = 0;
+//Atomic<int> nodes_restored = 0;
+
 // default system values go here
 System::System () :
       _atomicWDSeed( 1 ), _threadIdSeed( 0 ), _peIdSeed( 0 ),
@@ -758,6 +761,7 @@ void System::finish ()
        getMyThreadSafe()->getCurrentWD()->getResilienceNode()->restartLastDescRestored();
 
    // Destroy ResiliencePersistence
+   _resilience->printResilienceInfo();
    delete _resilience;
 
    //! \note deleting main work descriptor
@@ -1018,18 +1022,43 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    if (uwg) wd->copyReductions((WorkDescriptor *)uwg);
 
    /* RESILIENCE BASED ON MEMOIZATION */
-   if( getResiliencePersistence() == NULL )
+   if( getResiliencePersistence() == NULL ) {
       initResiliencePersistence( -1 );
+   }
 
    if( wd->getParent() != NULL && wd->getParent()->getResilienceNode() != NULL ) {
       if( wd->getResilienceNode() == NULL ) {
          ResilienceNode * desc = wd->getParent()->getResilienceNode()->getNextDescToRestore();
          if( desc != NULL ) {
             wd->setResilienceNode( desc );
+            //nodes_restored++;
+            //std::cerr << "Nodes restored: " << nodes_restored.value() << std::endl;
+            //std::stringstream ss;
+            //ss << "RN restored: " << desc - _resilience->getResilienceNode(1);
+            //WD * current = wd;
+            //while( current != NULL && current->getParent() != NULL ) {
+            //    ss << "<-" << current->getParent()->getResilienceNode() - _resilience->getResilienceNode(1);
+            //    current = current->getParent();
+            //}
+            //ss << std::endl;
+            //message( ss.str() );
+            //std::cerr << "WD " << wd->getId() << " has restored RN " << desc - _resilience->getResilienceNode( 1 ) << "." << std::endl;
          }
          else {
             desc = sys.getResiliencePersistence()->getFreeResilienceNode( wd->getParent()->getResilienceNode() );
             wd->setResilienceNode( desc );
+            //nodes_requested++;
+            //std::cerr << "Nodes requested: " << nodes_requested.value() << std::endl;
+            //std::stringstream ss;
+            //ss << "RN got: " << desc - _resilience->getResilienceNode(1);
+            //WD * current = wd;
+            //while( current != NULL && current->getParent() != NULL ) {
+            //    ss << "<-" << current->getParent()->getResilienceNode() - _resilience->getResilienceNode(1);
+            //    current = current->getParent();
+            //}
+            //ss << std::endl;
+            //message( ss.str() );
+            //std::cerr << "WD " << wd->getId() << " has got RN " << desc - _resilience->getResilienceNode( 1 ) << "." << std::endl;
          }
       }
       else {
