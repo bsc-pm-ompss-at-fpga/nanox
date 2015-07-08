@@ -1015,6 +1015,8 @@ void Scheduler::finishWork( WD * wd, bool schedule )
 
 bool Scheduler::inlineWork ( WD *wd, bool schedule )
 {
+
+
    if ( wd->isInvalid() 
         || ( wd->getParent() && wd->getParent()->isInvalid() ))
    {
@@ -1036,6 +1038,10 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
 
    BaseThread *thread = getMyThreadSafe();
 
+//   std::cout << "Scheduler::inlineWork oldWD id:" << wd->getId() << " thread->getCurrentWD()->getId() " <<  thread->getCurrentWD()->getId() << " ";
+
+   thread->setPlannedWD(*wd); //PLANNED WD
+
    // run it in the current frame
    WD *oldwd = thread->getCurrentWD();
 
@@ -1049,7 +1055,7 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
 
    // Initializing wd if necessary
    // It will be started later in inlineWorkDependent call
-   
+
    if ( !wd->started() ) { 
       if ( !wd->_mcontrol.isMemoryAllocated() ) {
          wd->_mcontrol.initialize( *thread->runningOn() );
@@ -1163,7 +1169,6 @@ bool Scheduler::inlineWorkAsync ( WD *wd, bool schedule )
 
    ensure( oldwd->isTiedTo() == NULL || thread == oldwd->isTiedTo(),
            "Violating tied rules " + toString<BaseThread*>( thread ) + "!=" + toString<BaseThread*>( oldwd->isTiedTo() ) );
-
    return done;
 }
 
@@ -1348,6 +1353,16 @@ void Scheduler::exit ( void )
       idleLoop<ExitBehaviour>();
    }
 }
+
+//jam
+bool Scheduler::reInlineWork(WD *wd, bool schedule) {
+   debug ( "Resiliency: Task ", wd->getId(), " is being re-submitted.");
+   BaseThread *thread = getMyThreadSafe();
+   wd->setStart();
+   const bool done = thread->inlineWorkDependent(*wd);
+ return done;
+}
+
 
 int SchedulerStats::getCreatedTasks() { return _createdTasks.value(); }
 int SchedulerStats::getReadyTasks() { return _readyTasks.value(); }

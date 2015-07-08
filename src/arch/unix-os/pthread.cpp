@@ -181,6 +181,10 @@ void PThread::setupSignalHandlers ()
 
 }
 
+#include "mpoison.hpp"
+using nanos::vm::MPoisonManager;
+
+
 void taskErrorHandler ( int sig, siginfo_t* si, void* context )
 {
    /*
@@ -204,11 +208,31 @@ void taskErrorHandler ( int sig, siginfo_t* si, void* context )
    /* overwrite sigaction with caller's address */
    trace[1] = (void *) uc->uc_mcontext.gregs[REG_RIP];
 
+   // ARM
+   // Intra procedure call scratch register. This is a synonym for R12.
+   //   trace[1] = (void *) uc->uc_mcontext.arm_ip;
+
+
    messages = backtrace_symbols(trace, trace_size);
    // Store the backtrace into the exception's error_info
-   throw TaskException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context, messages, trace_size);
+
+   //jam throw TaskException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context, messages, trace_size);
+
+    debug0("Resiliency: handling synchronous signals raised in tasks' context wd: ", getMyThreadSafe()->getPlannedWD()->getId(), " page address: ", si->si_addr, " backtrace: ", messages);
+
+	MPoisonManager *mp_mgr = nanos::vm::getMPoisonManager();
+	if((mp_mgr->unblockPage((uintptr_t)si->si_addr))==0){
+		debug0("Resiliency: Page address: ", si->si_addr, " unblocked. ");
+		getMyThreadSafe()->getPlannedWD()->setInvalid(true);
+		getMyThreadSafe()->getPlannedWD()->setNumtries(0);
+	}
+
+
+
 #else
-   throw TaskException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context);
+   //jam throw TaskException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context);
+    debug0("Resiliency: taskErrorHandler NO_debug");
+
 #endif
 }
 #endif

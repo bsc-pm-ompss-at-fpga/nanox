@@ -167,8 +167,12 @@ namespace nanos
    inline void BaseThread::processTransfers () { this->idle(); }
 
    // set/get methods
-   inline void BaseThread::setCurrentWD ( WD &current ) { _currentWD = &current; }
+   inline void BaseThread::setPlannedWD ( WD &planned ) { _plannedWD = &planned; }
  
+   inline WD * BaseThread::getPlannedWD () const { return _plannedWD; }
+
+   inline void BaseThread::setCurrentWD ( WD &current ) { _currentWD = &current; }
+
    inline WD * BaseThread::getCurrentWD () const { return _currentWD; }
  
    inline WD & BaseThread::getThreadWD () const { return _threadWD; }

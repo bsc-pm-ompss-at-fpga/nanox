@@ -173,6 +173,9 @@ inline bool DeviceData::isCompatible ( const Device &arch , const ProcessingElem
 inline bool DeviceData::isCompatibleWithPE ( const ProcessingElement* pe) { return true; }
 
 /* WorkDescriptor inlined functions */
+
+inline void WorkDescriptor::setStart () { _state = WorkDescriptor::START; }
+
 inline bool WorkDescriptor::started ( void ) const { return (( _state != INIT ) && (_state != START)); }
 inline bool WorkDescriptor::initialized ( void ) const { return ( _state != INIT ) ; }
 
@@ -544,5 +547,12 @@ inline bool WorkDescriptor::isRecoverable() const { return _flags.is_recoverable
 inline void WorkDescriptor::setCriticality ( int cr ) { _criticality = cr; }
 
 inline int  WorkDescriptor::getCriticality () const { return _criticality; }
+
+inline void WorkDescriptor::setNumtries ( int ntr ) { _num_tries = ntr; }
+
+inline void WorkDescriptor::incrNumtries () { _num_tries++; }
+
+inline unsigned int  WorkDescriptor::getNumtries () const { return _num_tries; }
+
 #endif
 

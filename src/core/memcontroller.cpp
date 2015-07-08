@@ -231,7 +231,7 @@ void MemController::copyDataIn() {
    }
 #ifdef NANOS_RESILIENCY_ENABLED
    if ( sys.isResiliencyEnabled() && _wd.isRecoverable() && !_wd.isInvalid() ) {
-      ensure( _backupOpsIn, "Backup ops array has not been initializedi!" );
+      ensure( _backupOpsIn, "Backup ops array has not been initialized!" );
 
    NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
    NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_IN );
