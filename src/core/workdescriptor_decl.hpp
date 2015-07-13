@@ -296,7 +296,7 @@ typedef std::set<const Device *>  DeviceList;
          InstrumentationContextData    _instrumentationContextData; //!< Instrumentation Context Data (empty if no instr. enabled)
          Slicer                       *_slicer;                 //! Related slicer (NULL if does'nt apply)
          int                           _criticality;
-         unsigned int                  _num_tries;
+         unsigned int                  _num_tries;              //!< TODO: explain what is this
          //Atomic< std::list<GraphEntry *> * > _myGraphRepList;
          //bool _listed;
          void                        (*_notifyCopy)( WD &wd, BaseThread const &thread);
@@ -349,7 +349,7 @@ typedef std::set<const Device *>  DeviceList;
          void setHostId( int id ) { _hostId = id; }
          /*! \brief Has this WorkDescriptor ever run?
           */
-         void setStart ();
+         void setStart ();  // TODO: explain what is this
 
          bool started ( void ) const;
          bool initialized ( void ) const;
@@ -731,9 +731,9 @@ typedef std::set<const Device *>  DeviceList;
          void setCriticality ( int cr );
          int getCriticality ( void ) const;
 
-         void setNumtries ( int ntr );
-         void incrNumtries ();
-         unsigned int getNumtries () const;
+         void setNumtries ( int ntr );  // TODO: explain this
+         void incrNumtries ();          // TODO: explain this
+         unsigned int getNumtries () const; // TODO: explain this
 
    };
 

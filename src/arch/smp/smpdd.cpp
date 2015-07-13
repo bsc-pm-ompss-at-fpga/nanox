@@ -183,6 +183,7 @@ void SMPDD::execute ( WD &wd ) throw ()
             // Nothing left to do, either task execution was OK or the recovery has to be done by an ancestor.
             return;
          }
+         debug( "Task ", wd.getId(), " is being re-executed." );
 
          NANOS_INSTRUMENT ( static nanos_event_key_t task_reexec_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
          NANOS_INSTRUMENT ( nanos_event_value_t task_reexec_val = (nanos_event_value_t ) NANOS_FT_RESTART );

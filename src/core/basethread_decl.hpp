@@ -145,7 +145,7 @@ namespace nanos
          Lock                    _mlock;         /**< Thread Lock */
          // Current/following tasks: 
          WD                     &_threadWD;      /**< Thread implicit WorkDescriptor */
-         WD                     *_plannedWD;     /**< Current WorkDescriptor the thread is executing */
+         WD                     *_plannedWD;     /**< Used for the recovery workaround for ARM. Current WorkDescriptor the thread is executing */
          WD                     *_currentWD;     /**< Current WorkDescriptor the thread is executing */
          WDDeque                 _nextWDs;       /**< Queue with all the tasks that the thread is being run simultaneously */
          // Thread's Team info:

@@ -167,6 +167,8 @@ namespace nanos
    inline void BaseThread::processTransfers () { this->idle(); }
 
    // set/get methods
+
+   // The Planned WD is used to implement the workaround for task recovery from checkpoint.
    inline void BaseThread::setPlannedWD ( WD &planned ) { _plannedWD = &planned; }
  
    inline WD * BaseThread::getPlannedWD () const { return _plannedWD; }

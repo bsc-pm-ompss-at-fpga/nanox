@@ -265,11 +265,11 @@ void WorkDescriptor::submit( bool force_queue )
    }
 } 
 
-//using namespace nanos::ext;
-//using namespace nanos;
 
-void WorkDescriptor::finish ()
-{
+
+void WorkDescriptor::finish() {
+
+#ifdef ARM_RECOVERY_WORKAROUND
    //jam
    /*
     * A task is only re-executed when the following conditions meet:
@@ -278,47 +278,49 @@ void WorkDescriptor::finish ()
     * 3) The task parent is not invalid (it doesn't make sense to recover ourselves if our parent is going to undo our work)
     * 4) The task has not run out of trials (a limit is set to avoid infinite loop)
     */
- if ( this->isInvalid()){
-   bool finished = false;
-   if ( this->isInvalid()
-      && this->isRecoverable() // Execution invalid and task recoverable
-      && ( this->getParent() == NULL || !this->getParent()->isInvalid() ) // Our parent is not invalid (if we got one)
-   ){
-      if ( this->getNumtries() < sys.getTaskMaxRetrials() ) {// We are still able to retry
-         sys.getExceptionStats().incrRecoveredTasks();
-         this->incrNumtries();
-         this->getActiveDevice().restore(*this);
-         finished = Scheduler::reInlineWork(this);
+
+   bool isInvalid = this->isInvalid();
+   if (isInvalid) {
+      bool finished = false;
+      if (this->isInvalid() && this->isRecoverable() // Execution invalid and task recoverable
+            && (this->getParent() == NULL || !this->getParent()->isInvalid())) { // Our parent is not invalid (if we got one)
+
+         if (this->getNumtries() < sys.getTaskMaxRetrials()) { // We are still able to retry
+            sys.getExceptionStats().incrRecoveredTasks();
+            this->incrNumtries();
+            this->getActiveDevice().restore(*this);
+            finished = Scheduler::reInlineWork(this);
+         } else {
+            // Giving up retrying...
+            this->getParent()->setInvalid( true);
+            return;
+         }
       } else {
-         // Giving up retrying...
-         this->getParent()->setInvalid( true );
+         debug("Exiting task ", this->getId(), ".");
+         // Nothing left to do, either task execution was OK or the recovery has to be done by an ancestor.
          return;
       }
-   } else {
-      debug( "Exiting task ", this->getId(), "." );
-      // Nothing left to do, either task execution was OK or the recovery has to be done by an ancestor.
+      if (finished) {
+         debug("Resiliency: Task ", this->getId(), " is being re-executed.");
+
+         NANOS_INSTRUMENT ( static nanos_event_key_t task_reexec_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") ); NANOS_INSTRUMENT ( nanos_event_value_t task_reexec_val = (nanos_event_value_t ) NANOS_FT_RESTART ); NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_reexec_key, &task_reexec_val) );
+      }
+   }
+   if (isInvalid) {
       return;
    }
-   if(finished){
-     debug ( "Resiliency: Task ", this	->getId(), " is being re-executed.");
+#endif
 
-     NANOS_INSTRUMENT ( static nanos_event_key_t task_reexec_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
-     NANOS_INSTRUMENT ( nanos_event_value_t task_reexec_val = (nanos_event_value_t ) NANOS_FT_RESTART );
-     NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_reexec_key, &task_reexec_val) );
-   }
-
- }else{
    // At that point we are ready to copy data out
-   if ( getNumCopies() > 0 ) {
-      _mcontrol.copyDataOut( MemController::WRITE_BACK );
-      while ( !_mcontrol.isOutputDataReady( *this ) ) {
+   if (getNumCopies() > 0) {
+      _mcontrol.copyDataOut(MemController::WRITE_BACK);
+      while (!_mcontrol.isOutputDataReady(*this)) {
          myThread->processTransfers();
       }
    }
 
    // Getting execution time
-   _executionTime = ( _numDevices == 1 ? 0.0 : OS::getMonotonicTimeUs() - _executionTime );
- }
+   _executionTime = (_numDevices == 1 ? 0.0 : OS::getMonotonicTimeUs() - _executionTime);
 }
 
 void WorkDescriptor::preFinish ()

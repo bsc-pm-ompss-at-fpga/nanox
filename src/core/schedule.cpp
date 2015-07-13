@@ -1038,8 +1038,6 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
 
    BaseThread *thread = getMyThreadSafe();
 
-//   std::cout << "Scheduler::inlineWork oldWD id:" << wd->getId() << " thread->getCurrentWD()->getId() " <<  thread->getCurrentWD()->getId() << " ";
-
    thread->setPlannedWD(*wd); //PLANNED WD
 
    // run it in the current frame
@@ -1354,13 +1352,21 @@ void Scheduler::exit ( void )
    }
 }
 
-//jam
+/**
+ * JAM
+ * Used for the workaround implementation of task recovery for ARM.
+ * Re-inlines the WD in case of a fault and recovery.
+ * @param wd
+ * @param schedule
+ * @return
+ */
 bool Scheduler::reInlineWork(WD *wd, bool schedule) {
    debug ( "Resiliency: Task ", wd->getId(), " is being re-submitted.");
    BaseThread *thread = getMyThreadSafe();
    wd->setStart();
    const bool done = thread->inlineWorkDependent(*wd);
- return done;
+
+   return done;
 }
 
 

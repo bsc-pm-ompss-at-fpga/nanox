@@ -34,6 +34,11 @@
 #include <cstddef>
 #endif
 
+#ifdef NANOS_RESILIENCY_ENABLED
+#include "mpoison.hpp"
+using nanos::vm::MPoisonManager;
+#endif
+
 // TODO: detect at configure
 #ifndef PTHREAD_STACK_MIN
 #define PTHREAD_STACK_MIN 16384
@@ -181,10 +186,11 @@ void PThread::setupSignalHandlers ()
 
 }
 
-#include "mpoison.hpp"
-using nanos::vm::MPoisonManager;
-
-
+#ifdef ARM_RECOVERY_WORKAROUND
+/*
+ * The ARM version does not support signal to exception converstion.
+ * Because of it we implement a workaround for it.
+ */
 void taskErrorHandler ( int sig, siginfo_t* si, void* context )
 {
    /*
@@ -212,27 +218,59 @@ void taskErrorHandler ( int sig, siginfo_t* si, void* context )
    // Intra procedure call scratch register. This is a synonym for R12.
    //   trace[1] = (void *) uc->uc_mcontext.arm_ip;
 
+   messages = backtrace_symbols(trace, trace_size);
+   // Store the backtrace into the exception's error_info
+
+   debug0("Resiliency: handling synchronous signals raised in tasks' context wd: ", getMyThreadSafe()->getPlannedWD()->getId(), " page address: ", si->si_addr, " backtrace: ", messages);
+
+   MPoisonManager *mp_mgr = nanos::vm::getMPoisonManager();
+   if((mp_mgr->unblockPage((uintptr_t)si->si_addr))==0){
+      debug0("Resiliency: Page address: ", si->si_addr, " unblocked. ");
+      getMyThreadSafe()->getPlannedWD()->setInvalid(true);
+      getMyThreadSafe()->getPlannedWD()->setNumtries(0);
+   }
+
+#else /* !NANOS_DEBUG_ENABLED */
+   MPoisonManager *mp_mgr = nanos::vm::getMPoisonManager();
+   if((mp_mgr->unblockPage((uintptr_t)si->si_addr))==0) {
+      getMyThreadSafe()->getPlannedWD()->setInvalid(true);
+      getMyThreadSafe()->getPlannedWD()->setNumtries(0);
+   }
+#endif /* NANOS_DEBUG_ENABLED */
+}
+#else /* !ARM_RECOVERY_WORKAROUND */
+void taskErrorHandler ( int sig, siginfo_t* si, void* context )
+{
+   /*
+    * In order to prevent the signal to be raised inside the handler,
+    * the kernel blocks it until the handler returns.
+    *
+    * As we are exiting the handler before return (throwing an exception),
+    * we must unblock the signal or that signal will not be available to catch
+    * in the future (this is done in at the catch clause).
+    */
+
+#ifdef NANOS_DEBUG_ENABLED
+   void *trace[50];
+   char **messages = (char **)NULL;
+   int trace_size = 0;
+   ucontext_t *uc = (ucontext_t *)context;
+
+   /* Do something useful with siginfo_t */
+
+   trace_size = backtrace(trace, 50);
+   /* overwrite sigaction with caller's address */
+   trace[1] = (void *) uc->uc_mcontext.gregs[REG_RIP];
 
    messages = backtrace_symbols(trace, trace_size);
    // Store the backtrace into the exception's error_info
 
-   //jam throw TaskException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context, messages, trace_size);
+   throw TaskException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context, messages, trace_size);
 
-    debug0("Resiliency: handling synchronous signals raised in tasks' context wd: ", getMyThreadSafe()->getPlannedWD()->getId(), " page address: ", si->si_addr, " backtrace: ", messages);
-
-	MPoisonManager *mp_mgr = nanos::vm::getMPoisonManager();
-	if((mp_mgr->unblockPage((uintptr_t)si->si_addr))==0){
-		debug0("Resiliency: Page address: ", si->si_addr, " unblocked. ");
-		getMyThreadSafe()->getPlannedWD()->setInvalid(true);
-		getMyThreadSafe()->getPlannedWD()->setNumtries(0);
-	}
-
-
-
-#else
-   //jam throw TaskException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context);
-    debug0("Resiliency: taskErrorHandler NO_debug");
-
-#endif
+#else /* !NANOS_DEBUG_ENABLED */
+   throw TaskException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context);
+#endif /* NANOS_DEBUG_ENABLED */
 }
-#endif
+#endif /* ARM_RECOVERY_WORKAROUND */
+#endif /* NANOS_RESILIENCY_ENABLED */
+
