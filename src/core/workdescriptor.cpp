@@ -279,8 +279,8 @@ void WorkDescriptor::finish() {
     * 4) The task has not run out of trials (a limit is set to avoid infinite loop)
     */
 
-   bool isInvalid = this->isInvalid();
-   if (isInvalid) {
+   bool isWdInvalid = this->isInvalid();
+   if (isWdInvalid) {
       bool finished = false;
       if (this->isInvalid() && this->isRecoverable() // Execution invalid and task recoverable
             && (this->getParent() == NULL || !this->getParent()->isInvalid())) { // Our parent is not invalid (if we got one)
@@ -306,7 +306,7 @@ void WorkDescriptor::finish() {
          NANOS_INSTRUMENT ( static nanos_event_key_t task_reexec_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") ); NANOS_INSTRUMENT ( nanos_event_value_t task_reexec_val = (nanos_event_value_t ) NANOS_FT_RESTART ); NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_reexec_key, &task_reexec_val) );
       }
    }
-   if (isInvalid) {
+   if (isWdInvalid) {
       return;
    }
 #endif
