@@ -62,21 +62,26 @@ namespace nanos {
 
          virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace const& mem ) const;
 
-         virtual bool rawCopyIn ( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) const;
+         //! \brief Intermediate function used to bypass a bug with GCC ipa-pure-const and inline optimizations.
+         void rawCopy ( char *begin, char *end, char *dest );
 
-         virtual bool rawCopyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) const;
+         //! \brief Makes a copy of the given chunk into device memory. This should be called on checkpoint operations only.
+         virtual bool checkpointCopy ( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) throw();
 
-         virtual void _copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) const;
+         //! \brief Makes a copy of the given chunk back into host memory. This should be called on restore operations only.
+         virtual bool restoreCopy ( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) throw();
 
-         virtual void _copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) const;
+         virtual void _copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) noexcept;
 
-         virtual bool _copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) const;
+         virtual void _copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId );
+
+         virtual bool _copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId );
 
          virtual void _copyInStrided1D( uint64_t devAddr, uint64_t hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const& mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId );
 
          virtual void _copyOutStrided1D( uint64_t hostAddr, uint64_t devAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace & mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId );
 
-         virtual bool _copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const& memDest, SeparateMemoryAddressSpace const& memOrig, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) const;
+         virtual bool _copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace const& memDest, SeparateMemoryAddressSpace const& memOrig, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId );
 
          virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace const& mem, SimpleAllocator::ChunkList &list ) const;
    };

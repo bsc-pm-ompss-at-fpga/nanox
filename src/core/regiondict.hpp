@@ -18,12 +18,14 @@ ContainerDense< T >::ContainerDense( CopyData const &cd ) : _container(), _leafC
 }
 
 template <class T>
-RegionNode * ContainerDense< T >::getRegionNode( reg_t id ) const {
+RegionNode * ContainerDense< T >::getRegionNode( reg_t id ) {
+   RecursiveLockBlock lb(_lock);
    return _container[ id ].getLeaf();
 }
 
 template <class T>
 void ContainerDense< T >::addRegionNode( RegionNode *leaf, bool rogue ) {
+   RecursiveLockBlock lb(_lock);
    _container[ leaf->getId() ].setLeaf( leaf );
    _container[ leaf->getId() ].setData( NULL );
    if (!rogue) _leafCount++;
@@ -31,11 +33,14 @@ void ContainerDense< T >::addRegionNode( RegionNode *leaf, bool rogue ) {
 
 template <class T>
 Version *ContainerDense< T >::getRegionData( reg_t id ) {
+   RecursiveLockBlock lb(_lock);
    return _container[ id ].getData();
+   
 }
 
 template <class T>
 void ContainerDense< T >::setRegionData( reg_t id, Version *data ) {
+   RecursiveLockBlock lb(_lock );
    _container[ id ].setData( data );
 }
 
@@ -134,7 +139,8 @@ ContainerSparse< T >::ContainerSparse( RegionDictionary< ContainerDense > &orig 
 }
 
 template <class T>
-RegionNode * ContainerSparse< T >::getRegionNode( reg_t id ) const {
+RegionNode * ContainerSparse< T >::getRegionNode( reg_t id ) {
+   // jbellon: Should this have synchronization? Readers vs writers
    std::map< reg_t, RegionVectorEntry >::const_iterator it = _container.lower_bound( id );
    if ( it == _container.end() || _container.key_comp()(id, it->first) ) {
       //fatal0( "Error, RegionMap::getLeaf does not contain region" );
@@ -212,7 +218,7 @@ ContainerDense< T > &ContainerSparse< T >::getOrigContainer() {
 }
 
 template <class T>
-RegionNode *ContainerSparse< T >::getGlobalRegionNode( reg_t id ) const {
+RegionNode *ContainerSparse< T >::getGlobalRegionNode( reg_t id ) {
    return _orig.getRegionNode( id );
 }
 
@@ -933,7 +939,7 @@ reg_t RegionDictionary< Sparsity >::registerRegionReturnSameVersionSubparts( reg
 }
 
 template < template <class> class Sparsity>
-bool RegionDictionary< Sparsity >::checkIntersect( reg_t regionIdA, reg_t regionIdB ) const {
+bool RegionDictionary< Sparsity >::checkIntersect( reg_t regionIdA, reg_t regionIdB ) {
    if ( regionIdA == regionIdB ) {
       *(myThread->_file) << __FUNCTION__ << " Dummy check! regA == regB ( " << regionIdA << " )" << std::endl;
       printBt( *(myThread->_file) );

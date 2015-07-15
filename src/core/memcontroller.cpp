@@ -219,7 +219,9 @@ void MemController::copyDataIn() {
    
    //if( sys.getNetwork()->getNodeNum()== 0)std::cerr << "MemController::copyDataIn for wd " << _wd.getId() << std::endl;
    for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
-      _memCacheCopies[ index ].generateInOps( *_inOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd, index );
+      if ( _wd.getCopies()[index].isInput() ) {
+         _memCacheCopies[ index ].generateInOps( *_inOps, _wd.getCopies()[index].isInput(), _wd.getCopies()[index].isOutput(), _wd, index );
+      }
    }
 
    _inOps->issue( _wd );
@@ -239,24 +241,35 @@ void MemController::copyDataIn() {
 
       bool queuedOps = false;
       for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
-         if ( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
-            // For inout parameters, make a temporary independent backup. We have to do this privately, without
-            // the cache being noticed, because this backup is for exclusive use of this workdescriptor only.
-            BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
+         if ( _wd.getCopies()[index].isInput() ) {
+            //_backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
+            _backupCacheCopies[index]._locations.clear();
 
-            std::size_t size = _wd.getCopies()[index].getSize();
-            uint64_t host_addr = _wd.getCopies()[index].getFitAddress();
-            uint64_t dev_addr = (uint64_t) dev.memAllocate(size, sys.getBackupMemory(), _wd, index);
+            if ( _wd.getCopies()[index].isOutput() ) {
+               // For inout parameters, make a temporary independent backup. We have to do this privately, without
+               // the cache being noticed, because this backup is for exclusive use of this workdescriptor only.
+               BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
 
-            // FIXME Maybe it would be better to store is_private_backup_aborted value inside _backupInOutCopies...
-            new (&_backupInOutCopies[index]) Chunk( dev_addr, host_addr, size );
+               std::size_t size = _wd.getCopies()[index].getSize();
+               uint64_t host_addr = _wd.getCopies()[index].getFitAddress();
+               uint64_t dev_addr = (uint64_t) dev.memAllocate(size, sys.getBackupMemory(), _wd, index);
 
-            _is_private_backup_aborted |= !dev.rawCopyIn( dev_addr, host_addr, size, sys.getBackupMemory(), _wd );
-         // Note: we dont want to make the regular backup for inouts, as children tasks' "in" 
-         // parameters will always do the backup later if they exist no matter if now we perform the copy or not
-         } else if ( _wd.getCopies()[index].isInput() ) {
-            _backupCacheCopies[ index ].generateInOps( *_backupOpsIn, true, false, _wd, index);
-            queuedOps = true;
+               // FIXME Maybe it would be better to store is_private_backup_aborted value inside _backupInOutCopies...
+               new (&_backupInOutCopies[index]) Chunk( dev_addr, host_addr, size );
+
+               // Note: we dont want to make the regular backup for inouts, as children tasks' "in" 
+               // parameters will always do the backup later if they exist no matter if now we perform the copy or not
+               //if(sys.getVerboseCopies()) //message( "Private copyIn (inout) wd:", std::dec, _wd.getId() );
+               _is_private_backup_aborted |= !dev.checkpointCopy( dev_addr, host_addr, size, sys.getBackupMemory(), _wd );
+               //if(sys.getVerboseCopies()) //message( "Private copyIn (inout) wd:", std::dec, _wd.getId(), " done. Private backup aborted?: ", _is_private_backup_aborted );
+
+            } else {
+               _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
+               _backupCacheCopies[index]._locationDataReady = true;
+
+               _backupCacheCopies[ index ].generateInOps( *_backupOpsIn, true, false, _wd, index);
+               queuedOps = true;
+            }
          }
       }
 
@@ -303,22 +316,6 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
    //}
    if ( _VERBOSE_CACHE || sys.getVerboseCopies() ) { *(myThread->_file) << "### copyDataOut wd " << std::dec << _wd.getId() << " metadata set, not released yet" << std::endl; }
 
-   for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
-      if ( _wd.getCopies()[index].isOutput() ) {
-         if ( _wd.getParent() != NULL && _wd.getParent()->_mcontrol.ownsRegion( _memCacheCopies[index]._reg ) ) {
-            WD &parent = *(_wd.getParent());
-            for ( unsigned int parent_idx = 0; parent_idx < parent.getNumCopies(); parent_idx += 1) {
-               if ( parent._mcontrol._memCacheCopies[parent_idx]._reg.contains( _memCacheCopies[ index ]._reg ) ) {
-                  if ( parent._mcontrol._memCacheCopies[parent_idx].getChildrenProducedVersion() < _memCacheCopies[ index ].getChildrenProducedVersion() ) {
-                     parent._mcontrol._memCacheCopies[parent_idx].setChildrenProducedVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
-                  }
-               }
-            }
-         }
-      }
-   }
-
-
    if ( _pe->getMemorySpaceId() == 0 /* HOST_MEMSPACE_ID */) {
       //_outputDataReady = true;
    } else {
@@ -331,18 +328,18 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
       //if( sys.getNetwork()->getNodeNum()== 0)std::cerr << "MemController::copyDataOut for wd " << _wd.getId() << std::endl;
       _outOps->issue( _wd );
    }
+
 #ifdef NANOS_RESILIENCY_ENABLED
    if (sys.isResiliencyEnabled() && _wd.isRecoverable() ) {
 
-   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
-   NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_OUT );
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
+      NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
+      NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_OUT );
+      NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
 
+      BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
       for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
          if( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
             // Inoutparameters' backup have to be cleaned: they are private
-            BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
-
             dev.memFree( _backupInOutCopies[index].getAddress(),
                           sys.getBackupMemory() );
          }
@@ -351,40 +348,39 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
       if( !_wd.isInvalid() ) {
          ensure( _backupOpsOut, "Backup ops array has not been initialized!" );
 
-         bool queuedOps = false;
+         bool ops_queued = false;
          for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
             // Needed for CP input data
             if( _wd.getCopies()[index].isOutput() ) {
-#ifdef NANOS_RESILIENCY_ENABLED
-         AllocatedChunk *backup = _backupCacheCopies[index]._chunk;
-         if( backup ) {// it seems this is never being executed
-            CachedRegionStatus* entry = (CachedRegionStatus*)backup->getNewRegions()->getRegionData( backup->getAllocatedRegion().id );
-            const bool invalid_entry = entry && !entry->isValid();
-            if( invalid_entry ) {
-               // If the entry is not valid, we set up its version to 0 so future backup overwrites aren't given any errors
-               entry->resetVersion();
-               _backupCacheCopies[ index ].setVersion( 0 );
-               continue;
+
+               AllocatedChunk *backup = _backupCacheCopies[index]._chunk;
+               if( backup ) {
+                  CachedRegionStatus* entry = (CachedRegionStatus*)backup->getNewRegions()->getRegionData( backup->getAllocatedRegion().id );
+                  const bool invalid_entry = entry && !entry->isValid();
+                  if( invalid_entry ) {
+                     // If the entry is not valid, we set up its version to 0 so future backup overwrites aren't given any errors
+                     entry->resetVersion();
+                     _backupCacheCopies[ index ].setVersion( 0 );
+                  } else {
+                     _backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
+                     _backupCacheCopies[index]._locations.clear();
+                     _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
+                     _backupCacheCopies[index]._locationDataReady = true;
+
+                     _backupCacheCopies[index].generateInOps( *_backupOpsOut, true, false, _wd, index);
+                     ops_queued = true;
+                  }
+               }
             }
          }
-#endif
-               _backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
 
-               _backupCacheCopies[index]._locations.clear();
-               _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
-               _backupCacheCopies[index]._locationDataReady = true;
-
-              _backupCacheCopies[index].generateInOps( *_backupOpsOut, true, false, _wd, index);
-              queuedOps = true;
-            }
-         }
-
-         if( queuedOps ) {
+         // We try to issue valid copies' checkpoint, if any.
+         if( ops_queued ) {
             _backupOpsOut->issue( _wd );
          }
       }
 
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
+      NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
    }
 
 #endif
@@ -405,36 +401,35 @@ void MemController::restoreBackupData ( )
    if (_backupCacheCopies) {
       _restoreOps = NEW SeparateAddressSpaceOutOps( _pe, false, true);
 
-      bool all_commited = true;
-      try {
-         for (unsigned int index = 0; index < _wd.getNumCopies(); index++) {
-            const uintptr_t dev_addr  = _backupInOutCopies[index].getAddress();
-            const size_t size         = _backupInOutCopies[index].getSize();
-            const uintptr_t host_addr = _backupInOutCopies[index].getHostAddress();
+      BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
 
-            if (_wd.getCopies()[index].isInput()
-                && _wd.getCopies()[index].isOutput() ) {
-               // Inoutparameters have to be restored no matter whether they were corrupted or not (they may be dirty).
-               BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
-               if( _is_private_backup_aborted ) {
-                  throw InvalidatedRegionFound();
-               } else {
-                  all_commited &= dev.rawCopyOut( host_addr, dev_addr, size,
-                                                  sys.getBackupMemory(), _wd );
-               }
-            } else if (_wd.getCopies()[index].isInput()) {
-               _backupCacheCopies[index]._chunk->copyRegionToHost( *_restoreOps,
-                     _backupCacheCopies[index]._reg.id,
-                     _backupCacheCopies[index].getVersion(), _wd, index);
+      bool failed = false;
+      unsigned int index = 0;
+      while( !failed && index < _wd.getNumCopies()) {
+         const uintptr_t dev_addr  = _backupInOutCopies[index].getAddress();
+         const uintptr_t host_addr = _backupInOutCopies[index].getHostAddress();
+         const size_t size         = _backupInOutCopies[index].getSize();
 
+         // Inout args have to be restored even if were not corrupted (they may be dirty).
+         if (_wd.getCopies()[index].isInput()
+             && _wd.getCopies()[index].isOutput() ) {
+            if( _is_private_backup_aborted ) {
+               failed = true;
+            } else {
+               failed = !dev.restoreCopy( host_addr, dev_addr, size,
+                                               sys.getBackupMemory(), _wd );
             }
+         } else if (_wd.getCopies()[index].isInput()) {
+            _backupCacheCopies[index]._chunk->copyRegionToHost( *_restoreOps,
+                  _backupCacheCopies[index]._reg.id,
+                  _backupCacheCopies[index].getVersion(), _wd, index);
          }
-         _restoreOps->issue(_wd);
-
-      } catch ( InvalidatedRegionFound const &err ) {
-         all_commited = false;
+         index++;
       }
-      if( !all_commited ) {
+
+      if( !failed ) {
+         _restoreOps->issue(_wd);
+      } else {
          if( _wd.getParent() == NULL ||               // If we haven't any ancestor to recover
                !_wd.getParent()->setInvalid( true ) ) // or we cannot find any ancestor which is recoverable
             fatal("Resiliency: Unrecoverable error found. "
@@ -548,6 +543,18 @@ bool MemController::isDataRestored( WD const &wd ) {
    if ( _initialized ) {
       if ( !_dataRestored ) {
          _dataRestored = _restoreOps->isDataReady( wd );
+
+         for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
+            AllocatedChunk *backup = _backupCacheCopies[index]._chunk;
+            if( backup ) {
+               CachedRegionStatus* entry = (CachedRegionStatus*)backup->getNewRegions()->getRegionData( backup->getAllocatedRegion().id );
+               const bool invalid_entry = entry && !entry->isValid();
+               if( invalid_entry ) {
+                  throw InvalidatedRegionFound();
+               }
+            }
+         }
+
          if ( _dataRestored ) {
             if ( _VERBOSE_CACHE ) { *(myThread->_file) << "Restored data is ready for wd " << _wd.getId() << " obj " << (void *)_restoreOps << std::endl; }
 
@@ -643,14 +650,23 @@ bool MemController::isMemoryAllocated() const {
 void MemController::setCacheMetaData() {
    for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
       if ( _wd.getCopies()[index].isOutput() ) {
-         unsigned int newVersion = _memCacheCopies[ index ].getVersion() + 1;
-         _memCacheCopies[ index ]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion ); //update directory
+         //unsigned int newVersion = _memCacheCopies[ index ].getVersion() + 1;
+         //_memCacheCopies[ index ]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion ); //update directory
+         unsigned int newVersion = 0;
+         if( _memCacheCopies[index].getVersion() > _memCacheCopies[index].getChildrenProducedVersion() ){
+            //message("Setting memCacheCopies[",index,"] version to " , _memCacheCopies[index].getVersion()+1 );
+            newVersion = _memCacheCopies[ index ].getVersion() + 1;
+         } else {
+            //message("Setting memCacheCopies[",index,"] version to " , _memCacheCopies[index].getChildrenProducedVersion()+1 );
+            newVersion = _memCacheCopies[ index ].getChildrenProducedVersion() + 1;
+         }
+         _memCacheCopies[ index ]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion );//update directory
          _memCacheCopies[ index ].setChildrenProducedVersion( newVersion );
 
          if ( _pe->getMemorySpaceId() != 0 /* HOST_MEMSPACE_ID */) {
             sys.getSeparateMemory( _pe->getMemorySpaceId() ).setRegionVersion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() + 1, _wd, index );
          }
-      } else if ( _wd.getCopies()[index].isInput() ) {
+      } else //if ( _wd.getCopies()[index].isInput() ) { // if it is not an output then it should be an input. otherwise ther would be no copy
          _memCacheCopies[ index ].setChildrenProducedVersion( _memCacheCopies[ index ].getVersion() );
       }
    }
@@ -660,4 +676,3 @@ bool MemController::hasObjectOfRegion( global_reg_t const &reg ) {
    return _ownedRegions.hasObjectOfRegion( reg );
 }
 
-}

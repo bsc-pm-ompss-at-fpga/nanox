@@ -4,7 +4,7 @@
 #include "version.hpp"
 using namespace nanos; 
 
-inline CachedRegionStatus::CachedRegionStatus() : Version(), _ops(), _dirty( false ) {
+inline CachedRegionStatus::CachedRegionStatus() : Version(), _ops(), _dirty( false ), _valid(true) {
 }
 
 inline CachedRegionStatus::CachedRegionStatus( CachedRegionStatus const &rs ) : Version( rs ), _ops ( ), _dirty( rs._dirty ), _valid( rs._valid ) {
@@ -49,7 +49,6 @@ inline void CachedRegionStatus::setValid( bool flag ) {
 
 inline void CachedRegionStatus::resetVersion() {
    Version::resetVersion();
-   _valid = true;
 }
 
 #endif /* CACHEDREGIONSTATUS_HPP */

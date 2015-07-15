@@ -73,19 +73,65 @@ std::size_t BackupManager::getMemCapacity (
    return _managed_pool.get_size();
 }
 
-bool BackupManager::rawCopyIn ( uint64_t devAddr, uint64_t hostAddr,
+bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
                               std::size_t len, SeparateMemoryAddressSpace &mem,
-                              WorkDescriptor const& wd ) const
+                              WorkDescriptor const& wd ) throw()
 {
-   // This is called on restore operations. Data is copied from device to host.
+   /* This is called on backup operations. Data is copied from host to device.
+    * The operation is defined outside _copyIn because, for inout args we need
+    * to create and manage private checkpoints, so passing through the dictionary and
+    * region cache is necessary.
+    */
    try {
       // We cannot use memcpy (C). It has an empty exception specifier (noexcept).
-      std::copy((char*) hostAddr, (char*) hostAddr+len, (char*) devAddr);
+      char* begin = reinterpret_cast<char*>(hostAddr);
+      char* end = reinterpret_cast<char*>(hostAddr)+len;
+      char* dest = reinterpret_cast<char*>(devAddr);
+      /* We use another function call to perform the copy in order to
+       * be able to compile std::copy call in a separate file.
+       * This is needed to avoid the GCC bug related to 
+       * non-call-exceptions plus inline and ipa-pure-const
+       * optimizations.
+       */
+      rawCopy(begin, end, dest);
       return true;
    } catch ( TaskException &e ) {
       e.handleCheckpointError( wd, hostAddr, devAddr, len );
       sys.getExceptionStats().incrInitializationErrors();
       debug("Resiliency: error detected during task ", wd.getId(), " data backup.");
+   }
+
+   return false;
+}
+
+bool BackupManager::restoreCopy ( uint64_t hostAddr, uint64_t devAddr,
+                               std::size_t len, SeparateMemoryAddressSpace &mem,
+                               WorkDescriptor const& wd ) noexcept
+{
+
+   /* This is called on restore operations. Data is copied from device to host.
+    * The operation is defined outside _copyOut because, for inout args, we need
+    * to create and manage private checkpoints, so passing through the dictionary and
+    * region cache is necessary.
+    */
+   try {
+      // We cannot use memcpy (C). It has an empty exception specifier (noexcept).
+      char* begin = reinterpret_cast<char*>(devAddr);
+      char* end = reinterpret_cast<char*>(devAddr)+len;
+      char* dest = reinterpret_cast<char*>(hostAddr);
+      /* We use another function call to perform the copy in order to
+       * be able to compile std::copy call in a separate file.
+       * This is needed to avoid the GCC bug related to 
+       * non-call-exceptions plus inline and ipa-pure-const
+       * optimizations.
+       */
+      rawCopy(begin, end, dest);
+      return true;
+   } catch ( TaskException &e ) {
+      e.handleCheckpointError( wd, devAddr, hostAddr, len );
+      //sys.getExceptionStats().incrInitializationErrors();
+      // FIXME: This is not an initialization error. should I add another type?
+      debug("Resiliency: error detected during task ", wd.getId(), " data restore.");
    }
    return false;
 }
@@ -94,44 +140,26 @@ void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
                               std::size_t len, SeparateMemoryAddressSpace &mem,
                               DeviceOps *ops, Functor *f,
                               WorkDescriptor const& wd, void *hostObject,
-                              reg_t hostRegionId ) const
+                              reg_t hostRegionId ) throw()
 {
    ops->addOp();
 
-   bool completed = rawCopyIn( devAddr, hostAddr, len, mem, wd );
-   if ( completed )
+   bool completed = checkpointCopy( devAddr, hostAddr, len, mem, wd );
+   if ( completed ) {
       ops->completeOp();
-   else
+   } else
       ops->abortOp();
-}
-
-bool BackupManager::rawCopyOut ( uint64_t hostAddr, uint64_t devAddr,
-                               std::size_t len, SeparateMemoryAddressSpace &mem,
-                               WorkDescriptor const& wd ) const
-{
-
-   // This is called on restore operations. Data is copied from device to host.
-   try {
-      // We cannot use memcpy (C). It has an empty exception specifier (noexcept).
-      std::copy((char*) devAddr, (char*) devAddr+len, (char*) hostAddr);
-      return true;
-   } catch ( TaskException &e ) {
-      e.handleCheckpointError( wd, devAddr, hostAddr, len );
-      sys.getExceptionStats().incrInitializationErrors();
-      debug("Resiliency: error detected during task ", wd.getId(), " data restore.");
-   }
-   return false;
 }
 
 void BackupManager::_copyOut ( uint64_t hostAddr, uint64_t devAddr,
                                std::size_t len, SeparateMemoryAddressSpace &mem,
                                DeviceOps *ops, Functor *f,
                                WorkDescriptor const& wd, void *hostObject,
-                               reg_t hostRegionId ) const
+                               reg_t hostRegionId )
 {
    ops->addOp();
 
-   bool completed = rawCopyOut( hostAddr, devAddr, len, mem, wd );
+   bool completed = restoreCopy( hostAddr, devAddr, len, mem, wd );
    if ( completed )
       ops->completeOp();
    else
@@ -144,7 +172,7 @@ bool BackupManager::_copyDevToDev ( uint64_t devDestAddr, uint64_t devOrigAddr,
                                     SeparateMemoryAddressSpace &memorig,
                                     DeviceOps *ops, Functor *f,
                                     WorkDescriptor const& wd, void *hostObject,
-                                    reg_t hostRegionId ) const
+                                    reg_t hostRegionId )
 {
    /* Device to device copies are not supported for BackupManager as only one instance
     * is expected for the whole process.
@@ -215,7 +243,7 @@ bool BackupManager::_copyDevToDevStrided1D (
       std::size_t numChunks, std::size_t ld,
       SeparateMemoryAddressSpace const& memDest,
       SeparateMemoryAddressSpace const& memOrig, DeviceOps *ops, Functor *f,
-      WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) const
+      WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId )
 {
    return false;
 }

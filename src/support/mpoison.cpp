@@ -35,6 +35,7 @@ pthread_t tid;
 volatile bool started = false;
 volatile bool stop = false;
 volatile bool run = false;
+volatile bool failFlag = false;
 
 nanos::vm::MPoisonManager *mp_mgr;
 
@@ -44,36 +45,50 @@ nanos::vm::MPoisonManager *nanos::vm::getMPoisonManager() {
 
 void *nanos::vm::mpoison_run(void *arg)
 {
-   static float rate = sys.getMPoisonRate();
-   if( rate <= 0.001f ) // discard really low values and/or negative values
-      return NULL;
+   //unsigned long *delay_start = (unsigned long*) arg;
+   //usleep( *delay_start );
 
-   useconds_t time_between_failures = 1000000 / rate; // in useconds
-
-   unsigned long *delay_start = (unsigned long*) arg;
-   usleep( *delay_start );
-
+   mp_mgr->resetRndPageDist();
    run &= sys.getMPoisonAmount() !=0; // if we must not inject errors, just skip...
 
    while( run ) {
 
       while( stop && run ) {}// wait until the other thread indicates 
                              // to continue the poisoning
-      mp_mgr->blockPage();
-      usleep( time_between_failures );
 
-      // It is intended to make an infinite loop if MPoisonAmount < 0
-      if( sys.getMPoisonAmount() < 0 || sys.getMPoisonAmount() > sys.getExceptionStats().getInjectedErrors() ) {
+      usleep( mp_mgr->getWaitTime() );
+      mp_mgr->blockPage();
+
+      if( sys.getMPoisonAmount() > sys.getExceptionStats().getInjectedErrors() 
+          || sys.getMPoisonAmount() < 0 ) {// It is intended to make an infinite loop if MPoisonAmount < 0
          sys.getExceptionStats().incrInjectedErrors();
       } else {
          run = false;
       }
    }
-
    return NULL;
 }
 
 extern "C" {
+
+void mpoison_set_fail( bool value ) {
+   failFlag = value;
+}
+
+void mpoison_do_fail() {
+   if( failFlag ) {
+      failFlag = false;
+      int *a = 0;
+      *a = 1;
+   }
+}
+
+int mpoison_should_fail() {
+   if( failFlag)
+      return 1;
+   else
+      return 0;
+}
 
 void mpoison_stop(){
    stop = true;
@@ -96,7 +111,7 @@ int mpoison_unblock_page( uintptr_t page_addr ) {
 }
 
 void mpoison_delay_start ( unsigned long* useconds ) {
-   if( sys.isPoisoningEnabled() ) {
+   if( run ) {
       warning("Memory fault injection: Creating injection thread");
       pthread_create(&tid, NULL, nanos::vm::mpoison_run, (void*)useconds);
    }
@@ -112,7 +127,11 @@ void mpoison_init ( )
    using namespace nanos::vm;
 
    if ( sys.isPoisoningEnabled() ) {
-      mp_mgr = new MPoisonManager( sys.getMPoisonSeed());
+      float rate = sys.getMPoisonRate();
+      if( rate <= 0.001f ) // discard really low values and/or negative values
+         return;
+
+      mp_mgr = new MPoisonManager( sys.getMPoisonSeed(), 1, rate );
 
       stop = false;
       run = true;
@@ -138,7 +157,7 @@ void mpoison_finalize ( )
 void mpoison_declare_region ( uintptr_t addr, size_t size )
 {
    using namespace nanos::vm;
-   if( sys.isPoisoningEnabled() ) {
+   if( sys.isPoisoningEnabled() && mp_mgr != NULL ) {
 
       uintptr_t aligned_addr = addr & ~(page_size-1);
       size_t aligned_size =( (addr + size) & ~(page_size-1) ) // end of region

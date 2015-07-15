@@ -175,6 +175,7 @@ namespace nanos
          */
          virtual WorkDescriptor* getAndRemoveWaiter() = 0;
 
+         Lock &getLock();
        
         /*! \brief acquire the lock.
          */

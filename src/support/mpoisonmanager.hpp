@@ -36,29 +36,48 @@ extern const uint64_t pn_mask;
 class MPoisonManager {
 
 public:
-  MPoisonManager( int seed );
+  MPoisonManager( int seed, size_t size, float rate );
 
   virtual ~MPoisonManager();
 
+  //!< Registers a portion of memory susceptible to be corrupted in the manager.
   void addAllocation( uintptr_t addr, size_t size );
 
+  /*! Unregisters a portion of memory susceptible to be corrupted in the manager.
+   * In case there were blocked pages inside it, they are unblocked.
+   */
   void deleteAllocation( uintptr_t addr );
 
+  //!< Unblocks all pages that remain blocked and removes them from the manager.
   void clearAllocations ( );
 
+  //!< Returns randomly an arrival time for the next failure.
+  unsigned getWaitTime( );
+
+  //!< Returns a randomly selected page's base address.
   uintptr_t getRandomPage( );
 
+  //!< Resets the page fault distribution so that it fits total_size.
+  void resetRndPageDist( );
+
+  /*! \brief Removes a randomly selected page's access rights.
+   * \return 0 on success. A different value means that the page could not be blocked.
+   */
   int blockPage( );
 
+  //!< Removes a given page's access rights. Address must be aligned to 'page_size'.
   int blockSpecificPage( uintptr_t page_addr );
 
+  /*! Returns an specific page's access rights to its original value. 
+   * Page address must be aligned to 'page_size'.
+   */
   int unblockPage( uintptr_t page_addr );
 
 private: 
   typedef struct {
     uintptr_t addr;
     std::size_t size;
-  } alloc_t;
+  } alloc_t;//!< Contains information about an allocation: base address and size.
 
   Lock mgr_lock; //!< Provides mutual exclusion access to unblockPage function.
 
@@ -66,7 +85,9 @@ private:
   std::set<uintptr_t> blocked_pages; //!< Set of addresses that which address has been unauthorised randomly.
   size_t total_size;//!< Indicates the total amount of memory allocated by the user.
 
-  std::mt19937 generator;//!< RNG engine
+  std::mt19937 generator;//!< Random number generator engine
+  std::uniform_int_distribution<size_t> page_fault_dist;//!< Random distribution used for memory page fault selection
+  std::exponential_distribution<float> wait_time_dist;//!< Random distribution used for time between failures
 };
 
 }// namespace vm

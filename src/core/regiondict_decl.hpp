@@ -46,6 +46,7 @@ typedef unsigned int reg_t;
    class RegionVectorEntry {
       RegionNode *_leaf;
       Version    *_data;
+      Lock        _lock;
 
       public:
       RegionVectorEntry();
@@ -67,7 +68,7 @@ typedef unsigned int reg_t;
       std::vector< std::size_t > _dimensionSizes;
       RegionNode                 _root;
       Lock                       _rogueLock;
-      Lock                       _lock;
+      RecursiveLock                       _lock;
       Lock                       _invalidationsLock;
       std::map< reg_t, reg_t >   _masterIdToLocalId;
       bool                       _keepAtOrigin;
@@ -75,7 +76,7 @@ typedef unsigned int reg_t;
       public:
       bool sparse;
       ContainerDense( CopyData const &cd );
-      RegionNode *getRegionNode( reg_t id ) const;
+      RegionNode *getRegionNode( reg_t id );
       void addRegionNode( RegionNode *leaf, bool rogue );
       Version *getRegionData( reg_t id );
       void setRegionData( reg_t id, Version * );
@@ -107,7 +108,7 @@ typedef unsigned int reg_t;
       public:
       bool sparse;
       ContainerSparse( RegionDictionary< ContainerDense > &orig );
-      RegionNode *getRegionNode( reg_t id ) const;
+      RegionNode *getRegionNode( reg_t id );
       void addRegionNode( RegionNode *leaf, bool rogue );
       Version *getRegionData( reg_t id );
       void setRegionData( reg_t id, Version * );
@@ -119,7 +120,7 @@ typedef unsigned int reg_t;
       ContainerDense< T > &getOrigContainer();
 
       Version *getGlobalRegionData( reg_t id );
-      RegionNode *getGlobalRegionNode( reg_t id ) const;
+      RegionNode *getGlobalRegionNode( reg_t id );
       RegionDictionary< ContainerDense > *getGlobalDirectoryKey();
       std::vector< std::size_t > const &getDimensionSizes() const;
 
@@ -161,9 +162,9 @@ typedef unsigned int reg_t;
       uint64_t getKeyBaseAddress() const;
       uint64_t getRealBaseAddress() const;
 
-      void printRegion( std::ostream &o, reg_t ) const;
+      void printRegion( std::ostream &o, reg_t );
 
-      bool checkIntersect( reg_t baseRegionId, reg_t targetRegionId ) const;
+      bool checkIntersect( reg_t baseRegionId, reg_t targetRegionId );
       reg_t computeTestIntersect( reg_t regionIdA, reg_t regionIdB ) ;
       reg_t computeIntersect( reg_t regionIdA, reg_t regionIdB ) ;
       void _computeIntersect( reg_t regionIdA, reg_t regionIdB, nanos_region_dimension_internal_t *outReg );

@@ -221,7 +221,7 @@ bool AllocatedChunk::NEWaddReadRegion2( BaseAddressSpaceInOps &ops, reg_t reg, u
          if ( !entry && skipNull ) {
             continue;
          }
-         if ( !entry || version > entry->getVersion() ) {
+         if ( !entry || !entry->isValid() || version > entry->getVersion() ) {
             //o << "No entry for region " << it->first << " "; _newRegions->printRegion( o, it->first); o << " must copy from region " << it->second << " "; _newRegions->printRegion(o, it->second); o << " want version "<< version << " entry version is " << ( (!entry) ? -1 : entry->getVersion() )<< std::endl;
             CachedRegionStatus *copyFromEntry = ( CachedRegionStatus * ) _newRegions->getRegionData( it->second );
             if ( !copyFromEntry || version > copyFromEntry->getVersion() ) {
@@ -347,6 +347,7 @@ void AllocatedChunk::prepareRegion( reg_t reg, unsigned int version ) {
 //}
 
 void AllocatedChunk::setRegionVersion( reg_t reg, unsigned int version, WD const &wd, unsigned int copyIdx ) {
+   RecursiveLockBlock lb(_lock);
    unsigned int currentVersion = 0;
    CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg );
    ensure(entry != NULL, "CacheEntry not found!");
@@ -360,6 +361,7 @@ void AllocatedChunk::setRegionVersion( reg_t reg, unsigned int version, WD const
 }
 
 void AllocatedChunk::NEWaddWriteRegion( reg_t reg, unsigned int version ) {
+   //RecursiveLockBlock lb(_lock);
    unsigned int currentVersion = 0;
    std::list< std::pair< reg_t, reg_t > > components;
    _newRegions->registerRegion( reg, components, currentVersion );
@@ -793,6 +795,7 @@ unsigned int AllocatedChunk::getVersion( global_reg_t const &reg ) {
 }
 
 DeviceOps *AllocatedChunk::getDeviceOps( global_reg_t const &reg ) {
+   RecursiveLockBlock lb(_lock);
    CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg.id );
    ensure(entry != NULL, "CacheEntry not found!");
    return entry->getDeviceOps();
@@ -1130,7 +1133,8 @@ AllocatedChunk *RegionCache::_getAllocatedChunk( global_reg_t const &reg, bool c
    return allocChunkPtr;
 }
 
-void RegionCache::NEWcopyIn( unsigned int srcLocation, global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx, DeviceOps *givenOps, AllocatedChunk *chunk ) {
+void RegionCache::NEWcopyIn( unsigned int srcLocation, global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx, DeviceOps *givenOps, AllocatedChunk *chunk ) throw() {
+   //RecursiveLockBlock lb( _lock );
    //AllocatedChunk *chunk = getAllocatedChunk( reg );
    //std::cerr << " NEWcopyIn for reg: "; reg.key->printRegion( std::cerr, reg.id ); std::cerr << std::endl;
    uint64_t origDevAddr = chunk->getAddress() + ( reg.getRealFirstAddress() - chunk->getHostAddress() );
@@ -1144,20 +1148,25 @@ void RegionCache::NEWcopyIn( unsigned int srcLocation, global_reg_t const &reg, 
    }
    copyIn( reg, origDevAddr, srcLocation, ops, NULL, wd );
 
+   // Resiliency: invalidate backups whenever a checkpoint fails
    CachedRegionStatus *entry = ( CachedRegionStatus * ) chunk->getNewRegions()->getRegionData( reg.id );
-   if ( entry != NULL ) { // does it really make sense that entry is null?
+   if ( entry != NULL ) {// does it really make sense that entry is null?
       entry->setValid( ops->allCommited() );
       if( !ops->allCommited() ) {// if there was an error, reset the version of the copy to 0
          entry->resetVersion();
+         //MemCacheCopy *backups = wd._mcontrol.getBackups();
+         //if( backups ) {
+         //   backups[copyIdx].setVersion(0);
+         //   backups[copyIdx].setChildrenProducedVersion(0);
+         //}
       }
+   } else {
+      message("Entry is NULL");
    }
-   ensure( ops->allCommited() || entry != NULL, 
-              "RegionCache::NEWcopyIn: CachedRegionStatus is NULL"
-              " and we should have invalidated it!"
-         );
 }
 
 void RegionCache::NEWcopyOut( global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx, DeviceOps *givenOps, bool inval ) {
+   RecursiveLockBlock lb( _lock );
    AllocatedChunk *origChunk = getAllocatedChunk( reg, wd, copyIdx );
    uint64_t origDevAddr = origChunk->getAddress() + ( reg.getRealFirstAddress() - origChunk->getHostAddress() );
    DeviceOps *ops = ( givenOps != NULL ) ? givenOps : reg.getDeviceOps();
@@ -1182,7 +1191,13 @@ void RegionCache::_copyIn( global_reg_t const &reg, uint64_t devAddr, uint64_t h
    if ( VERBOSE_DEV_OPS ) {
       *(myThread->_file) << "[" << myThread->getId() << "] _device._copyIn( copyTo=" << _memorySpaceId <<", hostAddr="<< (void*)hostAddr <<" ["<< *((double*) hostAddr) <<"]"<<", devAddr="<< (void*)devAddr <<", len=" << len << ", _pe, ops, wd="<< wd.getId() << " ["<< (wd.getDescription() != NULL ? wd.getDescription() : "no description") << "] );" <<std::endl;
    }
-   if (!fake) _device._copyIn( devAddr, hostAddr, len, sys.getSeparateMemory( _memorySpaceId ), ops, (CompleteOpFunctor *) NULL, wd, (void *) reg.key->getKeyBaseAddress(), reg.id );
+   if (!fake) {
+      _device._copyIn( devAddr, hostAddr, len, sys.getSeparateMemory( _memorySpaceId ), ops, 
+                       (CompleteOpFunctor *) NULL, wd, (void *) reg.key->getKeyBaseAddress(), reg.id );
+      if( ops->aborted() ) {
+         message("I've found an aborted operation!!!");
+      }
+   }
    //NANOS_INSTRUMENT( inst.close(); );
 }
 

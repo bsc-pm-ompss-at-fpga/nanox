@@ -1,5 +1,6 @@
+
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2014 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,82 +18,10 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef _NANOS_SYNCRHONIZED_CONDITION
-#define _NANOS_SYNCRHONIZED_CONDITION
+#include "backupmanager.hpp"
+#include <algorithm>
 
-#include "synchronizedcondition_decl.hpp"
-#include "atomic.hpp"
-#include "basethread.hpp"
-#include "schedule_decl.hpp"
-
-using namespace nanos;
-
-inline void GenericSyncCond::lock()
+void BackupManager::rawCopy( char *begin, char *end, char *dest )
 {
-   _lock.acquire();
-   memoryFence();
+   std::copy(begin, end, dest);
 }
-
-inline void GenericSyncCond::unlock()
-{
-   memoryFence();
-   _lock.release();
-}
-
-inline Lock &GenericSyncCond::getLock()
-{
-   return _lock;
-}
-
-template <class _T>
-inline void SynchronizedCondition< _T>::wait()
-{
-   Scheduler::waitOnCondition(this);
-}
-
-template <class _T>
-inline void SynchronizedCondition< _T>::reference()
-{
-   _refcount++;
-   memoryFence();
-}
-
-template <class _T>
-inline void SynchronizedCondition< _T>::unreference()
-{
-   _refcount--;
-}
-
-template <class _T>
-inline void SynchronizedCondition< _T>::waitConditionAndSignalers()
-{
-   Scheduler::waitOnCondition(this);
-   while ( _refcount.value() > 0 ) {
-      memoryFence();
-   }
-}
-
-template <class _T>
-inline void SynchronizedCondition< _T>::signal()
-{
-   lock();
-   while ( hasWaiters() ) {
-      WD* wd = getAndRemoveWaiter();
-      Scheduler::wakeUp(wd);
-   }
-   unlock(); 
-}
-
-template <class _T>
-inline void SynchronizedCondition< _T>::signal_one()
-{
-   lock();
-   if ( hasWaiters() ) {
-      WD* wd = getAndRemoveWaiter();
-      Scheduler::wakeUp(wd);
-   }
-   unlock();
-}
-
-#endif
-
