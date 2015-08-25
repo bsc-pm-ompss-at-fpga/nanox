@@ -385,7 +385,7 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
    verbose("Wait on condition");
    while ( !condition->check() /* FIXME:xteruel do we needed? && thread->isRunning() */) {
       if ( checks == 0 ) {
-         verbose("   starting idle loop"); //FIXME:xteruel
+         //verbose("   starting idle loop"); //FIXME:xteruel
          condition->lock();
          if ( !( condition->check() ) ) {
 

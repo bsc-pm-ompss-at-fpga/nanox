@@ -651,7 +651,11 @@ namespace nanos {
             /* 63 */ registerEventKey("team-ptr", "Team info", false, EVENT_DEVELOPER);
             /* 64 */ registerEventKey("thread-numa-node","Thread NUMA node", true, EVENT_ADVANCED);
             /* 65 */ registerEventKey("wd-numa-node","WD NUMA node", true, EVENT_ADVANCED);
-            /* 66 */ registerEventKey("resilience","Copying result from last execution", true, EVENT_ALL);
+            /* 66 */ registerEventKey("resilience","Resilience events", true, EVENT_USER, true );
+            registerEventValue("resilience","load_input","load_input");
+            registerEventValue("resilience","load_output","load_output");
+            registerEventValue("resilience","store_input","store_input");
+            registerEventValue("resilience","store_output","store_output");
                      
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }

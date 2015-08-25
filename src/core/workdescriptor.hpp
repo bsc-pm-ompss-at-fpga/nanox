@@ -562,8 +562,14 @@ inline void WorkDescriptor::setCriticality ( int cr ) { _criticality = cr; }
 inline int  WorkDescriptor::getCriticality () const { return _criticality; }
 
 //Resilience based on memoization
-inline void WorkDescriptor::setResilienceNode( ResilienceNode * rn ) { _resNode = rn; }
+inline void WorkDescriptor::setResilienceNode( ResilienceNode * rn ) { _resNode = rn; _resNode->restartLastDescRestored(); }
 inline ResilienceNode * WorkDescriptor::getResilienceNode() { return _resNode; }
+
+inline void WorkDescriptor::setCheckpoint( bool flag ) { _flags.is_checkpoint = flag; }
+inline bool WorkDescriptor::isCheckpoint() const { return _flags.is_checkpoint; }
+
+inline void WorkDescriptor::setSideEffect( bool flag ) { _flags.is_side_effect = flag; }
+inline bool WorkDescriptor::isSideEffect() const { return _flags.is_side_effect; }
 
 #endif
 

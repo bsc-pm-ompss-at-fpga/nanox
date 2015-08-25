@@ -22,6 +22,7 @@
 #include "basethread_decl.hpp"
 #include "instrumentation.hpp"
 #include <iostream>
+#include <sstream>
 #include <sched.h>
 #include <unistd.h>
 #include <signal.h>
@@ -33,6 +34,11 @@
 #define PTHREAD_STACK_MIN 16384
 #endif
 
+#ifdef NANOS_DEBUG_ENABLED
+#include <execinfo.h>
+#include <ucontext.h>
+#include <cstddef>
+#endif
 
 using namespace nanos;
 
@@ -186,14 +192,36 @@ void PThread::setupSignalHandlers ()
 
 void taskExecutionHandler ( int sig, siginfo_t* si, void* context ) throw(TaskExecutionException)
 {
-   /*
-    * In order to prevent the signal to be raised inside the handler,
-    * the kernel blocks it until the handler returns.
-    *
-    * As we are exiting the handler before return (throwing an exception),
-    * we must unblock the signal or that signal will not be available to catch
-    * in the future (this is done in at the catch clause).
-    */
+#ifdef NANOS_DEBUG_ENABLED
+   void *trace[50];
+   char **messages = (char **)NULL;
+   size_t trace_size = 0;
+   ucontext_t *uc = (ucontext_t *)context;
+
+   /* Do something useful with siginfo_t */
+
+   trace_size = backtrace(trace, 50);
+   /* overwrite sigaction with caller's address */
+   trace[1] = (void *) uc->uc_mcontext.gregs[REG_RIP];
+
+   messages = backtrace_symbols(trace, trace_size);
+   std::stringstream ss;
+   ss << std::endl
+      << "Backtrace:"
+      <<std::endl;
+   // Skip the first entry (points to the signal handler)
+   for( size_t i = 1; i < trace_size; i++ )
+   {
+      ss << " * "
+         << messages[i] << std::endl;
+   }
+   std::cerr << ss.str();
+
+
+   // Store the backtrace into the exception's error_info
    throw TaskExecutionException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context);
+#else
+   throw TaskExecutionException(getMyThreadSafe()->getCurrentWD(), *si, *(ucontext_t*)context);
+#endif // nanos_debug_enabled
 }
-#endif
+#endif // nanos_resiliency_enabled

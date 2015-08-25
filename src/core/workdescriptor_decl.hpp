@@ -219,6 +219,8 @@ typedef std::set<const Device *>  DeviceList;
             bool is_implicit;        //!< Is the WD an implicit task (in a team)?
             bool is_recoverable;   //!< Flags a task as recoverable, that is, it can be re-executed if it finished with errors.
             bool is_invalid;       //!< Flags an invalid workdescriptor. Used in resiliency when a task fails.
+            bool is_checkpoint;
+            bool is_side_effect;
          } WDFlags;
          typedef int PriorityType;
          typedef enum { INIT, START, READY, BLOCKED } State;
@@ -734,6 +736,12 @@ typedef std::set<const Device *>  DeviceList;
 
          void setResilienceNode ( ResilienceNode * rn );
          ResilienceNode * getResilienceNode();
+
+         void setCheckpoint( bool flag );
+         bool isCheckpoint() const;
+
+         void setSideEffect( bool flag );
+         bool isSideEffect() const;
    };
 
    typedef class WorkDescriptor WD;

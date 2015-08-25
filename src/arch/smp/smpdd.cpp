@@ -25,6 +25,7 @@
 #include "instrumentation.hpp"
 #include "taskexecutionexception.hpp"
 #include <string>
+#include <signal.h>
 //#include "errorgen.hpp"
 
 using namespace nanos;
@@ -34,7 +35,7 @@ SMPDevice nanos::ext::SMP("SMP");
 
 size_t SMPDD::_stackSize = 256*1024;
 
-Atomic<bool> error_injected = false;
+//Atomic<bool> error_injected = false;
 
 //! \brief Registers the Device's configuration options
 //! \param reference to a configuration object.
@@ -93,7 +94,7 @@ SMPDD * SMPDD::copyTo ( void *toAddr )
    return dd;
 }
 
-void SMPDD::execute ( WD &wd ) throw ()
+void SMPDD::execute ( WD &wd ) //throw ( )
 {
 #ifdef NANOS_RESILIENCY_ENABLED
    bool retry = false;
@@ -107,41 +108,81 @@ void SMPDD::execute ( WD &wd ) throw ()
        */
       wd.setInvalid(true);
       debug ( "Task " << wd.getId() << " is flagged as invalid.");
-   } else {
-      //bool taskFailed = false;
+   }
+   else {
+       //bool taskFailed = false;
       while (true) {
          try {
-            // Call to the user function
-            if( wd.getResilienceNode() != NULL && wd.getResilienceNode()->isComputed() ) { 
-                   ///* && wd.getDescription() != NULL && /*TODO:FIXME*/ strcmp( wd.getDescription(), "exchange_particles" ) != 0 */) {
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-               NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("resilience") );
-               NANOS_INSTRUMENT ( nanos_event_value_t val = wd.getId() );
-               NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenStateAndBurst ( NANOS_RUNNING, key, val ) );
-#endif
-               //std::cerr << "Loading result of RN " << wd.getResilienceNode() - sys.getResiliencePersistence()->getResilienceNode( 1 )
-               //    << std::endl;
-               wd.getResilienceNode()->loadResult( wd.getCopies(), wd.getNumCopies(), wd.getId() );
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-               NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseStateAndBurst ( key, val ) );
-#endif
+            if( wd.getParent() != NULL && wd.getResilienceNode() == NULL )
+               fatal( "WD has not RN." );
+            if( wd.isCheckpoint() && wd.isSideEffect() )
+               fatal( "The same task cannot be checkpoint and side_effect. (2)" );
+            if( wd.getResilienceNode() == NULL && ( wd.isCheckpoint() || wd.isSideEffect() ) )
+               fatal( "This kind of tasks must have ResilienceNode but this task has no ResilienceNode." );
+
+            if( wd.isCheckpoint() ) {
+               if( wd.getResilienceNode()->isComputed() ) {
+                  if( wd.getResilienceNode()->getDataIndex() <= 0 ) { 
+                     //std::cout << "Rank " << sys._rank << " wd " << wd.getId() << " is checkpoint and computed and has no data --> skip." << std::endl;
+                     break;
+                  }
+                  else {
+                     //std::cout << "Rank " << sys._rank << " wd " << wd.getId() << " is checkpoint and computed and has data --> loadInput." << std::endl;
+                     NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
+                     NANOS_INSTRUMENT ( static nanos_event_key_t key = ID->getEventKey("resilience"); )
+                     NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( key, RESILIENCE_LOAD_INPUT ); )
+                     wd.getResilienceNode()->loadInput( wd.getCopies(), wd.getNumCopies(), wd.getId() );
+                     NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 ); )
+                  }
+               }
+               else if( wd.getNumCopies() > 0 ) { 
+                  //std::cout << "Rank " << sys._rank << " wd " << wd.getId() << " is checkpoint and is not computed --> storeInput." << std::endl;
+                  NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
+                  NANOS_INSTRUMENT ( static nanos_event_key_t key = ID->getEventKey("resilience"); )
+                  NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( key, RESILIENCE_STORE_INPUT ) ; )
+                  wd.getResilienceNode()->storeInput( wd.getCopies(), wd.getNumCopies(), wd.getId() );
+                  NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 ); )
+               }
             }
-            else {
-                // Introduce errors only in created tasks, not in implicit tasks.
-                if( error_injected == false && wd.getParent() != NULL && sys.faultInjectionThreshold() ) { 
-                   int totalTasks = sys.getSchedulerStats().getTotalTasks();
-                   int createdTasks = sys.getSchedulerStats().getCreatedTasks(); 
-                   int executedTasks =  createdTasks-totalTasks;
-                   if( executedTasks >= sys.faultInjectionThreshold() ) {
-                      error_injected = true;
-                      throw std::runtime_error( "Injected error." );
-                   }
-                }
-                   //gen_fail();
-               //std::cerr << "Executing RN " << wd.getResilienceNode() - sys.getResiliencePersistence()->getResilienceNode( 1 )
-               //    << std::endl;
-                getWorkFct()( wd.getData() );
+
+            if( wd.isSideEffect() ) {
+               if( wd.getResilienceNode()->isComputed() ) {
+                  //std::cout << "Rank " << sys._rank << " wd " << wd.getId() << " is side_effect and is computed --> loadOutput." << std::endl;
+                  NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
+                  NANOS_INSTRUMENT ( static nanos_event_key_t key = ID->getEventKey("resilience"); )
+                  NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( key, RESILIENCE_LOAD_OUTPUT ) ; )
+                  wd.getResilienceNode()->loadOutput( wd.getCopies(), wd.getNumCopies(), wd.getId() );
+                  NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 ); )
+                  break;
+               }
+               else {
+                  //std::cout << "Rank " << sys._rank << " wd " << wd.getId() << " is side_effect and is not computed --> storeOutput." << std::endl;
+                  sys._resilienceCriticalRegion++;
+                  //std::cerr << "RANK " << sys._rank << " will store output of RN "
+                  //    << wd.getResilienceNode() - sys.getResiliencePersistence()->getResilienceNode(1) << "." << std::endl;
+               }
             }
+
+            getWorkFct()( wd.getData() );
+
+            if( wd.isSideEffect() ) {
+               sys._resilienceCriticalRegion--;
+               //std::cerr << "RANK " << sys._rank << " has stored output of RN "
+               //    << wd.getResilienceNode() - sys.getResiliencePersistence()->getResilienceNode(1) << "." << std::endl;
+            }
+
+            // Introduce errors only in created tasks, not in implicit tasks.
+            if( /*error_injected == false &&*/ ( wd.getParent() != NULL && sys.faultInjectionThreshold() ) ) { 
+               int totalTasks = sys.getSchedulerStats().getTotalTasks();
+               int createdTasks = sys.getSchedulerStats().getCreatedTasks(); 
+               int executedTasks =  createdTasks-totalTasks;
+               if( executedTasks >= sys.faultInjectionThreshold() ) {
+                  //error_injected = true;
+                  while( sys._resilienceCriticalRegion.value() > 0 ) { }
+                  throw std::runtime_error( "Injected error." );
+               }
+            }
+
          } catch (TaskExecutionException& e) {
             //taskFailed = true;
             /*
@@ -160,12 +201,12 @@ void SMPDD::execute ( WD &wd ) throw ()
             message( ss.str() );
             //message(e.what());
             // Unrecoverable error: terminate execution
-            sys.printResilienceInfo();
             std::terminate();
          } catch (std::exception& e) {
             //taskFailed = true;
             std::stringstream ss;
-            ss << "Uncaught exception "
+            ss << "RANK " << sys._rank << ". "
+               << "Uncaught exception "
                << typeid(e).name()
                << ". Thrown in task "
                << wd.getId()
@@ -178,7 +219,6 @@ void SMPDD::execute ( WD &wd ) throw ()
             //taskFailed = true;
             message("Uncaught exception (unknown type). Thrown in task " << wd.getId() << ". ");
             // Unexpected error: terminate execution
-            sys.printResilienceInfo();
             std::terminate();
          }
          // Only retry when ...

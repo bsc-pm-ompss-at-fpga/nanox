@@ -253,6 +253,8 @@ namespace nanos
          bool _printResilienceInfo;
          int _faultInjectionThreshold;
       public:
+         Atomic<int> _resilienceCriticalRegion;
+         int _rank;
          Hwloc _hwloc;
          bool _immediateSuccessorDisabled;
          bool _predecessorCopyInfoDisabled;

@@ -75,9 +75,6 @@ namespace PMInterfaceType
 }
 }
 
-//Atomic<int> nodes_requested = 0;
-//Atomic<int> nodes_restored = 0;
-
 // default system values go here
 System::System () :
       _atomicWDSeed( 1 ), _threadIdSeed( 0 ), _peIdSeed( 0 ),
@@ -109,6 +106,7 @@ System::System () :
       , _router()
       , _removeResilienceFiles( true )
       , _faultInjectionThreshold( 0 )
+      , _resilienceCriticalRegion( 0 )
       , _hwloc()
       , _immediateSuccessorDisabled( false )
       , _predecessorCopyInfoDisabled( false )
@@ -757,11 +755,13 @@ void System::finish ()
    delete[] _lockPool;
 
    //Restart desc counter of masterWD.
-   if( getMyThreadSafe()->getCurrentWD()->getResilienceNode() != NULL )
-       getMyThreadSafe()->getCurrentWD()->getResilienceNode()->restartLastDescRestored();
+   //if( getMyThreadSafe()->getCurrentWD()->getResilienceNode() != NULL )
+   //    getMyThreadSafe()->getCurrentWD()->getResilienceNode()->restartLastDescRestored();
 
    // Destroy ResiliencePersistence
-   _resilience->printResilienceInfo();
+   // /* DEBUG
+   //_resilience->printResilienceInfo();
+   // DEBUG */
    delete _resilience;
 
    //! \note deleting main work descriptor
@@ -1002,6 +1002,11 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
       wd->setFinal ( dyn_props->flags.is_final );
       wd->setRecoverable ( dyn_props->flags.is_recover);
       if ( dyn_props->flags.is_implicit ) wd->setImplicit();
+
+      if( dyn_props->flags.is_checkpoint && dyn_props->flags.is_side_effect )
+         fatal( "The same task cannot be checkpoint and side_effect. (1)" );
+      wd->setCheckpoint( dyn_props->flags.is_checkpoint );
+      wd->setSideEffect( dyn_props->flags.is_side_effect );
    }
 
    if ( dyn_props && dyn_props->tie_to ) wd->tieTo( *( BaseThread * )dyn_props->tie_to );
@@ -1029,41 +1034,15 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    if( wd->getParent() != NULL && wd->getParent()->getResilienceNode() != NULL ) {
       if( wd->getResilienceNode() == NULL ) {
          ResilienceNode * desc = wd->getParent()->getResilienceNode()->getNextDescToRestore();
-         if( desc != NULL ) {
+         if( desc != NULL )
             wd->setResilienceNode( desc );
-            //nodes_restored++;
-            //std::cerr << "Nodes restored: " << nodes_restored.value() << std::endl;
-            //std::stringstream ss;
-            //ss << "RN restored: " << desc - _resilience->getResilienceNode(1);
-            //WD * current = wd;
-            //while( current != NULL && current->getParent() != NULL ) {
-            //    ss << "<-" << current->getParent()->getResilienceNode() - _resilience->getResilienceNode(1);
-            //    current = current->getParent();
-            //}
-            //ss << std::endl;
-            //message( ss.str() );
-            //std::cerr << "WD " << wd->getId() << " has restored RN " << desc - _resilience->getResilienceNode( 1 ) << "." << std::endl;
-         }
          else {
             desc = sys.getResiliencePersistence()->getFreeResilienceNode( wd->getParent()->getResilienceNode() );
             wd->setResilienceNode( desc );
-            //nodes_requested++;
-            //std::cerr << "Nodes requested: " << nodes_requested.value() << std::endl;
-            //std::stringstream ss;
-            //ss << "RN got: " << desc - _resilience->getResilienceNode(1);
-            //WD * current = wd;
-            //while( current != NULL && current->getParent() != NULL ) {
-            //    ss << "<-" << current->getParent()->getResilienceNode() - _resilience->getResilienceNode(1);
-            //    current = current->getParent();
-            //}
-            //ss << std::endl;
-            //message( ss.str() );
-            //std::cerr << "WD " << wd->getId() << " has got RN " << desc - _resilience->getResilienceNode( 1 ) << "." << std::endl;
          }
       }
-      else {
+      else
           fatal( "A new WD cannot already have ResilienceNode." );
-      }
    }
 
    /* RESILIENCE BASED ON MEMOIZATION */

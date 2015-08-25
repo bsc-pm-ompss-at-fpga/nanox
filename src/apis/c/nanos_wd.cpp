@@ -635,4 +635,26 @@ NANOS_API_DEF( void, nanos_init_resilience, ( int rank ) )
     sys.initResiliencePersistence( rank );
 }
 
+NANOS_API_DEF( bool *, nanos_resilience_store_output, ( nanos_wd_t wd ) ) {
+    WD * work = ( WD * )wd;
+    if( work == NULL )
+        fatal( "WD is NULL." );
+    ResilienceNode * resNode = work->getResilienceNode();
+    if( resNode != NULL ) {
+        if( work->getNumCopies() > 0 && !work->isInvalid() && !resNode->isComputed() && work->isSideEffect() ) {
+            NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
+                NANOS_INSTRUMENT ( static nanos_event_key_t key = ID->getEventKey("resilience"); )
+                NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( key, RESILIENCE_STORE_OUTPUT ); )
+                resNode->storeOutput( work->getCopies(), work->getNumCopies(), work->getId() );
+            NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 ); )
+            //std::cerr << "RANK " << sys._rank << " has stored output of RN " << resNode - sys.getResiliencePersistence()->getResilienceNode(1) << "." << std::endl;
+        }
+    }
+    else {
+        std::cerr << "WD " << work->getId() << " has no RN." << std::endl;
+        fatal( "ResilienceNode not found. Cannot store result." );
+    }
+    return resNode->getComputed();
+}
+
 //! \}

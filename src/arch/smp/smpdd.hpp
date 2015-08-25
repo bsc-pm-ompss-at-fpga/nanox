@@ -81,7 +81,7 @@ namespace ext
              * operations that must be done just before/after
              * this call (e.g. task re-execution on errors).
              */
-            void execute ( WD &wd ) throw();
+            void execute ( WD &wd );// throw( );
 
 #ifdef NANOS_RESILIENCY_ENABLED
             /*! \brief Restores the workdescriptor to its original state.

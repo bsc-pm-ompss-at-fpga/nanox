@@ -323,15 +323,20 @@ void WorkDescriptor::done ()
 #endif
 
    // Storing result in resilience tree.
-   if( _resNode != NULL ) {
-      if( _numCopies > 0 && !isInvalid() && !_resNode->isComputed() )
-         _resNode->storeResult( _copies, _numCopies, _id );
-      _resNode->restartLastDescRestored();
-   }
-   else {
-      std::cerr << "WD " << _id << " has no RN." << std::endl;
-      fatal( "ResilienceNode not found. Cannot store result." );
-   }
+   //if( _resNode != NULL ) {
+   //   if( _numCopies > 0 && !isInvalid() && !_resNode->isComputed() && isSideEffect() ) {
+   //      NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
+   //      NANOS_INSTRUMENT ( static nanos_event_key_t key = ID->getEventKey("resilience"); )
+   //      NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( key, RESILIENCE_STORE_OUTPUT ); )
+   //      _resNode->storeOutput( _copies, _numCopies, _id );
+   //      NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 ); )
+   //   }
+   //   //_resNode->restartLastDescRestored();
+   //}
+   //else {
+   //   std::cerr << "WD " << _id << " has no RN." << std::endl;
+   //   fatal( "ResilienceNode not found. Cannot store result." );
+   //}
 
    // Waiting for children (just to keep structures)
    if ( _components != 0 ) waitCompletion();

@@ -644,10 +644,13 @@ inline bool System::usePredecessorCopyInfo() const {
 }
 
 inline void System::initResiliencePersistence( int rank ) { 
+   _rank = rank;
    _resilience = new ResiliencePersistence( rank, _resilienceTreeFileSize, _resilienceResultsFileSize ); 
    WD &mainWD = *myThread->getCurrentWD();
-   if( sys.getResiliencePersistence()->getResilienceNode( mainWD.getId() )->isInUse() )
+   if( sys.getResiliencePersistence()->getResilienceNode( mainWD.getId() )->isInUse() ) {
+       //sys.getResiliencePersistence()->getResilienceNode( mainWD.getId() )->restartLastDescRestored();
        mainWD.setResilienceNode( sys.getResiliencePersistence()->getResilienceNode( mainWD.getId() ) );
+   }
    else {
        mainWD.setResilienceNode( sys.getResiliencePersistence()->getFreeResilienceNode() );
    }
