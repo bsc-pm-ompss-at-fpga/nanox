@@ -57,7 +57,7 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
                                  _priority( 0 ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
                                  _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL),
                                  _taskReductions(),
-                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL ), _resNode( NULL ), _mcontrol( *this )
+                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL )/*, _resNode( NULL )*/, _mcontrol( *this )
                                  {
                                     _flags.is_final = 0;
                                     _flags.is_submitted = false;
@@ -89,7 +89,7 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                  _translateArgs( translate_args ),
                                  _priority( 0 ),  _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
                                  _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL), _taskReductions(),
-                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL ), _resNode( NULL ), _mcontrol( *this )
+                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL )/*, _resNode( NULL )*/, _mcontrol( *this )
                                  {
                                      _devices = new DeviceData*[1];
                                      _devices[0] = device;
@@ -124,7 +124,7 @@ inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **d
                                  _translateArgs( wd._translateArgs ),
                                  _priority( wd._priority ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
                                  _copiesNotInChunk( wd._copiesNotInChunk), _description(description), _instrumentationContextData(), _slicer(wd._slicer), _taskReductions(),
-                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL ), _resNode( wd._resNode ), _mcontrol( *this )
+                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL )/*, _resNode( wd._resNode )*/, _mcontrol( *this )
                                  {
                                     if ( wd._parent != NULL ) wd._parent->addWork(*this);
                                     _flags.is_final = false;
@@ -562,14 +562,14 @@ inline void WorkDescriptor::setCriticality ( int cr ) { _criticality = cr; }
 inline int  WorkDescriptor::getCriticality () const { return _criticality; }
 
 //Resilience based on memoization
-inline void WorkDescriptor::setResilienceNode( ResilienceNode * rn ) { _resNode = rn; _resNode->restartLastDescRestored(); }
-inline ResilienceNode * WorkDescriptor::getResilienceNode() { return _resNode; }
+//inline void WorkDescriptor::setResilienceNode( ResilienceNode * rn ) { _resNode = rn; _resNode->restartLastDescRestored(); }
+//inline ResilienceNode * WorkDescriptor::getResilienceNode() { return _resNode; }
 
 inline void WorkDescriptor::setCheckpoint( bool flag ) { _flags.is_checkpoint = flag; }
 inline bool WorkDescriptor::isCheckpoint() const { return _flags.is_checkpoint; }
 
-inline void WorkDescriptor::setSideEffect( bool flag ) { _flags.is_side_effect = flag; }
-inline bool WorkDescriptor::isSideEffect() const { return _flags.is_side_effect; }
+//inline void WorkDescriptor::setSideEffect( bool flag ) { _flags.is_side_effect = flag; }
+//inline bool WorkDescriptor::isSideEffect() const { return _flags.is_side_effect; }
 
 #endif
 

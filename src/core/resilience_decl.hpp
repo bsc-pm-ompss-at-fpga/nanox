@@ -10,6 +10,12 @@
 
 namespace nanos {
 
+    struct Checkpoint
+    {
+        size_t size;
+        unsigned long index; 
+    };
+
     struct FreeInfo
     {
         size_t size;
@@ -32,15 +38,15 @@ namespace nanos {
 
     class ResiliencePersistence {
 
-        bool _restoreTree;
-        ResilienceNode * _checkpoint;
+        bool _restore;
+        //ResilienceNode * _checkpoint;
 
         // RELATED TO RESILIENCE TREE
-        ResilienceNode * _resilienceTree;
-        Lock _resilienceTreeLock;
-        int _resilienceTreeFileDescriptor;
-        char * _resilienceTreeFilepath;
-        size_t _RESILIENCE_TREE_MAX_FILE_SIZE;
+        //ResilienceNode * _resilienceTree;
+        //Lock _resilienceTreeLock;
+        //int _resilienceTreeFileDescriptor;
+        //char * _resilienceTreeFilepath;
+        //size_t _RESILIENCE_TREE_MAX_FILE_SIZE;
 
         // RELATED TO RESILIENCE RESULTS
         void * _resilienceResults;
@@ -49,82 +55,86 @@ namespace nanos {
         char * _resilienceResultsFilepath;
         size_t _RESILIENCE_RESULTS_MAX_FILE_SIZE;
 
-        void removeAllDescs( ResilienceNode * rn );
+        //void removeAllDescs( ResilienceNode * rn );
         unsigned long defragmentateResultsSpace( size_t size );
         //void printResilienceInfo();
 
         public:
-        ResiliencePersistence( int rank, size_t resilienceTreeFileSize, size_t resilienceResultsFileSize );
+        ResiliencePersistence( int rank/*, size_t resilienceTreeFileSize*/, size_t resilienceResultsFileSize );
         ~ResiliencePersistence();
 
         // RELATED TO RESILIENCE TREE
-        ResilienceNode * getFreeResilienceNode( ResilienceNode * parent = NULL );
-        ResilienceNode * getResilienceNode( unsigned int offset );
-        void freeResilienceNode( unsigned int offset );
+        //ResilienceNode * getFreeResilienceNode( ResilienceNode * parent = NULL );
+        //ResilienceNode * getResilienceNode( unsigned int offset );
+        //void freeResilienceNode( unsigned int offset );
 
         // RELATED TO RESILIENCE RESULTS
         unsigned long getResilienceResultsFreeSpace( size_t size, bool avoidDefragmentation = false );
         void * getResilienceResults( unsigned long offset );
         void freeResilienceResultsSpace( unsigned long offset, size_t size);
 
-        void setCheckpoint( ResilienceNode * checkpoint );
-        ResilienceNode * getCheckpoint();
-        void disableRestore();
-        bool restore();
+        //void setCheckpoint( ResilienceNode * checkpoint );
+        //ResilienceNode * getCheckpoint();
 
+        bool restore();
+        void disableRestore();
+        unsigned long getCheckpointId();
+        void setCheckpointId( unsigned long id );
+        void loadData( CopyData * copies, size_t numCopies );
+        void storeData( CopyData * copies, size_t numCopies, unsigned long id );
         void printResilienceInfo();
     };
 
-    class ResilienceNode {
-        friend class ResiliencePersistence;
+    //class ResilienceNode {
+    //    friend class ResiliencePersistence;
 
-        int _desc;
-        int _sibling;
-        int _next;
-        int _prev;
-        unsigned int _descSize;
-        unsigned int _lastDescRestored;
-        unsigned long _dataIndex;
-        size_t _dataSize;
-        bool _inUse;
-        bool _computed;
+    //    int _desc;
+    //    int _sibling;
+    //    int _next;
+    //    int _prev;
+    //    unsigned int _descSize;
+    //    unsigned int _lastDescRestored;
+    //    unsigned long _dataIndex;
+    //    size_t _dataSize;
+    //    bool _inUse;
+    //    bool _computed;
 
-        bool addSibling( int sibling );
-        size_t getDataSizeToFree() const;
+    //    bool addSibling( int sibling );
+    //    size_t getDataSizeToFree() const;
 
-        public:
+    //    public:
 
-        //_inUse
-        bool isInUse() const;
-        void setInUse( bool flag );
+    //    //_inUse
+    //    bool isInUse() const;
+    //    void setInUse( bool flag );
 
-        //_computed
-        bool *getComputed();
-        bool isComputed() const;
+    //    //_computed
+    //    bool *getComputed();
+    //    bool isComputed() const;
 
-        //_dataIndex
-        unsigned long getDataIndex() const;
+    //    //_dataIndex
+    //    unsigned long getDataIndex() const;
 
-        //_dataSize
-        size_t getDataSize() const;
+    //    //_dataSize
+    //    size_t getDataSize() const;
 
-        //_descSize
-        unsigned int getNumDescendants();
+    //    //_descSize
+    //    unsigned int getNumDescendants();
 
-        // METHODS RELATED TO RESULT
-        void storeInput( CopyData * copies, size_t numCopies, int task_id );
-        void loadInput( CopyData * copies, size_t numCopies, int task_id );
-        void storeOutput( CopyData * copies, size_t numCopies, int task_id );
-        void loadOutput( CopyData * copies, size_t numCopies, int task_id );
+    //    // METHODS RELATED TO RESULT
+    //    void storeInput( CopyData * copies, size_t numCopies, int task_id );
+    //    void loadInput( CopyData * copies, size_t numCopies, int task_id );
+    //    void storeOutput( CopyData * copies, size_t numCopies, int task_id );
+    //    void loadOutput( CopyData * copies, size_t numCopies, int task_id );
 
-        // METHODS RELATED TO RESTORE
-        void restartLastDescRestored();
-        ResilienceNode* getNextDescToRestore();
+    //    // METHODS RELATED TO RESTORE
+    //    void restartLastDescRestored();
+    //    ResilienceNode* getNextDescToRestore();
 
-        // METHODS RELATED TO TREE
-        bool addDesc( int desc );
-        void removeAllDescs();
-    };
+    //    // METHODS RELATED TO TREE
+    //    bool addDesc( int desc );
+    //    void removeAllDescs();
+    //};
 
 }
 #endif /* NANOS_RESILIENCE_DECL_H */

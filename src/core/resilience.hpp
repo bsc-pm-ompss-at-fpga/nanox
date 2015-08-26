@@ -6,114 +6,114 @@
 
 using namespace nanos;
 
-inline ResilienceNode * ResiliencePersistence::getFreeResilienceNode( ResilienceNode * parent ) {
-    int * ResilienceInfo = ( int * ) _resilienceResults;
-
-    _resilienceTreeLock.acquire();
-    // 0 is an invalid index. 
-    if( ResilienceInfo[0] == 0 )
-        fatal0( "Not enough space in tree file." );
-
-    // Get first_free node and updatee first free to the next free node.
-    int index_free = ResilienceInfo[0]; 
-    int next = getResilienceNode( index_free )->_next;
-    next = next ? next : index_free+1;
-    ResilienceInfo[0] = ( next > (int) ( _RESILIENCE_TREE_MAX_FILE_SIZE/sizeof(ResilienceNode) ) ) ? 0 : next;
-
-    // Sanity check
-    ResilienceNode * res = getResilienceNode( index_free ); 
-    if( res->_inUse ) {
-        std::stringstream ss;
-        ss << "Node " << index_free << " is already in use." << std::endl;
-        fatal0( ss.str() );
-    }
-
-    // Set parent and mark node as used.
-    if( parent != NULL )
-        res->setInUse( parent->addDesc( index_free ) );
-    else
-        res->setInUse( true );
-
-    // Get first_used and update first_used to the new first_used node.
-    int index_used = ResilienceInfo[1]; 
-    ResilienceInfo[1] = index_free;
-
-    /**
-      *  Pop from free_nodes list and push to used_nodes list. Three steps:
-      *      1.  new_first_free->_prev = 0. (Now, this node is the head of free_nodes list, so it has not previous node.)
-      **/
-    ResilienceNode * next_free = getResilienceNode( next ); 
-    if( next_free != NULL )
-        next_free->_prev = 0;
-
-    // 2. res->_next = old_first_used. (Now, this node is the head of used_nodes list, so it has not previous node.)
-    if( index_free == index_used )
-        fatal0( "getFreeRN: This is a cycle." );
-    res->_next = index_used;
-
-    // 3. old_first_used->_prev = res. (Now, this node is not the head and it substituted for res, so it has as previous node res.)
-    ResilienceNode * next_used = getResilienceNode( index_used );
-    if( next_used != NULL )
-        next_used->_prev = index_free;
-
-    _resilienceTreeLock.release();
-    return res;
-}
-
-inline ResilienceNode * ResiliencePersistence::getResilienceNode( unsigned int offset ) { 
-    if( offset < 1 || offset > _RESILIENCE_TREE_MAX_FILE_SIZE/sizeof(ResilienceNode) ) return NULL; 
-    return _resilienceTree+offset-1;
-}
-
-inline void ResiliencePersistence::freeResilienceNode( unsigned int offset ) {
-    int * ResilienceInfo = ( int * ) _resilienceResults;
-    ResilienceNode * current = getResilienceNode( offset ); 
-    ResilienceNode * next_used = getResilienceNode( current->_next ); 
-    ResilienceNode * prev_used = getResilienceNode( current->_prev );
-    int current_prev = current->_prev;
-    int current_next = current->_next;
-    if( current_next == current_prev ) 
-        fatal( "freeRN: This is a cycle. (1)" );
-
-    _resilienceTreeLock.acquire();
-
-    // Clean Node
-    memset( current, 0, sizeof(ResilienceNode) );
-
-    // Check if the node to be freed is the head and update it to the next used if needed.
-    if( ResilienceInfo[1] == (int) offset )
-        ResilienceInfo[1] = current_next;
-
-    // Update first_free node to the node beeing freed.
-    int first_free = ResilienceInfo[0];
-    if( first_free == (int) offset )
-        fatal( "freeRN: This is a cycle. (2)" );
-    ResilienceInfo[0] = offset;
-
-    /**
-      * Pop from used_nodes list and push to free_nodes list. Five steps required:
-      *     1. current->_prev = 0. (Already done on cleaning.)
-      *     2. current->_next = first_free.
-      **/
-    current->_next = first_free;
-
-    // 3. next_used->_prev = current->_prev.
-    if( next_used != NULL ) { 
-        next_used->_prev = current_prev;
-    }
-
-    // 4. prev_used->_next = current->_next.
-    if( prev_used != NULL ) {
-        prev_used->_next = current_next;
-    }
-
-    // 5. first_free->_prev = current.
-    ResilienceNode * first_free_node = getResilienceNode( first_free );
-    if( first_free_node != NULL )
-        first_free_node->_prev = offset;
-
-    _resilienceTreeLock.release();
-}
+//inline ResilienceNode * ResiliencePersistence::getFreeResilienceNode( ResilienceNode * parent ) {
+//    int * ResilienceInfo = ( int * ) _resilienceResults;
+//
+//    _resilienceTreeLock.acquire();
+//    // 0 is an invalid index. 
+//    if( ResilienceInfo[0] == 0 )
+//        fatal0( "Not enough space in tree file." );
+//
+//    // Get first_free node and updatee first free to the next free node.
+//    int index_free = ResilienceInfo[0]; 
+//    int next = getResilienceNode( index_free )->_next;
+//    next = next ? next : index_free+1;
+//    ResilienceInfo[0] = ( next > (int) ( _RESILIENCE_TREE_MAX_FILE_SIZE/sizeof(ResilienceNode) ) ) ? 0 : next;
+//
+//    // Sanity check
+//    ResilienceNode * res = getResilienceNode( index_free ); 
+//    if( res->_inUse ) {
+//        std::stringstream ss;
+//        ss << "Node " << index_free << " is already in use." << std::endl;
+//        fatal0( ss.str() );
+//    }
+//
+//    // Set parent and mark node as used.
+//    if( parent != NULL )
+//        res->setInUse( parent->addDesc( index_free ) );
+//    else
+//        res->setInUse( true );
+//
+//    // Get first_used and update first_used to the new first_used node.
+//    int index_used = ResilienceInfo[1]; 
+//    ResilienceInfo[1] = index_free;
+//
+//    /**
+//      *  Pop from free_nodes list and push to used_nodes list. Three steps:
+//      *      1.  new_first_free->_prev = 0. (Now, this node is the head of free_nodes list, so it has not previous node.)
+//      **/
+//    ResilienceNode * next_free = getResilienceNode( next ); 
+//    if( next_free != NULL )
+//        next_free->_prev = 0;
+//
+//    // 2. res->_next = old_first_used. (Now, this node is the head of used_nodes list, so it has not previous node.)
+//    if( index_free == index_used )
+//        fatal0( "getFreeRN: This is a cycle." );
+//    res->_next = index_used;
+//
+//    // 3. old_first_used->_prev = res. (Now, this node is not the head and it substituted for res, so it has as previous node res.)
+//    ResilienceNode * next_used = getResilienceNode( index_used );
+//    if( next_used != NULL )
+//        next_used->_prev = index_free;
+//
+//    _resilienceTreeLock.release();
+//    return res;
+//}
+//
+//inline ResilienceNode * ResiliencePersistence::getResilienceNode( unsigned int offset ) { 
+//    if( offset < 1 || offset > _RESILIENCE_TREE_MAX_FILE_SIZE/sizeof(ResilienceNode) ) return NULL; 
+//    return _resilienceTree+offset-1;
+//}
+//
+//inline void ResiliencePersistence::freeResilienceNode( unsigned int offset ) {
+//    int * ResilienceInfo = ( int * ) _resilienceResults;
+//    ResilienceNode * current = getResilienceNode( offset ); 
+//    ResilienceNode * next_used = getResilienceNode( current->_next ); 
+//    ResilienceNode * prev_used = getResilienceNode( current->_prev );
+//    int current_prev = current->_prev;
+//    int current_next = current->_next;
+//    if( current_next == current_prev ) 
+//        fatal( "freeRN: This is a cycle. (1)" );
+//
+//    _resilienceTreeLock.acquire();
+//
+//    // Clean Node
+//    memset( current, 0, sizeof(ResilienceNode) );
+//
+//    // Check if the node to be freed is the head and update it to the next used if needed.
+//    if( ResilienceInfo[1] == (int) offset )
+//        ResilienceInfo[1] = current_next;
+//
+//    // Update first_free node to the node beeing freed.
+//    int first_free = ResilienceInfo[0];
+//    if( first_free == (int) offset )
+//        fatal( "freeRN: This is a cycle. (2)" );
+//    ResilienceInfo[0] = offset;
+//
+//    /**
+//      * Pop from used_nodes list and push to free_nodes list. Five steps required:
+//      *     1. current->_prev = 0. (Already done on cleaning.)
+//      *     2. current->_next = first_free.
+//      **/
+//    current->_next = first_free;
+//
+//    // 3. next_used->_prev = current->_prev.
+//    if( next_used != NULL ) { 
+//        next_used->_prev = current_prev;
+//    }
+//
+//    // 4. prev_used->_next = current->_next.
+//    if( prev_used != NULL ) {
+//        prev_used->_next = current_next;
+//    }
+//
+//    // 5. first_free->_prev = current.
+//    ResilienceNode * first_free_node = getResilienceNode( first_free );
+//    if( first_free_node != NULL )
+//        first_free_node->_prev = offset;
+//
+//    _resilienceTreeLock.release();
+//}
 
 inline unsigned long ResiliencePersistence::getResilienceResultsFreeSpace( size_t size, bool avoidDefragmentation ) { 
     int * ResilienceInfo = ( int * ) _resilienceResults;
@@ -455,20 +455,30 @@ inline void ResiliencePersistence::freeResilienceResultsSpace( unsigned long off
     _resilienceResultsLock.release();
 }
 
-inline void ResiliencePersistence::setCheckpoint( ResilienceNode * checkpoint ) { _checkpoint = checkpoint; }
-inline ResilienceNode * ResiliencePersistence::getCheckpoint() { return _checkpoint; }
+inline bool ResiliencePersistence::restore() { return _restore; }
+inline void ResiliencePersistence::disableRestore() { _restore = false; }
+// TODO: FIXME: _checkpoint_id does not exist.
+inline unsigned long ResiliencePersistence::getCheckpointId() { 
+    unsigned long * init = ( unsigned long * ) _resilienceResults;
+    return init[0];
+}
+inline void ResiliencePersistence::setCheckpointId( unsigned long id ) { 
+    unsigned long * init = ( unsigned long * ) _resilienceResults;
+    init[0] = id;
+}
 
-inline bool ResilienceNode::isInUse() const { return _inUse; }
-inline void ResilienceNode::setInUse( bool flag ) { _inUse = flag; }
-inline bool * ResilienceNode::getComputed() { return &_computed; }
-inline bool ResilienceNode::isComputed() const { return _computed; }
-inline unsigned long ResilienceNode::getDataIndex() const { return _dataIndex; }
-inline size_t ResilienceNode::getDataSize() const { return _dataSize; }
-inline size_t ResilienceNode::getDataSizeToFree() const 
-{ return _dataSize % sizeof(ResultsNode) ? ( ( _dataSize/sizeof(ResultsNode) ) + 1 ) * sizeof(ResultsNode) : _dataSize; }
-inline unsigned int ResilienceNode::getNumDescendants() { return _descSize; }
-inline void ResilienceNode::restartLastDescRestored() { _lastDescRestored = 0; }
-inline bool ResiliencePersistence::restore() { return _restoreTree; }
-inline void ResiliencePersistence::disableRestore() { _restoreTree = false; }
+//inline void ResiliencePersistence::setCheckpoint( ResilienceNode * checkpoint ) { _checkpoint = checkpoint; }
+//inline ResilienceNode * ResiliencePersistence::getCheckpoint() { return _checkpoint; }
+
+//inline bool ResilienceNode::isInUse() const { return _inUse; }
+//inline void ResilienceNode::setInUse( bool flag ) { _inUse = flag; }
+//inline bool * ResilienceNode::getComputed() { return &_computed; }
+//inline bool ResilienceNode::isComputed() const { return _computed; }
+//inline unsigned long ResilienceNode::getDataIndex() const { return _dataIndex; }
+//inline size_t ResilienceNode::getDataSize() const { return _dataSize; }
+//inline size_t ResilienceNode::getDataSizeToFree() const 
+//{ return _dataSize % sizeof(ResultsNode) ? ( ( _dataSize/sizeof(ResultsNode) ) + 1 ) * sizeof(ResultsNode) : _dataSize; }
+//inline unsigned int ResilienceNode::getNumDescendants() { return _descSize; }
+//inline void ResilienceNode::restartLastDescRestored() { _lastDescRestored = 0; }
 
 #endif /* _NANOS_RESILIENCE_H */

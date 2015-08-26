@@ -247,7 +247,7 @@ namespace nanos
          int _userDefinedNUMANode;
          Router _router;
          ResiliencePersistence * _resilience;
-         size_t _resilienceTreeFileSize;
+         //size_t _resilienceTreeFileSize;
          size_t _resilienceResultsFileSize;
          bool _removeResilienceFiles;
          bool _printResilienceInfo;

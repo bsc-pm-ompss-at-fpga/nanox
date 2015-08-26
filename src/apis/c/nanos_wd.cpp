@@ -287,21 +287,21 @@ NANOS_API_DEF( nanos_err_t, nanos_create_wd_and_run_compact, ( nanos_const_wd_de
       if( sys.getResiliencePersistence() == NULL )
          sys.initResiliencePersistence( -1 );
 
-      if( wd.getParent() != NULL && wd.getParent()->getResilienceNode() != NULL ) {
-         if( wd.getResilienceNode() == NULL ) {
-            ResilienceNode * desc = wd.getParent()->getResilienceNode()->getNextDescToRestore();
-            if( desc != NULL ) {
-               wd.setResilienceNode( desc );
-            }
-            else {
-               desc = sys.getResiliencePersistence()->getFreeResilienceNode( wd.getParent()->getResilienceNode() );
-               wd.setResilienceNode( desc );
-            }
-         }
-         else {
-             fatal( "A new WD cannot already have ResilienceNode." );
-         }
-      }
+      //if( wd.getParent() != NULL && wd.getParent()->getResilienceNode() != NULL ) {
+      //   if( wd.getResilienceNode() == NULL ) {
+      //      ResilienceNode * desc = wd.getParent()->getResilienceNode()->getNextDescToRestore();
+      //      if( desc != NULL ) {
+      //         wd.setResilienceNode( desc );
+      //      }
+      //      else {
+      //         desc = sys.getResiliencePersistence()->getFreeResilienceNode( wd.getParent()->getResilienceNode() );
+      //         wd.setResilienceNode( desc );
+      //      }
+      //   }
+      //   else {
+      //       fatal( "A new WD cannot already have ResilienceNode." );
+      //   }
+      //}
 
       /* RESILIENCE BASED ON MEMOIZATION */
 
@@ -635,26 +635,26 @@ NANOS_API_DEF( void, nanos_init_resilience, ( int rank ) )
     sys.initResiliencePersistence( rank );
 }
 
-NANOS_API_DEF( bool *, nanos_resilience_store_output, ( nanos_wd_t wd ) ) {
-    WD * work = ( WD * )wd;
-    if( work == NULL )
-        fatal( "WD is NULL." );
-    ResilienceNode * resNode = work->getResilienceNode();
-    if( resNode != NULL ) {
-        if( work->getNumCopies() > 0 && !work->isInvalid() && !resNode->isComputed() && work->isSideEffect() ) {
-            NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
-                NANOS_INSTRUMENT ( static nanos_event_key_t key = ID->getEventKey("resilience"); )
-                NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( key, RESILIENCE_STORE_OUTPUT ); )
-                resNode->storeOutput( work->getCopies(), work->getNumCopies(), work->getId() );
-            NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 ); )
-            //std::cerr << "RANK " << sys._rank << " has stored output of RN " << resNode - sys.getResiliencePersistence()->getResilienceNode(1) << "." << std::endl;
-        }
-    }
-    else {
-        std::cerr << "WD " << work->getId() << " has no RN." << std::endl;
-        fatal( "ResilienceNode not found. Cannot store result." );
-    }
-    return resNode->getComputed();
-}
+//NANOS_API_DEF( bool *, nanos_resilience_store_output, ( nanos_wd_t wd ) ) {
+//    WD * work = ( WD * )wd;
+//    if( work == NULL )
+//        fatal( "WD is NULL." );
+//    ResilienceNode * resNode = work->getResilienceNode();
+//    if( resNode != NULL ) {
+//        if( work->getNumCopies() > 0 && !work->isInvalid() && !resNode->isComputed() && work->isSideEffect() ) {
+//            NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
+//                NANOS_INSTRUMENT ( static nanos_event_key_t key = ID->getEventKey("resilience"); )
+//                NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( key, RESILIENCE_STORE_OUTPUT ); )
+//                resNode->storeOutput( work->getCopies(), work->getNumCopies(), work->getId() );
+//            NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 ); )
+//            //std::cerr << "RANK " << sys._rank << " has stored output of RN " << resNode - sys.getResiliencePersistence()->getResilienceNode(1) << "." << std::endl;
+//        }
+//    }
+//    else {
+//        std::cerr << "WD " << work->getId() << " has no RN." << std::endl;
+//        fatal( "ResilienceNode not found. Cannot store result." );
+//    }
+//    return resNode->getComputed();
+//}
 
 //! \}

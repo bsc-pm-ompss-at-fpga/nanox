@@ -4,7 +4,7 @@
 namespace nanos
 {
    class ResiliencePersistence;
-   class ResilienceNode;
+   //class ResilienceNode;
 };
 
 #endif

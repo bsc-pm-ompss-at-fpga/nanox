@@ -387,7 +387,7 @@ NANOS_API_DECL(nanos_err_t, nanos_scheduler_set_stealing, ( bool value ));
 
 // RESILIENCE BASED ON MEMOIZATION
 NANOS_API_DECL( void, nanos_init_resilience, ( int rank ) );
-NANOS_API_DECL( bool *, nanos_resilience_store_output, ( nanos_wd_t wd ) );
+//NANOS_API_DECL( bool *, nanos_resilience_store_output, ( nanos_wd_t wd ) );
 
 //funtion which will be called by mercurium
 //on first line of user main (in some cases, offload and cluster)

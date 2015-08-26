@@ -398,8 +398,8 @@ void System::config ()
    cfg.registerConfigOption( "disable-predecessor-info", NEW Config::FlagOption( _predecessorCopyInfoDisabled ),
                              "Disables sending the copy_data info to successor WDs." );
    cfg.registerArgOption( "disable-predecessor-info", "disable-predecessor-info" );
-   cfg.registerConfigOption( "resilience-tree-filesize", NEW Config::SizeVar( _resilienceTreeFileSize ),
-                             "Defines the size of the file where resilience tree will be stored." );
+   //cfg.registerConfigOption( "resilience-tree-filesize", NEW Config::SizeVar( _resilienceTreeFileSize ),
+   //                          "Defines the size of the file where resilience tree will be stored." );
    cfg.registerArgOption( "resilience-tree-filesize", "resilience-tree-filesize" );
    cfg.registerConfigOption( "resilience-results-filesize", NEW Config::SizeVar( _resilienceResultsFileSize ),
                              "Defines the size of the file where resilience results will be stored." );
@@ -1003,10 +1003,10 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
       wd->setRecoverable ( dyn_props->flags.is_recover);
       if ( dyn_props->flags.is_implicit ) wd->setImplicit();
 
-      if( dyn_props->flags.is_checkpoint && dyn_props->flags.is_side_effect )
-         fatal( "The same task cannot be checkpoint and side_effect. (1)" );
+      //if( dyn_props->flags.is_checkpoint && dyn_props->flags.is_side_effect )
+      //   fatal( "The same task cannot be checkpoint and side_effect. (1)" );
       wd->setCheckpoint( dyn_props->flags.is_checkpoint );
-      wd->setSideEffect( dyn_props->flags.is_side_effect );
+      //wd->setSideEffect( dyn_props->flags.is_side_effect );
    }
 
    if ( dyn_props && dyn_props->tie_to ) wd->tieTo( *( BaseThread * )dyn_props->tie_to );
@@ -1027,23 +1027,23 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    if (uwg) wd->copyReductions((WorkDescriptor *)uwg);
 
    /* RESILIENCE BASED ON MEMOIZATION */
-   if( getResiliencePersistence() == NULL ) {
+   if( _resilience == NULL ) {
       initResiliencePersistence( -1 );
    }
 
-   if( wd->getParent() != NULL && wd->getParent()->getResilienceNode() != NULL ) {
-      if( wd->getResilienceNode() == NULL ) {
-         ResilienceNode * desc = wd->getParent()->getResilienceNode()->getNextDescToRestore();
-         if( desc != NULL )
-            wd->setResilienceNode( desc );
-         else {
-            desc = sys.getResiliencePersistence()->getFreeResilienceNode( wd->getParent()->getResilienceNode() );
-            wd->setResilienceNode( desc );
-         }
-      }
-      else
-          fatal( "A new WD cannot already have ResilienceNode." );
-   }
+   //if( wd->getParent() != NULL && wd->getParent()->getResilienceNode() != NULL ) {
+   //   if( wd->getResilienceNode() == NULL ) {
+   //      ResilienceNode * desc = wd->getParent()->getResilienceNode()->getNextDescToRestore();
+   //      if( desc != NULL )
+   //         wd->setResilienceNode( desc );
+   //      else {
+   //         desc = sys.getResiliencePersistence()->getFreeResilienceNode( wd->getParent()->getResilienceNode() );
+   //         wd->setResilienceNode( desc );
+   //      }
+   //   }
+   //   else
+   //       fatal( "A new WD cannot already have ResilienceNode." );
+   //}
 
    /* RESILIENCE BASED ON MEMOIZATION */
 }

@@ -34,6 +34,7 @@ using namespace nanos::ext;
 SMPDevice nanos::ext::SMP("SMP");
 
 size_t SMPDD::_stackSize = 256*1024;
+Atomic<unsigned long> cp_task_inst = 0;
 
 //Atomic<bool> error_injected = false;
 
@@ -113,65 +114,38 @@ void SMPDD::execute ( WD &wd ) //throw ( )
        //bool taskFailed = false;
       while (true) {
          try {
-            if( wd.getParent() != NULL && wd.getResilienceNode() == NULL )
-               fatal( "WD has not RN." );
-            if( wd.isCheckpoint() && wd.isSideEffect() )
-               fatal( "The same task cannot be checkpoint and side_effect. (2)" );
-            if( wd.getResilienceNode() == NULL && ( wd.isCheckpoint() || wd.isSideEffect() ) )
-               fatal( "This kind of tasks must have ResilienceNode but this task has no ResilienceNode." );
+            //if( wd.getParent() != NULL && wd.getResilienceNode() == NULL )
+            //   fatal( "WD has not RN." );
+            //if( wd.isCheckpoint() && wd.isSideEffect() )
+            //   fatal( "The same task cannot be checkpoint and side_effect. (2)" );
+            //if( wd.getResilienceNode() == NULL && ( wd.isCheckpoint() || wd.isSideEffect() ) )
+            //   fatal( "This kind of tasks must have ResilienceNode but this task has no ResilienceNode." );
+
+            if( wd.getParent() == NULL && wd.isCheckpoint() )
+               fatal( "MainWD cannot be checkpoint." );
 
             if( wd.isCheckpoint() ) {
-               if( wd.getResilienceNode()->isComputed() ) {
-                  if( wd.getResilienceNode()->getDataIndex() <= 0 ) { 
-                     //std::cout << "Rank " << sys._rank << " wd " << wd.getId() << " is checkpoint and computed and has no data --> skip." << std::endl;
-                     break;
-                  }
-                  else {
-                     //std::cout << "Rank " << sys._rank << " wd " << wd.getId() << " is checkpoint and computed and has data --> loadInput." << std::endl;
-                     NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
-                     NANOS_INSTRUMENT ( static nanos_event_key_t key = ID->getEventKey("resilience"); )
-                     NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( key, RESILIENCE_LOAD_INPUT ); )
-                     wd.getResilienceNode()->loadInput( wd.getCopies(), wd.getNumCopies(), wd.getId() );
-                     sys.getResiliencePersistence()->disableRestore();
-                     NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 ); )
-                  }
+               unsigned long checkpoint_id = cp_task_inst.addAndFetch(); 
+               // If we are restoring from a failed execution, check if there is a checkpoint to restore data.
+               if( sys.getResiliencePersistence()->restore() ) {
+                   if( checkpoint_id == sys.getResiliencePersistence()->getCheckpointId() ) {
+                       sys.getResiliencePersistence()->loadData( wd.getCopies(), wd.getNumCopies() );
+                       sys.getResiliencePersistence()->disableRestore();
+                   }
+                   else break;
                }
-               else if( wd.getNumCopies() > 0 ) { 
-                  //std::cout << "Rank " << sys._rank << " wd " << wd.getId() << " is checkpoint and is not computed --> storeInput." << std::endl;
-                  NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
-                  NANOS_INSTRUMENT ( static nanos_event_key_t key = ID->getEventKey("resilience"); )
-                  NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( key, RESILIENCE_STORE_INPUT ) ; )
-                  wd.getResilienceNode()->storeInput( wd.getCopies(), wd.getNumCopies(), wd.getId() );
-                  NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 ); )
-               }
-            }
-
-            if( wd.isSideEffect() ) {
-               if( wd.getResilienceNode()->isComputed() ) {
-                  //std::cout << "Rank " << sys._rank << " wd " << wd.getId() << " is side_effect and is computed --> loadOutput." << std::endl;
-                  NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
-                  NANOS_INSTRUMENT ( static nanos_event_key_t key = ID->getEventKey("resilience"); )
-                  NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( key, RESILIENCE_LOAD_OUTPUT ) ; )
-                  wd.getResilienceNode()->loadOutput( wd.getCopies(), wd.getNumCopies(), wd.getId() );
-                  NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 ); )
-                  break;
-               }
-               else {
-                  //std::cout << "Rank " << sys._rank << " wd " << wd.getId() << " is side_effect and is not computed --> storeOutput." << std::endl;
-                  sys._resilienceCriticalRegion++;
-                  //std::cerr << "RANK " << sys._rank << " will store output of RN "
-                  //    << wd.getResilienceNode() - sys.getResiliencePersistence()->getResilienceNode(1) << "." << std::endl;
-               }
+               // If this is the first execution of this task, store data.
+               else sys.getResiliencePersistence()->storeData( wd.getCopies(), wd.getNumCopies(), checkpoint_id );
             }
             else if( wd.getParent() != NULL && sys.getResiliencePersistence()->restore() ) break;
 
             getWorkFct()( wd.getData() );
 
-            if( wd.isSideEffect() ) {
-               sys._resilienceCriticalRegion--;
-               //std::cerr << "RANK " << sys._rank << " has stored output of RN "
-               //    << wd.getResilienceNode() - sys.getResiliencePersistence()->getResilienceNode(1) << "." << std::endl;
-            }
+            //if( wd.isSideEffect() ) {
+            //   sys._resilienceCriticalRegion--;
+            //   //std::cerr << "RANK " << sys._rank << " has stored output of RN "
+            //   //    << wd.getResilienceNode() - sys.getResiliencePersistence()->getResilienceNode(1) << "." << std::endl;
+            //}
 
             // Introduce errors only in created tasks, not in implicit tasks.
             if( /*error_injected == false &&*/ ( wd.getParent() != NULL && sys.faultInjectionThreshold() ) ) { 

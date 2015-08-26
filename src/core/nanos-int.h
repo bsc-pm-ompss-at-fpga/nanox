@@ -246,7 +246,8 @@ typedef struct {
    bool is_recover:1;
    bool is_implicit:1;
    bool is_checkpoint:1;
-   bool is_side_effect:1;
+   //bool is_side_effect:1;
+   bool reserved4:1;
    bool reserved5:1;
    bool reserved6:1;
    bool reserved7:1;
