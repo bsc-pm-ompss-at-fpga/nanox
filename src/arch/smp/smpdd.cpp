@@ -126,15 +126,18 @@ void SMPDD::execute ( WD &wd ) //throw ( )
 
             if( wd.isCheckpoint() ) {
                unsigned long checkpoint_id = cp_task_inst.addAndFetch(); 
-               // If we are restoring from a failed execution, check if there is a checkpoint to restore data.
                if( sys.getResiliencePersistence()->restore() ) {
-                   if( checkpoint_id == sys.getResiliencePersistence()->getCheckpointId() ) {
-                       sys.getResiliencePersistence()->loadData( wd.getCopies(), wd.getNumCopies() );
-                       sys.getResiliencePersistence()->disableRestore();
-                   }
-                   else break;
+                  unsigned long last_checkpoint = sys.getResiliencePersistence()->getCheckpointId();
+                  //std::cerr << "checkpoint_id: " << checkpoint_id << " || last_checkpoint: " << last_checkpoint << std::endl;
+                  if( checkpoint_id == last_checkpoint ) {
+                     sys.getResiliencePersistence()->loadData( wd.getCopies(), wd.getNumCopies() );
+                     sys.getResiliencePersistence()->disableRestore();
+                  }
+                  else {
+                     //std::cerr << "Skipping task" << std::endl;
+                     break;
+                  }
                }
-               // If this is the first execution of this task, store data.
                else sys.getResiliencePersistence()->storeData( wd.getCopies(), wd.getNumCopies(), checkpoint_id );
             }
             else if( wd.getParent() != NULL && sys.getResiliencePersistence()->restore() ) break;

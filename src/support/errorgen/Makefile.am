@@ -23,6 +23,7 @@ errorgen_sources = \
 	$(END) 
 
 flagcxx11=-std=c++11
+#flagcxx11=
 
 noinst_LTLIBRARIES =
 

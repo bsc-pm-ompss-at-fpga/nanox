@@ -400,7 +400,7 @@ void System::config ()
    cfg.registerArgOption( "disable-predecessor-info", "disable-predecessor-info" );
    //cfg.registerConfigOption( "resilience-tree-filesize", NEW Config::SizeVar( _resilienceTreeFileSize ),
    //                          "Defines the size of the file where resilience tree will be stored." );
-   cfg.registerArgOption( "resilience-tree-filesize", "resilience-tree-filesize" );
+   //cfg.registerArgOption( "resilience-tree-filesize", "resilience-tree-filesize" );
    cfg.registerConfigOption( "resilience-results-filesize", NEW Config::SizeVar( _resilienceResultsFileSize ),
                              "Defines the size of the file where resilience results will be stored." );
    cfg.registerArgOption( "resilience-results-filesize", "resilience-results-filesize" );

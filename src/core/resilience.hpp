@@ -116,20 +116,19 @@ using namespace nanos;
 //}
 
 inline unsigned long ResiliencePersistence::getResilienceResultsFreeSpace( size_t size, bool avoidDefragmentation ) { 
-    int * ResilienceInfo = ( int * ) _resilienceResults;
-    unsigned long * ResilienceInfo2 = ( unsigned long * ) &ResilienceInfo[2];
+    unsigned long * ResilienceInfo = ( unsigned long * ) _resilienceResults;
     if( size > _RESILIENCE_RESULTS_MAX_FILE_SIZE ) 
         fatal( "Not enough space in results file." );
 
     if( !avoidDefragmentation )
         _resilienceResultsLock.acquire();
 
-    if( ResilienceInfo2[0] == 0 )
+    if( ResilienceInfo[3] == 0 )
         fatal( "No space remaining in results file." );
-    if( ResilienceInfo2[0] >= _RESILIENCE_RESULTS_MAX_FILE_SIZE )
+    if( ResilienceInfo[3] >= _RESILIENCE_RESULTS_MAX_FILE_SIZE )
         fatal( "No space remaining in results file (1)." );
 
-    ResultsNode * results = ( ResultsNode * ) getResilienceResults( ResilienceInfo2[0] );
+    ResultsNode * results = ( ResultsNode * ) getResilienceResults( ResilienceInfo[3] );
     FreeInfo current_info = results->free_info;
 
     // Forcing the size to be multiple of sizeof(ResultsNode).
@@ -142,10 +141,10 @@ inline unsigned long ResiliencePersistence::getResilienceResultsFreeSpace( size_
         //FreeInfo debug_info = results->free_info;
         // DEBUG */
         // Chunk of the exactly requested size: just point the head of free to the next one.
-        unsigned long res = ResilienceInfo2[0];
+        unsigned long res = ResilienceInfo[3];
         if( results->free_info.next_free == 0 ) {
             results->free_info.next_free = 
-                ( ResilienceInfo2[0] + size >= _RESILIENCE_RESULTS_MAX_FILE_SIZE ) ? 0 : ResilienceInfo2[0] + size;
+                ( ResilienceInfo[3] + size >= _RESILIENCE_RESULTS_MAX_FILE_SIZE ) ? 0 : ResilienceInfo[3] + size;
         }
         // /* DEBUG 
         //if( _freeResilienceResults == results->free_info.next_free ) {
@@ -153,13 +152,13 @@ inline unsigned long ResiliencePersistence::getResilienceResultsFreeSpace( size_
         //    std::cerr << "debug_info: {" << debug_info.next_free << ", " << debug_info.size << "}." << std::endl;
         //}
         // DEBUG */
-        ResilienceInfo2[0] = results->free_info.next_free;
+        ResilienceInfo[3] = results->free_info.next_free;
 
         // Prepare the next node.
-        results = ( ResultsNode * ) getResilienceResults( ResilienceInfo2[0] );
+        results = ( ResultsNode * ) getResilienceResults( ResilienceInfo[3] );
         if( results != NULL ) {
             if( results->free_info.next_free == 0 && results->free_info.size == 0 ) {
-                results->free_info.size = _RESILIENCE_RESULTS_MAX_FILE_SIZE - ResilienceInfo2[0];
+                results->free_info.size = _RESILIENCE_RESULTS_MAX_FILE_SIZE - ResilienceInfo[3];
                 // /* DEBUG 
                 //std::cerr << "1. Results[" << _freeResilienceResults << "] = {" << results->free_info.next_free << ", " << results->free_info.size << "}." << std::endl;
                 // DEBUG */
@@ -199,7 +198,7 @@ inline unsigned long ResiliencePersistence::getResilienceResultsFreeSpace( size_
          ** 2- Resize the current chunk, substracting the size requested. 
          */
         //std::cerr << "Chunk bigger than requested size." << std::endl;
-        unsigned long res = ResilienceInfo2[0];
+        unsigned long res = ResilienceInfo[3];
 
         /* Set next_free if it is no already setted. */
         // /*DEBUG
@@ -222,10 +221,10 @@ inline unsigned long ResiliencePersistence::getResilienceResultsFreeSpace( size_
         //if( _freeResilienceResults == res+size )
         //    std::cerr << "2. _freeResilienceResults updated from " << _freeResilienceResults << " to " << res+size << "." << std::endl;
         // DEBUG*/
-        ResilienceInfo2[0] = ( res + size >= _RESILIENCE_RESULTS_MAX_FILE_SIZE ) ? 0 : res + size; 
+        ResilienceInfo[3] = ( res + size >= _RESILIENCE_RESULTS_MAX_FILE_SIZE ) ? 0 : res + size; 
 
         /* Prepare next results node. */
-        results = ( ResultsNode * ) getResilienceResults( ResilienceInfo2[0] );
+        results = ( ResultsNode * ) getResilienceResults( ResilienceInfo[3] );
         if( results!= NULL ) {
             // /*DEBUG
             //if( aux.next_free == _freeResilienceResults ) 
@@ -274,7 +273,7 @@ inline unsigned long ResiliencePersistence::getResilienceResultsFreeSpace( size_
          ** 2- Remove the used chunk of the list and link the previous with the next. Example: 0->2->4 to 0->4
          */
         //std::cerr << "Chunk smaller than requested size." << std::endl;
-        unsigned long current = ResilienceInfo2[0];
+        unsigned long current = ResilienceInfo[3];
         unsigned long next = current_info.next_free;
         ResultsNode * next_results = ( ResultsNode * ) getResilienceResults( next );
         FreeInfo next_info;
@@ -429,8 +428,7 @@ inline void ResiliencePersistence::freeResilienceResultsSpace( unsigned long off
     if( size < sizeof(ResultsNode) ) 
         fatal( "All chunks are forced to be, at least, of sizeof(ResultsNode)." );
 
-    int * ResilienceInfo = ( int * ) _resilienceResults;
-    unsigned long * ResilienceInfo2 = ( unsigned long * ) &ResilienceInfo[2];
+    unsigned long * ResilienceInfo = ( unsigned long * ) _resilienceResults;
     _resilienceResultsLock.acquire();
 
     // /* DEBUG
@@ -439,14 +437,14 @@ inline void ResiliencePersistence::freeResilienceResultsSpace( unsigned long off
 
     memset( getResilienceResults( offset ), 0, size ); 
     ResultsNode * results = ( ResultsNode * ) getResilienceResults( offset );
-    results->free_info.next_free = ResilienceInfo2[0];
+    results->free_info.next_free = ResilienceInfo[3];
     results->free_info.size = size;
     // /* DEBUG
     //std::cerr << "9. Results[" << offset << "] = {" << results->free_info.next_free << ", " << results->free_info.size << "}." << std::endl;
     //if( _freeResilienceResults == offset )
     //    std::cerr << "4. _freeResilienceResults updated from " << _freeResilienceResults << " to " << offset << "." << std::endl;
     // DEBUG */
-    ResilienceInfo2[0] = offset;
+    ResilienceInfo[3] = offset;
     
     // /* DEBUG
     //std::cerr << "Chunk freed. Next_free is " << free.next_free << " with size " << free.size << "." << std::endl;
