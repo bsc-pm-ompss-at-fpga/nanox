@@ -132,6 +132,7 @@ void SMPDD::execute ( WD &wd ) //throw ( )
                      NANOS_INSTRUMENT ( static nanos_event_key_t key = ID->getEventKey("resilience"); )
                      NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent( key, RESILIENCE_LOAD_INPUT ); )
                      wd.getResilienceNode()->loadInput( wd.getCopies(), wd.getNumCopies(), wd.getId() );
+                     sys.getResiliencePersistence()->disableRestore();
                      NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 ); )
                   }
                }
@@ -162,6 +163,7 @@ void SMPDD::execute ( WD &wd ) //throw ( )
                   //    << wd.getResilienceNode() - sys.getResiliencePersistence()->getResilienceNode(1) << "." << std::endl;
                }
             }
+            else if( wd.getParent() != NULL && sys.getResiliencePersistence()->restore() ) break;
 
             getWorkFct()( wd.getData() );
 

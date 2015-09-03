@@ -286,33 +286,34 @@ namespace nanos {
         size_t used_space = 0;
         while( current != 0 ) {
             ResilienceNode * rn = getResilienceNode( current );
-            used_space += rn->getDataSizeToFree(); 
+            if( rn->getDataIndex() != 0 )
+                used_space += rn->getDataSizeToFree(); 
             if( current == (size_t) rn->_next )
                 fatal0( "Cycle in UsedResilienceNode linked list." );
             current = rn->_next;
         }
 
-        current = init2[0]; 
+        unsigned long current2 = init2[0]; 
         size_t free_space = 0;
-        while( current != 0 ) {
+        while( current2 != 0 ) {
             // /* DEBUG
             //std::cerr << "Current is " << current << ". Free space is " << free_space << "." << std::endl;
             // DEBUG */
-            ResultsNode * results = ( ResultsNode * ) getResilienceResults( current );
+            ResultsNode * results = ( ResultsNode * ) getResilienceResults( current2 );
             if( results == NULL )
                 break;
             // /* DEBUG
-            //std::cerr << current << "->free_info.size is " << results->free_info.size << "." << std::endl;
+            //std::cerr << current2 << "->free_info.size is " << results->free_info.size << "." << std::endl;
             // DEBUG */
             free_space += results->free_info.size;
-            current = results->free_info.next_free; 
+            current2 = results->free_info.next_free; 
         }
 
         //used_space += 2*sizeof(int) + sizeof(unsigned long);
-        std::cerr << "USED SPACE IS " << used_space << " THAT SHOULD BE EQUAL TO " 
-            << _RESILIENCE_RESULTS_MAX_FILE_SIZE - free_space << std::endl;
-        std::cerr << "FREE SPACE IS " << free_space << " THAT SHOULD BE EQUAL TO " 
-            << _RESILIENCE_RESULTS_MAX_FILE_SIZE - used_space << std::endl;
+        //std::cerr << "USED SPACE IS " << used_space << " THAT SHOULD BE EQUAL TO " 
+        //    << _RESILIENCE_RESULTS_MAX_FILE_SIZE - free_space << std::endl;
+        //std::cerr << "FREE SPACE IS " << free_space << " THAT SHOULD BE EQUAL TO " 
+        //    << _RESILIENCE_RESULTS_MAX_FILE_SIZE - used_space << std::endl;
     }
 
     /********** RESILIENCE PERSISTENCE **********/

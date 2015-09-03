@@ -468,5 +468,7 @@ inline size_t ResilienceNode::getDataSizeToFree() const
 { return _dataSize % sizeof(ResultsNode) ? ( ( _dataSize/sizeof(ResultsNode) ) + 1 ) * sizeof(ResultsNode) : _dataSize; }
 inline unsigned int ResilienceNode::getNumDescendants() { return _descSize; }
 inline void ResilienceNode::restartLastDescRestored() { _lastDescRestored = 0; }
+inline bool ResiliencePersistence::restore() { return _restoreTree; }
+inline void ResiliencePersistence::disableRestore() { _restoreTree = false; }
 
 #endif /* _NANOS_RESILIENCE_H */

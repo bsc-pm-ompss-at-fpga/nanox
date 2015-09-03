@@ -69,6 +69,8 @@ namespace nanos {
 
         void setCheckpoint( ResilienceNode * checkpoint );
         ResilienceNode * getCheckpoint();
+        void disableRestore();
+        bool restore();
 
         void printResilienceInfo();
     };
