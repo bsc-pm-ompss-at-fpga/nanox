@@ -39,6 +39,9 @@ void mpoison_scan ( void );
 //! \brief Instead of scanning maps file, use user defined chunk list to inject failures.
 void mpoison_declare_region ( uintptr_t addr, size_t size );
 
+//! \brief blocks the page starting at address page_addr. Returns 0 if no errors were found
+int mpoison_block_page( uintptr_t);
+
 //! \brief Unblocks the page starting at address page_addr. Returns 0 if no errors were found
 int mpoison_unblock_page ( uintptr_t );
 

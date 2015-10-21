@@ -98,6 +98,18 @@ void mpoison_continue(){
    stop = false;
 }
 
+int mpoison_block_page( uintptr_t page_addr ) {
+  if ( mp_mgr->blockSpecificPage(page_addr) == 0 ) {
+	      debug("Resiliency: blocked Address: 0x", std::hex, page_addr);
+	      return 0;
+  } else {
+	      warning("Resiliency: Error while blocking page. "
+	              "Address: 0x", std::hex, page_addr,
+	              " Reason: ", strerror(errno) );
+	      return -1;
+   }
+}
+
 int mpoison_unblock_page( uintptr_t page_addr ) {
    if ( mp_mgr->unblockPage(page_addr) == 0 ) {
       debug("Resiliency: Page restored! Address: 0x", std::hex, page_addr);
@@ -157,7 +169,7 @@ void mpoison_finalize ( )
 void mpoison_declare_region ( uintptr_t addr, size_t size )
 {
    using namespace nanos::vm;
-   if( sys.isPoisoningEnabled() && mp_mgr != NULL ) {
+   if( sys.isPoisoningEnabled() && mp_mgr != NULL && addr) {
 
       uintptr_t aligned_addr = addr & ~(page_size-1);
       size_t aligned_size =( (addr + size) & ~(page_size-1) ) // end of region

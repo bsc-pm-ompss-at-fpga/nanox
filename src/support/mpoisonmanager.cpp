@@ -134,7 +134,7 @@ int MPoisonManager::blockPage() {
 }
 
 int MPoisonManager::blockSpecificPage( uintptr_t page_addr ) {
-    LockBlock lock ( mgr_lock );
+	LockBlock lock ( mgr_lock );
     blocked_pages.insert( page_addr );
     debug0( "Mpoison: blocking memory page. Addr: 0x", std::hex, page_addr, ". "
             "Total: ", std::dec, blocked_pages.size(), " pages blocked."
