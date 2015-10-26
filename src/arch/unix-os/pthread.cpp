@@ -227,14 +227,12 @@ void taskErrorHandler ( int sig, siginfo_t* si, void* context )
    if((mp_mgr->unblockPage((uintptr_t)si->si_addr))==0){
       debug0("Resiliency: Page address: ", si->si_addr, " unblocked. ");
       getMyThreadSafe()->getPlannedWD()->setInvalid(true);
-      getMyThreadSafe()->getPlannedWD()->setNumtries(0);
    }
 
 #else /* !NANOS_DEBUG_ENABLED */
    MPoisonManager *mp_mgr = nanos::vm::getMPoisonManager();
    if((mp_mgr->unblockPage((uintptr_t)si->si_addr))==0) {
       getMyThreadSafe()->getPlannedWD()->setInvalid(true);
-      getMyThreadSafe()->getPlannedWD()->setNumtries(0);
    }
 #endif /* NANOS_DEBUG_ENABLED */
 }

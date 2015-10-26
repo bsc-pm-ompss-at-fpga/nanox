@@ -1355,23 +1355,6 @@ void Scheduler::exit ( void )
    }
 }
 
-/**
- * JAM
- * Used for the workaround implementation of task recovery for ARM.
- * Re-inlines the WD in case of a fault and recovery.
- * @param wd
- * @param schedule
- * @return
- */
-bool Scheduler::reInlineWork(WD *wd, bool schedule) {
-   debug ( "Resiliency: Task ", wd->getId(), " is being re-submitted.");
-   BaseThread *thread = getMyThreadSafe();
-   wd->setStart();
-   const bool done = thread->inlineWorkDependent(*wd);
-
-   return done;
-}
-
 
 int SchedulerStats::getCreatedTasks() { return _createdTasks.value(); }
 int SchedulerStats::getReadyTasks() { return _readyTasks.value(); }

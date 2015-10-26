@@ -731,10 +731,6 @@ typedef std::set<const Device *>  DeviceList;
          void setCriticality ( int cr );
          int getCriticality ( void ) const;
 
-         void setNumtries ( int ntr );  // TODO: explain this
-         void incrNumtries ();          // TODO: explain this
-         unsigned int getNumtries () const; // TODO: explain this
-
    };
 
    typedef class WorkDescriptor WD;
