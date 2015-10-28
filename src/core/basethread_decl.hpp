@@ -226,10 +226,11 @@ namespace nanos
 
          virtual bool canBlock() { return false; }
 
-         // set/get methods
+#ifdef ARM_RECOVERY_WORKAROUND
          void setPlannedWD ( WD &planned );
 
          WD * getPlannedWD () const;
+#endif
 
          void setCurrentWD ( WD &current );
 

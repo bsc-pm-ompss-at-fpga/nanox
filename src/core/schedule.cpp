@@ -1035,7 +1035,9 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
 
    BaseThread *thread = getMyThreadSafe();
 
+#ifdef ARM_RECOVERY_WORKAROUND
    thread->setPlannedWD(*wd); //PLANNED WD
+#endif
 
    // run it in the current frame
    WD *oldwd = thread->getCurrentWD();
@@ -1206,6 +1208,9 @@ void Scheduler::switchTo ( WD *to )
       NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_discard_key, &task_discard_val) );
 
    } else {
+#ifdef ARM_RECOVERY_WORKAROUND
+     myThread->setPlannedWD(*to);
+#endif
      if ( myThread->runningOn()->supportsUserLevelThreads() ) {
         if (!to->started()) {
            to->_mcontrol.initialize( *myThread->runningOn() );
