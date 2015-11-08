@@ -146,7 +146,7 @@ int MPoisonManager::blockSpecificPage( uintptr_t page_addr ) {
 
 int MPoisonManager::injectFault( uintptr_t page_addr ) {
    unsigned char* page_head = (unsigned char*)page_addr;
-   for (int i = 0; i < page_size; i++) {
+   for (int i = 0; i < (int)page_size; i++) {
       *page_head = 10;
       page_head++;
    }
