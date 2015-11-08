@@ -128,7 +128,9 @@ unsigned MPoisonManager::getWaitTime( )
 int MPoisonManager::blockPage() {
   uintptr_t addr = getRandomPage();
   if( addr ) {
-     return blockSpecificPage( addr );
+     return injectFault(addr);
+     // FZ: test fault injection with bitflip.
+     //return blockSpecificPage( addr );
   }
   return -1;
 }
@@ -140,6 +142,17 @@ int MPoisonManager::blockSpecificPage( uintptr_t page_addr ) {
             "Total: ", std::dec, blocked_pages.size(), " pages blocked."
           );
     return mprotect( (void*)page_addr, page_size, PROT_NONE );
+}
+
+int MPoisonManager::injectFault( uintptr_t page_addr ) {
+   unsigned char* page_head = (unsigned char*)page_addr;
+   for (int i = 0; i < page_size; i++) {
+      *page_head = 10;
+      page_head++;
+   }
+
+   // TODO: set isFault to true.
+   return 0;
 }
 
 int MPoisonManager::unblockPage( uintptr_t page_addr ) {

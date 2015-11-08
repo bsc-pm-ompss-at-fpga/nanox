@@ -68,6 +68,9 @@ public:
   //!< Removes a given page's access rights. Address must be aligned to 'page_size'.
   int blockSpecificPage( uintptr_t page_addr );
 
+  //!< Injects a fault in the specified page.
+  int injectFault( uintptr_t page_addr);
+
   /*! Returns an specific page's access rights to its original value. 
    * Page address must be aligned to 'page_size'.
    */
