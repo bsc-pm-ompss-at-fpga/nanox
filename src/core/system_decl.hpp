@@ -240,6 +240,8 @@ namespace nanos
          float                     _memory_poison_rate;
          //! Maximum error injections
          int                       _memory_poison_amount;
+         //! The address that is faulty. Only set with
+         uintptr_t                 _faulty_address;
 #endif
 
          // disable copy constructor & assignment operation
@@ -437,6 +439,29 @@ namespace nanos
           * \brief Returns the maximum number of injected errors
           */
          float getMPoisonAmount() const;
+         /*!
+          * \brief Returns the fault address if a fault (bit flip) was inserted via injectBitFlipFault
+          */
+         uintptr_t getFaultyAddress() const;
+         /*!
+          * \brief Sets what is the faulty address.
+          */
+         void setFaultyAddress(uintptr_t);
+
+         /*!
+          * \brief Returns the number of faults within the intrested memory regions.
+          */
+         int getFaultsInInterestedMemoryRegion() const;
+
+         /*!
+          * \brief Returns the total memory where faults can be injected.
+          */
+         int getTotalMemoryExposedToFaultInjection() const;
+
+         /*!
+          * \brief Returns the size of the memory where we are interested in if faults are injected.
+          */
+         int getSizeOfMemoryInterestedInFaultInjection() const;
 #endif
 
          // team related methods

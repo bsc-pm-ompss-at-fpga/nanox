@@ -39,11 +39,17 @@ void mpoison_scan ( void );
 //! \brief Instead of scanning maps file, use user defined chunk list to inject failures.
 void mpoison_declare_region ( uintptr_t addr, size_t size );
 
+//! \brief Declare what is the region we would like faults to happen which typically is a small portion of the address space found by memory_scan.
+void mpoison_declare_interested_memory_region (uintptr_t addr, size_t size);
+
 //! \brief blocks the page starting at address page_addr. Returns 0 if no errors were found
 int mpoison_block_page( uintptr_t);
 
 //! \brief Unblocks the page starting at address page_addr. Returns 0 if no errors were found
 int mpoison_unblock_page ( uintptr_t );
+
+//! \brief Injects a bit flip in the address. The address is aligned.
+int mpoison_inject_bit_flip_in_address( uintptr_t );
 
 //! Makes the mpoison dedicated thread to stop randomized page blocking
 void mpoison_stop ( void );

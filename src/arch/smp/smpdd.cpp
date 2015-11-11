@@ -139,6 +139,18 @@ void SMPDD::execute ( WD &wd ) throw ()
          try {
             // Call to the user function
             getWorkFct()( wd.getData() );
+
+#ifdef NANOS_FAULT_INJECTION
+            //
+            // This is the place where execution returns after the execution of the task.
+            // We check if any manual flags were set for fault injection
+            //
+            if (sys.getFaultyAddress() != 0) {
+               wd.setInvalid(true);
+               sys.setFaultyAddress(0);
+            }
+#endif
+
          } catch (nanos::TaskException& e) {
             debug("Resiliency: error detected during task ", wd.getId(), " execution.");
             sys.getExceptionStats().incrExecutionErrors();

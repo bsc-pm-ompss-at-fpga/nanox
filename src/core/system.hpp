@@ -545,6 +545,17 @@ inline int System::getMPoisonSeed() const { return _memory_poison_seed; }
 inline float System::getMPoisonRate() const { return _memory_poison_rate; }
 
 inline float System::getMPoisonAmount() const { return _memory_poison_amount; }
+
+inline void System::setFaultyAddress(uintptr_t addr) { _faulty_address = addr; }
+
+inline uintptr_t System::getFaultyAddress() const { return _faulty_address; }
+
+inline int System::getFaultsInInterestedMemoryRegion() const { return _resiliencyStats.getFaultsInInterestedMemoryRegion(); }
+
+inline int System::getTotalMemoryExposedToFaultInjection() const { return _resiliencyStats.getTotalMemoryExposedToFaultInjection(); }
+
+inline int System::getSizeOfMemoryInterestedInFaultInjection() const { return _resiliencyStats.getSizeOfMemoryInterestedInFaultInjection(); }
+
 #endif
 
 inline void System::setSMPPlugin(SMPBasePlugin *p) {

@@ -43,6 +43,12 @@ public:
   //!< Registers a portion of memory susceptible to be corrupted in the manager.
   void addAllocation( uintptr_t addr, size_t size );
 
+  //!< Register a portion of memory that we are interested faults to be injected.
+  void addInterestedMemoryAllocation( uintptr_t addr, size_t size);
+
+  //!< Checks if the address is in the interested memory region.
+  bool isInInterestedMemoryAllocation( uintptr_t addr );
+
   /*! Unregisters a portion of memory susceptible to be corrupted in the manager.
    * In case there were blocked pages inside it, they are unblocked.
    */
@@ -57,6 +63,15 @@ public:
   //!< Returns a randomly selected page's base address.
   uintptr_t getRandomPage( );
 
+  //!< Returns a randomly selected address within a page.
+  unsigned short getRandomAddressInPage();
+
+  //!< Returns a randomly selected bit position within a word.
+  unsigned char getRandomBitIndex();
+
+  //!< Returns a randomly selected bit value 0 or 1.
+  unsigned char getRandomBitValue();
+
   //!< Resets the page fault distribution so that it fits total_size.
   void resetRndPageDist( );
 
@@ -68,8 +83,11 @@ public:
   //!< Removes a given page's access rights. Address must be aligned to 'page_size'.
   int blockSpecificPage( uintptr_t page_addr );
 
-  //!< Injects a fault in the specified page.
-  int injectFault( uintptr_t page_addr);
+  //!< Injects a bit flip in the specified page.
+  int injectBitFlipInPage( uintptr_t page_addr);
+
+  //!< Injects a bit flip in the specified address.
+  int injectBitFlipInAddress( uintptr_t addr);
 
   /*! Returns an specific page's access rights to its original value. 
    * Page address must be aligned to 'page_size'.
@@ -86,11 +104,16 @@ private:
 
   std::deque<alloc_t> alloc_list; //!< List that contains all the allocations made by the user.
   std::set<uintptr_t> blocked_pages; //!< Set of addresses that which address has been unauthorised randomly.
+  std::vector<alloc_t> interested_mem_allocations; //!< List of the memory regions were we would like the faults to happen
   size_t total_size;//!< Indicates the total amount of memory allocated by the user.
+  size_t total_interested_memory_allocation_size; //!< The total amount of the memory regions that we are interested faults to happen
 
   std::mt19937 generator;//!< Random number generator engine
   std::uniform_int_distribution<size_t> page_fault_dist;//!< Random distribution used for memory page fault selection
   std::exponential_distribution<float> wait_time_dist;//!< Random distribution used for time between failures
+  std::uniform_int_distribution<unsigned short int> addr_in_page_dist; //!< Random distribution for picking an address in page
+  std::uniform_int_distribution<unsigned char> bit_in_addr_dist; //!< Random distribution for picking a bit within a word
+  std::uniform_int_distribution<unsigned char> bit_value_dist; //!< Random distribution for bit value 0 or 1.
 };
 
 }// namespace vm

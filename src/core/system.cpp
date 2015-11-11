@@ -728,6 +728,9 @@ void System::finish ()
    verbose ( std::dec, (unsigned int) getExecutionErrors(),      " task executions failed" );
    verbose ( std::dec, (unsigned int) getRecoveredTasks(),       " tasks have been reexecuted" );
    verbose ( std::dec, (unsigned int) getDiscardedTasks(),       " tasks have been discarded (initialization, parent or sibling(s) failed" );
+   verbose ( std::dec, (unsigned int) getFaultsInInterestedMemoryRegion(), " faults were injected in interested memory region.");
+   verbose ( std::dec, (unsigned int) getTotalMemoryExposedToFaultInjection(), " total memory affected by fault in bytes.");
+   verbose ( std::dec, (unsigned int) getSizeOfMemoryInterestedInFaultInjection(), " size of memory interested in fault injection in bytes.");
 #endif // NANOS_RESILIENCY_ENABLED
    sys.getNetwork()->nodeBarrier();
 
@@ -1556,6 +1559,9 @@ void System::executionSummary( void )
    message0( "=== ", std::dec, getExecutionErrors(),      " task executions failed" );
    message0( "=== ", std::dec, getRecoveredTasks(),       " tasks have been reexecuted" );
    message0( "=== ", std::dec, getDiscardedTasks(),       " tasks have been discarded (initialization, parent or sibling(s) failed" );
+   message0( "=== ", std::dec, getFaultsInInterestedMemoryRegion(), " faults were injected in interested memory region.");
+   message0( "=== ", std::dec, (unsigned int) getTotalMemoryExposedToFaultInjection(), " total memory affected by fault in bytes.");
+   message0( "=== ", std::dec, (unsigned int) getSizeOfMemoryInterestedInFaultInjection(), " size of memory interested in fault injection in bytes.");
 #endif // NANOS_RESILIENCY_ENABLED
    message0( "===============================================================" );
 }

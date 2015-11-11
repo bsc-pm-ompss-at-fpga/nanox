@@ -73,6 +73,7 @@ extern "C" {
 
 void mpoison_set_fail( bool value ) {
    failFlag = value;
+   sys.setFaultyAddress(value);
 }
 
 void mpoison_do_fail() {
@@ -120,6 +121,10 @@ int mpoison_unblock_page( uintptr_t page_addr ) {
               " Reason: ", strerror(errno) );
       return -1;
    }
+}
+
+int mpoison_inject_bit_flip_in_address( uintptr_t addr ) {
+   return mp_mgr->injectBitFlipInAddress(addr);
 }
 
 void mpoison_delay_start ( unsigned long* useconds ) {
@@ -191,6 +196,16 @@ void mpoison_declare_region ( uintptr_t addr, size_t size )
 
       mp_mgr->addAllocation( aligned_addr, aligned_size );
    }
+}
+
+void mpoison_declare_interested_memory_region (uintptr_t addr, size_t size)
+{
+   using namespace nanos::vm;
+   if (!sys.isPoisoningEnabled() || mp_mgr == NULL || addr == 0) {
+      return;
+   }
+
+   mp_mgr->addInterestedMemoryAllocation(addr, size);
 }
 
 void mpoison_scan ()

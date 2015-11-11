@@ -27,16 +27,23 @@ namespace vm {
 
 const uint64_t page_size = sysconf(_SC_PAGESIZE);
 const uint64_t pn_mask = ~(page_size - 1);
+const unsigned char word_size = sizeof(uintptr_t);
+const uintptr_t addr_mask = ~(sizeof(uintptr_t) - 1);
 
 
 MPoisonManager::MPoisonManager( int seed, size_t size, float rate ):
    mgr_lock(),
    alloc_list(),
    blocked_pages(),
+   interested_mem_allocations(10),
    total_size(0),
+   total_interested_memory_allocation_size(0),
    generator(seed),
    page_fault_dist(0, size),
-   wait_time_dist(rate)
+   wait_time_dist(rate),
+   addr_in_page_dist(0, (unsigned short)page_size - 1),
+   bit_in_addr_dist(0, word_size - 1),
+   bit_value_dist(0, 1)
 {
 }
 
@@ -51,6 +58,28 @@ void MPoisonManager::addAllocation( uintptr_t addr, size_t size )
 {
    alloc_list.push_back( { addr, size } );
    total_size += size;
+   sys.getExceptionStats().setTotalMemoryExposedToFaultInjection(total_size);
+}
+
+void MPoisonManager::addInterestedMemoryAllocation( uintptr_t addr, size_t size )
+{
+   interested_mem_allocations.push_back({ addr, size });
+   total_interested_memory_allocation_size += size;
+   sys.getExceptionStats().setSizeOfMemoryInterestedInFaultInjection(total_interested_memory_allocation_size);
+}
+
+bool MPoisonManager::isInInterestedMemoryAllocation( uintptr_t addr )
+{
+   std::vector<alloc_t>::iterator it = interested_mem_allocations.begin();
+   for (it = interested_mem_allocations.begin(); it != interested_mem_allocations.end(); it++ )
+   {
+      uintptr_t start_addr = it->addr;
+      uintptr_t end_addr = start_addr + it->size;
+      if (addr >= start_addr && addr <= end_addr) {
+         return true;
+      }
+   }
+   return false;
 }
 
 void MPoisonManager::deleteAllocation( uintptr_t addr )
@@ -118,6 +147,18 @@ uintptr_t MPoisonManager::getRandomPage(){
    }
 }
 
+unsigned short MPoisonManager::getRandomAddressInPage() {
+   return addr_in_page_dist(generator);
+}
+
+unsigned char MPoisonManager::getRandomBitIndex() {
+   return bit_in_addr_dist(generator);
+}
+
+unsigned char MPoisonManager::getRandomBitValue() {
+   return bit_value_dist(generator);
+}
+
 unsigned MPoisonManager::getWaitTime( )
 {
    // Note: wait times are in us
@@ -128,7 +169,7 @@ unsigned MPoisonManager::getWaitTime( )
 int MPoisonManager::blockPage() {
   uintptr_t addr = getRandomPage();
   if( addr ) {
-     return injectFault(addr);
+     return injectBitFlipInPage(addr);
      // FZ: test fault injection with bitflip.
      //return blockSpecificPage( addr );
   }
@@ -144,14 +185,34 @@ int MPoisonManager::blockSpecificPage( uintptr_t page_addr ) {
     return mprotect( (void*)page_addr, page_size, PROT_NONE );
 }
 
-int MPoisonManager::injectFault( uintptr_t page_addr ) {
-   unsigned char* page_head = (unsigned char*)page_addr;
-   for (int i = 0; i < (int)page_size; i++) {
-      *page_head = 10;
-      page_head++;
-   }
+int MPoisonManager::injectBitFlipInPage( uintptr_t page_addr ) {
+   unsigned short addr_offset = getRandomAddressInPage();
+   uintptr_t addr = page_addr + addr_offset;
 
-   // TODO: set isFault to true.
+   return injectBitFlipInAddress(addr);
+}
+
+int MPoisonManager::injectBitFlipInAddress( uintptr_t addr ) {
+   unsigned char bit_index = getRandomBitIndex();
+   unsigned char bit_value = getRandomBitValue();
+
+   // Align the address
+   addr = addr - (addr % word_size);
+
+   uintptr_t *addr_ptr = (uintptr_t*)addr;
+
+   uintptr_t most_significant_bits_of_addr = (addr_mask << (bit_index + 1)) & *addr_ptr;
+   uintptr_t faulty_bit = bit_value << bit_index;
+   uintptr_t less_significant_bits_of_addr = (addr_mask >> (word_size - bit_index)) & *addr_ptr;
+
+   // The new value at the address.
+   *addr_ptr = most_significant_bits_of_addr | faulty_bit | less_significant_bits_of_addr;
+
+   if (isInInterestedMemoryAllocation(addr)) {
+      sys.getExceptionStats().incrFaultsInInterestedMemoryRegion();
+   }
+   sys.setFaultyAddress(addr);
+
    return 0;
 }
 

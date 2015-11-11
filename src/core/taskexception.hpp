@@ -46,13 +46,23 @@ namespace nanos {
          Atomic<int> _errors_in_initialization;
          Atomic<int> _recovered_tasks;
          Atomic<int> _discarded_tasks;
+         int _faults_in_interested_memory_region;
+         size_t _total_memory_exposed_to_fault_injection;
+         size_t _size_of_memory_interested_in_fault_injection;
 
          TaskExceptionStats ( TaskExceptionStats &tes );
 
          TaskExceptionStats& operator= ( TaskExceptionStats &tes );
 
       public:
-         TaskExceptionStats () : _errors_in_execution(0), _errors_in_initialization(0), _recovered_tasks(0), _discarded_tasks(0) {}
+         TaskExceptionStats () :
+            _errors_in_execution(0),
+            _errors_in_initialization(0),
+            _recovered_tasks(0),
+            _discarded_tasks(0),
+            _faults_in_interested_memory_region(0),
+            _total_memory_exposed_to_fault_injection(0),
+            _size_of_memory_interested_in_fault_injection(0) {}
 
          ~TaskExceptionStats () {}
 
@@ -70,6 +80,15 @@ namespace nanos {
 
          int getDiscardedTasks() const { return _discarded_tasks.value(); }
          void incrDiscardedTasks() { _discarded_tasks++; }
+
+         int getFaultsInInterestedMemoryRegion() const { return _faults_in_interested_memory_region; }
+         void incrFaultsInInterestedMemoryRegion() { _faults_in_interested_memory_region++; }
+
+         size_t getTotalMemoryExposedToFaultInjection() const { return _total_memory_exposed_to_fault_injection; }
+         void setTotalMemoryExposedToFaultInjection(size_t total_memory_exposed_to_fault_injection) { _total_memory_exposed_to_fault_injection = total_memory_exposed_to_fault_injection; }
+
+         size_t getSizeOfMemoryInterestedInFaultInjection() const { return _size_of_memory_interested_in_fault_injection; }
+         void setSizeOfMemoryInterestedInFaultInjection(size_t size_of_memory_interested_in_fault_injection)  { _size_of_memory_interested_in_fault_injection = size_of_memory_interested_in_fault_injection; }
    };
 
    /*!
