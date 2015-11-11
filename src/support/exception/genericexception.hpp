@@ -23,6 +23,7 @@
 #include "exceptiontracer.hpp"
 
 #include <exception>
+#include <string>
 
 namespace nanos {
 namespace error {

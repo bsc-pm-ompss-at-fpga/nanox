@@ -195,6 +195,8 @@ support_sources = \
 	exception/mpierror.cpp \
 	exception/mpierrorhandler.hpp \
 	exception/mpierrortranslator.hpp \
+	exception/mpierrorhandler.hpp \
+	exception/mpierrortranslator.hpp \
 	$(END) 
 
 debug_sources = \
@@ -219,7 +221,7 @@ if fault_injection_enabled
 libmpoison_sources = \
 	vmentry.hpp \
 	vmentry.cpp \
-        mpoison.h \
+	mpoison.h \
 	mpoison.hpp \
 	mpoison.cpp \
 	mpoisonmanager.hpp \
