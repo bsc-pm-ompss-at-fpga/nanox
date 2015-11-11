@@ -169,9 +169,9 @@ unsigned MPoisonManager::getWaitTime( )
 int MPoisonManager::blockPage() {
   uintptr_t addr = getRandomPage();
   if( addr ) {
-     return injectBitFlipInPage(addr);
+     //return injectBitFlipInPage(addr);
      // FZ: test fault injection with bitflip.
-     //return blockSpecificPage( addr );
+     return blockSpecificPage( addr );
   }
   return -1;
 }
