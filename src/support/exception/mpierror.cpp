@@ -23,10 +23,13 @@
 #include <mpi.h>
 #include <sstream>
 
+namespace nanos {
+namespace error {
+
 template<>
 std::string MPIError<MPI_Comm>::generateMessage() const
 {
-   size_t desc_length;
+   int desc_length;
    char description[MPI_MAX_ERROR_STRING];
    MPI_Error_string(errorCode, description, &desc_length);
 
@@ -34,5 +37,9 @@ std::string MPIError<MPI_Comm>::generateMessage() const
    ss << "MPI error detected "
       << "on communicator " << failedHandle
       << ". Error: " << description;
+
+   return ss.str();
 }
 
+}// namespace error
+}// namespace nanos

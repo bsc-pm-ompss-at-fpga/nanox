@@ -21,11 +21,15 @@
 #define EXCEPTION_TRACER_HPP
 
 #include "debug.hpp"
+#include "system.hpp" // required for using debug macros
 
 #include <execinfo.h>
 #include <signal.h>
 
 #include <exception>
+
+namespace nanos {
+namespace error {
 
 /*!
  * \ingroup NanosExceptions
@@ -47,3 +51,7 @@ class ExceptionTracer {
 		}
 };
 
+}// namespace error
+}// namespace nanos
+
+#endif // EXCEPTION_TRACER_HPP

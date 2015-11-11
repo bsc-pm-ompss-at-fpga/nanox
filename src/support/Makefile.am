@@ -189,6 +189,12 @@ support_sources = \
 	printbt.cpp \
 	genericevent_decl.hpp \
 	genericevent.cpp \
+	exception/exceptiontracer.hpp \
+	exception/genericexception.hpp \
+	exception/mpierror.hpp \
+	exception/mpierror.cpp \
+	exception/mpierrorhandler.hpp \
+	exception/mpierrortranslator.hpp \
 	$(END) 
 
 debug_sources = \

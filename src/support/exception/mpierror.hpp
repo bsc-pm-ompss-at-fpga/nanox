@@ -54,7 +54,7 @@ public:
     * @param[in] error pointer to the error code.
     */
    MPIError( MPIHandle *handle, int *error ) :
-         GenericException( generateMessage() )
+         GenericException( generateMessage() ),
          failedHandle(*handle), 
          errorCode(*error)
    {}

@@ -29,6 +29,18 @@ namespace error {
 
 /*!
  * \defgroup NanosExceptions
+ * Nanos exceptions module.
+ * \details Manages error handling through the use of C++ exceptions that contain
+ * useful information such as which task was being executed at the time of the
+ * error.
+ * Extra info can be provided depending on the type of error. Current supported
+ * errors:
+ *  - MPI routine error
+ *  - Sinchronous signals (Segmentation fault, bus, floating point, ...)
+ */
+
+/*!
+ * \ingroup NanosExceptions
  * \brief A generic class for exceptions.
  * \details GenericException is the base class of every exception used inside the runtime.
  * \author Jorge Bellon
@@ -45,14 +57,16 @@ class GenericException : public ExceptionTracer, public std::exception {
        */
       GenericException( std::string const& message ) : 
             errorMessage( message ), 
-            runningTaskonError( getMyThreadSafe()->getCurrentWD() )
+            runningTaskOnError( *getMyThreadSafe()->getCurrentWD() )
       {}
+
+      ~GenericException() throw() {}
 
       /**
        * Provides access to an explanatory string
        * \returns a brief description of the error that was found
        */
-      virtual const char* what() const {
+      virtual const char* what() const throw() {
          return errorMessage.c_str();
       }
 };
