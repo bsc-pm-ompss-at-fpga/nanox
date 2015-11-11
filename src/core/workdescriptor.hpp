@@ -510,39 +510,32 @@ inline void *WorkDescriptor::getRemoteAddr() const {
    return _remoteAddr;
 }
 
-inline bool WorkDescriptor::setInvalid ( bool flag )
-{
-   if (_flags.is_invalid != flag) {
-      _flags.is_invalid = flag;
-
-      /*
-       * Note: At this time, do not take any action if the task is invalid and it has
-       * no parent. There could be some special cases where it does not imply a fatal
-       * error.
-       */
-      if (_flags.is_invalid && !_flags.is_recoverable) {
-         if (_parent == NULL)
-            /*
-             *  If no invalidity propagation is possible (this task is the root in some way)
-             *  return that no recoverable task was found at this point, so any action can be taken
-             *  accordingly.
-             */
-            return false;
-         else if (!_parent->_flags.is_invalid) {
-            // If this task is not recoverable, propagate invalidation to its parent.
-            return _parent->setInvalid(true);
-            return true;
-         }
-      }
-   }
-   return true;
-}
+inline bool WorkDescriptor::setInvalid( bool flag ) { _flags.is_invalid = flag; }
 
 inline bool WorkDescriptor::isInvalid() const { return _flags.is_invalid; }
 
 inline void WorkDescriptor::setRecoverable( bool flag ) { _flags.is_recoverable = flag; }
 
 inline bool WorkDescriptor::isRecoverable() const { return _flags.is_recoverable; }
+
+inline WorkDescriptor *WorkDescriptor::propagateInvalidation ()
+{
+   WorkDescriptor *current = this;
+	WorkDescriptor *next = current->getParent();
+
+   current->setInvalid(true);
+	while ( !current->isRecoverable() && next ) {
+		current = next;
+		current->setInvalid(true);
+		next = current->getParent();
+	}
+
+	return current;
+}
+
+inline bool WorkDescriptor::isAbleToExecute() const { return !isInvalid() && (getParent() == NULL || !getParent()->isInvalid()); }
+
+inline bool WorkDescriptor::isExecutionRepeatable() const { return isInvalid() && isRecoverable() && ( !getParent() || !getParent()->isInvalid() ); }
 
 inline void WorkDescriptor::setCriticality ( int cr ) { _criticality = cr; }
 

@@ -113,19 +113,25 @@ SMPDD * SMPDD::copyTo ( void *toAddr )
    return dd;
 }
 
+#ifndef NANOS_RESILIENCY_ENABLED
 void SMPDD::execute ( WD &wd ) throw ()
 {
-#ifdef NANOS_RESILIENCY_ENABLED
+   // Workdescriptor execution
+   getWorkFct()(wd.getData());
+}
+#else
+void SMPDD::execute ( WD &wd ) throw ()
+{
    unsigned num_tries = 0;
 
-   if (wd.isInvalid() || (wd.getParent() != NULL && wd.getParent()->isInvalid())) {
+   if ( !wd.isAbleToExecute() ) {
       /*
        *  TODO Optimization?
        *  It could be better to skip this work if workdescriptor is flagged as invalid
        *  before allocating a new stack for the task and, perhaps,
        *  skip data copies of dependences.
        */
-      wd.setInvalid(true);
+      WorkDescriptor *ancestor = wd.propagateInvalidation();
       debug ( "Resiliency: Task ", wd.getId(), " is flagged as invalid. Skipping it.");
 
       NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
@@ -150,25 +156,13 @@ void SMPDD::execute ( WD &wd ) throw ()
                sys.setFaultyAddress(0);
             }
 #endif
+         } catch (nanos::OperationFailure& failure) {
 
-         } catch (nanos::TaskException& e) {
             debug("Resiliency: error detected during task ", wd.getId(), " execution.");
+				ExecutionFailure handle( failure );
+				// TODO move the following to ExecutionFailure
             sys.getExceptionStats().incrExecutionErrors();
             e.handleExecutionError( );
-         } catch (std::exception& e) {
-            sys.getExceptionStats().incrExecutionErrors();
-
-            // Unexpected error: terminate execution
-            fatal( "Error: Uncaught exception ", typeid(e).name(),
-                   ". Thrown in task ", wd.getId(), ". "
-                   "Reason: ", e.what()
-                 );
-         } catch (...) {
-            sys.getExceptionStats().incrExecutionErrors();
-            // Unexpected error: terminate execution
-            fatal( "Error: Uncaught exception (unknown type). "
-                   "Thrown in task ", wd.getId(), ". "
-                 );
          }
 
          /* 
@@ -179,10 +173,7 @@ void SMPDD::execute ( WD &wd ) throw ()
           * 4) The task has not run out of trials (a limit is set to avoid infinite loop)
           */ 
          try {
-            if ( wd.isInvalid() 
-               && wd.isRecoverable() // Execution invalid and task recoverable
-               && ( wd.getParent() == NULL || !wd.getParent()->isInvalid() ) // Our parent is not invalid (if we got one)
-            ){
+            if ( wd.isExecutionRepeatable() ) {// Our parent is not invalid (if we got one)
                if ( num_tries < sys.getTaskMaxRetrials() ) {// We are still able to retry
                   sys.getExceptionStats().incrRecoveredTasks();
                   num_tries++;
@@ -190,7 +181,7 @@ void SMPDD::execute ( WD &wd ) throw ()
                } else {
                   debug( "Task ", wd.getId(), " is not being recovered again. Number of trials exhausted." );
                   // Giving up retrying...
-                  wd.getParent()->setInvalid( true );
+                  wd.getParent()->propagateInvalidation();
                   restart = false;
                }
             } else {
@@ -217,11 +208,8 @@ void SMPDD::execute ( WD &wd ) throw ()
          }
       } while (restart);
    }
-#else
-   // Workdescriptor execution
-   getWorkFct()(wd.getData());
-#endif
 }
+#endif
 
 #ifdef NANOS_RESILIENCY_ENABLED
 bool SMPDD::recover( TaskException const& err ) {

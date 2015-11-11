@@ -21,6 +21,7 @@
 #include "deviceops.hpp"
 #include "taskexception.hpp"
 #include <sys/mman.h>
+#include <iostream>
 
 BackupManager::BackupManager ( ) :
       Device("BackupMgr"), _memsize(0), _pool_addr(), _managed_pool() {}
@@ -94,6 +95,7 @@ bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
        * optimizations.
        */
       rawCopy(begin, end, dest);
+      std::cout << "Checkpoint. Copied from 0x" << std::hex << hostAddr << " to 0x" << std::hex << devAddr << std::endl;
       return true;
    } catch ( TaskException &e ) {
       e.handleCheckpointError( wd, hostAddr, devAddr, len );

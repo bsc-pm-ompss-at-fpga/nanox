@@ -728,6 +728,18 @@ typedef std::set<const Device *>  DeviceList;
          //! \brief Returns whether a WorkDescriptor is able to re-execute from the beginning if an error is detected.
          bool isRecoverable ( void ) const;
 
+			/*! \brief Propagate invalid flag through ancestors up to a recoverable one is found
+			 * \return The closest recoverable ancestor or the last one if none exist
+			 */
+			WorkDescriptor *propagateInvalidation( void );
+
+			//! \brief Returns whether a WorkDescriptor can run or not, due to invalidation.
+			bool isAbleToExecute ( void ) const;
+
+			// FIXME: should isExecutionRepeatable be moved to DeviceData?
+			//! \brief Returns whether a WorkDescriptor should re-execute or not
+			bool isExecutionRepeatable ( void ) const;
+
          void setCriticality ( int cr );
          int getCriticality ( void ) const;
 
