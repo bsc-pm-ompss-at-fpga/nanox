@@ -219,13 +219,13 @@ noinst_LTLIBRARIES =
 
 if fault_injection_enabled
 libmpoison_sources = \
-	vmentry.hpp \
-	vmentry.cpp \
-	mpoison.h \
-	mpoison.hpp \
-	mpoison.cpp \
-	mpoisonmanager.hpp \
-	mpoisonmanager.cpp
+	errinjection/vmentry.hpp \
+	errinjection/vmentry.cpp \
+	errinjection/mpoison.h \
+	errinjection/mpoison.hpp \
+	errinjection/mpoison.cpp \
+	errinjection/mpoisonmanager.hpp \
+	errinjection/mpoisonmanager.cpp
 endif
 
 if DEBUG_VERSION

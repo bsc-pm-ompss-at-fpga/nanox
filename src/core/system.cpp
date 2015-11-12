@@ -403,32 +403,6 @@ void System::config ()
          "Sets the memory pool maximum size (dedicated to store task backups) in bytes. ");
    cfg.registerArgOption("backup_pool_size", "backup-pool-size");
    cfg.registerEnvOption("backup_pool_size", "NX_BACKUP_POOL_SIZE");
-
-#endif
-#ifdef NANOS_FAULT_INJECTION
-   cfg.registerConfigOption("memory_poisoning",
-         NEW Config::FlagOption(_memory_poison_enabled, true),
-         "Enables random memory page poisoning (resiliency testing)");
-   cfg.registerArgOption("memory_poisoning", "memory-poisoning");
-   cfg.registerEnvOption("memory_poisoning", "NX_ENABLE_POISONING");
-
-   cfg.registerConfigOption("mp_seed",
-         NEW Config::IntegerVar(_memory_poison_seed),
-         "Seed used by memory page poisoning RNG (default: 'time(0)')");
-   cfg.registerArgOption("mp_seed", "mpoison-seed");
-   cfg.registerEnvOption("mp_seed", "NX_MPOISON_SEED");
-
-   cfg.registerConfigOption("mp_rate",
-         NEW Config::FloatVar(_memory_poison_rate),
-         "Memory poisoning rate (error/s). Default: '0')");
-   cfg.registerArgOption("mp_rate", "mpoison-rate");
-   cfg.registerEnvOption("mp_rate", "NX_MPOISON_RATE");
-
-   cfg.registerConfigOption("mp_amount",
-         NEW Config::IntegerVar(_memory_poison_amount),
-         "Maximum number of injected errors (default: infinite )");
-   cfg.registerArgOption("mp_amount", "mpoison-amount");
-   cfg.registerEnvOption("mp_amount", "NX_MPOISON_AMOUNT");
 #endif
 
    cfg.registerConfigOption ( "verbose-devops", NEW Config::FlagOption ( _verboseDevOps, true ), "Verbose cache ops" );
