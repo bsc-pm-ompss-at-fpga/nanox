@@ -1,3 +1,24 @@
+/*************************************************************************************/
+/*      Copyright 2009-2015 Barcelona Supercomputing Center                          */
+/*                                                                                   */
+/*      This file is part of the NANOS++ library.                                    */
+/*                                                                                   */
+/*      NANOS++ is free software: you can redistribute it and/or modify              */
+/*      it under the terms of the GNU Lesser General Public License as published by  */
+/*      the Free Software Foundation, either version 3 of the License, or            */
+/*      (at your option) any later version.                                          */
+/*                                                                                   */
+/*      NANOS++ is distributed in the hope that it will be useful,                   */
+/*      but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*      GNU Lesser General Public License for more details.                          */
+/*                                                                                   */
+/*      You should have received a copy of the GNU Lesser General Public License     */
+/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*************************************************************************************/
+
+#ifndef SIGNAL_EXCEPTION_HPP
+#define SIGNAL_EXCEPTION_HPP
 
 #include "exceptiontracer.hpp"
 #include "signaltranslator.hpp"
@@ -7,6 +28,9 @@
 #include <pthread.h>
 
 #include <exception>
+
+namespace nanos {
+namespace error {
 
 class SignalException : public GenericException {
 	private:
@@ -58,3 +82,9 @@ class BusErrorException : public SignalException {
 				SignalException( signalInfo, executionContext, getErrorMessage()  )
 		{}
 };
+
+} // namespace error
+} // namespace nanos
+
+#endif // SIGNAL_EXCEPTION_HPP
+
