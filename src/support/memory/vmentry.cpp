@@ -28,25 +28,25 @@
 namespace nanos {
 namespace vm {
 	VMEntry::VMEntry() :
-		_start(), _end(), _offset(0), _inode(0), _major(0), _minor(0), _path(), _prot(), _flags()
+		_region(), _offset(0), _inode(0), _major(0), _minor(0), _path(), _prot(), _flags()
 	{
 	}
 	
-	VMEntry::VMEntry(Address const& start, Address const& end, AccessRights const& prot, MemoryPageFlags const& flags) :
-		_start(start), _end(end), _offset(0), _inode(0), _major(0), _minor(0), _path(),
+	VMEntry::VMEntry(MemoryChunk const& area, AccessRights const& prot, MemoryPageFlags const& flags) :
+		_region(area), _offset(0), _inode(0), _major(0), _minor(0), _path(),
 		_prot(prot), _flags(flags)
 	{
 	}
 	
-	VMEntry::VMEntry(Address const& start, Address const& end, AccessRights const& prot, MemoryPageFlags const& flags,
+	VMEntry::VMEntry(MemoryChunk const& area, AccessRights const& prot, MemoryPageFlags const& flags,
 		uint64_t offset, uint64_t inode, uint8_t major, uint8_t minor,	std::string path) :
-		_start(start), _end(end), _offset(offset), _inode(inode), _major(major),
+		_region(area), _offset(offset), _inode(inode), _major(major),
 		_minor(minor), _path(path), _prot(prot), _flags(flags)
 	{
 	}
 	
 	VMEntry::VMEntry(const VMEntry &other) :
-		_start(other._start), _end(other._end), _offset(other._offset),
+		_region(other._region), _offset(other._offset),
 		_inode(other._inode), _major(other._major), _minor(other._minor),
 		_path(other._path), _prot(other._prot), _flags(other._flags)
 	{
@@ -58,8 +58,7 @@ namespace vm {
 	
 	VMEntry& VMEntry::operator=(const VMEntry &other)
 	{
-		_start = other._start;
-		_end = other._end;
+		_region = other._region;
 		_offset = other._offset;
 		_inode = other._inode;
 		_major = other._major;
@@ -82,9 +81,9 @@ namespace vm {
 		else
 			visibility = 'p';
 		
-		ss << setfill('0') << setw(8) << entry.getStart() 
+		ss << setfill('0') << setw(8) << entry.getMemoryRegion().begin()
 			<< '-' 
-			<< setfill('0') << setw(8) << entry.getEnd()
+			<< setfill('0') << setw(8) << entry.getMemoryRegion().end()
 			<< ' ' << entry.getAccessRights() << visibility
 			<< ' ' << setfill('0') << setw(8) << entry.getOffset() 
 			<< ' ' << setfill('0') << setw(2) << hex << entry.getDeviceMajor() 
@@ -106,13 +105,16 @@ namespace vm {
 	{
 		using namespace std;
 
-		MemoryPageFlags pageflags;
-
-		input >> entry._start;
+		uintptr_t start, end;
+		input >> start;
 		input.get();
-		input >> entry._end;
+		input >> end;
+
+		entry.setMemoryRegion( MemoryChunk(start, end) );
+
 		input >> entry._prot;
 
+		MemoryPageFlags pageflags;
 		pageflags.setShared( input.get() == 's' );
 
 		input >> entry._offset;

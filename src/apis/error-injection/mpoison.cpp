@@ -31,43 +31,7 @@
 #include <unistd.h>
 
 /* Variables used to manage and synchronize with mpoison thread */
-pthread_t tid;
-volatile bool started = false;
-volatile bool stop = false;
-volatile bool run = false;
 volatile bool failFlag = false;
-
-nanos::vm::MPoisonManager *mp_mgr;
-
-nanos::vm::MPoisonManager *nanos::vm::getMPoisonManager() {
-   return mp_mgr;
-}
-
-void *nanos::vm::mpoison_run(void *arg)
-{
-   //unsigned long *delay_start = (unsigned long*) arg;
-   //usleep( *delay_start );
-
-   mp_mgr->resetRndPageDist();
-   run &= sys.getMPoisonAmount() !=0; // if we must not inject errors, just skip...
-
-   while( run ) {
-
-      while( stop && run ) {}// wait until the other thread indicates 
-                             // to continue the poisoning
-
-      usleep( mp_mgr->getWaitTime() );
-      mp_mgr->blockPage();
-
-      if( sys.getMPoisonAmount() > sys.getExceptionStats().getInjectedErrors() 
-          || sys.getMPoisonAmount() < 0 ) {// It is intended to make an infinite loop if MPoisonAmount < 0
-         sys.getExceptionStats().incrInjectedErrors();
-      } else {
-         run = false;
-      }
-   }
-   return NULL;
-}
 
 extern "C" {
 
@@ -79,8 +43,6 @@ void mpoison_set_fail( bool value ) {
 void mpoison_do_fail() {
    if( failFlag ) {
       failFlag = false;
-      int *a = 0;
-      *a = 1;
    }
 }
 

@@ -7,11 +7,11 @@
 class ErrorInjectionThread {
 	private:
 		ErrorInjectionPolicy const& injectionPolicy;
-		std::thread injectionThread;
 		std::atomic<bool> terminate;
-		std::atomic<bool> dont_suspend;
+		std::atomic<bool> allowInjection;
 		std::mutex suspendMutex;
 		std::condition_variable suspendCondition;
+		std::thread injectionThread;
 
 		static void injectionLoop ( InjectionThread &thisThread ) {
 			while( !thisThread.shouldTermninate() ) {
@@ -24,18 +24,20 @@ class ErrorInjectionThread {
 			std::unique_lock<std::mutex> lockGuard( suspendMutex ); // Lock to safely access conditino variable
 			suspendCondition.wait_for( suspendMutex, // Mutex used for condition variable
 												injectionPolicy.getWaitTime(),// Timeout
-												[](){return dont_suspend;} // Predicate: should thread be resumed after notify?
+												[](){return allowInjection;} // Predicate: should thread be resumed after notify?
 											);
 		}
 
 		ErrorInjectionPolicy &getInjectionPolicy() { return injectionPolicy; }
 
 	public:
-		InjectionThread( ErrorInjectionPolicy const& manager ) std::noexcept :
+		InjectionThread( ErrorInjectionPolicy const& manager, bool suspend = true ) std::noexcept :
 				injectionPolicy( manager ),
-				injectionThread( injectionFunction, *this ),
 				terminate(false),
-				dont_suspend(true)
+				allowInjection(!suspend),
+				suspendMutex(),
+				suspendCondition(),
+				injectionThread( injectionFunction, *this )				
 		{
 			std::cout << "Starting injection thread" << std::endl;
 		}
@@ -43,7 +45,6 @@ class ErrorInjectionThread {
 		virtual ~InjectionThread() std::noexcept
 		{
 			terminate();
-
 			injectionThread.join();
 		}
 
@@ -54,19 +55,19 @@ class ErrorInjectionThread {
 		void terminate() std::noexcept {
 			std::unique_lock<std::mutex> lockGuard( suspendMutex );
 			terminate = true;
-			dont_suspend = true;
+			allowInjection = true;
 			suspendCondition.notify();
 		}
 
 		void stop() std::noexcept {
 			std::unique_lock<std::mutex> lockGuard( suspendMutex );
-			dont_suspend = false;
+			allowInjection = false;
 		}
 
 		void resume() std::noexcept {
 			std::unique_lock<std::mutex> lockGuard( suspendMutex );
-			if( !dont_suspend ) {
-				dont_suspend = true;
+			if( !allowInjection ) {
+				allowInjection = true;
 				suspendCondition.nofity();
 			}
 		}

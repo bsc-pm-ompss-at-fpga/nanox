@@ -17,8 +17,8 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef VMENTRY_HPP_
-#define VMENTRY_HPP_
+#ifndef VMENTRY_HPP
+#define VMENTRY_HPP
 
 #include "accessrights.hpp"
 #include "memoryaddress.hpp"
@@ -73,61 +73,73 @@ class MemoryPageFlags
 class VMEntry
 {
   private:
-	 Address _start; // Beginning address
-	 Address _end;   // Ending address
+	 MemoryChunk _region; //!< Area delimited by the mapping
 
 	 // File related attributes
-	 uint64_t _offset; // Offset in the file where the mapping starts
-	 uint64_t _inode; // Inode identifier
+	 uint64_t _offset;       //!< Offset in the file where the mapping starts
+	 uint64_t _inode;        //!< Inode identifier
 
-	 uint16_t _major; // Major device number
-	 uint16_t _minor; // Minor device number
+	 uint16_t _major;        //!< Major device number
+	 uint16_t _minor;        //!< Minor device number
 
-	 std::string _path; // Mapped file path
+	 std::string _path;      //!< Mapped file path
 
-	 AccessRights _prot;         // Access rights
-	 MemoryPageFlags _flags;        // Page flags
+	 AccessRights _prot;     //!< Access rights
+	 MemoryPageFlags _flags; //!< Page flags
 
-  public:
-	 friend std::istream&
-				operator>>(std::istream&, VMEntry &);
+	public:
+		friend std::istream& operator>>(std::istream&, VMEntry &);
 
-	 VMEntry();
+		VMEntry();
 
-	 VMEntry(Address const& start, Address const& end, AccessRights const& prot, MemoryPageFlags const& flags);
+		VMEntry( MemoryChunk const& area, AccessRights const& prot, MemoryPageFlags const& flags);
 
-	 VMEntry(Address const& start, Address const& end, AccessRights const& prot, MemoryPageFlags const& flags,
-						  uint64_t offset, uint64_t inode, uint8_t major, uint8_t minor, std::string path);
+		VMEntry( MemoryChunk const& area, AccessRights const& prot, MemoryPageFlags const& flags,
+				uint64_t offset, uint64_t inode, uint8_t major, uint8_t minor, std::string path);
 
-	 VMEntry(const VMEntry &other);
-
-	 virtual ~VMEntry();
-
-	 VMEntry& operator=(const VMEntry &other);
-
-	 AccessRights const& getAccessRights() const { return _prot; }
-
-	 Address const& getStart() const { return _start; }
-	 Address const& getEnd() const { return _end; }
-	 uint64_t getOffset() const { return _offset; }
-	 uint64_t getInode() const { return _inode; }
-	 uint64_t getDeviceMajor() const { return _major; }
-	 uint64_t getDeviceMinor() const { return _minor; }
-	 std::string getPath() const { return _path; }
-	 AccessRights const& getAccessRights() const { return _prot; }
-	 MemoryPageFlags const& getPageFlags() const { return _flags; }
-
-	 void setStart( Address const& address ) { _start = address; }
-	 void setEnd( Address const& address ) { _end = address; }
-	 void setOffset( uint64_t offset ) { _offset = offset; }
-	 void setInode( uint64_t inode ) { _inode = inode; }
-	 void setDeviceMajor( uint64_t major ) { _major = major; }
-	 void setDeviceMinor() { _minor = minor; }
-	 void setPath( std::string const& path ) { _path = path; }
-	 void setAccessRights( AccessRights const& access ) { _prot = access; }
-	 void setPageFlags( MemoryPageFlags const& pageflags ) { _flags = pageflags; }
+		VMEntry(VMEntry const &other);
+	
+		virtual ~VMEntry();
+	
+		VMEntry& operator=(VMEntry const &other);
+	
+		AccessRights const& getAccessRights() const { return _prot; }
+	
+		MemoryChunk const& getMemoryRegion() const { return _region; }
+	
+		uint64_t getOffset() const { return _offset; }
+	
+		uint64_t getInode() const { return _inode; }
+	
+		uint64_t getDeviceMajor() const { return _major; }
+	
+		uint64_t getDeviceMinor() const { return _minor; }
+	
+		std::string getPath() const { return _path; }
+	
+		AccessRights const& getAccessRights() const { return _prot; }
+	
+		MemoryPageFlags const& getPageFlags() const { return _flags; }
+	
+		void setMemoryRegion( MemoryChunk const& address ) { _start = address; }
+	
+		void setOffset( uint64_t offset ) { _offset = offset; }
+	
+		void setInode( uint64_t inode ) { _inode = inode; }
+	
+		void setDeviceMajor( uint64_t major ) { _major = major; }
+	
+		void setDeviceMinor() { _minor = minor; }
+	
+		void setPath( std::string const& path ) { _path = path; }
+	
+		void setAccessRights( AccessRights const& access ) { _prot = access; }
+	
+		void setPageFlags( MemoryPageFlags const& pageflags ) { _flags = pageflags; }
 };
 
 } // namespace vm
 } // namespace nanos
-#endif /* VMENTRY_HPP_ */
+
+#endif /* VMENTRY_HPP */
+
