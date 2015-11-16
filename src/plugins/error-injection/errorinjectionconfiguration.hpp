@@ -1,21 +1,29 @@
 
+#ifndef ERROR_INJECTION_CONFIG_HPP
+#define ERROR_INJECTION_CONFIG_HPP
+
 #include "config.hpp"
 #include "frequency.hpp"
 #include <chrono>
 #include <string>
 
 namespace nanos {
-namespace resiliency {
+namespace error {
 
 class ErrorInjectionConfig : public Config {
 	private:
-		std::string selected_injector;         //!< Name of the error injector selected by the user
-		std::frequency<float> injection_rate;  //!< Injection rate in Hz
-		unsigned injection_limit;              //!< Maximum number of errors injected (0: unlimited)
-		unsigned injection_seed;               //!< Error injection random number generator seed.
+		std::string selected_injector;    //!< Name of the error injector selected by the user
+		frequency<float> injection_rate;  //!< Injection rate in Hz
+		unsigned injection_limit;         //!< Maximum number of errors injected (0: unlimited)
+		unsigned injection_seed;          //!< Error injection random number generator seed.
 		
 	public:
-		ErrorInjectionConfig () : Config()
+		ErrorInjectionConfig () : 
+				Config(),
+				selected_injector("none"),
+				injection_rate(0),
+				injection_limit(0),
+				injection_seed(0)
 		{
 			registerConfigOption("error_injection",
 				NEW Config::StringVar(selected_injector, "none"),
@@ -52,4 +60,9 @@ class ErrorInjectionConfig : public Config {
 
 		unsigned getInjectionSeed() const { return injection_seed; }
 
-}
+};
+
+} // namespace error
+} // namespace nanos
+
+#endif // ERROR_INJECTION_CONFIG

@@ -69,10 +69,6 @@
 #include "backupmanager.hpp"
 #endif
 
-#ifdef NANOS_FAULT_INJECTION
-#include "mpoison.h"
-#endif
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -108,12 +104,6 @@ System::System () :
       , _resiliency_disabled(false)
       , _task_max_trials(1)
       , _backup_pool_size(sysconf(_SC_PAGESIZE ) * sysconf(_SC_PHYS_PAGES) / 2)
-#endif
-#ifdef NANOS_FAULT_INJECTION
-      , _memory_poison_enabled(false)
-      , _memory_poison_seed(time(0))
-      , _memory_poison_rate(0.0f)
-      , _memory_poison_amount(-1)
 #endif
       , _affinityFailureCount( 0 )
       , _createLocalTasks( false )
@@ -627,6 +617,7 @@ void System::start ()
       environmentSummary();
 
 #ifdef HAVE_CXX11
+		// TODO: move this to the new exception design directory
       // If the summary is enabled, print the final execution summary
       // even if the application is terminated by an error.
       std::set_terminate( [](){
@@ -696,7 +687,9 @@ void System::finish ()
 
    verbose ( "NANOS++ statistics");
    verbose ( std::dec, (unsigned int) getCreatedTasks(),         " tasks have been executed" );
-#ifdef NANOS_RESILIENCY_ENABLED
+
+// TODO: review statistic gathering for resiliency
+#if 0 //def NANOS_RESILIENCY_ENABLED
    verbose ( std::dec, (unsigned int) getInjectedErrors(),       " errors injected" );
    verbose ( std::dec, (unsigned int) getInitializationErrors(), " tasks could not be initialized (backup failed)" );
    verbose ( std::dec, (unsigned int) getExecutionErrors(),      " task executions failed" );
@@ -1527,7 +1520,8 @@ void System::executionSummary( void )
    message0( "============ Nanos++ Final Execution Summary ==================" );
    message0( "=== Application ended in ", seconds, " seconds" );
    message0( "=== ", std::dec, getCreatedTasks(),         " tasks have been executed" );
-#ifdef NANOS_RESILIENCY_ENABLED
+// TODO review statistic gathering for resiliency
+#if 0 //def NANOS_RESILIENCY_ENABLED
    message0( "=== ", std::dec, getInjectedErrors(),       " errors injected" );
    message0( "=== ", std::dec, getInitializationErrors(), " tasks could not be initialized (backup failed)" );
    message0( "=== ", std::dec, getExecutionErrors(),      " task executions failed" );

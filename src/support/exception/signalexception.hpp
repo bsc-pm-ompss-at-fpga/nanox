@@ -20,7 +20,7 @@
 #ifndef SIGNAL_EXCEPTION_HPP
 #define SIGNAL_EXCEPTION_HPP
 
-#include "exceptiontracer.hpp"
+#include "genericexception.hpp"
 #include "signaltranslator.hpp"
 #include "signalinfo.hpp"
 
@@ -37,28 +37,31 @@ class SignalException : public GenericException {
 		SignalInfo handledSignalInfo;
 		ExecutionContext executionContextWhenHandled;
 
-	protected:
-		void setErrorMessage( std::string const& message ) { errorMessage = message; }
+	public:
+		SignalException( siginfo_t* signalInfo, ucontext_t* executionContext, std::string const& message ) :
+				GenericException( message ),
+				handledSignalInfo( signalInfo ), 
+				executionContextWhenHandled( executionContext ) 
+		{}
+
+		/* \brief Deallocates resources and restores 
+		 * \details In addition to freeing the memory used for saving signal structs, 
+		 * it also unblocks the signal when the exception is deleted.
+		 * Deletion is usually performed at the end of the catch block, unless
+		 * the exception is thrown through the heap (catch by pointer), where the user 
+		 * is responsible for calling the delete operation explicitly.
+		 */
+		virtual ~SignalException() {
+			sigset_t thisSignalMask;
+			sigemptyset(&thisSignalMask);
+			sigaddset(&thisSignalMask, handledSignalInfo.getSignalNumber());
+			pthread_sigmask(SIG_UNBLOCK, &thisSignalMask, NULL);
+		}
 
 		SignalInfo const& getHandledSignalInfo() const { return handledSignalInfo; }
 
 		ExecutionContext const& getExecutionContextWhenHandled() { return executionContextWhenHandled; }
 
-	public:
-		SignalException( siginfo_t* signalInfo, ucontext_t* executionContext, std::string const& errorMessage ) :
-				GenericException( errorMessage ),
-				handledSignalInfo( signalInfo ), 
-				executionContextWhenHandled( executionContext ) 
-		{}
-
-		virtual ~SignalException() {
-			// Unblock the signal when the exception is deleted
-			// Deletion should be performed at the end of the catch block.
-			sigset_t thisSignalMask;
-			sigemptyset(&thisSignalMask);
-			sigaddset(&thisSignalMask, handledSignalInfo.getSignalNumber());
-			pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
-		}
 };
 
 class SegmentationFaultException : public SignalException {

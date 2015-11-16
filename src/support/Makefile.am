@@ -191,13 +191,18 @@ support_sources = \
 	genericevent.cpp \
 	exception/exceptiontracer.hpp \
 	exception/genericexception.hpp \
-	exception/mpierror.hpp \
-	exception/mpierror.cpp \
-	exception/mpierrorhandler.hpp \
-	exception/mpierrortranslator.hpp \
-	exception/mpierrorhandler.hpp \
-	exception/mpierrortranslator.hpp \
-	$(END) 
+	$(END)
+
+# if MPI
+# support_sources= \
+# 	exception/mpierror.hpp \
+# 	exception/mpierror.cpp \
+# 	exception/mpierrorhandler.hpp \
+# 	exception/mpierrortranslator.hpp \
+# 	exception/mpierrorhandler.hpp \
+# 	exception/mpierrortranslator.hpp \
+# 	$(END) 
+# endif
 
 debug_sources = \
 	memtracker_fwd.hpp\
@@ -214,7 +219,6 @@ gpu_support_sources = \
 	$(END)
 endif
 	
-
 noinst_LTLIBRARIES =
 
 if fault_injection_enabled

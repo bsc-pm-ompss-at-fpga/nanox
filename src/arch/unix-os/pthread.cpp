@@ -34,7 +34,7 @@
 #include <cstddef>
 #endif
 
-#ifdef NANOS_RESILIENCY_ENABLED
+#if 0 //def NANOS_RESILIENCY_ENABLED
 #include "mpoison.hpp"
 using nanos::vm::MPoisonManager;
 #endif
@@ -186,7 +186,7 @@ void PThread::setupSignalHandlers ()
 
 }
 
-#ifdef ARM_RECOVERY_WORKAROUND
+#if 0 //def ARM_RECOVERY_WORKAROUND
 /*
  * The ARM version does not support signal to exception converstion.
  * Because of it we implement a workaround for it.

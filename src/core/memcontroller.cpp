@@ -431,7 +431,7 @@ void MemController::restoreBackupData ( )
          _restoreOps->issue(_wd);
       } else {
          if( _wd.getParent() == NULL ||               // If we haven't any ancestor to recover
-               !_wd.getParent()->setInvalid( true ) ) // or we cannot find any ancestor which is recoverable
+               !_wd.getParent()->propagateInvalidation() ) // or we cannot find any ancestor which is recoverable
             fatal("Resiliency: Unrecoverable error found. "
                   "Found an invalidated backup and I haven't any ancestor which can recover the execution." );
       }

@@ -1,6 +1,6 @@
 
 #include "nanos-error-injection.h"
-#include "errorinjectioninterface.hpp"
+#include "../plugins/error-injection/errorinjectioninterface.hpp"
 
 void nanos_inject_error( void *handle )
 {

@@ -29,8 +29,9 @@
 
 #ifdef NANOS_RESILIENCY_ENABLED
 #include <cstdint>
-#include "taskexception.hpp"
 #include "memcontroller_decl.hpp"
+#include "exception/operationfailure.hpp"
+#include "exception/executionfailure.hpp"
 
 #ifdef NANOS_FAULT_INJECTION
 #include <cstring>
@@ -131,7 +132,7 @@ void SMPDD::execute ( WD &wd ) throw ()
        *  before allocating a new stack for the task and, perhaps,
        *  skip data copies of dependences.
        */
-      WorkDescriptor *ancestor = wd.propagateInvalidation();
+      /*WorkDescriptor *ancestor =*/ wd.propagateInvalidation();
       debug ( "Resiliency: Task ", wd.getId(), " is flagged as invalid. Skipping it.");
 
       NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
@@ -156,13 +157,13 @@ void SMPDD::execute ( WD &wd ) throw ()
                sys.setFaultyAddress(0);
             }
 #endif
-         } catch (nanos::OperationFailure& failure) {
+         } catch (nanos::error::OperationFailure& failure) {
 
             debug("Resiliency: error detected during task ", wd.getId(), " execution.");
-				ExecutionFailure handle( failure );
+				nanos::error::ExecutionFailure handle( failure );
 				// TODO move the following to ExecutionFailure
             sys.getExceptionStats().incrExecutionErrors();
-            e.handleExecutionError( );
+            //e.handleExecutionError( );
          }
 
          /* 
@@ -190,13 +191,15 @@ void SMPDD::execute ( WD &wd ) throw ()
                restart = false;
             }
          } catch ( std::exception &ex ) {
-            bool recoverable_error = wd.getParent() && wd.getParent()->setInvalid(true);
-            if( !recoverable_error )
-            {
-               // Unrecoverable error: terminate execution
-               fatal("An error was found, but there isn't any recoverable ancestor. ");
-            }
-         
+				// TODO: this has to be reviewed.
+				/* Exceptions in restore() should not be allowed
+             * bool recoverable_error = wd.getParent() && wd.getParent()->setInvalid(true);
+             * if( !recoverable_error )
+             * {
+             *    // Unrecoverable error: terminate execution
+             *    fatal("An error was found, but there isn't any recoverable ancestor. ");
+             * }
+         	 */
             restart = false;
          }
          if(restart) {

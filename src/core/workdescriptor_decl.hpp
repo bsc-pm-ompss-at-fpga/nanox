@@ -717,7 +717,7 @@ typedef std::set<const Device *>  DeviceList;
              \param A flag that indicates whether this task is being invalidated or not.
              \return A boolean value that indicates if either the task itself is recoverable or a recoverable ancestor was found.
          */
-         bool setInvalid ( bool flag );
+         void setInvalid ( bool flag );
 
          //! \brief Returns whether a WorkDescriptor is invalid or not.
          bool isInvalid ( void ) const;

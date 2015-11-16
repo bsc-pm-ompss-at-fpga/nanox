@@ -33,9 +33,8 @@ class Address {
 	private:
 		uintptr_t value; //!< Memory address
 	public:
-		//! \brief Default constructor
-		constexpr
-		Address() : value(0) {}
+		//! \brief Default constructor: uninitialized address does not make sense
+		Address() = delete;
 
 		/*! \brief Constructor by initialization.
 		 *  \details Creates a new Address instance
@@ -123,13 +122,69 @@ class Address {
 		 */
 		constexpr
 		Address align( size_t alignment_constraint ) {
-			return Address( value & ~(alignment_constraint-1) );
+			return Address(
+						value &
+						~( alignment_constraint-1 )
+						);
+		}
+
+		/*! @returns returns an aligned address
+		 * @tparam alignment_constraint the alignment to be applied
+		 */
+		template< size_t alignment_constraint >
+		constexpr
+		Address align() {
+			return Address(
+						value &
+						~( alignment_constraint-1 )
+						);
+		}
+
+		/*! @returns returns an aligned address
+		 * @param[in] lsb least significant bit of the aligned address
+		 *
+		 * \detail LSB is a common term for specifying the imoprtant
+		 *         part of an address in an specific context.
+		 *         For example, in virtual page management, lsb is
+		 *         usually 12 ( 2^12: 4096 is the page size ).
+		 *
+		 *         Basically we have to build a mask where all the bits
+		 *         in a position less significant than lsb are equal
+		 *         to 0:
+		 *          1) Create a number with a '1' value in the lsb-th
+		 *             position.
+		 *          2) Substract one: all bits below the lsb-th will
+		 *             be '1'.
+		 *          3) Perform a bitwise-NOT to finish the mask with
+		 *             all 1s but in the non-significant bits.
+		 */
+		constexpr
+		Address alignToLSB( short lsb ) {
+			return Address(
+						value &
+						~( (1<<lsb)-1 )
+						);
+		}
+
+		/*! @returns returns an aligned address
+		 * @tparam alignment_constraint the alignment to be applied
+		 * \sa alignUsingLSB"("short lsb")"
+		 */
+		template< short lsb >
+		constexpr
+		Address alignToLSB() {
+			return Address(
+						value &
+						~( (1<<lsb)-1 )
+						);
 		}
 };
 
 /*! \brief Prints an address object to an output stream.
  *  \details String representation of an address in hexadecimal.
  */
+std::ostream& operator<<(std::ostream& out, Address const &entry);
+
 std::ostream& operator<<(std::ostream& out, Address const &entry)
 {
 	return out << std::hex << static_cast<uintptr_t>( entry );

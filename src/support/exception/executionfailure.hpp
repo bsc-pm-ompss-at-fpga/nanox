@@ -27,11 +27,15 @@ namespace error {
 
 class ExecutionFailure {
 	private:
-		OperationFailure const& failedOperation;
+		OperationFailure &failedOperation;
 	public:
-		ExecutionFailure( OperationFailure const& operation ) :
+		ExecutionFailure( OperationFailure &operation ) :
 				failedOperation( operation )
 		{
+			WorkDescriptor *recoverableAncestor = failedOperation.getTaskInvolved().propagateInvalidation();
+			if( !recoverableAncestor ) {
+				fatal( "Could not find a recoverable task when recovering from ", failedOperation.what() );
+			}
 		}
 };
 

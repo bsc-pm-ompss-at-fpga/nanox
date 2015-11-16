@@ -29,7 +29,7 @@ pkginclude_HEADERS=\
    c/nanos_version.h \
    c/nanos_reduction.h \
    c/nanos_atomic.h \
-	error_injection/nanos-error-injection.h
+	error-injection/nanos-error-injection.h
 	$(END)
 
 BUILT_SOURCES=\
@@ -73,7 +73,7 @@ nanos_c_sources = \
 	$(END) 
 
 nanos_error_injection_sources = \
-	error_injection/nanos-error-injection.cpp \
+	error-injection/nanos-error-injection.cpp \
 	$(END)
 
 

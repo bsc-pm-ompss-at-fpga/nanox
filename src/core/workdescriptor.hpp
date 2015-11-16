@@ -510,7 +510,7 @@ inline void *WorkDescriptor::getRemoteAddr() const {
    return _remoteAddr;
 }
 
-inline bool WorkDescriptor::setInvalid( bool flag ) { _flags.is_invalid = flag; }
+inline void WorkDescriptor::setInvalid( bool flag ) { _flags.is_invalid = flag; }
 
 inline bool WorkDescriptor::isInvalid() const { return _flags.is_invalid; }
 
@@ -524,7 +524,7 @@ inline WorkDescriptor *WorkDescriptor::propagateInvalidation ()
 	WorkDescriptor *next = current->getParent();
 
    current->setInvalid(true);
-	while ( !current->isRecoverable() && next ) {
+	while ( next && !next->isRecoverable() && !next->isInvalid() ) {
 		current = next;
 		current->setInvalid(true);
 		next = current->getParent();

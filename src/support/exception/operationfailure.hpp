@@ -32,21 +32,11 @@ namespace error {
  */
 class OperationFailure : public SegmentationFaultException {
 	private:
-		WorkDescriptor &runningTaskWhenHandled;
-		//WorkDescriptor &plannedTaskWhenHandled;
 		using super=SegmentationFaultException;
 	public:
 		OperationFailure( siginfo_t* signalInfo, ucontext_t* executionContext ) :
-				super( signalInfo, executionContext ),
-				runningTaskWhenHandled( *(getMyThreadSafe()->getCurrentWD()) )
-				//plannedTaskWhenHandled( *(getMyThreadSafe()->getPlannedWD()) )
+				super( signalInfo, executionContext )
 		{
-			WorkDescriptor *recoverableAncestor = runningTaskWhenHandled.propagateInvalidation();
-			//bool isRecoverable = task->setInvalid( true );
-			//if( !isRecoverable ) {
-			if( !recoverableAncestor ) {
-				fatal( "Could not find a recoverable task when recovering from ", failedOperation.what() );
-			}
 		}
 };
 

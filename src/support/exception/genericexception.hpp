@@ -49,7 +49,7 @@ namespace error {
 class GenericException : public ExceptionTracer, public std::exception {
    private:
       std::string errorMessage;//!< Explanatory string.
-      WorkDescriptor &runningTaskOnError;//!< WorkDescriptor that was being executed when the error was found.
+      WorkDescriptor &taskInvolved;//!< WorkDescriptor that was being executed when the error was found.
 
    public:
       /**
@@ -58,10 +58,15 @@ class GenericException : public ExceptionTracer, public std::exception {
        */
       GenericException( std::string const& message ) : 
             errorMessage( message ), 
-            runningTaskOnError( *getMyThreadSafe()->getCurrentWD() )
+            taskInvolved( *getMyThreadSafe()->getCurrentWD() )
       {}
 
       ~GenericException() throw() {}
+
+		WorkDescriptor &getTaskInvolved()
+		{
+			return taskInvolved;
+		}
 
       /**
        * Provides access to an explanatory string
@@ -75,4 +80,5 @@ class GenericException : public ExceptionTracer, public std::exception {
 }// namespace error
 }// namespace nanos
 
-#endif // GENERICEXCEPTION_HPP
+#endif // GENERIC_EXCEPTION_HPP
+
