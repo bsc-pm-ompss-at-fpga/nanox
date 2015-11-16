@@ -29,6 +29,7 @@ pkginclude_HEADERS=\
    c/nanos_version.h \
    c/nanos_reduction.h \
    c/nanos_atomic.h \
+	error_injection/nanos-error-injection.h
 	$(END)
 
 BUILT_SOURCES=\
@@ -71,9 +72,16 @@ nanos_c_sources = \
 	c/nanos_dependence.cpp\
 	$(END) 
 
+nanos_error_injection_sources = \
+	error_injection/nanos-error-injection.cpp \
+	$(END)
+
 
 if DEBUG_VERSION
-debug_LTLIBRARIES=debug/libnanox-c.la
+debug_LTLIBRARIES= \
+	debug/libnanox-c.la \
+	debug/libnanox-error-injection.la \
+	$(END)
 
 nanos_debug_cxxflags=$(common_includes) $(common_debug_cxxflags)
 nanos_debug_fcflags=$(common_includes) $(common_debug_fcflags)
@@ -84,11 +92,21 @@ debug_libnanox_c_la_LDFLAGS=$(version_flags) $(ignore_muldefs)
 debug_libnanox_c_la_LIBADD=$(top_builddir)/src/core/debug/libnanox.la
 debug_libnanox_c_la_SOURCES=$(nanos_c_sources)
 debug_libnanox_c_la_DEPENDENCIES=$(top_builddir)/src/core/debug/libnanox.la
+
+debug_libnanox_error_injection_la_FCFLAGS=$(nanos_debug_fcflags)
+debug_libnanox_error_injection_la_CXXFLAGS=$(nanos_debug_cxxflags)
+debug_libnanox_error_injection_la_LDFLAGS=$(version_flags) $(ignore_muldefs)
+debug_libnanox_error_injection_la_LIBADD=$(top_builddir)/src/core/debug/libnanox.la
+debug_libnanox_error_injection_la_SOURCES=$(nanos_error_injection_sources)
+debug_libnanox_error_injection_la_DEPENDENCIES=$(top_builddir)/src/core/debug/libnanox.la
 endif
 
 
 if INSTRUMENTATION_VERSION
-instrumentation_LTLIBRARIES=instrumentation/libnanox-c.la
+instrumentation_LTLIBRARIES= \
+	instrumentation/libnanox-c.la \
+	instrumentation/libnanox-error-injection.la \
+	$(END)
 
 nanos_instr_cxxflags=$(common_includes) $(common_instr_cxxflags)
 nanos_instr_fcflags=$(common_includes) $(common_instr_fcflags)
@@ -99,10 +117,20 @@ instrumentation_libnanox_c_la_LDFLAGS=$(version_flags) $(ignore_muldefs)
 instrumentation_libnanox_c_la_LIBADD=$(top_builddir)/src/core/instrumentation/libnanox.la
 instrumentation_libnanox_c_la_SOURCES=$(nanos_c_sources)
 instrumentation_libnanox_c_la_DEPENDENCIES=$(top_builddir)/src/core/instrumentation/libnanox.la
+
+instrumentation_libnanox_error_injection_la_FCFLAGS=$(nanos_instr_fcflags)
+instrumentation_libnanox_error_injection_la_CXXFLAGS=$(nanos_instr_cxxflags)
+instrumentation_libnanox_error_injection_la_LDFLAGS=$(version_flags) $(ignore_muldefs)
+instrumentation_libnanox_error_injection_la_LIBADD=$(top_builddir)/src/core/instrumentation/libnanox.la
+instrumentation_libnanox_error_injection_la_SOURCES=$(nanos_error_injection_sources)
+instrumentation_libnanox_error_injection_la_DEPENDENCIES=$(top_builddir)/src/core/instrumentation/libnanox.la
 endif
 
 if INSTRUMENTATION_DEBUG_VERSION
-instrumentation_debug_LTLIBRARIES=instrumentation-debug/libnanox-c.la
+instrumentation_debug_LTLIBRARIES= \
+	instrumentation-debug/libnanox-c.la \
+	instrumentation-debug/libnanox-error-injection.la \
+	$(END)
 
 nanos_instrdebug_cxxflags=$(common_includes) $(common_instrdebug_cxxflags)
 nanos_instrdebug_fcflags=$(common_includes) $(common_instrdebug_fcflags)
@@ -113,10 +141,20 @@ instrumentation_debug_libnanox_c_la_LDFLAGS=$(version_flags) $(ignore_muldefs)
 instrumentation_debug_libnanox_c_la_LIBADD=$(top_builddir)/src/core/instrumentation-debug/libnanox.la
 instrumentation_debug_libnanox_c_la_SOURCES=$(nanos_c_sources)
 instrumentation_debug_libnanox_c_la_DEPENDENCIES=$(top_builddir)/src/core/instrumentation-debug/libnanox.la
+
+instrumentation_debug_libnanox_error_injection_la_FCFLAGS=$(nanos_debug_fcflags)
+instrumentation_debug_libnanox_error_injection_la_CXXFLAGS=$(nanos_debug_cxxflags)
+instrumentation_debug_libnanox_error_injection_la_LDFLAGS=$(version_flags) $(ignore_muldefs)
+instrumentation_debug_libnanox_error_injection_la_LIBADD=$(top_builddir)/src/core/instrumentation-debug/libnanox.la
+instrumentation_debug_libnanox_error_injection_la_SOURCES=$(nanos_error_injection_sources)
+instrumentation_debug_libnanox_error_injection_la_DEPENDENCIES=$(top_builddir)/src/core/instrumentation-debug/libnanox.la
 endif
 
 if PERFORMANCE_VERSION
-performance_LTLIBRARIES=performance/libnanox-c.la
+performance_LTLIBRARIES= \
+	performance/libnanox-c.la \
+	performance/libnanox-error-injection.la \
+	$(END)
 
 nanos_perfo_cxxflags=$(common_includes) $(common_perfo_cxxflags)
 nanos_perfo_fcflags=$(common_includes) $(common_perfo_fcflags)
@@ -127,6 +165,13 @@ performance_libnanox_c_la_LDFLAGS=$(version_flags) $(ignore_muldefs)
 performance_libnanox_c_la_LIBADD=$(top_builddir)/src/core/performance/libnanox.la
 performance_libnanox_c_la_SOURCES=$(nanos_c_sources)
 performance_libnanox_c_la_DEPENDENCIES=$(top_builddir)/src/core/performance/libnanox.la
+
+performance_libnanox_error_injection_la_FCFLAGS=$(nanos_debug_fcflags)
+performance_libnanox_error_injection_la_CXXFLAGS=$(nanos_debug_cxxflags)
+performance_libnanox_error_injection_la_LDFLAGS=$(version_flags) $(ignore_muldefs)
+performance_libnanox_error_injection_la_LIBADD=$(top_builddir)/src/core/performance/libnanox.la
+performance_libnanox_error_injection_la_SOURCES=$(nanos_error_injection_sources)
+performance_libnanox_error_injection_la_DEPENDENCIES=$(top_builddir)/src/core/performance/libnanox.la
 endif
 #####################################################################################
 #####################################################################################
