@@ -2,21 +2,24 @@
 #ifndef ERROR_INJECTION_PLUGIN_HPP
 #define ERROR_INJECTION_PLUGIN_HPP
 
+#include "errorinjectionpolicy.hpp"
+#include "plugin.hpp"
+
 namespace nanos {
-namespace resiliency {
+namespace error {
 
 class ErrorInjectionPlugin : public Plugin
 {
    public:
       ErrorInjectionPlugin() : 
-				Plugin( "InjectionPlugin", 1 ),
+				Plugin( "ErrorInjectionPlugin", 1 )
 		{
 		}
 
 		virtual ErrorInjectionPolicy &getInjectionPolicy() = 0;
 };
 
-}// namespace resiliency
+}// namespace error
 }// namespace nanos
 
 #endif // ERROR_INJECTION_PLUGIN_HPP

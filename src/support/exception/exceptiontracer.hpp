@@ -25,6 +25,7 @@
 
 #include <execinfo.h>
 #include <signal.h>
+#include <stdlib.h>
 
 #include <exception>
 

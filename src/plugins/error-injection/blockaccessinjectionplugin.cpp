@@ -1,10 +1,10 @@
 
 #include "blockaccessinjector.hpp"
 #include "errorinjectionplugin.hpp"
-
+#include "system.hpp"
 
 namespace nanos {
-namespace resiliency {
+namespace error {
 
 class BlockPageAccessInjectionPlugin : public ErrorInjectionPlugin
 {
@@ -19,8 +19,13 @@ class BlockPageAccessInjectionPlugin : public ErrorInjectionPlugin
 		}
 
 		virtual ErrorInjectionPolicy &getInjectionPolicy() { return policy; }
+
+		static const char* pluginName() { return "block-access"; }
 };
 
 }// namespace resiliency
 }// namespace nanos
 
+DECLARE_PLUGIN( nanos::error::BlockPageAccessInjectionPlugin::pluginName(),
+                nanos::error::BlockPageAccessInjectionPlugin
+              );

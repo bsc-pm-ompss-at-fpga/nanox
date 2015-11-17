@@ -520,9 +520,6 @@ void System::start ()
 
       memory_space_id_t backup_id = addSeparateMemoryAddressSpace( *mgr, true /*allocWide*/);
       _backupMemory = &getSeparateMemory( backup_id );
-
-      // Setup signal handlers
-      myThread->setupSignalHandlers();
    }
 #endif
 

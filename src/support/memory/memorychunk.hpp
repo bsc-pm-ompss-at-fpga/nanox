@@ -22,22 +22,14 @@
 
 #include "memoryaddress.hpp"
 
-/*! \brief Checks that an alignment constraint is fulfilled
- */
-constexpr
-bool is_properly_aligned( Address address, size_t alignment_constraint )
-{
-   return ( reinterpret_cast<uintptr_t>(address.data()) & (alignment_constraint-1) ) == 0;
-}
-
 /*!
  * \brief Represents a contiguous area of memory.
  * \author Jorge Bellon
  */
 class MemoryChunk {
    private:
-      Address baseAddress; //!< Beginning address of the chunk
-      size_t length;       //!< Size of the chunk
+      Address _baseAddress; //!< Beginning address of the chunk
+      size_t  _length;       //!< Size of the chunk
    public:
 		/*! \brief Creates a new representation of an area of memory.
 		 * @param[in] base beginning address of the region.
@@ -45,7 +37,7 @@ class MemoryChunk {
 		 */
       constexpr
       MemoryChunk( Address const& base, size_t chunkLength ) :
-            baseAddress( base ), length( chunkLength )
+            _baseAddress( base ), _length( chunkLength )
       {
       }
 
@@ -55,26 +47,25 @@ class MemoryChunk {
 		 */
       constexpr
       MemoryChunk( Address const& begin, Address const& end ) :
-            baseAddress( begin ), length( end - base )
+            _baseAddress( begin ), _length( end - begin )
       {
-			static_assert( begin < end, "Illegal representation of the memory region." );
       }
 
 		//! \returns the lower limit address of the region.
       constexpr
-      Address getBaseAddress() const { return baseAddress; }
+      Address getBaseAddress() const { return _baseAddress; }
 
 		//! \returns the size of the region.
       constexpr
-      size_t getSize() const { return length; }
+      size_t size() const { return _length; }
 
 		//! \returns the lower limit address of the region.
       constexpr
-      Address begin() const { return baseAddress; }
+      Address begin() const { return _baseAddress; }
 
 		//! \returns the upper limit address of the region.
       constexpr
-      Address end() const { return baseAddress+length; }
+      Address end() const { return _baseAddress+_length; }
 };
 
 /*!
@@ -87,22 +78,15 @@ template <size_t alignment_restriction>
 class AlignedMemoryChunk : public MemoryChunk {
    public:
       constexpr
-      AlignedMemoryChunk( Address const& baseAddress, size_t length ) :
-            MemoryChunk( baseAddress, length )
+      AlignedMemoryChunk( Address const& baseAddress, size_t chunkSize ) :
+            MemoryChunk( baseAddress, chunkSize )
       {
-         static_assert( is_properly_aligned( baseAddress, alignment_restriction ),
-                                 "Provided address is not properly aligned." );
-			static_assert( is_properly_ailgned( length, alignment_restriction ),
-											"Provided size is not properly aligned." );
       }
 
       constexpr
       AlignedMemoryChunk( Address const& baseAddress, Address const& endAddress ) :
             MemoryChunk( baseAddress, endAddress )
       {
-          static_assert( is_properly_aligned( baseAddress, alignment_restriction )
-							&& is_properly_aligned( endAddress, alignment_restriction ),
-                                  "Provided addresses are not properly aligned." );
       }
 
       template<class ChunkType>

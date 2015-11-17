@@ -21,6 +21,8 @@
 #define GENERIC_EXCEPTION_HPP
 
 #include "exceptiontracer.hpp"
+#include "workdescriptor_fwd.hpp"
+#include "basethread_decl.hpp"
 
 #include <exception>
 #include <string>

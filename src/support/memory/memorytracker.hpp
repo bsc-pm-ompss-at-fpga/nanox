@@ -1,27 +1,34 @@
 
+#ifndef MEMORY_TRACKER_HPP
+#define MEMORY_TRACKER_HPP
+
 #include "memorychunk.hpp"
 
-template <typedef ChunkType>
+template <typename ChunkType>
 class MemoryTracker {
 	private:
-		size_t totalSize;
-		std::list<ChunkType> chunkList;
+		using ChunkList = std::list<ChunkType>;
+
+		size_t _totalSize;
+		ChunkList _listOfChunks;
 
 	public:
 		MemoryTracker( std::initializer_list<ChunkType> startingListOfChunks ) :
-			chunkList( startingListOfChunks )
+			_listOfChunks( startingListOfChunks )
 		{
 		}
 
-		void addMemoryChunk( MemoryChunk const& chunk ) {
-			chunkList.push_back( chunk );
-			totalSize += chunkList.back().getSize()
+		void insert( MemoryChunk const& chunk ) {
+			_listOfChunks.push_back( chunk );
+			_totalSize += _listOfChunks.back().getSize();
 		}
 
-		size_t getTotalSize() const { return totalSize; }
+		size_t getTotalSize() const { return _totalSize; }
 
-		std::deque<ChunkType> const& getChunks() const { return chunkList; }
+		ChunkList const& getChunks() const { return _listOfChunks; }
 
-		ChunkType const& at( unsigned position ) const { return chunkList.at(position); }
+		ChunkType const& at( unsigned position ) const { return _listOfChunks.at(position); }
 };
+
+#endif // MEMORY_TRACKER_HPP
 

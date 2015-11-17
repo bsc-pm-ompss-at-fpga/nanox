@@ -95,15 +95,10 @@ devinclude_HEADERS = \
 	requestqueue_decl.hpp \
 	requestqueue.hpp \
 	printbt_decl.hpp \
-        smpbaseplugin_decl.hpp \
+	smpbaseplugin_decl.hpp \
 	pinnedallocator_decl.hpp \
 	genericevent_decl.hpp \
 	$(END) 
-
-if fault_injection_enabled
-devinclude_HEADERS += \
-	mpoison.h
-endif
 
 support_sources = \
 	resourcemanager.hpp\
@@ -191,6 +186,8 @@ support_sources = \
 	genericevent.cpp \
 	exception/exceptiontracer.hpp \
 	exception/genericexception.hpp \
+	exception/signalexception.cpp \
+	memory/memoryaddress.cpp \
 	$(END)
 
 # if MPI
@@ -221,22 +218,11 @@ endif
 	
 noinst_LTLIBRARIES =
 
-if fault_injection_enabled
-libmpoison_sources = \
-	errinjection/vmentry.hpp \
-	errinjection/vmentry.cpp \
-	errinjection/mpoison.h \
-	errinjection/mpoison.hpp \
-	errinjection/mpoison.cpp \
-	errinjection/mpoisonmanager.hpp \
-	errinjection/mpoisonmanager.cpp
-endif
-
 if DEBUG_VERSION
 noinst_LTLIBRARIES += debug/libsupport.la
 
 debug_libsupport_la_CXXFLAGS=$(common_includes) $(common_debug_cxxflags)
-debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources) $(gpu_support_sources) $(libmpoison_sources)
+debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources) $(gpu_support_sources)
 debug_libsupport_la_LDFLAGS=$(dlb_debug_ldflags)
 
 endif
@@ -245,7 +231,7 @@ if INSTRUMENTATION_VERSION
 noinst_LTLIBRARIES += instrumentation/libsupport.la
 
 instrumentation_libsupport_la_CXXFLAGS=$(common_includes) $(common_instr_cxxflags)
-instrumentation_libsupport_la_SOURCES=$(support_sources) $(gpu_support_sources) $(libmpoison_sources)
+instrumentation_libsupport_la_SOURCES=$(support_sources) $(gpu_support_sources)
 instrumentation_libsupport_la_LDFLAGS=$(dlb_instr_ldflags)
 
 endif
@@ -254,7 +240,7 @@ if INSTRUMENTATION_DEBUG_VERSION
 noinst_LTLIBRARIES += instrumentation-debug/libsupport.la
 
 instrumentation_debug_libsupport_la_CXXFLAGS=$(common_includes) $(common_instrdebug_cxxflags)
-instrumentation_debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources) $(gpu_support_sources) $(libmpoison_sources)
+instrumentation_debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources) $(gpu_support_sources)
 instrumentation_debug_libsupport_la_LDFLAGS=$(dlb_instrdebug_ldflags)
 
 endif
@@ -263,7 +249,7 @@ if PERFORMANCE_VERSION
 noinst_LTLIBRARIES += performance/libsupport.la
 
 performance_libsupport_la_CXXFLAGS=$(common_includes) $(common_perfo_cxxflags)
-performance_libsupport_la_SOURCES=$(support_sources) $(gpu_support_sources) $(libmpoison_sources)
+performance_libsupport_la_SOURCES=$(support_sources) $(gpu_support_sources)
 performance_libsupport_la_LDFLAGS=$(dlb_perfo_ldflags)
 
 endif

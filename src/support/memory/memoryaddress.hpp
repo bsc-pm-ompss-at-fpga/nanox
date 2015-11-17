@@ -55,27 +55,15 @@ class Address {
 		constexpr
 		Address( Address const& o ) : value(o.value) {}
 
-		//! \brief Null pointer constructor is not supported.
-		Address( std::nullptr_t ) = delete;
-
-		//! \brief Null pointer assignment is not supported.
-		Address const& operator=( std::nullptr_t ) = delete;
-
-		//! \brief Null pointer comparison is not supported.
-		bool operator==( std::nullptr_t ) = delete;
-
-		//! \brief Null pointer comparison is not supported.
-		bool operator!=( std::nullptr_t ) = delete;
-
 		//! \brief Checks if two addresses are equal
 		constexpr
-		bool operator==( Address const& o )  {
+		bool operator==( Address const& o ) {
 			return value == o.value;
 		}
 
 		//! \brief Checks if two addresses differ
 		constexpr
-		bool operator!=( Address const& o )  {
+		bool operator!=( Address const& o ) {
 			return value != o.value;
 		}
 
@@ -86,7 +74,7 @@ class Address {
 		 *  with respect to the value of this object.
 		 */
 		constexpr
-		Address operator+( size_t size )  {
+		Address operator+( size_t size ) {
 			return Address( reinterpret_cast<uintptr_t>(value) + size );
 		}
 
@@ -97,9 +85,21 @@ class Address {
 		 *  with respect to the value of this object.
 		 */
 		constexpr
-		size_t operator-( Address const& base )  {
+		size_t operator-( Address const& base ) {
 			return reinterpret_cast<uintptr_t>(base.value)
 				  - reinterpret_cast<uintptr_t>(value);
+		}
+
+		//! \returns if this address is smaller than the reference
+		constexpr
+		bool operator<( Address const& reference ) {
+			return value < reference.value;
+		}
+
+		//! \returns if this address is greater than the reference
+		constexpr
+		bool operator>( Address const& reference ) {
+			return value > reference.value;
 		}
 
 		//! @returns the integer representation of the address
@@ -180,15 +180,18 @@ class Address {
 		}
 };
 
+/*! \brief Checks that an alignment constraint is fulfilled
+ */
+constexpr
+bool is_properly_aligned( Address address, size_t alignment_constraint )
+{
+   return ( static_cast<uintptr_t>(address) & (alignment_constraint-1) ) == 0;
+}
+
 /*! \brief Prints an address object to an output stream.
  *  \details String representation of an address in hexadecimal.
  */
 std::ostream& operator<<(std::ostream& out, Address const &entry);
-
-std::ostream& operator<<(std::ostream& out, Address const &entry)
-{
-	return out << std::hex << static_cast<uintptr_t>( entry );
-}
 
 #endif // ADDRESS_HPP
 

@@ -2,6 +2,7 @@ END=
 
 # Common flags and files
 common_includes= \
+	-I$(top_builddir) \
 	-I$(top_srcdir)/src/arch/@OS@ \
 	-I$(top_srcdir)/src/support \
 	-I$(top_srcdir)/src/core \
@@ -80,4 +81,4 @@ common_instrdebug_fcflags= $(global_instrdebug_fcflags) -D_NANOS_INTERNAL
 instrdebug_cflags=-O0 -g2
 
 version_flags= -version-info 1:0:0
-ld_plugin_flags= -avoid-version $(hwloc_ldflags)
+ld_plugin_flags= -avoid-version $(hwloc_ldflags) -module

@@ -47,6 +47,7 @@ struct is_frequency<frequency<Rep, Resolution> > : std::true_type
 {
 };
 
+
 template<typename ToFreq, typename CF, typename CR,
         bool NumIsOne = false, bool DenIsOne = false>
 struct _frequency_cast_impl

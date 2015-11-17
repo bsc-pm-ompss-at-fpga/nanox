@@ -1,6 +1,12 @@
 
+#ifndef BLOCK_ACCESS_INJECTOR_HPP
+#define BLOCK_ACCESS_INJECTOR_HPP
+
+namespace nanos {
+namespace error {
+
 #include "errorinjectionpolicy.hpp"
-#include "memorytracker.hpp"
+#include "memory/memorytracker.hpp"
 
 class BlockMemoryPageAccessInjector : public ErrorInjectionPolicy
 {
@@ -13,7 +19,7 @@ class BlockMemoryPageAccessInjector : public ErrorInjectionPolicy
 		std::exponential_distribution<float> waitTimeDistribution;
 
 	public:
-		BlockmemoryPageAccessInjector() std::noexcept :
+		BlockmemoryPageAccessInjector() noexcept :
 			ErrorInjectionPolicy(),
 			randomNumberGenerator(),
 			waitTimeDistribution(),
@@ -25,7 +31,7 @@ class BlockMemoryPageAccessInjector : public ErrorInjectionPolicy
 			waitTimeDistribution( properties.getInjectionRate() );
 		}
 
-		std::chrono::seconds<float> getWaitTime() std::noexcept {
+		std::chrono::seconds<float> getWaitTime() noexcept {
 			return std::chrono:seconds<float>( waitTimeDistribution(randomNumberGenerator) );
 		}
 
@@ -63,3 +69,9 @@ class BlockMemoryPageAccessInjector : public ErrorInjectionPolicy
 			}
 		}
 };
+
+} // namespace error
+} // namespace nanos
+
+#endif // BLOCK_ACCESS_INJECTOR_HPP
+

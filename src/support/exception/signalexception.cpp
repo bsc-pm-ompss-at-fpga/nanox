@@ -22,11 +22,13 @@
 #include <signal.h>
 #include <sstream>
 
+using namespace nanos::error;
+
 std::string BusErrorException::getErrorMessage() const
 {
 	std::stringstream ss;
 	ss << "BusErrorException:";
-	switch ( handledSignalInfo.getCode() ) {
+	switch ( getHandledSignalInfo().getSignalCode() ) {
 		case BUS_ADRALN:
 			ss << " Invalid address alignment.";
 			break;
@@ -54,7 +56,7 @@ std::string SegmentationFaultException::getErrorMessage() const
 {
 	std::stringstream ss;
 	ss << "SegmentationFaultException:";
-	switch ( handledSignalInfo.getCode() ) {
+	switch ( getHandledSignalInfo().getSignalCode() ) {
 		case SEGV_MAPERR:
 			ss << " Address not mapped to object.";
 			break;

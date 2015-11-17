@@ -1,6 +1,8 @@
 
 #include "nanos-error-injection.h"
-#include "../plugins/error-injection/errorinjectioninterface.hpp"
+#include "errorinjectioninterface.hpp"
+
+using namespace nanos::error;
 
 void nanos_inject_error( void *handle )
 {
@@ -19,7 +21,7 @@ void nanos_injection_start()
 
 void nanos_injection_stop()
 {
-	ErrorInjectionInterface::suspendInjection();
+	ErrorInjectionInterface::stopInjection();
 }
 
 void nanos_injection_finalize()
