@@ -75,7 +75,7 @@ class Address {
 		 */
 		constexpr
 		Address operator+( size_t size ) {
-			return Address( reinterpret_cast<uintptr_t>(value) + size );
+			return Address( value + size );
 		}
 
 		/*! \brief Calculate an address using
@@ -88,6 +88,16 @@ class Address {
 		size_t operator-( Address const& base ) {
 			return reinterpret_cast<uintptr_t>(base.value)
 				  - reinterpret_cast<uintptr_t>(value);
+		}
+
+		Address operator++( int size ) {
+			value += size;
+			return *this;
+		}
+
+		Address operator--( int size ) {
+			value += size;
+			return *this;
 		}
 
 		//! \returns if this address is smaller than the reference
@@ -117,6 +127,27 @@ class Address {
 			return reinterpret_cast<T*>(value);
 		}
 
+		/*! @returns whether this address fulfills an
+		 * alignment restriction or not.
+		 * @param[in] alignment_constraint the alignment
+		 * restriction
+		 */
+		constexpr
+		bool isAligned( size_t alignment_constraint ) {
+			return ( value & (alignment_constraint-1)) == 0;
+		}
+
+		/*! @returns whether this address fulfills an
+		 * alignment restriction or not.
+		 * \tparam alignment_constraint the alignment
+		 * restriction
+		 */
+		template< size_t alignment_constraint >
+		constexpr
+		bool isAligned() {
+			return ( value & (alignment_constraint-1)) == 0;
+		}
+
 		/*! @returns returns an aligned address
 		 * @param[in] alignment_constraint the alignment to be applied
 		 */
@@ -143,7 +174,7 @@ class Address {
 		/*! @returns returns an aligned address
 		 * @param[in] lsb least significant bit of the aligned address
 		 *
-		 * \detail LSB is a common term for specifying the imoprtant
+		 * \detail LSB is a common term for specifying the important
 		 *         part of an address in an specific context.
 		 *         For example, in virtual page management, lsb is
 		 *         usually 12 ( 2^12: 4096 is the page size ).

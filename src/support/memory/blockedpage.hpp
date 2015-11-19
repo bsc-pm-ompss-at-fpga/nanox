@@ -20,7 +20,9 @@
 #ifndef BLOCKED_PAGE_HPP
 #define BLOCKED_PAGE_HPP
 
-#include "memorychunk.hpp"
+#include "memorypage.hpp"
+
+#include <sys/mman.h>
 
 /*! \brief Object representation of a memory portion without any access rights.
  *  \details BlockedMemoryPage represents an area of memory whose access rights
@@ -33,36 +35,29 @@
  */
 class BlockedMemoryPage : public MemoryPage {
 	public:
-		/*! \brief Creates a new blocked memory area from two addresses.
-		 * \details Shrinks a memory area delimited by two addresses to meet
-		 * memory page alignment constraints. Later, it blocks its access
-		 * rights using mprotect.
-		 * @param[in] beginAddress lower hard limit of the blocked area. Blocked
-		 * 	rights may apply to the next page-aligned address if this isn't.
-		 * @param[in] endAddress upper hard limit of the blocked area. Blocked
-		 * 	rights may apply up to the previous page-aligned address if this isn't.
+		/*! \brief Creates a new blocked memory area that covers a virtual memory page
+		 * \details It blocks its access rights using mprotect. The underlying memory
+		 * page object is created by copy.
+		 * @param[in] page the page that is going to be blocked.
 		 */
-		BlockedMemoryPage( Address const& beginAddress, Address const& endAddress ) :
-			MemoryPage( beginAddress, endAddress )
+		BlockedMemoryPage( MemoryPage const& page ) :
+			MemoryPage( page )
 		{
 			// Blocks this area of memory from reading
-			mprotect( getBaseAddress(), getSize(), PROT_NONE );
+			mprotect( getBaseAddress(), size(), PROT_NONE );
 		}
 
-		/*! \brief Creates a new blocked memory area.
-		 * \details Shrinks a memory area delimited by an address and a size to meet
-		 * memory page alignment constraints. Later, it blocks its access
-		 * rights using mprotect.
-		 * @param[in] baseAddress lower hard limit of the blocked area. Blocked
-		 * 	rights may apply to the next page-aligned address if this isn't.
-		 * @param[in] length maximum size of the blocked area. Blocked rights may
-		 * 	apply up to the previous page-aligned address if this isn't.
+		/*! \brief Creates a new blocked memory area that covers a virtual memory page
+		 * \details It blocks its access rights using mprotect. The underlying memory
+		 * page object is created using one of its constructors.
+		 * @param[in] page the page that is going to be blocked.
 		 */
-		BlockedMemoryPage( Address const& baseAddress, size_t length ) :
-			MemoryPage( baseAddress, length )
+		template< typename... Args >
+		BlockedMemoryPage( Args... arguments ) :
+			MemoryPage( arguments... )
 		{
 			// Blocks this area of memory from reading
-			mprotect( getBaseAddress(), getSize(), PROT_NONE );
+			mprotect( getBaseAddress(), size(), PROT_NONE );
 		}
 
 		/*! \brief Releases the resources allocated by this object.
@@ -71,10 +66,10 @@ class BlockedMemoryPage : public MemoryPage {
 		 * 	Regarding the previous value, we assume that original
 		 * 	access rights were read/write.
 		 */
-		virtual ~BlockedMemoryPage
+		virtual ~BlockedMemoryPage()
 		{
 			// Restores access rights for this area of memory
-			mprotect( getBaseAddress(), getSize(), PROT_READ | PROT_WRITE );
+			mprotect( getBaseAddress(), size(), PROT_READ | PROT_WRITE );
 		}
 };
 

@@ -19,8 +19,7 @@ private:
 	class InjectionInterfaceSingleton {
 		private:
 			ErrorInjectionConfig properties;
-			//std::unique_ptr<ErrorInjectionPlugin> plugin;
-			ErrorInjectionPlugin* plugin;
+			std::unique_ptr<ErrorInjectionPlugin> plugin;
 			ErrorInjectionPolicy &policy;
 			ErrorInjectionThread thread;
 
@@ -47,7 +46,6 @@ private:
 
 			virtual ~InjectionInterfaceSingleton()
 			{
-				delete plugin;
 			}
 	};
 

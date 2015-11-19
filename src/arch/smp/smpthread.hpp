@@ -105,9 +105,6 @@ namespace ext
          virtual bool canBlock() { return true;}
 
          virtual int getCpuId() const;
-#ifdef NANOS_RESILIENCY_ENABLED
-         virtual void setupSignalHandlers() { _pthread.setupSignalHandlers(); }
-#endif
    };
 
    class SMPMultiThread : public SMPThread

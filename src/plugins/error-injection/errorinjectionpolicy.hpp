@@ -20,7 +20,9 @@ class ErrorInjectionPolicy {
 		{
 		}
 
-		virtual void config( ErrorInjectionConfig &properties ) {}
+		virtual void config( ErrorInjectionConfig const& properties )
+		{
+		}
 
 		// Randomly injects an error
 		// Automatically called by the injection thread

@@ -34,6 +34,11 @@ class frequency {
 		{
 		}
 
+		operator Rep&()
+		{
+			return _cycles;
+		}
+
 		Rep count() const { return _cycles; }
 };
 

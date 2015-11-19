@@ -22,6 +22,11 @@
 
 #include "memoryaddress.hpp"
 
+template <class ChunkType>
+struct is_contiguous_memory_region : public std::false_type
+{
+};
+
 /*!
  * \brief Represents a contiguous area of memory.
  * \author Jorge Bellon
@@ -31,6 +36,11 @@ class MemoryChunk {
       Address _baseAddress; //!< Beginning address of the chunk
       size_t  _length;       //!< Size of the chunk
    public:
+		MemoryChunk() = delete;
+
+		constexpr
+		MemoryChunk( MemoryChunk const& other ) = default;
+
 		/*! \brief Creates a new representation of an area of memory.
 		 * @param[in] base beginning address of the region.
 		 * @param[in] chunkLength size of the region.
@@ -53,19 +63,44 @@ class MemoryChunk {
 
 		//! \returns the lower limit address of the region.
       constexpr
-      Address getBaseAddress() const { return _baseAddress; }
+      Address getBaseAddress()
+		{
+			return _baseAddress;
+		}
+
+		//! Sets a new value to the beginning address
+      Address setBaseAddress( Address const& addr )
+		{
+			return _baseAddress  = addr;
+		}
 
 		//! \returns the size of the region.
       constexpr
-      size_t size() const { return _length; }
+      size_t size()
+		{
+			return _length;
+		}
 
 		//! \returns the lower limit address of the region.
       constexpr
-      Address begin() const { return _baseAddress; }
+      Address begin()
+		{
+			return _baseAddress;
+		}
 
 		//! \returns the upper limit address of the region.
       constexpr
-      Address end() const { return _baseAddress+_length; }
+      Address end()
+		{
+			return _baseAddress+_length;
+		}
+
+		//! \returns whether an address belongs to the region or not.
+		constexpr
+		bool contains( Address address )
+		{
+			return begin() < address && address < end();
+		}
 };
 
 /*!
@@ -77,6 +112,11 @@ class MemoryChunk {
 template <size_t alignment_restriction>
 class AlignedMemoryChunk : public MemoryChunk {
    public:
+		AlignedMemoryChunk() = delete;
+
+		constexpr
+		AlignedMemoryChunk( AlignedMemoryChunk const& other ) = default;
+
       constexpr
       AlignedMemoryChunk( Address const& baseAddress, size_t chunkSize ) :
             MemoryChunk( baseAddress, chunkSize )
@@ -89,18 +129,35 @@ class AlignedMemoryChunk : public MemoryChunk {
       {
       }
 
+		/*!
+		 * \brief Constructs an AlignedMemoryChunk that wraps
+		 * any other kind of contiguous memory chunk.
+		 */
       template<class ChunkType>
       constexpr
       AlignedMemoryChunk( ChunkType const& chunk ) :
             MemoryChunk(
-                     chunk.begin().align( alignment_restriction ) + alignment_restriction,
-                     chunk.end().align( alignment_restriction )
+                     chunk.begin().template align<alignment_restriction>(),
+                     chunk.end().template align<alignment_restriction>()
+								+ chunk.end().template isAligned<alignment_restriction>()?
+									0 : 
+									alignment_restriction
                   )
       {
+			static_assert( is_contiguous_memory_region<ChunkType>::type,
+					"Provided chunk does not represent contiguous memory." );
       }
 };
 
-// FIXME: change literal page size by macro computed by autoconf
-using MemoryPage = AlignedMemoryChunk<4096>;
+template <>
+struct is_contiguous_memory_region<MemoryChunk> : public std::true_type
+{
+};
+
+template <size_t alignment>
+struct is_contiguous_memory_region<AlignedMemoryChunk<alignment> > : public std::true_type
+{
+};
 
 #endif // MEMORY_CHUNK
+

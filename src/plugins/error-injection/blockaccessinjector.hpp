@@ -2,63 +2,71 @@
 #ifndef BLOCK_ACCESS_INJECTOR_HPP
 #define BLOCK_ACCESS_INJECTOR_HPP
 
-namespace nanos {
-namespace error {
-
 #include "errorinjectionpolicy.hpp"
 #include "memory/memorytracker.hpp"
+#include "memory/blockedpage.hpp"
+
+#include <chrono>
+#include <random>
+
+namespace nanos {
+namespace error {
 
 class BlockMemoryPageAccessInjector : public ErrorInjectionPolicy
 {
 	private:
 		MemoryTracker<MemoryPage> candidatePages;
-		MemoryTracker<BlockedPage> blockedPages;
+		MemoryTracker<BlockedMemoryPage> blockedPages;
 
 		std::mt19937 randomNumberGenerator;
-		std::uniform_real_distribution pageFaultDistribution;
 		std::exponential_distribution<float> waitTimeDistribution;
+		std::uniform_real_distribution<float> pageFaultDistribution;
 
+		using seconds = std::chrono::duration<float>;
 	public:
-		BlockmemoryPageAccessInjector() noexcept :
+		BlockMemoryPageAccessInjector( ErrorInjectionConfig const& properties ) noexcept :
 			ErrorInjectionPolicy(),
-			randomNumberGenerator(),
-			waitTimeDistribution(),
+			candidatePages(),
+			blockedPages(),
+			randomNumberGenerator( properties.getInjectionSeed() ),
+			waitTimeDistribution( properties.getInjectionRate() ),
 			pageFaultDistribution(0, 1)
-		{}
-
-		void config( ErrorInjectionConfig const& properties ) {
-			randomNumberGenerator( properties.getInjectionSeed() );
-			waitTimeDistribution( properties.getInjectionRate() );
+		{
 		}
 
-		std::chrono::seconds<float> getWaitTime() noexcept {
-			return std::chrono:seconds<float>( waitTimeDistribution(randomNumberGenerator) );
+		seconds getWaitTime() noexcept {
+			return seconds( waitTimeDistribution(randomNumberGenerator) );
 		}
 
 		void injectError() {
-			if( !candidatePages.empty() ) {
+			if( !candidatePages.isEmpty() ) {
 				size_t position = candidatePages.getTotalSize() 
 										* pageFaultDistribution( randomNumberGenerator );
 
-				for( auto it = candidatePages.begin(); 
-						it != candidatePages.end() && position >= it->getSize();
-						it++ )
+				auto it = candidatePages.begin();
+				while( it != candidatePages.end() && position >= it->size() )
 				{
-					position -= it->getSize();
+					position -= it->size();
+					it++;
 				}
 
 				if( it != candidatePages.end() ) {
-					blockedPages.emplace_back( *it );
+					blockedPages.insert( *it );
 					candidatePages.erase( it );
 				}
 			}
 		}
 
-		void insertCandidatePage( MemoryPage const& page ) {
-			candidatePages.emplace_back( page );
+		void injectError( void *page )
+		{
+			blockedPages.emplace( BlockedPage
 		}
 
-		void recoverError( void* handle ) {
+		void insertCandidatePage( MemoryPage const& page ) {
+			candidatePages.insert( page );
+		}
+
+		void recoverError( void* handle ) noexcept {
 			Address failedAddress( handle );
 
 			for( auto it = blockedPages.begin(); it != blockedPages.end(); it++ ) {

@@ -15,10 +15,6 @@ class StubInjector : public ErrorInjectionPolicy
 		{
 		}
 
-		void config( ErrorInjectionConfig const& properties )
-		{
-		}
-
 		virtual void injectError()
 		{
 		}
