@@ -1,31 +1,15 @@
 
 #include "stubinjector.hpp"
-#include "errorinjectionplugin.hpp"
+#include "error-injection/errorinjectionplugin.hpp"
 #include "system.hpp"
 
-namespace nanos {
-namespace error {
+using namespace nanos::error;
 
-class StubInjectionPlugin : public ErrorInjectionPlugin
+struct StubInjectionPlugin : public ErrorInjectionPlugin<StubInjector>
 {
-	private:
-		StubInjector policy;
-
-	public:
-		StubInjectionPlugin() :
-			ErrorInjectionPlugin(),
-			policy()
-		{
-		}
-
-		virtual ErrorInjectionPolicy &getInjectionPolicy() { return policy; }
-
-		static const char* pluginName() { return "none"; }
+		static const char* pluginName() { return "injection-none"; }
 };
 
-}// namespace error
-}// namespace nanos
-
-DECLARE_PLUGIN( nanos::error::StubInjectionPlugin::pluginName(),
-                nanos::error::StubInjectionPlugin
+DECLARE_PLUGIN( StubInjectionPlugin::pluginName(),
+                StubInjectionPlugin
               );

@@ -2,7 +2,7 @@
 #ifndef ERROR_INJECTION_STUB_HPP
 #define ERROR_INJECTION_STUB_HPP
 
-#include "errorinjectionpolicy.hpp"
+#include "error-injection/errorinjectionpolicy.hpp"
 
 namespace nanos {
 namespace error {
@@ -10,8 +10,8 @@ namespace error {
 class StubInjector : public ErrorInjectionPolicy
 {
 	public:
-		StubInjector() noexcept :
-			ErrorInjectionPolicy()
+		StubInjector( ErrorInjectionConfig const& properties ) noexcept :
+			ErrorInjectionPolicy( properties )
 		{
 		}
 
@@ -29,11 +29,6 @@ class StubInjector : public ErrorInjectionPolicy
 
 		virtual void declareResource( void* handle, size_t size )
 		{
-		}
-
-		virtual std::chrono::duration<float> getWaitTime() noexcept
-		{
-			return std::chrono::duration<float>(0);
 		}
 };
 

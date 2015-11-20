@@ -4,13 +4,16 @@
 
 #include "config.hpp"
 #include "frequency.hpp"
+#include "system.hpp"
+
 #include <chrono>
 #include <string>
 
 namespace nanos {
 namespace error {
 
-class ErrorInjectionConfig : public Config {
+// TODO: review how Config is used with plugins (src/support/plugin.cpp:98)
+class ErrorInjectionConfig /*: public Config*/ {
 	private:
 		std::string selected_injector;    //!< Name of the error injector selected by the user
 		frequency<float> injection_rate;  //!< Injection rate in Hz
@@ -19,7 +22,7 @@ class ErrorInjectionConfig : public Config {
 		
 	public:
 		ErrorInjectionConfig () : 
-				Config(),
+				//Config(),
 				selected_injector("none"),
 				injection_rate(0),
 				injection_limit(0),
@@ -49,7 +52,28 @@ class ErrorInjectionConfig : public Config {
 			//registerArgOption("error_injection_limit", "error-injection-limit");
 			//registerEnvOption("error_injection_limit", "NX_ERROR_INJECTION_LIMIT");
 
-			init();
+			//init();
+		}
+
+		void config( Config &properties )
+		{
+			properties.registerConfigOption("error_injection_seed",
+			            NEW Config::UintVar(injection_seed),
+			            "Error injector randon number generator seed.");
+			properties.registerArgOption("error_injection_seed", "error-injection-seed");
+			properties.registerEnvOption("error_injection_seed", "NX_ERROR_INJECTION_SEED");
+
+			properties.registerConfigOption("error_injection_rate",
+			            NEW Config::FloatVar(static_cast<float&>(injection_rate)),
+			            "Error injection rate (Hz).");
+			properties.registerArgOption("error_injection_rate", "error-injection-rate");
+			properties.registerEnvOption("error_injection_rate", "NX_ERROR_INJECTION_RATE");
+
+			properties.registerConfigOption("error_injection_limit",
+			            NEW Config::UintVar(injection_limit),
+			            "Maximum number of injected errors (0: unlimited)");
+			properties.registerArgOption("error_injection_limit", "error-injection-limit");
+			properties.registerEnvOption("error_injection_limit", "NX_ERROR_INJECTION_LIMIT");
 		}
 
 		std::string const& getSelectedInjectorName() const { return selected_injector; }

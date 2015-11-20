@@ -1,31 +1,17 @@
 
 #include "blockaccessinjector.hpp"
-#include "errorinjectionplugin.hpp"
+#include "error-injection/errorinjectionplugin.hpp"
 #include "system.hpp"
 
-namespace nanos {
-namespace error {
+using namespace nanos::error;
 
-class BlockPageAccessInjectionPlugin : public ErrorInjectionPlugin
+class BlockPageAccessInjectionPlugin : public ErrorInjectionPlugin<BlockMemoryPageAccessInjector>
 {
-	private:
-		BlockMemoryPageAccessInjector policy;
-
 	public:
-		BlockPageAccessInjectionPlugin() :
-			ErrorInjectionPlugin(),
-			policy()
-		{
-		}
-
-		virtual ErrorInjectionPolicy &getInjectionPolicy() { return policy; }
-
-		static const char* pluginName() { return "block-access"; }
+		static const char* pluginName() { return "injection-block-access"; }
 };
 
-}// namespace resiliency
-}// namespace nanos
-
-DECLARE_PLUGIN( nanos::error::BlockPageAccessInjectionPlugin::pluginName(),
-                nanos::error::BlockPageAccessInjectionPlugin
+DECLARE_PLUGIN( BlockPageAccessInjectionPlugin::pluginName(),
+                BlockPageAccessInjectionPlugin
               );
+

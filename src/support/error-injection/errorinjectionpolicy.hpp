@@ -2,9 +2,10 @@
 #ifndef ERROR_INJECTION_POLICY_HPP
 #define ERROR_INJECTION_POLICY_HPP
 
-#include "errorinjectionconfiguration.hpp"
+#include "error-injection/errorinjectionconfiguration.hpp"
 
 #include <chrono>
+#include <random>
 #include <ratio>
 
 namespace nanos {
@@ -12,15 +13,11 @@ namespace error {
 
 class ErrorInjectionPolicy {
 	public:
-		ErrorInjectionPolicy() noexcept
+		ErrorInjectionPolicy( ErrorInjectionConfig const& properties ) noexcept
 		{
 		}
 
 		virtual ~ErrorInjectionPolicy() noexcept
-		{
-		}
-
-		virtual void config( ErrorInjectionConfig const& properties )
 		{
 		}
 
@@ -40,9 +37,9 @@ class ErrorInjectionPolicy {
 		// candidate for corruption using error injection
 		virtual void declareResource(void* handle, size_t size ) = 0;
 
-		// Returns the time to wait until the injection thread
-		// performs the next injection
-		virtual std::chrono::duration<float> getWaitTime() noexcept = 0;
+		virtual void stop() {}
+
+		virtual void resume() {}
 };
 
 } // namespace error

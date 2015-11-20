@@ -1,6 +1,6 @@
 
 #include "nanos-error-injection.h"
-#include "errorinjectioninterface.hpp"
+#include "error-injection/errorinjectioninterface.hpp"
 
 using namespace nanos::error;
 

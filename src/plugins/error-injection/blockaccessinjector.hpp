@@ -2,68 +2,64 @@
 #ifndef BLOCK_ACCESS_INJECTOR_HPP
 #define BLOCK_ACCESS_INJECTOR_HPP
 
-#include "errorinjectionpolicy.hpp"
-#include "memory/memorytracker.hpp"
+#include "periodicinjectionpolicy.hpp"
+#include "memory/memorypage.hpp"
 #include "memory/blockedpage.hpp"
 
 #include <chrono>
+#include <deque>
+#include <set>
 #include <random>
 
 namespace nanos {
 namespace error {
 
-class BlockMemoryPageAccessInjector : public ErrorInjectionPolicy
+class BlockMemoryPageAccessInjector : public PeriodicInjectionPolicy<>
 {
 	private:
-		MemoryTracker<MemoryPage> candidatePages;
-		MemoryTracker<BlockedMemoryPage> blockedPages;
+		std::deque<MemoryPage> candidatePages;
+		std::set<BlockedMemoryPage> blockedPages;
 
-		std::mt19937 randomNumberGenerator;
-		std::exponential_distribution<float> waitTimeDistribution;
-		std::uniform_real_distribution<float> pageFaultDistribution;
-
-		using seconds = std::chrono::duration<float>;
 	public:
 		BlockMemoryPageAccessInjector( ErrorInjectionConfig const& properties ) noexcept :
-			ErrorInjectionPolicy(),
+			PeriodicInjectionPolicy( properties ),
 			candidatePages(),
-			blockedPages(),
-			randomNumberGenerator( properties.getInjectionSeed() ),
-			waitTimeDistribution( properties.getInjectionRate() ),
-			pageFaultDistribution(0, 1)
+			blockedPages()
 		{
 		}
 
-		seconds getWaitTime() noexcept {
-			return seconds( waitTimeDistribution(randomNumberGenerator) );
+		void config( ErrorInjectionConfig const& properties )
+		{
 		}
 
-		void injectError() {
-			if( !candidatePages.isEmpty() ) {
-				size_t position = candidatePages.getTotalSize() 
-										* pageFaultDistribution( randomNumberGenerator );
+		void injectError()
+		{
+			using distribution = std::uniform_int_distribution<size_t>;
+			using dist_param = distribution::param_type;
 
-				auto it = candidatePages.begin();
-				while( it != candidatePages.end() && position >= it->size() )
-				{
-					position -= it->size();
-					it++;
-				}
+			static distribution pageFaultDistribution;
+			
+			if( !candidatePages.empty() ) {
+				dist_param parameter( 0, candidatePages.size() );
+				size_t position = pageFaultDistribution( getRandomGenerator(), parameter );
 
-				if( it != candidatePages.end() ) {
-					blockedPages.insert( *it );
-					candidatePages.erase( it );
-				}
+				blockedPages.emplace( candidatePages[position] );
 			}
 		}
 
-		void injectError( void *page )
+		void injectError( void *address )
 		{
-			blockedPages.emplace( BlockedPage
+			blockedPages.emplace( MemoryPage(address) );
 		}
 
-		void insertCandidatePage( MemoryPage const& page ) {
-			candidatePages.insert( page );
+		void declareResource( void *address, size_t size )
+		{
+			MemoryPage::retrievePagesInsideChunk( candidatePages, ::MemoryChunk( static_cast<Address>(address), size) );
+		}
+
+		void insertCandidatePage( MemoryPage const& page )
+		{
+			candidatePages.push_back( page );
 		}
 
 		void recoverError( void* handle ) noexcept {

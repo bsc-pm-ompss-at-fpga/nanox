@@ -101,6 +101,7 @@ System::System () :
 #endif
       , _lockPoolSize(37), _lockPool( NULL ), _mainTeam (NULL), _simulator(false)
 #ifdef NANOS_RESILIENCY_ENABLED
+      , _injectionPolicy( "none" )
       , _resiliency_disabled(false)
       , _task_max_trials(1)
       , _backup_pool_size(sysconf(_SC_PAGESIZE ) * sysconf(_SC_PHYS_PAGES) / 2)
@@ -393,6 +394,11 @@ void System::config ()
          "Sets the memory pool maximum size (dedicated to store task backups) in bytes. ");
    cfg.registerArgOption("backup_pool_size", "backup-pool-size");
    cfg.registerEnvOption("backup_pool_size", "NX_BACKUP_POOL_SIZE");
+
+   registerPluginOption("error_injection", "error-injection", _injectionPolicy,
+         "Selects error injection policy. Used for resiliency evaluation.", cfg);
+   cfg.registerArgOption("error_injection", "error-injection");
+   cfg.registerEnvOption("error_injection", "NX_ERROR_INJECTION");
 #endif
 
    cfg.registerConfigOption ( "verbose-devops", NEW Config::FlagOption ( _verboseDevOps, true ), "Verbose cache ops" );

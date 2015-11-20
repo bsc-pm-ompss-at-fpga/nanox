@@ -20,7 +20,7 @@
 #ifndef MEMORY_PAGE_HPP
 #define MEMORY_PAGE_HPP
 
-#include "memorychunk.hpp"
+#include "memory/memorychunk.hpp"
 
 #include <deque>
 #include <sys/user.h>
@@ -45,25 +45,28 @@ class MemoryPage : public AlignedMemoryChunk<PAGE_SIZE> {
       {
       }
 
-      template<class ChunkType>
-      static std::deque<MemoryPage>&& retrievePagesFromChunk( ChunkType const& chunk )
+      template<class Container, class ChunkType>
+      static void retrievePagesWrappingChunk( Container &pageContainer, ChunkType const& chunk )
       {
 			// Create a page-aligned chunk that wraps the given one
-			AlignedMemoryChunk<PAGE_SIZE> wrap( chunk );
-			// Construct a list of as many memory pages as needed to
-			// represent this newly created chunk.
-			std::deque<MemoryPage> pageScatteredChunk( 
-					wrap.size() / MemoryPage::size(), // number of elements
-					MemoryPage( wrap.begin() )        // default value
-				);
+			AlignedMemoryChunk<MemoryPage::size()> wrap( chunk );
+			for( Address addr = wrap.begin(); addr < wrap.end(); addr+= MemoryPage::size() )
+				pageContainer.emplace_back( addr );
+      }
 
-			Address addr = wrap.begin();
-			std::for_each( pageScatteredChunk.begin(), 
-								pageScatteredChunk.end(),
-								[&addr](MemoryPage& page) { page.setBaseAddress( addr+=MemoryPage::size() ); }
-							);
-
-			return pageScatteredChunk;
+      template<class Container, class ChunkType>
+      static void retrievePagesInsideChunk( Container &pageContainer, ChunkType const& chunk )
+      {
+			// Create a page-aligned chunk that is wrapped by the given one
+			Address addr = chunk.begin();
+			if( !addr.template isAligned<MemoryPage::size()>() ) {
+				addr = addr.template align<MemoryPage::size()>() + MemoryPage::size();
+			}
+			Address end = chunk.end().template align<MemoryPage::size()>();
+			while( addr < end ) {
+				pageContainer.emplace_back( addr );
+				addr+= MemoryPage::size();
+			}
       }
 };
 

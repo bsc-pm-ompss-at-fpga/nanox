@@ -34,11 +34,6 @@
 #include <cstddef>
 #endif
 
-#if 0 //def NANOS_RESILIENCY_ENABLED
-#include "mpoison.hpp"
-using nanos::vm::MPoisonManager;
-#endif
-
 // TODO: detect at configure
 #ifndef PTHREAD_STACK_MIN
 #define PTHREAD_STACK_MIN 16384

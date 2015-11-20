@@ -3,11 +3,7 @@
 #define ERROR_INJECTION_INTERFACE_HPP
 
 #include "errorinjectionconfiguration.hpp"
-#include "errorinjectionplugin.hpp"
 #include "errorinjectionpolicy.hpp"
-#include "errorinjectionthread.hpp"
-#include "frequency.hpp"
-#include "system.hpp"
 
 #include <memory>
 
@@ -18,10 +14,7 @@ class ErrorInjectionInterface {
 private:
 	class InjectionInterfaceSingleton {
 		private:
-			ErrorInjectionConfig properties;
-			std::unique_ptr<ErrorInjectionPlugin> plugin;
-			ErrorInjectionPolicy &policy;
-			ErrorInjectionThread thread;
+			std::unique_ptr<ErrorInjectionPolicy> _policy;
 
 			friend class ErrorInjectionInterface;
 		public:
@@ -34,14 +27,8 @@ private:
 			 * 	4) Instantiate the thread that will perform the injection.
 			 */
 			InjectionInterfaceSingleton() :
-					properties(),
-					plugin( reinterpret_cast<ErrorInjectionPlugin*>(
-									sys.loadAndGetPlugin("error-injection-"+properties.getSelectedInjectorName() )
-								) ),
-					policy( plugin->getInjectionPolicy() ),
-					thread( policy )
+					_policy( nullptr )
 			{
-				policy.config( properties );
 			}
 
 			virtual ~InjectionInterfaceSingleton()
@@ -53,23 +40,46 @@ private:
 
 public:
 	//! Deterministically injects an error
-	static void injectError( void* handle ) { interfaceObject.policy.injectError( handle ); }
+	static void injectError( void* handle )
+	{
+		interfaceObject._policy->injectError( handle );
+	}
 
 	/*! Restore an injected error providing some hint
 	 * of where to find it
 	 */
-	static void recoverError( void* handle ) noexcept { interfaceObject.policy.recoverError( handle ); }
+	static void recoverError( void* handle ) noexcept
+	{
+		interfaceObject._policy->recoverError( handle );
+	}
 
 	/*! Declares some resource that will be
 	 * candidate for corruption using error injection
 	 */
-	static void declareResource(void* handle, size_t size ) { interfaceObject.policy.declareResource( handle, size ); }
+	static void declareResource(void* handle, size_t size )
+	{
+		interfaceObject._policy->declareResource( handle, size );
+	}
 
-	static void resumeInjection() { interfaceObject.thread.resume(); }
+	static void resumeInjection()
+	{
+		interfaceObject._policy->resume();
+	}
 
-	static void stopInjection() { interfaceObject.thread.stop(); }
+	static void stopInjection()
+	{
+		interfaceObject._policy->stop();
+	}
 
-	static void terminateInjection() { interfaceObject.thread.terminate(); }
+	static void terminateInjection()
+	{
+		interfaceObject._policy.reset(nullptr);
+	}
+
+	static void setInjectionPolicy( ErrorInjectionPolicy *selectedPolicy ) 
+	{
+		interfaceObject._policy.reset( selectedPolicy );
+	}
 };
 
 } // namespace error

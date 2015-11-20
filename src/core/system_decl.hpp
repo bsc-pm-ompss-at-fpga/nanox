@@ -222,6 +222,8 @@ namespace nanos
          bool                      _simulator;
 
 #ifdef NANOS_RESILIENCY_ENABLED
+         //! Specifies which error injection policy is going to be loaded
+         std::string               _injectionPolicy;
          //! Disables resiliency mechanism at runtime.
          bool                      _resiliency_disabled;
          //! Specifies the maximum number of times a recoverable task can re-execute (avoids infinite recursion).

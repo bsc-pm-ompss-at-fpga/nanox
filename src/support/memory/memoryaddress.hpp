@@ -90,12 +90,12 @@ class Address {
 				  - reinterpret_cast<uintptr_t>(value);
 		}
 
-		Address operator++( int size ) {
+		Address operator+=( size_t size ) {
 			value += size;
 			return *this;
 		}
 
-		Address operator--( int size ) {
+		Address operator-=( size_t size ) {
 			value += size;
 			return *this;
 		}

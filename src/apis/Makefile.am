@@ -19,7 +19,10 @@
 
 include ../common.am
 
-common_includes += -I $(top_builddir)/src/apis/c
+common_includes += \
+	-I $(top_builddir)/src/apis/c \
+	-I $(top_builddir)/src/apis/error-injection \
+	-I $(top_srcdir)/src/plugins/error-injection
 
 #####################################################################################
 #### C ##############################################################################

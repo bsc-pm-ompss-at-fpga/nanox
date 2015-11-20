@@ -33,8 +33,8 @@ struct is_contiguous_memory_region : public std::false_type
  */
 class MemoryChunk {
    private:
-      Address _baseAddress; //!< Beginning address of the chunk
-      size_t  _length;       //!< Size of the chunk
+      Address _begin; //!< Beginning address of the chunk
+      Address _end;   //!< Size of the chunk
    public:
 		MemoryChunk() = delete;
 
@@ -43,11 +43,11 @@ class MemoryChunk {
 
 		/*! \brief Creates a new representation of an area of memory.
 		 * @param[in] base beginning address of the region.
-		 * @param[in] chunkLength size of the region.
+		 * @param[in] length size of the region.
 		 */
       constexpr
-      MemoryChunk( Address const& base, size_t chunkLength ) :
-            _baseAddress( base ), _length( chunkLength )
+      MemoryChunk( Address const& base, size_t length ) :
+            _begin( base ), _end( base+length )
       {
       }
 
@@ -57,49 +57,42 @@ class MemoryChunk {
 		 */
       constexpr
       MemoryChunk( Address const& begin, Address const& end ) :
-            _baseAddress( begin ), _length( end - begin )
+            _begin( begin ), _end( end )
       {
       }
-
-		//! \returns the lower limit address of the region.
-      constexpr
-      Address getBaseAddress()
-		{
-			return _baseAddress;
-		}
-
-		//! Sets a new value to the beginning address
-      Address setBaseAddress( Address const& addr )
-		{
-			return _baseAddress  = addr;
-		}
 
 		//! \returns the size of the region.
       constexpr
       size_t size()
 		{
-			return _length;
+			return _end - _begin;
 		}
 
 		//! \returns the lower limit address of the region.
       constexpr
       Address begin()
 		{
-			return _baseAddress;
+			return _begin;
 		}
 
 		//! \returns the upper limit address of the region.
       constexpr
       Address end()
 		{
-			return _baseAddress+_length;
+			return _end;
 		}
 
 		//! \returns whether an address belongs to the region or not.
 		constexpr
 		bool contains( Address address )
 		{
-			return begin() < address && address < end();
+			return begin() <= address && address < end();
+		}
+
+		constexpr
+		bool operator< ( MemoryChunk const& chunk )
+		{
+			return end() < chunk.begin();
 		}
 };
 
@@ -110,7 +103,7 @@ class MemoryChunk {
  * \author Jorge Bellon
  */
 template <size_t alignment_restriction>
-class AlignedMemoryChunk : public MemoryChunk {
+class AlignedMemoryChunk : public ::MemoryChunk {
    public:
 		AlignedMemoryChunk() = delete;
 
@@ -150,7 +143,7 @@ class AlignedMemoryChunk : public MemoryChunk {
 };
 
 template <>
-struct is_contiguous_memory_region<MemoryChunk> : public std::true_type
+struct is_contiguous_memory_region<::MemoryChunk> : public std::true_type
 {
 };
 

@@ -44,7 +44,7 @@ class BlockedMemoryPage : public MemoryPage {
 			MemoryPage( page )
 		{
 			// Blocks this area of memory from reading
-			mprotect( getBaseAddress(), size(), PROT_NONE );
+			mprotect( begin(), size(), PROT_NONE );
 		}
 
 		/*! \brief Creates a new blocked memory area that covers a virtual memory page
@@ -53,11 +53,24 @@ class BlockedMemoryPage : public MemoryPage {
 		 * @param[in] page the page that is going to be blocked.
 		 */
 		template< typename... Args >
-		BlockedMemoryPage( Args... arguments ) :
+		BlockedMemoryPage( Args const&... arguments ) :
 			MemoryPage( arguments... )
 		{
 			// Blocks this area of memory from reading
-			mprotect( getBaseAddress(), size(), PROT_NONE );
+			mprotect( begin(), size(), PROT_NONE );
+		}
+
+		/*! \brief Creates a new blocked memory area that covers a virtual memory page
+		 * \details It blocks its access rights using mprotect. The underlying memory
+		 * page object is created using one of its constructors.
+		 * @param[in] page the page that is going to be blocked.
+		 */
+		template< typename... Args >
+		BlockedMemoryPage( Args&&... arguments ) :
+			MemoryPage( std::forward<Args>(arguments)... )
+		{
+			// Blocks this area of memory from reading
+			mprotect( begin(), size(), PROT_NONE );
 		}
 
 		/*! \brief Releases the resources allocated by this object.
@@ -69,8 +82,9 @@ class BlockedMemoryPage : public MemoryPage {
 		virtual ~BlockedMemoryPage()
 		{
 			// Restores access rights for this area of memory
-			mprotect( getBaseAddress(), size(), PROT_READ | PROT_WRITE );
+			mprotect( begin(), size(), PROT_READ | PROT_WRITE );
 		}
 };
 
 #endif // BLOCKED_PAGE_HPP
+
