@@ -4,6 +4,8 @@
 
 using namespace nanos::error;
 
+ErrorInjectionInterface::InjectionInterfaceSingleton ErrorInjectionInterface::interfaceObject;
+
 void nanos_inject_error( void *handle )
 {
 	ErrorInjectionInterface::injectError( handle );

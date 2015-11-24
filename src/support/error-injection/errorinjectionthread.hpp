@@ -6,6 +6,8 @@
 #include "periodicinjectionpolicy_decl.hpp"
 #include "frequency.hpp"
 
+#include "debug.hpp"
+
 #include <chrono>
 #include <ratio>
 
@@ -13,70 +15,83 @@ namespace nanos {
 namespace error {
 
 template < class RandomEngine >
-void ErrorInjectionThread<RandomEngine>::injectionLoop ( ErrorInjectionThread<RandomEngine> *thisThread ) {
-	while( !thisThread->shouldTerminate() ) {
-		thisThread->wait();
-		thisThread->getInjectionPolicy().injectError();
-	}
-}
-
-template < class RandomEngine >
-ErrorInjectionThread<RandomEngine>::ErrorInjectionThread( InjectionPolicy& manager, frequency<float, std::ratio<1> > injectionRate ) noexcept :
-		injectionPolicy( manager ),
-		waitTimeDistribution( injectionRate.count() ),
-		mustFinish(false),
-		allowInjection(false),
-		suspendMutex(),
-		suspendCondition(),
-		injectionThread( injectionLoop, this )
+ErrorInjectionThread<RandomEngine>::ErrorInjectionThread( InjectionPolicy& manager, frequency<double, std::kilo> injectionRate ) noexcept :
+		_injectionPolicy( manager ),
+		_waitTimeDistribution( injectionRate.count() ),
+		_finish(false),
+		_wait(true),
+		_mutex(),
+		_suspendCondition(),
+		_injectionThread( &ErrorInjectionThread::injectionLoop, this )
 {
-	//std::cout << "Starting injection thread" << std::endl;
+	debug0( "Starting injection thread" );
 }
 
 template < class RandomEngine >
 ErrorInjectionThread<RandomEngine>::~ErrorInjectionThread() noexcept
 {
 	terminate();
-	injectionThread.join();
+	debug0( "Error injection thread finished." );
 }
 
 template < class RandomEngine >
 void ErrorInjectionThread<RandomEngine>::wait() {
-	std::unique_lock<std::mutex> lockGuard( suspendMutex );             // Lock to safely access conditino variable
-	suspendCondition.wait_for( lockGuard,                               // Mutex used for condition variable
-										getWaitTime(),                           // Timeout
-										[this]()->bool{ return allowInjection; } // Predicate: should thread be resumed after timeout?
-									);
-}
-
-template < class RandomEngine >
-void ErrorInjectionThread<RandomEngine>::terminate() noexcept {
-	std::unique_lock<std::mutex> lockGuard( suspendMutex );
-	mustFinish = true;
-	allowInjection = true;
-	suspendCondition.notify_all();
-}
-
-template < class RandomEngine >
-void ErrorInjectionThread<RandomEngine>::stop() noexcept {
-	std::unique_lock<std::mutex> lockGuard( suspendMutex );
-	allowInjection = false;
-}
-
-template < class RandomEngine >
-void ErrorInjectionThread<RandomEngine>::resume() noexcept {
-	std::unique_lock<std::mutex> lockGuard( suspendMutex );
-	if( !allowInjection ) {
-		allowInjection = true;
-		suspendCondition.notify_one();
+	std::unique_lock<std::mutex> lock( _mutex );
+	if( _wait ) {
+		_suspendCondition.wait( lock );
+	} else {
+		_suspendCondition.wait_for( lock, getWaitTime() );
 	}
 }
 
 template < class RandomEngine >
-std::chrono::duration<float, std::ratio<1> > ErrorInjectionThread<RandomEngine>::getWaitTime() noexcept {
-	using duration_type = std::chrono::duration<float, std::ratio<1> >;
-	duration_type value = duration_type(waitTimeDistribution( injectionPolicy.getRandomGenerator() ));
-	return value;
+void ErrorInjectionThread<RandomEngine>::terminate() noexcept {
+	{
+		std::unique_lock<std::mutex> lock( _mutex );
+		_finish = true;
+		_wait = false;
+		_suspendCondition.notify_all();
+	}
+	_injectionThread.join();
+}
+
+template < class RandomEngine >
+void ErrorInjectionThread<RandomEngine>::stop() noexcept {
+	std::unique_lock<std::mutex> lock( _mutex );
+	_wait = true;
+}
+
+template < class RandomEngine >
+void ErrorInjectionThread<RandomEngine>::resume() noexcept {
+	std::unique_lock<std::mutex> lock( _mutex );
+	if( _wait ) {
+		_wait = false;
+		_suspendCondition.notify_one();
+	}
+}
+
+template < class RandomEngine >
+PeriodicInjectionPolicy<RandomEngine> &ErrorInjectionThread<RandomEngine>::getInjectionPolicy()
+{
+	return _injectionPolicy;
+}
+
+
+using duration_t = std::chrono::duration<double, std::milli>;
+
+template < class RandomEngine >
+duration_t ErrorInjectionThread<RandomEngine>::getWaitTime() noexcept {
+	return duration_t( 
+					_waitTimeDistribution( _injectionPolicy.getRandomGenerator() )
+				);
+}
+
+template < class RandomEngine >
+void ErrorInjectionThread<RandomEngine>::injectionLoop() {
+	while( !_finish ) {
+		wait();
+		getInjectionPolicy().injectError();
+	}
 }
 
 } // namespace error

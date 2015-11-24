@@ -20,28 +20,20 @@ class ErrorInjectionThread {
 	private:
 		using InjectionPolicy = PeriodicInjectionPolicy<RandomEngine>;
 
-		InjectionPolicy& injectionPolicy;
-
-		std::exponential_distribution<float> waitTimeDistribution;
-
-		std::atomic<bool> mustFinish;
-		std::atomic<bool> allowInjection;
-		std::mutex suspendMutex;
-		std::condition_variable suspendCondition;
-		std::thread injectionThread;
-
-		void wait();
-
-		std::chrono::duration<float, std::ratio<1> > getWaitTime() noexcept;
-
-		bool shouldTerminate() const noexcept { return mustFinish; }
+		InjectionPolicy                      &_injectionPolicy;
+		std::exponential_distribution<double> _waitTimeDistribution;
+		bool                                  _finish;
+		bool                                  _wait;
+		std::mutex                            _mutex;
+		std::condition_variable               _suspendCondition;
+		std::thread                           _injectionThread;
 
 	public:
-		ErrorInjectionThread( InjectionPolicy& manager, frequency<float,std::ratio<1> > injectionRate ) noexcept;
+		ErrorInjectionThread( InjectionPolicy& manager, frequency<double,std::kilo> injectionRate ) noexcept;
 
 		virtual ~ErrorInjectionThread() noexcept;
 
-		InjectionPolicy &getInjectionPolicy() { return injectionPolicy; }
+		InjectionPolicy &getInjectionPolicy();
 
 		void terminate() noexcept;
 
@@ -50,7 +42,11 @@ class ErrorInjectionThread {
 		void resume() noexcept;
 
 	private:
-		static void injectionLoop ( ErrorInjectionThread *thisThread );
+		void wait();
+
+		std::chrono::duration<double,std::milli> getWaitTime() noexcept;
+
+		void injectionLoop ();
 };
 
 } // namespace error
