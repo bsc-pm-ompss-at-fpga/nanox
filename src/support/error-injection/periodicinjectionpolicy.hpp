@@ -3,7 +3,7 @@
 #define PERIODIC_INJECTION_POLICY_HPP
 
 #include "periodicinjectionpolicy_decl.hpp"
-#include "error-injection/errorinjectionthread_decl.hpp"
+#include "error-injection/errorinjectionthread.hpp"
 
 namespace nanos {
 namespace error {

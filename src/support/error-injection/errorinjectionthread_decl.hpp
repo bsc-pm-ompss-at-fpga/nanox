@@ -21,6 +21,7 @@ class ErrorInjectionThread {
 		using InjectionPolicy = PeriodicInjectionPolicy<RandomEngine>;
 
 		InjectionPolicy& injectionPolicy;
+
 		std::exponential_distribution<float> waitTimeDistribution;
 
 		std::atomic<bool> mustFinish;

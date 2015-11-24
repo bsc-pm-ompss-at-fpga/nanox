@@ -226,7 +226,15 @@ void System::loadModules ()
 
    ensure0( _defBarrFactory,"No default system barrier factory" );
    
+#ifdef NANOS_RESILIENCY_ENABLED
+	// load default error injection plugin
+   verbose0( "loading ", getInjectionPolicy(), " injection policy" );
 
+   if ( !loadPlugin( std::string("injection-")+getInjectionPolicy() ) )
+      fatal0( "Could not load main error injection policy" );
+
+   ensure0( !_injectionPolicy.empty(),"No error injection policy defined" );
+#endif
 }
 
 void System::unloadModules ()

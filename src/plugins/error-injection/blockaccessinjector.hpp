@@ -2,7 +2,7 @@
 #ifndef BLOCK_ACCESS_INJECTOR_HPP
 #define BLOCK_ACCESS_INJECTOR_HPP
 
-#include "periodicinjectionpolicy.hpp"
+#include "error-injection/periodicinjectionpolicy.hpp"
 #include "memory/memorypage.hpp"
 #include "memory/blockedpage.hpp"
 

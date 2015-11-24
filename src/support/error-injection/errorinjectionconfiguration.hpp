@@ -28,35 +28,12 @@ class ErrorInjectionConfig /*: public Config*/ {
 				injection_limit(0),
 				injection_seed(0)
 		{
-			//registerConfigOption("error_injection",
-			//	NEW Config::StringVar(selected_injector, "none"),
-			//	"Selects error injection policy. Used for resiliency evaluation.");
-			//registerArgOption("error_injection", "error-injection");
-			//registerEnvOption("error_injection", "NX_ERROR_INJECTION");
-
-			//registerConfigOption("error_injection_seed",
-			//	NEW Config::IntegerVar(injection_seed,0),
-			//	"Error injector randon number generator seed.");
-			//registerArgOption("error_injection_seed", "error-injection-seed");
-			//registerEnvOption("error_injection_seed", "NX_ERROR_INJECTION_SEED");
-
-			//registerConfigOption("error_injection_rate",
-			//	NEW Config::FloatVar(static_cast<float&>(injection_rate),0.0f),
-			//	"Error injection rate (Hz).");
-			//registerArgOption("error_injection_rate", "error-injection-rate");
-			//registerEnvOption("error_injection_rate", "NX_ERROR_INJECTION_RATE");
-
-			//registerConfigOption("error_injection_limit",
-			//	NEW Config::IntegerVar(injection_limit,0),
-			//	"Maximum number of injected errors (0: unlimited)");
-			//registerArgOption("error_injection_limit", "error-injection-limit");
-			//registerEnvOption("error_injection_limit", "NX_ERROR_INJECTION_LIMIT");
-
-			//init();
 		}
 
 		void config( Config &properties )
 		{
+			properties.setOptionsSection("Error injection plugin for resiliency evaluation", "Injection plugin specific options" );
+
 			properties.registerConfigOption("error_injection_seed",
 			            NEW Config::UintVar(injection_seed),
 			            "Error injector randon number generator seed.");

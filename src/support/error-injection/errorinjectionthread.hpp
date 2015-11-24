@@ -3,7 +3,7 @@
 #define ERROR_INJECTION_THREAD_HPP
 
 #include "errorinjectionthread_decl.hpp"
-#include "periodicinjectionpolicy.hpp"
+#include "periodicinjectionpolicy_decl.hpp"
 #include "frequency.hpp"
 
 #include <chrono>
@@ -74,9 +74,9 @@ void ErrorInjectionThread<RandomEngine>::resume() noexcept {
 
 template < class RandomEngine >
 std::chrono::duration<float, std::ratio<1> > ErrorInjectionThread<RandomEngine>::getWaitTime() noexcept {
-	return std::chrono::duration<float, std::ratio<1> >( 0 );
-//						waitTimeDistribution( getInjectionPolicy().getRandomEngine() )
-//				);
+	using duration_type = std::chrono::duration<float, std::ratio<1> >;
+	duration_type value = duration_type(waitTimeDistribution( injectionPolicy.getRandomGenerator() ));
+	return value;
 }
 
 } // namespace error

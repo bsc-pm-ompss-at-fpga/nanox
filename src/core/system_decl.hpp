@@ -394,6 +394,11 @@ namespace nanos
          size_t getBackupPoolSize ( ) const;
 
          /*!
+          * \brief Returns the injection policy selected by the user.
+          */
+         std::string const& getInjectionPolicy() const;
+
+         /*!
           * \brief Returns current task execution error count.
           */
          int getInjectedErrors ( ) const;
