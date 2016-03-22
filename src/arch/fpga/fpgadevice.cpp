@@ -71,17 +71,23 @@ inline bool FPGADevice::copyIn( void *localDst, CopyDescriptor &remoteSrc, size_
 
    FPGAPinnedAllocator& allocator = FPGAProcessor::getPinnedAllocator();
    uint64_t baseAddress = (uint64_t)allocator.getBasePointer( (void *)src_addr, size);
-   ensure( baseAddress != 0, "Trying to submit a regular (not pinned) buffer to FPGA");
-   uint64_t offset;
    xdma_buf_handle bufHandle;
-   offset = src_addr - baseAddress;
-   bufHandle = allocator.getBufferHandle( (void *)src_addr );
 
-   NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_SUBMIT_IN_DMA_EVENT );
-   //Support synchronous transfers??
-   status = xdmaSubmitKBuffer( bufHandle, size, (unsigned int)offset, XDMA_ASYNC,
-           device, iChan, &dmaHandle );
-   NANOS_FPGA_CLOSE_RUNTIME_EVENT;
+   if ( baseAddress ) {
+      //Transferring pinned kernel space buffer
+      uint64_t offset;
+      offset = src_addr - baseAddress;
+      bufHandle = allocator.getBufferHandle( (void *)src_addr );
+
+      NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_SUBMIT_IN_DMA_EVENT );
+      //Support synchronous transfers??
+      status = xdmaSubmitKBuffer( bufHandle, size, (unsigned int)offset, XDMA_ASYNC,
+            device, iChan, &dmaHandle );
+      NANOS_FPGA_CLOSE_RUNTIME_EVENT;
+   } else {
+      //Transfer user space memory (pin buffer & submit transfer)
+      status = xdmaSubmitBuffer( (void*)src_addr, size, XDMA_ASYNC, device, iChan, &dmaHandle );
+   }
 
    debug ( "  got intput handle: " << dmaHandle );
    if ( status )
@@ -138,16 +144,20 @@ bool FPGADevice::copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size
 
    FPGAPinnedAllocator& allocator = FPGAProcessor::getPinnedAllocator();
    uint64_t baseAddress = (uint64_t)allocator.getBasePointer( (void*)src_addr, size );
-   ensure( baseAddress != 0, "Trying to submit a regular (not pinned) buffer to FPGA");
-   uint64_t offset;
-   xdma_buf_handle bufHandle;
-   offset = src_addr - baseAddress;
-   bufHandle = allocator.getBufferHandle( (void *)src_addr );
+   if ( baseAddress ) {
+      uint64_t offset;
+      xdma_buf_handle bufHandle;
+      offset = src_addr - baseAddress;
+      bufHandle = allocator.getBufferHandle( (void *)src_addr );
 
-   NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_SUBMIT_OUT_DMA_EVENT );
-   status = xdmaSubmitKBuffer( bufHandle, size, (unsigned int)offset, XDMA_ASYNC,
-           device, oChan, &dmaHandle );
-   NANOS_FPGA_CLOSE_RUNTIME_EVENT;
+      NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_SUBMIT_OUT_DMA_EVENT );
+      status = xdmaSubmitKBuffer( bufHandle, size, (unsigned int)offset, XDMA_ASYNC,
+            device, oChan, &dmaHandle );
+      NANOS_FPGA_CLOSE_RUNTIME_EVENT;
+
+   } else {
+      status = xdmaSubmitBuffer( (void*)src_addr, size, XDMA_ASYNC, device, oChan, &dmaHandle );
+   }
 
    if ( status )
       warning( "Error submitting output:" << status );
