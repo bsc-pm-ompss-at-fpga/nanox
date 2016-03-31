@@ -25,6 +25,7 @@
 
 #include "fpgaprocessor.hpp"
 #include "smpthread.hpp"
+#include "libxdma.h"
 
 namespace nanos {
 namespace ext
@@ -33,7 +34,8 @@ namespace ext
    class FPGAThread : public SMPThread
    {
       public:
-         FPGAThread(WD &wd, PE *pe, SMPProcessor *core, Atomic<int> fpgaDevice) : SMPThread(wd, pe, core), _pendingWD(){}
+         FPGAThread(WD &wd, PE *pe, SMPProcessor *core, Atomic<int> fpgaDevice) :
+            SMPThread(wd, pe, core), _pendingWD(), _hwInstrCounters() {}
 
          void initializeDependent( void );
          void runDependent ( void );
@@ -51,6 +53,8 @@ namespace ext
 
       private:
          std::queue< WD* > _pendingWD;
+         std::map< WD*, xdma_instr_times* > _hwInstrCounters;
+         void readInstrCounters( WD *wd );
    };
 }
 }
