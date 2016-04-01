@@ -108,6 +108,7 @@ void FPGAThread::finishPendingWD( int numWD ) {
    for (int i=0; i<n; i++) {
       WD * wd = _pendingWD.front();
       //Scheduler::postOutlineWork( wd, false, this );
+      readInstrCounters( wd );
       FPGAWorker::postOutlineWork(wd);
       _pendingWD.pop();
    }
