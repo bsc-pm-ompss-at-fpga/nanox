@@ -65,12 +65,6 @@ bool FPGAThread::inlineWorkDependent( WD &wd )
 }
 
 void FPGAThread::preOutlineWorkDependent ( WD &wd ) {
-   //Set up HW instrumentation
-   const xdma_device deviceHandle =
-      ( ( FPGAProcessor * ) myThread->runningOn() )->getFPGAProcessorInfo()->getDeviceHandle();
-   xdma_instr_times * hwCounters;
-   xdmaSetupTaskInstrument(deviceHandle, &hwCounters);
-   _hwInstrCounters[ &wd ] = hwCounters;
    wd.preStart(WorkDescriptor::IsNotAUserLevelThread);
 }
 
@@ -83,7 +77,6 @@ void FPGAThread::outlineWorkDependent ( WD &wd ) {
    //set flag to allow new opdate
    fpga->setUpdate(true);
    FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
-   //XXX: Setup instrumentation for this task
    ( dd.getWorkFct() )( wd.getData() );
 }
 
@@ -142,4 +135,13 @@ void FPGAThread::readInstrCounters( WD *wd ) {
    xdmaClearTaskTimes( counters );
    _hwInstrCounters.erase( wd );
 
+}
+
+void FPGAThread::setupTaskInstrumentation( WD *wd ) {
+   //Set up HW instrumentation
+   const xdma_device deviceHandle =
+      ( ( FPGAProcessor * ) myThread->runningOn() )->getFPGAProcessorInfo()->getDeviceHandle();
+   xdma_instr_times * hwCounters;
+   xdmaSetupTaskInstrument(deviceHandle, &hwCounters);
+   _hwInstrCounters[ wd ] = hwCounters;
 }

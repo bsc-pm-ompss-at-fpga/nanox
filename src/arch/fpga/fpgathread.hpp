@@ -50,6 +50,7 @@ namespace ext
          void finishPendingWD( int numWD );
          void addPendingWD( WD *wd );
          void finishAllWD();
+         void setupTaskInstrumentation( WD *wd );
 
       private:
          std::queue< WD* > _pendingWD;
