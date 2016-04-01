@@ -31,6 +31,9 @@ void FPGAThread::initializeDependent()
 {
    //initialize device
    ( ( FPGAProcessor * ) myThread->runningOn() )->init();
+   //initialize instrumentation
+   xdmaInitHWInstrumentation();
+
 }
 
 
