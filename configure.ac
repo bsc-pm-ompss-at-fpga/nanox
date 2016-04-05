@@ -1140,13 +1140,13 @@ AC_SUBST([MKL_LIBS])
 AC_MSG_CHECKING([if task resiliency is enabled])
 AC_ARG_ENABLE([resiliency],
   [
-    AS_HELP_STRING([--disable-resiliency], [Disables task-level resiliency])
+    AS_HELP_STRING([--enable-resiliency], [Enables task-level resiliency])
   ],
   [
     resiliency=$enableval
   ],
   [
-    resiliency=yes
+    resiliency=no
   ])
 AC_MSG_RESULT([$resiliency])
 
