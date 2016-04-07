@@ -50,6 +50,7 @@ typedef uint64_t ompt_target_time_t;        /* raw time value on a device       
 typedef void * ompt_target_buffer_t;        /* opaque handle for a target buffer             */ 
 
 typedef uint64_t ompt_target_buffer_cursor_t;/* opaque handle for a position in target buffer*/ 
+typedef uint64_t ompt_target_id_t;          /* uniquely identifies a target region */
 
 typedef enum ompt_thread_type_e {
   ompt_thread_initial  = 1,
