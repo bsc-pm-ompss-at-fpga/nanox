@@ -15,10 +15,13 @@ class ExecutionContext {
 
 class SignalInfo {
 	private:
-		siginfo_t savedInfo;
+		siginfo_t _info;
 	public:
 		SignalInfo( siginfo_t * info ) :
-			savedInfo( *info )
+			_info( *info )
 		{}
 
+		int getSignalNumber() const { return _info.si_signo; }
+
+		int getSignalCode() const { return _info.si_code; }
 };

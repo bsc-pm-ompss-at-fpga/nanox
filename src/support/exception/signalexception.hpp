@@ -1,30 +1,34 @@
 
+#ifndef SIGNALEXCEPTION_HPP
+#define SIGNALEXCEPTION_HPP
+
 #include "exceptiontracer.hpp"
 #include "signaltranslator.hpp"
 #include "signalinfo.hpp"
+#include "exception/genericexception.hpp"
 
 #include <signal.h>
 #include <pthread.h>
 
 #include <exception>
 
+namespace nanos {
+namespace error {
+
 class SignalException : public GenericException {
 	private:
-		SignalInfo handledSignalInfo;
-		ExecutionContext executionContextWhenHandled;
+		SignalInfo       _handledSignalInfo;
+		ExecutionContext _executionContextWhenHandled;
 
 	protected:
-		void setErrorMessage( std::string const& message ) { errorMessage = message; }
+		SignalInfo const& getHandledSignalInfo() const { return _handledSignalInfo; }
 
-		SignalInfo const& getHandledSignalInfo() const { return handledSignalInfo; }
-
-		ExecutionContext const& getExecutionContextWhenHandled() { return executionContextWhenHandled; }
-
+		ExecutionContext const& getExecutionContextWhenHandled() { return _executionContextWhenHandled; }
 	public:
-		SignalException( siginfo_t* signalInfo, ucontext_t* executionContext, std::string const& errorMessage ) :
-				GenericException( errorMessage ),
-				handledSignalInfo( signalInfo ), 
-				executionContextWhenHandled( executionContext ) 
+		SignalException( siginfo_t* signalInfo, ucontext_t* executionContext, std::string const& message ) :
+				GenericException( message ),
+				_handledSignalInfo( signalInfo ), 
+				_executionContextWhenHandled( executionContext ) 
 		{}
 
 		virtual ~SignalException() {
@@ -32,8 +36,8 @@ class SignalException : public GenericException {
 			// Deletion should be performed at the end of the catch block.
 			sigset_t thisSignalMask;
 			sigemptyset(&thisSignalMask);
-			sigaddset(&thisSignalMask, handledSignalInfo.getSignalNumber());
-			pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
+			sigaddset(&thisSignalMask, getHandledSignalInfo().getSignalNumber());
+			pthread_sigmask(SIG_UNBLOCK, &thisSignalMask, NULL);
 		}
 };
 
@@ -58,3 +62,9 @@ class BusErrorException : public SignalException {
 				SignalException( signalInfo, executionContext, getErrorMessage()  )
 		{}
 };
+
+} // namespace error
+} // namespace nanos
+
+#endif
+

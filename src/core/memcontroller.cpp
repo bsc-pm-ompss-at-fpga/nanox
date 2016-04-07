@@ -430,8 +430,10 @@ void MemController::restoreBackupData ( )
       if( !failed ) {
          _restoreOps->issue(_wd);
       } else {
-         if( _wd.getParent() == NULL ||               // If we haven't any ancestor to recover
-               !_wd.getParent()->setInvalid( true ) ) // or we cannot find any ancestor which is recoverable
+         WorkDescriptor* recoverableAncestor = NULL;
+         if( _wd.getParent() != NULL )
+            recoverableAncestor = _wd.getParent()->propagateInvalidationAndGetRecoverableAncestor();
+         if( !recoverableAncestor )
             fatal("Resiliency: Unrecoverable error found. "
                   "Found an invalidated backup and I haven't any ancestor which can recover the execution." );
       }
@@ -541,7 +543,7 @@ bool MemController::isDataRestored( WD const &wd ) {
    ensure( _preinitialized == true, "MemController::isDataRestored: MemController not initialized!");
    ensure( _wd.isRecoverable(), "Task is not recoverable. There wasn't any data to be restored. ");
    if ( _initialized ) {
-      if ( !_dataRestored ) {
+      if ( _restoreOps && !_dataRestored ) {
          _dataRestored = _restoreOps->isDataReady( wd );
 
          for ( unsigned int index = 0; index < _wd.getNumCopies(); index++ ) {
@@ -563,6 +565,8 @@ bool MemController::isDataRestored( WD const &wd ) {
                sys.getBackupMemory().releaseRegion( _backupCacheCopies[ index ]._reg, _wd, index, _backupCacheCopies[ index ]._policy ) ;
             }*/
          }
+      } else {
+         _dataRestored = true;
       }
       return _dataRestored;
    }

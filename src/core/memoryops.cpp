@@ -48,48 +48,55 @@ BaseOps::~BaseOps() {
 }
 
 bool BaseOps::isDataReady( WD const &wd, bool inval ) {
-   if ( !_dataReady ) {
-      bool allReady = true;
+   if ( _dataReady ) return true;
 
-      std::set< OwnOp >::iterator it = _ownDeviceOps.begin();
-      while ( it != _ownDeviceOps.end() && allReady ) {
-         if ( it->_ops->allCompleted() ) {
-            it++;
-         } else {
-            allReady = false;
+   bool allReady = true;
+
+   std::set< OwnOp >::iterator it = _ownDeviceOps.begin();
+   while ( it != _ownDeviceOps.end() && allReady ) {
+      allReady = it->_ops->allCompleted();
+      it++;
+   }
+   // do it this way because there may be dependencies between operations,
+   // by clearing all when all are completed any dependence will be satisfied.
+   if ( allReady ) {
+      //if (!inval) {
+      //   *(myThread->_file) << "######################## COMPLETED OPS FOR WD " << wd.getId() << " ownOps is "<< _ownDeviceOps.size() << std::endl;
+      //}
+      for ( it = _ownDeviceOps.begin(); it != _ownDeviceOps.end(); it++ ) {
+         it->_ops->completeCacheOp( /* debug: */ &wd );
+         if ( _delayedCommit ) { 
+            //it->commitMetadata( _pe );
+            it->_reg.setLocationAndVersion( _pe, it->_location, it->_version );
          }
       }
-      // do it this way because there may be dependencies between operations,
-      // by clearing all when all are completed any dependence will be satisfied.
-      if ( allReady ) {
-         //if (!inval) {
-         //   *(myThread->_file) << "######################## COMPLETED OPS FOR WD " << wd.getId() << " ownOps is "<< _ownDeviceOps.size() << std::endl;
-         //}
-         for ( it = _ownDeviceOps.begin(); it != _ownDeviceOps.end(); it++ ) {
-            it->_ops->completeCacheOp( /* debug: */ &wd );
-            if ( _delayedCommit ) { 
-               it->commitMetadata( _pe );
-            }
-         }
-         _ownDeviceOps.clear();
+      _ownDeviceOps.clear();
+   } else {
+      return false;
+   }
+
+   if ( allReady ) {
+      std::set< DeviceOps * >::iterator otherIt = _otherDeviceOps.begin();
+      // Si el tamano de otherDeviceOps no es demasiado grande, merece mas la pena buscar y luego borrar todo...
+      //while ( otherIt != _otherDeviceOps.end() && allReady ) {
+      //   // y esto?? por qué usar toberemovedit?
+      //   if ( (*otherIt)->allCacheOpsCompleted() ) {
+      //      std::set< DeviceOps * >::iterator toBeRemovedIt = otherIt;
+      //      otherIt++;
+      //      _otherDeviceOps.erase( toBeRemovedIt );
+      //   } else {
+      //      allReady = false;
+      //   }
+      //}
+      while ( allReady && otherIt != _otherDeviceOps.end() ) {
+         allReady = (*otherIt)->allCacheOpsCompleted();
       }
-      if ( allReady ) {
-         std::set< DeviceOps * >::iterator otherIt = _otherDeviceOps.begin();
-         while ( otherIt != _otherDeviceOps.end() && allReady ) {
-            if ( (*otherIt)->allCacheOpsCompleted() ) {
-               std::set< DeviceOps * >::iterator toBeRemovedIt = otherIt;
-               otherIt++;
-               _otherDeviceOps.erase( toBeRemovedIt );
-            } else {
-               allReady = false;
-            }
-         }
-      }
-      if ( allReady ) {
+      if( allReady ) {
+         _otherDeviceOps.clear();
          releaseLockedSourceChunks( wd );
       }
-      _dataReady = allReady;
    }
+   _dataReady = allReady;
    return _dataReady;
 }
 
@@ -104,8 +111,12 @@ std::set< BaseOps::OwnOp > &BaseOps::getOwnOps() {
 void BaseOps::insertOwnOp( DeviceOps *ops, global_reg_t reg, unsigned int version, memory_space_id_t loc ) {
    OwnOp op( ops, reg, version, loc );
    _ownDeviceOps.insert( op );
+   // esto igual se puede mover al issue?
+   // hay una diferencia: en algunos casos interesa hacerlo al principio.
+   // Candidato a politica de commit: commitOnDeclare, commitOnIssue, noCommit...
    if ( !_delayedCommit ) {
-      op.commitMetadata( _pe );
+      //op.commitMetadata( _pe );
+      op._reg.setLocationAndVersion( _pe, op._location, op._version );
    }
 }
 

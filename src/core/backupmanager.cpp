@@ -23,6 +23,8 @@
 #include <sys/mman.h>
 #include <iostream>
 
+#include "mpoison.h"
+
 BackupManager::BackupManager ( ) :
       Device("BackupMgr"), _memsize(0), _pool_addr(), _managed_pool() {}
 
@@ -78,6 +80,8 @@ bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
                               std::size_t len, SeparateMemoryAddressSpace &mem,
                               WorkDescriptor const& wd ) throw()
 {
+   static int counter = 0;
+   counter++;
    /* This is called on backup operations. Data is copied from host to device.
     * The operation is defined outside _copyIn because, for inout args we need
     * to create and manage private checkpoints, so passing through the dictionary and
@@ -95,7 +99,6 @@ bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
        * optimizations.
        */
       rawCopy(begin, end, dest);
-      std::cout << "Checkpoint. Copied from 0x" << std::hex << hostAddr << " to 0x" << std::hex << devAddr << std::endl;
       return true;
    } catch ( TaskException &e ) {
       e.handleCheckpointError( wd, hostAddr, devAddr, len );

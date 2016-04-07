@@ -48,8 +48,8 @@ namespace error {
  */
 class GenericException : public ExceptionTracer, public std::exception {
    private:
-      std::string errorMessage;//!< Explanatory string.
-      WorkDescriptor &runningTaskOnError;//!< WorkDescriptor that was being executed when the error was found.
+      std::string     _errorMessage;//!< Explanatory string.
+      WorkDescriptor &_runningTaskOnError;//!< WorkDescriptor that was being executed when the error was found.
 
    public:
       /**
@@ -57,9 +57,11 @@ class GenericException : public ExceptionTracer, public std::exception {
        * @param[in] message Brief description of the error that was found.
        */
       GenericException( std::string const& message ) : 
-            errorMessage( message ), 
-            runningTaskOnError( *getMyThreadSafe()->getCurrentWD() )
+            _errorMessage( message ), 
+            _runningTaskOnError( *getMyThreadSafe()->getCurrentWD() )
       {}
+
+		void setErrorMessage( std::string const& message ) { _errorMessage = message; }
 
       ~GenericException() throw() {}
 
@@ -68,7 +70,7 @@ class GenericException : public ExceptionTracer, public std::exception {
        * \returns a brief description of the error that was found
        */
       virtual const char* what() const throw() {
-         return errorMessage.c_str();
+         return _errorMessage.c_str();
       }
 };
 

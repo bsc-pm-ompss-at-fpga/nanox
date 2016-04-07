@@ -71,6 +71,7 @@ void *nanos::vm::mpoison_run(void *arg)
 
 extern "C" {
 
+#if 0 // disabled
 void mpoison_set_fail( bool value ) {
    failFlag = value;
    sys.setFaultyAddress(value);
@@ -90,6 +91,7 @@ int mpoison_should_fail() {
    else
       return 0;
 }
+#endif
 
 void mpoison_stop(){
    stop = true;

@@ -36,20 +36,20 @@ dlb_instrdebug_ldflags = -L@DLB_LIB@ -ldlb_instr_dbg
 endif
 
 if GNU_C
-common_cflags= -Wall -Wextra -Werror -Wshadow -Wmissing-declarations -Wno-unused-parameter  -include"new_decl.hpp" -pthread $(hwloc_cxxflags) $(ft_cxxflags) $(dlb_cppflags)
+common_cflags= -Wall -Wextra -Werror -Wshadow -Wmissing-declarations -Wno-unused-parameter  -include"new_decl.hpp" -pthread $(hwloc_cxxflags) $(ft_cxxflags) $(dlb_cppflags) $(CXXFLAGS)
 common_fcflags= -Wall -Wextra -Wshadow -Wno-unused-parameter -pthread -fPIC -DPIC $(ft_fcflags)
 no_inline_flag= -fno-inline
 endif
 
 if IBM_C
-common_cflags= -qinclude="new_decl.hpp" -qlanglvl=variadictemplates $(CFLAGS) $(hwloc_cxxflags) $(dlb_cppflags)
+common_cflags= -qinclude="new_decl.hpp" -qlanglvl=variadictemplates $(CFLAGS) $(hwloc_cxxflags) $(dlb_cppflags) $(CXXFLAGS)
 common_fcflags= -qPIC -DPIC
 no_inline_flag= -qnoinline
 ignore_muldefs= -Wl,-z,muldefs
 endif
 
 if INTEL_C
-common_cflags= -Wall -Wextra -Werror -Wshadow -Wmissing-declarations -Wno-unused-parameter -include"new_decl.hpp" -pthread  $(hwloc_cxxflags) $(ft_cxxflags)
+common_cflags= -Wall -Wextra -Werror -Wshadow -Wmissing-declarations -Wno-unused-parameter -include"new_decl.hpp" -pthread  $(hwloc_cxxflags) $(ft_cxxflags) $(CXXFLAGS)
 common_fcflags= -Wall -Wextra -Wshadow -Wno-unused-parameter -pthread -fPIC -DPIC $(ft_fcflags)
 endif
 

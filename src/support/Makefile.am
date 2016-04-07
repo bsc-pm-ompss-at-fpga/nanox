@@ -192,11 +192,12 @@ support_sources = \
 	exception/exceptiontracer.hpp \
 	exception/genericexception.hpp \
 	exception/mpierror.hpp \
-	exception/mpierror.cpp \
 	exception/mpierrorhandler.hpp \
 	exception/mpierrortranslator.hpp \
 	exception/mpierrorhandler.hpp \
 	exception/mpierrortranslator.hpp \
+	exception/signalexception.hpp \
+	exception/signalexception.cpp \
 	$(END) 
 
 debug_sources = \

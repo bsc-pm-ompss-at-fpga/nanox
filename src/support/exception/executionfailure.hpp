@@ -1,17 +1,25 @@
 
 #include "operationfailure.hpp"
 
+namespace nanos {
+namespace error {
+
 class ExecutionFailure {
 	private:
-		OperationFailure const& failedOperation;
+		OperationFailure& _failedOperation;
 	public:
-		ExecutionFailure( OperationFailure const& operation ) :
-				failedOperation( operation )
+		ExecutionFailure( OperationFailure& operation ) :
+				_failedOperation( operation )
 		{
-			bool isRecoverable = task->setInvalid( true );
-			if( !isRecoverable ) {
-				fatal( "Could not find a recoverable task when recovering from ", failedOperation.what() );
+         sys.getExceptionStats().incrExecutionErrors();
+
+			WorkDescriptor* recoverableAncestor = _failedOperation.getTask().propagateInvalidationAndGetRecoverableAncestor();
+			if( !recoverableAncestor ) {
+				fatal( "Could not find a recoverable task when recovering from ", _failedOperation.what() );
 			}
 		}
 };
+
+} // namespace error
+} // namespace nanos
 

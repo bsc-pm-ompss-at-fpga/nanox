@@ -31,6 +31,8 @@
 #include <cstdint>
 #include "taskexception.hpp"
 #include "memcontroller_decl.hpp"
+#include "exception/operationfailure.hpp"
+#include "exception/executionfailure.hpp"
 
 #ifdef NANOS_FAULT_INJECTION
 #include <cstring>
@@ -131,7 +133,7 @@ void SMPDD::execute ( WD &wd ) throw ()
        *  before allocating a new stack for the task and, perhaps,
        *  skip data copies of dependences.
        */
-      WorkDescriptor *ancestor = wd.propagateInvalidation();
+      wd.propagateInvalidationAndGetRecoverableAncestor();
       debug ( "Resiliency: Task ", wd.getId(), " is flagged as invalid. Skipping it.");
 
       NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
@@ -156,13 +158,10 @@ void SMPDD::execute ( WD &wd ) throw ()
                sys.setFaultyAddress(0);
             }
 #endif
-         } catch (nanos::OperationFailure& failure) {
+         } catch (nanos::error::OperationFailure& failure) {
 
             debug("Resiliency: error detected during task ", wd.getId(), " execution.");
-				ExecutionFailure handle( failure );
-				// TODO move the following to ExecutionFailure
-            sys.getExceptionStats().incrExecutionErrors();
-            e.handleExecutionError( );
+            nanos::error::ExecutionFailure handle( failure );
          }
 
          /* 
@@ -181,7 +180,7 @@ void SMPDD::execute ( WD &wd ) throw ()
                } else {
                   debug( "Task ", wd.getId(), " is not being recovered again. Number of trials exhausted." );
                   // Giving up retrying...
-                  wd.getParent()->propagateInvalidation();
+                  wd.getParent()->propagateInvalidationAndGetRecoverableAncestor();
                   restart = false;
                }
             } else {
@@ -190,8 +189,8 @@ void SMPDD::execute ( WD &wd ) throw ()
                restart = false;
             }
          } catch ( std::exception &ex ) {
-            bool recoverable_error = wd.getParent() && wd.getParent()->setInvalid(true);
-            if( !recoverable_error )
+            WorkDescriptor* recoverableAncestor = wd.propagateInvalidationAndGetRecoverableAncestor();
+            if( !recoverableAncestor )
             {
                // Unrecoverable error: terminate execution
                fatal("An error was found, but there isn't any recoverable ancestor. ");
@@ -224,7 +223,8 @@ bool SMPDD::recover( TaskException const& err ) {
          switch(err.getSignalInfo().si_code) {
             case SEGV_MAPERR: /* Address not mapped to object.  */
                message( "SEGV_MAPERR error recovery is not supported yet." );
-               return false;
+               //return false;
+               return true;
             case SEGV_ACCERR: /* Invalid permissions for mapped object.  */
                uintptr_t page_addr = (uintptr_t)err.getSignalInfo().si_addr;
                // Align faulting address with virtual page address

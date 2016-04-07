@@ -19,7 +19,7 @@
 
 /*
  <testinfo>
- test_generator='gens/resiliency-generator -a --task-retries=4'
+ test_generator='gens/resiliency-generator -a --task-retrials=4'
  </testinfo>
 */
 
@@ -192,8 +192,8 @@ fib0(int n)
 int
 main(int argc, char **argv)
 {
-  int n = 20;
-  if (fib0(n) != 6765)
+  int n = 8;
+  if (fib0(n) != 21)
     return 1;
   return 0;
 }

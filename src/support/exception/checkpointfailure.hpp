@@ -8,8 +8,8 @@ class CheckpointFailure {
 		CheckpointFailure( OperationFailure const& operation ) :
 				failedOperation( operation )
 		{
-			bool isRecoverable = task->setInvalid( true );
-			if( !isRecoverable ) {
+			WorkDescriptor* recoverableAncestor = _failedOperation.getTask().propagateInvalidationAndGetRecoverableAncestor();
+			if( !recoverableAncestor ) {
 				fatal( "Could not find a recoverable task when recovering from ", failedOperation.what() );
 			}
 		}

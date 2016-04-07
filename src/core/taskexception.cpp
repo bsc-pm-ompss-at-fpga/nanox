@@ -269,9 +269,8 @@ void TaskException::handleExecutionError ( ) const
    pthread_sigmask(SIG_UNBLOCK, &sigs, NULL);
 
    // error detected in task execution: invalidate it
-   bool recoverable_error = task->setInvalid(true);
-
-   if( !recoverable_error )  
+   WorkDescriptor* recoverableAncestor = task->propagateInvalidationAndGetRecoverableAncestor();
+   if( !recoverableAncestor )
    {
       // Unrecoverable error: terminate execution
       fatal("An error was found, but there isn't any recoverable ancestor. ", what());
