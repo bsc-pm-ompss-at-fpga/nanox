@@ -302,6 +302,31 @@ extern "C" {
       return NULL;
    }
 
+
+   static ompt_target_id_t ompt_nanos_get_target_id( void );
+   static ompt_target_id_t ompt_nanos_get_target_id( void )
+   {
+      return 0;
+   }
+
+   static int ompt_nanos_get_num_devices( void )
+   {
+      return 0;
+   }
+
+   //! Return the ID of the active device
+   static int ompt_nanos_target_get_device_id( void )
+   {
+      return 0;
+   }
+
+   static int ompt_nanos_target_get_device_info( int32_t device_id, const char **type,
+         ompt_target_device_t **device, ompt_function_lookup_t *lookup,
+         const char *documentation )
+   {
+      return 0;
+   }
+
    ompt_interface_fn_t ompt_nanos_lookup ( const char *entry_point );
    ompt_interface_fn_t ompt_nanos_lookup ( const char *entry_point )
    {
@@ -325,8 +350,127 @@ extern "C" {
          return ( ompt_interface_fn_t ) ompt_nanos_get_task_id;
       if ( strncmp( entry_point, "ompt_get_task_frame", strlen("ompt_get_task_frame") ) == 0 )
          return ( ompt_interface_fn_t ) ompt_nanos_get_task_frame;
- 
+
+      //Target
+      if ( strncmp( entry_point, "ompt_get_target_id", strlen("ompt_get_target_id") )  == 0 )
+         return ( ompt_interface_fn_t ) ompt_nanos_get_target_id; //TODO
+      if ( strncmp( entry_point, "ompt_get_num_devices", strlen("ompt_get_num_devices") ) == 0 )
+         return ( ompt_interface_fn_t ) ompt_nanos_get_num_devices;     //TODO
+      if ( strncmp( entry_point, "ompt_target_get_device_id", strlen("ompt_target_get_device_id") ) == 0 )
+         return (ompt_interface_fn_t ) ompt_nanos_target_get_device_id;       //TODO
+      if ( strncmp( entry_point, "ompt_target_get_device_info", strlen("ompt_target_get_device_info") ) == 0 )
+         return ( ompt_interface_fn_t ) ompt_nanos_target_get_device_info;    //TODO
+
       return (NULL);
+   }
+
+
+   static ompt_target_time_t ompt_nanos_target_get_time( ompt_target_device_t *device )
+   {
+      return 0;
+   }
+
+   static double ompt_nanos_target_translate_time( ompt_target_device_t *device,
+         ompt_target_time_t time)
+   {
+      return 0;
+   }
+
+   static int ompt_nanos_target_set_trace_ompt( ompt_target_device_t *device, _Bool enable,
+         ompt_record_type_t rtype )
+   {
+      return 0;
+   }
+
+   static int ompt_nanos_target_set_trace_native( ompt_target_device_t *device, _Bool enable,
+         ompt_record_type_t rtype )
+   {
+      return 0;
+   }
+
+   static int ompt_nanos_target_start_trace( ompt_target_device_t *device,
+         ompt_target_buffer_request_callback_t request,
+         ompt_target_buffer_complete_callback_t )
+   {
+      return 0;
+   }
+
+   static int ompt_nanos_target_pause_trace( ompt_target_device_t *device, _Bool begin_pause )
+   {
+      return 0;
+   }
+
+   static int ompt_nanos_target_stop_trace ( ompt_target_device_t *device )
+   {
+      return 0;
+   }
+
+   static int ompt_nanos_target_advance_buffer_cursor( ompt_target_buffer_t *buffer,
+         ompt_target_buffer_cursor_t current,
+         ompt_target_buffer_cursor_t *next )
+   {
+      return 0;
+   }
+
+  static ompt_record_type_t ompt_nanos_target_buffer_get_record_type( ompt_target_buffer_t *buffer, ompt_target_buffer_cursor_t current)
+  {
+     return (ompt_record_type_t)0;
+  }
+
+  static ompt_record_ompt_t *ompt_nanos_target_buffer_get_record_ompt( ompt_target_buffer_t *buffer,
+        ompt_target_buffer_cursor_t current )
+  {
+     return 0;
+  }
+
+  static void *ompt_nanos_target_buffer_get_record_native( ompt_target_buffer_cursor_t *buffer,
+        ompt_target_buffer_cursor_t current, ompt_target_id_t *host_op_id )
+  {
+     return 0;
+  }
+
+  static ompt_record_native_abstract_t *ompt_nanos_target_buffer_get_record_native_abstract(
+        void *native_record )
+  {
+     return ( ompt_record_native_abstract_t* )NULL;
+  }
+
+
+   /*!
+    * Lookup function that will manage target (device) related functions
+    * A single target lookup function is used for any device
+    */
+   ompt_interface_fn_t ompt_nanos_target_lookup ( const char *entry_point );
+   ompt_interface_fn_t ompt_nanos_target_lookup ( const char *entry_point )
+   {
+      //TODO: Use a smarter way to look for a function
+      //Trace control
+      if ( strncmp( entry_point, "ompt_target_get_time", strlen("ompt_target_get_time") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_get_time;
+      if ( strncmp( entry_point, "ompt_target_translate_time", strlen("ompt_target_translate_time") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_translate_time;
+      if ( strncmp( entry_point, "ompt_target_set_trace_ompt", strlen("ompt_target_set_trace_ompt") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_set_trace_ompt;
+      if ( strncmp( entry_point, "ompt_target_set_trace_native", strlen("ompt_target_set_trace_native") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_set_trace_native;
+      if ( strncmp( entry_point, "ompt_target_start_trace", strlen("ompt_target_start_trace") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_start_trace;
+      if ( strncmp( entry_point, "ompt_target_pause_trace", strlen("ompt_target_pause_trace") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_pause_trace;
+      if ( strncmp( entry_point, "ompt_target_stop_trace", strlen("ompt_target_stop_trace") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_stop_trace;
+      //Buffer control
+      if ( strncmp( entry_point, "ompt_target_advance_buffer_cursor", strlen("ompt_target_advance_buffer_cursor") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_advance_buffer_cursor;
+      if ( strncmp( entry_point, "ompt_target_buffer_get_record_type", strlen("ompt_target_buffer_get_record_type") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_buffer_get_record_type;
+      if ( strncmp( entry_point, "ompt_target_buffer_get_record_ompt", strlen("ompt_target_buffer_get_record_ompt") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_buffer_get_record_ompt;
+      if ( strncmp( entry_point, "ompt_target_buffer_get_record_native", strlen("ompt_target_buffer_get_record_native") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_buffer_get_record_native;
+      if ( strncmp( entry_point, "ompt_target_buffer_get_record_native_abstract", strlen("ompt_target_buffer_get_record_native_abstract") ) == 0 )
+         return (ompt_interface_fn_t) ompt_nanos_target_buffer_get_record_native_abstract;
+      return NULL;
    }
 }
 
