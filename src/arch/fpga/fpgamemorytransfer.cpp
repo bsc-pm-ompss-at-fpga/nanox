@@ -26,7 +26,6 @@ using namespace nanos;
 using namespace nanos::ext;
 
 FPGAMemoryTransfer* FPGAMemoryTransferList::addTransfer(CopyDescriptor copyDesc, xdma_transfer_handle handle) {
-   debug("Add transfer" << copyDesc.getTag());
 
    FPGAMemoryTransfer *newTransfer = NEW FPGAMemoryTransfer(copyDesc, handle);
    if ( _transfers.size() > (unsigned int)_maxActiveTransfers && _maxActiveTransfers >= 0 ) {
@@ -47,7 +46,6 @@ void FPGAMemoryTransferList::syncTransfer(CopyDescriptor copyDesc) {
 }
 
 void FPGAMemoryOutTransferList::syncTransfer(uint64_t hostAddress){
-   debug("sync out transfer" << (void*)hostAddress);
    _lock.acquire();
    for (std::deque< FPGAMemoryTransfer* >::iterator it = _transfers.begin();
          it != _transfers.end();
@@ -64,8 +62,10 @@ void FPGAMemoryOutTransferList::syncTransfer(uint64_t hostAddress){
             //TODO use non blocking finish in orer to clean finished transfers
             status = xdmaWaitTransfer( transfer->_dmaHandle );
             verbose(" waited " << transfer->_dmaHandle);
-            if (status) {
-               warning( "ERROR on dma out transfer wait #" << transfer->_dmaHandle <<  "status:" << status );
+            if ( status != XDMA_SUCCESS ) {
+               warning( "Failed to wait out transfer " << transfer->_dmaHandle
+                       << " @" << std::hex << (uintptr_t)hostAddress
+                       <<  std::dec << " status: " << status );
             }
             xdmaReleaseTransfer( &transfer->_dmaHandle );
 
@@ -84,7 +84,6 @@ void FPGAMemoryOutTransferList::syncNTransfers(unsigned int n){
    int status;
    int nx = std::min(n, (unsigned int)_transfers.size());
    if (nx == 0) return; //avoid locking when there is nothing to sync
-   debug( "Sync " << n << " out transfers");
    _lock.acquire();
    for (int i=0; i<nx; i++)
    {
@@ -96,8 +95,10 @@ void FPGAMemoryOutTransferList::syncNTransfers(unsigned int n){
       verbose("DMAWait out" << transfer->_dmaHandle);
       NANOS_FPGA_CREATE_RUNTIME_EVENT( NANOS_FPGA_WAIT_OUTPUT_DMA_EVENT );
       status = xdmaWaitTransfer( transfer->_dmaHandle );
-      if (status) {
-         warning( "ERROR on dma out transfer wait #" << transfer->_dmaHandle <<  "status:" << status );
+      if ( status != XDMA_SUCCESS ) {
+         warning( "Failed to wait transfer " << transfer->_dmaHandle
+               << " @" << std::hex << (uintptr_t)transfer->_copyDescriptor.getTag()
+               << std::dec << " status: " << status );
       }
       xdmaReleaseTransfer( &transfer->_dmaHandle );
 
@@ -119,7 +120,6 @@ void FPGAMemoryOutTransferList::syncOldTransfers(){
 }
 
 void FPGAMemoryInTransferList::syncTransfer(uint64_t hostAddress){
-   debug( "Sync intput transfer " << (void*)hostAddress);
    int status;
    for (std::deque< FPGAMemoryTransfer* >::iterator it = _transfers.begin();
          it != _transfers.end();
@@ -133,8 +133,10 @@ void FPGAMemoryInTransferList::syncTransfer(uint64_t hostAddress){
             status = xdmaWaitTransfer( transfer->_dmaHandle );
             xdmaReleaseTransfer( &transfer->_dmaHandle );
          }
-         if (status) {
-            warning( "ERROR on dma in transfer wait #" << transfer->_dmaHandle <<  "status:" << status );
+         if ( status != XDMA_SUCCESS ) {
+            warning( "Failed to wait in transfer " << transfer->_dmaHandle
+                  << " @" << std::hex << (uintptr_t)hostAddress
+                  <<  std::dec << " status: " << status );
          }
 
          return;
@@ -144,7 +146,6 @@ void FPGAMemoryInTransferList::syncTransfer(uint64_t hostAddress){
 }
 
 void FPGAMemoryInTransferList::syncNTransfers(unsigned int n){
-   debug( "Sync " << n << " in transfers");
    int status;
    //_lock.acquire();
    int nx = std::min(n, (unsigned int)_transfers.size());
@@ -157,8 +158,10 @@ void FPGAMemoryInTransferList::syncNTransfers(unsigned int n){
       status = xdmaWaitTransfer( transfer->_dmaHandle );
       NANOS_FPGA_CLOSE_RUNTIME_EVENT;
       xdmaReleaseTransfer( &transfer->_dmaHandle );
-      if (status) {
-         warning( "ERROR on dma in transfer wait #" << transfer->_dmaHandle <<  "status:" << status );
+      if ( status != XDMA_SUCCESS ) {
+         warning( "Failed to wait in transfer " << transfer->_dmaHandle
+               << " @" << std::hex << (uintptr_t)transfer->_copyDescriptor.getTag()
+               <<  std::dec << " status: " << status );
       }
       _transfers.pop_front();
    }

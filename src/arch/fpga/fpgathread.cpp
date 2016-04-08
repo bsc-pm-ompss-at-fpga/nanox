@@ -22,6 +22,7 @@
 #include "fpgadd.hpp"
 #include "fpgamemorytransfer.hpp"
 #include "fpgaworker.hpp"
+#include "fpgaprocessorinfo.hpp"
 
 using namespace nanos;
 using namespace nanos::ext;
@@ -30,6 +31,9 @@ void FPGAThread::initializeDependent()
 {
    //initialize device
    ( ( FPGAProcessor * ) myThread->runningOn() )->init();
+   //initialize instrumentation
+   xdmaInitHWInstrumentation();
+
 }
 
 
@@ -104,6 +108,7 @@ void FPGAThread::finishPendingWD( int numWD ) {
    for (int i=0; i<n; i++) {
       WD * wd = _pendingWD.front();
       //Scheduler::postOutlineWork( wd, false, this );
+      readInstrCounters( wd );
       FPGAWorker::postOutlineWork(wd);
       _pendingWD.pop();
    }
@@ -117,8 +122,27 @@ void FPGAThread::finishAllWD() {
    while( !_pendingWD.empty() ) {
       WD * wd = _pendingWD.front();
       //Scheduler::postOutlineWork( wd, false, this );
+      //Retreive counter data from HW & clear entry
+      //All task transfers have been finished so performance data should be ready
+      readInstrCounters( wd );
       FPGAWorker::postOutlineWork(wd);
       _pendingWD.pop();
    }
 }
 
+void FPGAThread::readInstrCounters( WD *wd ) {
+   xdma_instr_times *counters = _hwInstrCounters[ wd ];
+   //TODO: Submit data to instrumentation layer
+   xdmaClearTaskTimes( counters );
+   _hwInstrCounters.erase( wd );
+
+}
+
+void FPGAThread::setupTaskInstrumentation( WD *wd ) {
+   //Set up HW instrumentation
+   const xdma_device deviceHandle =
+      ( ( FPGAProcessor * ) myThread->runningOn() )->getFPGAProcessorInfo()->getDeviceHandle();
+   xdma_instr_times * hwCounters;
+   xdmaSetupTaskInstrument(deviceHandle, &hwCounters);
+   _hwInstrCounters[ wd ] = hwCounters;
+}
