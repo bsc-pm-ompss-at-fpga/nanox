@@ -1188,6 +1188,7 @@ void Scheduler::switchHelper (WD *oldWD, WD *newWD, void *arg)
 
 void Scheduler::switchTo ( WD *to )
 {
+/*
    if ( to->isInvalid() 
         || ( to->getParent() && to->getParent()->isInvalid() ))
    {
@@ -1208,6 +1209,7 @@ void Scheduler::switchTo ( WD *to )
       NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_discard_key, &task_discard_val) );
 
    } else {
+*/
 #ifdef ARM_RECOVERY_WORKAROUND
      myThread->setPlannedWD(*to);
 #endif
@@ -1236,7 +1238,7 @@ void Scheduler::switchTo ( WD *to )
            delete[] (char *)to;
         }
      }
-   }
+/*   }*/
 }
 
 void Scheduler::yield ()
