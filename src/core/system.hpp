@@ -530,6 +530,10 @@ inline ThreadTeam *System::getMainTeam() {
    return _mainTeam;
 }
 
+inline void System::setVerboseDevOps(bool value) {
+   _verboseDevOps = value;
+}
+
 inline bool System::getVerboseDevOps() const {
    return _verboseDevOps;
 }
@@ -669,7 +673,7 @@ inline std::map<unsigned int, PE *> const &System::getPEs() const {
 
 inline void System::allocLock() {
    while ( !_allocLock.tryAcquire() ) {
-      myThread->idle();
+      myThread->processTransfers();
    }
 }
 

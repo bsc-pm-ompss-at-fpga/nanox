@@ -1,31 +1,7 @@
 #include "netwd_decl.hpp"
 #include "workdescriptor.hpp"
 #include "system_decl.hpp"
-#ifdef OpenCL_DEV
-#include "opencldd.hpp"
-#endif
 
-namespace nanos {
-namespace ext {
-
-
-#ifdef GPU_DEV
-//FIXME: GPU Support
-void * local_nanos_gpu_factory( void *args );
-void * local_nanos_gpu_factory( void *args )
-{
-   nanos_smp_args_t *smp = ( nanos_smp_args_t * ) args;
-   return ( void * )new ext::GPUDD( smp->outline );
-   //if ( prealloc != NULL )
-   //{
-   //   return ( void * )new (prealloc) ext::GPUDD( smp->outline );
-   //}
-   //else
-   //{
-   //   return ( void * ) new ext::GPUDD( smp->outline );
-   //}
-}
-#endif
 void * local_nanos_smp_factory( void *args );
 void * local_nanos_smp_factory( void *args )
 {
@@ -43,6 +19,7 @@ void * local_nanos_ocl_factory( void *args )
    return ( void * )new ext::OpenCLDD( smp->outline );
 }
 #endif
+
 #ifdef FPGA_DEV
 #include "fpgadd.hpp"
 #include "fpgadevice_decl.hpp"
@@ -53,6 +30,30 @@ void * local_nanos_fpga_factory( void *args )
    return ( void * )new ext::FPGADD( smp->outline );
 }
 #endif
+
+
+#ifdef GPU_DEV
+//FIXME: GPU Support
+#include "gpudd.hpp"
+void * local_nanos_gpu_factory( void *args );
+void * local_nanos_gpu_factory( void *args )
+{
+   nanos_smp_args_t *smp = ( nanos_smp_args_t * ) args;
+   return ( void * )new ext::GPUDD( smp->outline );
+   //if ( prealloc != NULL )
+   //{
+   //   return ( void * )new (prealloc) ext::GPUDD( smp->outline );
+   //}
+   //else
+   //{
+   //   return ( void * ) new ext::GPUDD( smp->outline );
+   //}
+}
+#endif
+
+namespace nanos {
+namespace ext {
+
 
 std::size_t SerializedWDFields::getTotalSize( WD const &wd ) {
    unsigned int totalDimensions = 0;
@@ -128,7 +129,7 @@ std::size_t SerializedWDFields::getDataSize() const {
    return _dataSize;
 }
 
-void (*SerializedWDFields::getXlateFunc())(void *, void*) const {
+void (*SerializedWDFields::getXlateFunc() const)(void *, void*) {
    return _xlate;
 }
 
@@ -144,7 +145,7 @@ WD const *SerializedWDFields::getWDAddr() const {
    return _wd;
 }
 
-void (*SerializedWDFields::getOutline())(void *) const {
+void (*SerializedWDFields::getOutline() const)(void *) {
    return _outline;
 }
 
@@ -172,15 +173,21 @@ WD2Net::WD2Net( WD const &wd ) {
    
    uintptr_t dimensionIndex = 0;
    for (unsigned int i = 0; i < wd.getNumCopies(); i += 1) {
-      new ( &newCopies[i] ) CopyData( wd.getCopies()[i] );
-      memcpy( &dimensions[ dimensionIndex ], wd.getCopies()[i].getDimensions(), sizeof( nanos_region_dimension_internal_t ) * wd.getCopies()[i].getNumDimensions());
+      CopyData &cd = ( wd.getCopies()[i].getDeductedCD() != NULL ) 
+         ? *(wd.getCopies()[i].getDeductedCD()) 
+         : wd.getCopies()[i];
+      new ( &newCopies[i] ) CopyData( cd );
+      if ( newCopies[i].getDeductedCD() != NULL ) {
+         std::cerr << "REGISTERED REG!!!!" << std::endl;
+      }
+      memcpy( &dimensions[ dimensionIndex ], cd.getDimensions(), sizeof( nanos_region_dimension_internal_t ) * cd.getNumDimensions());
       newCopies[i].setDimensions( ( nanos_region_dimension_internal_t *  ) dimensionIndex ); // This is the index because it makes no sense to send an address over the network
-      newCopies[i].setHostBaseAddress( (uint64_t) wd.getCopies()[i].getBaseAddress() );
+      newCopies[i].setHostBaseAddress( (uint64_t) cd.getBaseAddress() );
       newCopies[i].setRemoteHost( true );
-      //newCopies[i].setBaseAddress( (void *) ( wd._ccontrol.getAddress( i ) - wd.getCopies()[i].getOffset() ) );
+      //newCopies[i].setBaseAddress( (void *) ( wd._ccontrol.getAddress( i ) - cd.getOffset() ) );
       newCopies[i].setBaseAddress( (void *) wd._mcontrol.getAddress( i ) );
       newCopies[i].setHostRegionId( wd._mcontrol._memCacheCopies[i]._reg.id );
-      dimensionIndex += wd.getCopies()[i].getNumDimensions();
+      dimensionIndex += cd.getNumDimensions();
    }
 }
 

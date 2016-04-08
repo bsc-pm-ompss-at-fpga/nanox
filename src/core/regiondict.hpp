@@ -274,7 +274,7 @@ reg_t ContainerDense< T >::getMaxRegionId() const {
 template <class T>
 void ContainerDense< T >::invalLock() {
    while ( !_invalidationsLock.tryAcquire() ) {
-      myThread->idle();
+      myThread->processTransfers();
    }
 }
 
@@ -346,7 +346,7 @@ template <class T>
 Version *ContainerSparse< T >::getRegionData( reg_t id ) {
    //_containerLock.acquire();
    while ( !_containerLock.tryAcquire() ) {
-      myThread->idle();
+      myThread->processTransfers();
    }
    std::map< reg_t, RegionVectorEntry >::iterator it = _container.lower_bound( id );
    if ( it == _container.end() || _container.key_comp()(id, it->first) ) {
@@ -465,7 +465,7 @@ template < template <class> class Sparsity>
 void RegionDictionary< Sparsity >::lockObject() {
    //_lock.acquire();
    while ( !_lock.tryAcquire() ) {
-      myThread->idle();
+      myThread->processTransfers();
    }
 }
 
@@ -638,14 +638,17 @@ void RegionDictionary< Sparsity >::addRegionAndComputeIntersects( reg_t id, std:
 								metadata_regs.insert(*sit);
 							}
 						}
+                  if ( this_id == 1 ) {
+                     metadata_regs.insert( 1 );
+                  }
 						if ( metadata_regs.size() >= 1 ) {
-							// if ( metadata_regs.size() > 1 ) {
-							// 	*myThread->_file << "Multiple regions can be the parent region: ";
-							// 	for ( std::set<reg_t>::const_iterator sit = metadata_regs.begin(); sit != metadata_regs.end(); sit++ ) {
-							// 		*myThread->_file << *sit << " ";
-							// 	}
-							// 	*myThread->_file << std::endl;
-							// }
+							//  if ( metadata_regs.size() > 1 ) {
+							//  	*myThread->_file << "Multiple regions can be the parent region: ";
+							//  	for ( std::set<reg_t>::const_iterator sit = metadata_regs.begin(); sit != metadata_regs.end(); sit++ ) {
+							//  		*myThread->_file << *sit << " ";
+							//  	}
+							//  	*myThread->_file << std::endl;
+							//  }
 							reg_t max_version_reg = 0;
 							unsigned int current_version = 0;
 							//bool has_own_region = false;
@@ -662,13 +665,13 @@ void RegionDictionary< Sparsity >::addRegionAndComputeIntersects( reg_t id, std:
 									max_version_reg = *sit;
 								}
 							}
-							//if ( metadata_regs.size() > 1 && max_version_reg != 0 ) {
-							//	*myThread->_file << "[w/id " << this_id << "] Selected region (by version: " << current_version <<") : " << max_version_reg << " own_version: " << own_version << std::endl;
-							//	for ( std::set<reg_t>::const_iterator sit = metadata_regs.begin(); sit != metadata_regs.end(); sit++ ) {
-							//		*myThread->_file << *sit << " ";
-							//	}
-							//	*myThread->_file << std::endl;
-							//}
+							// if ( metadata_regs.size() > 1 && max_version_reg != 0 ) {
+							// 	*myThread->_file << "[w/id " << this_id << "] Selected region (by version: " << current_version <<") : " << max_version_reg << " own_version: " << own_version << std::endl;
+							// 	for ( std::set<reg_t>::const_iterator sit = metadata_regs.begin(); sit != metadata_regs.end(); sit++ ) {
+							// 		*myThread->_file << *sit << " ";
+							//    }
+							// 	*myThread->_file << std::endl;
+							// }
 							if ( own_version == current_version && max_version_reg != 0 ) {
 								max_version_reg = this_id;
 							}
@@ -743,15 +746,16 @@ void RegionDictionary< Sparsity >::addRegionAndComputeIntersects( reg_t id, std:
 }
 
 template < template <class> class Sparsity>
-reg_t RegionDictionary< Sparsity >::obtainRegionId( CopyData const &cd, WD const &wd, unsigned int idx ) {
+reg_t RegionDictionary< Sparsity >::obtainRegionId( CopyData &cd, WD const &wd, unsigned int idx ) {
    reg_t id = 0;
    CopyData *deductedCd = NULL;
    if ( this->getRegisteredObject() != NULL && !this->getRegisteredObject()->equalGeometry( cd ) ) {
       CopyData *tmp = NEW CopyData( *this->getRegisteredObject() );
       nanos_region_dimension_internal_t *dims = NEW nanos_region_dimension_internal_t[tmp->getNumDimensions()];
+      cd.deductCd( *this->getRegisteredObject(), dims );
       tmp->setDimensions( dims );
-      cd.deductCd( *this->getRegisteredObject(), tmp );
       deductedCd = tmp;
+      cd.setDeductedCD( tmp );
    }
    CopyData const &realCd = deductedCd != NULL ? *deductedCd : cd;
    if ( realCd.getNumDimensions() != this->getNumDimensions() ) {
@@ -768,12 +772,14 @@ reg_t RegionDictionary< Sparsity >::obtainRegionId( CopyData const &cd, WD const
    } else {
       for ( unsigned int cidx = 0; cidx < realCd.getNumDimensions(); cidx += 1 ) {
          if ( this->getDimensionSizes()[ cidx ] != realCd.getDimensions()[ cidx ].size ) {
+            printBt(*myThread->_file);
             fatal("Object with base address " << (void *)realCd.getBaseAddress() <<
                   " was previously registered with a different size in dimension " <<
                   std::dec << cidx << " (previously was " <<
                   std::dec << this->getDimensionSizes()[ cidx ] <<
                   " now received size " << std::dec <<
-                  realCd.getDimensions()[ cidx ].size << ")." );
+                  realCd.getDimensions()[ cidx ].size << "). WD: " <<
+                  ( wd.getDescription() != NULL ? wd.getDescription() : "n/a") );
          }
       }
       id = this->addRegion( realCd.getDimensions() );
@@ -783,7 +789,7 @@ reg_t RegionDictionary< Sparsity >::obtainRegionId( CopyData const &cd, WD const
 }
 
 template < template <class> class Sparsity>
-reg_t RegionDictionary< Sparsity >::obtainRegionId( nanos_region_dimension_internal_t region[] ) {
+reg_t RegionDictionary< Sparsity >::obtainRegionId( nanos_region_dimension_internal_t const region[] ) {
    return this->addRegion( region );
 }
 

@@ -9,7 +9,7 @@ AC_CANONICAL_SYSTEM
 AC_CANONICAL_TARGET
 
 # Automake initialization
-AM_INIT_AUTOMAKE([-Wall dist-bzip2 -Wno-portability subdir-objects])
+AM_INIT_AUTOMAKE([-Wall dist-bzip2 -Wno-portability subdir-objects foreign])
 AC_CONFIG_MACRO_DIR([m4])
 
 # Enable silent rules if available
@@ -155,6 +155,9 @@ AX_CHECK_DLB
 
 # Check for Zynq Xilinx DMA driver library (fpga)
 AX_CHECK_XDMA
+
+# Enable Task callback feature
+AX_ENABLE_TASK_CALLBACK
 
 # Extrae check
 MPITRACE_HOME=""
