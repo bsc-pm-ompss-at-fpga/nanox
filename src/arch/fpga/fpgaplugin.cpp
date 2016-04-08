@@ -86,6 +86,7 @@ class FPGAPlugin : public ArchPlugin
                memory_space_id_t memSpaceId = sys.addSeparateMemoryAddressSpace(
                      nanos::ext::FPGA, true, 0 );
                SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
+               fpgaAddressSpace.setAcceleratorNumber( sys.getNewAcceleratorId() );
                fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
                ext::SMPProcessor *core;
                core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
