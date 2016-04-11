@@ -90,6 +90,7 @@ bool BaseOps::isDataReady( WD const &wd, bool inval ) {
       //}
       while ( allReady && otherIt != _otherDeviceOps.end() ) {
          allReady = (*otherIt)->allCacheOpsCompleted();
+         otherIt++;
       }
       if( allReady ) {
          _otherDeviceOps.clear();
