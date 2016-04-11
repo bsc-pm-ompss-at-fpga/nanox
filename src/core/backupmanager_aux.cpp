@@ -23,5 +23,6 @@
 
 void BackupManager::rawCopy( char *begin, char *end, char *dest )
 {
+   // We cannot use memcpy (C). It has an empty exception specifier (noexcept).
    std::copy(begin, end, dest);
 }

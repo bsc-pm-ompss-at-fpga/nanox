@@ -77,11 +77,5 @@ public:
    bool hasObjectOfRegion( global_reg_t const &reg );
 };
 
-   typedef enum {
-      NANOS_FT_CP_IN,     /* 1 */
-      NANOS_FT_CP_OUT,    /* 2 */
-      NANOS_FT_CP_RESTORE /* 3 */
-   } checkpoint_event_value_t;
-
 }
 #endif /* MEMCONTROLLER_DECL */

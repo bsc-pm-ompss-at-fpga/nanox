@@ -38,6 +38,11 @@ namespace boost {
 
 namespace nanos {
 
+   typedef enum {
+      NANOS_FT_CP = 1,
+      NANOS_FT_RT /* 2 */
+   } checkpoint_event_value_t;
+
    class BackupManager : public Device {
       private:
          size_t                              _memsize;
