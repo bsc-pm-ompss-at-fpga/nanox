@@ -26,6 +26,7 @@
 #include "synchronizedcondition.hpp"
 #include "instrumentationmodule_decl.hpp"
 #include "os.hpp"
+#include "xstring.hpp"
 
 #ifdef CLUSTER_DEV
 #include "clusterthread_decl.hpp"
