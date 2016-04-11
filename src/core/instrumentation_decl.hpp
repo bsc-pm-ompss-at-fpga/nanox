@@ -758,6 +758,27 @@ namespace nanos {
    };
 #endif
 
+   //Device deferred event support for instrumentation
+   class DeviceInstrumentation {
+      public:
+         void init();
+         //! Gets raw time from device clock
+         virtual unsigned long long int getDeviceTime() = 0;
+         //! Translate a raw device timestamp to a us timestamp from an unspecified starting point
+         virtual unsigned long long int translateDeviceTime(
+               unsigned long long int deviceTime ) = 0;
+         virtual const char *getDeviceType() = 0;
+         virtual void startDeviceTrace() = 0;
+         virtual void pauseDeviceTrace( bool pause ) = 0;
+         virtual void stopDeviceTrace() = 0;
+
+         int getID() { return _id; }
+         void setId( int id ) { _id = id; }
+      private:
+         int _id;   //! Instrumentation device ID
+
+   };
+
 //! \class Instrumentation
 //! \brief Instrumentation main class is the core of the insrumentation behaviour.
 /*! \description This class implements several methods: methods to create events, methods to raise event, WorkDescriptor context swhitch methods. Instrumentation plugins will be derived classes of this class. These plugins must implement (at least) a subset of these methods will determine their specific behaviour. This is called the instrumentation plugin interface:
@@ -968,6 +989,7 @@ namespace nanos {
                PtP ( bool start, nanos_event_domain_t domain, nanos_event_id_t id, nanos_event_key_t key,  nanos_event_value_t value, unsigned int partner = NANOX_INSTRUMENTATION_PARTNER_MYSELF );
                friend class Instrumentation;
          };
+
 #ifndef NANOS_INSTRUMENTATION_ENABLED
       public:
          Instrumentation () {}
@@ -1187,6 +1209,7 @@ namespace nanos {
 
          void raiseOpenStateAndBurst ( nanos_event_state_value_t state, nanos_event_key_t key, nanos_event_value_t val );
          void raiseCloseStateAndBurst ( nanos_event_key_t key, nanos_event_value_t value );
+         virtual void registerInstrumentDevice( DeviceInstrumentation *devInstr ) {}
 #endif
    };
 }

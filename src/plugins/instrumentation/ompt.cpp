@@ -311,7 +311,7 @@ extern "C" {
 
    static int ompt_nanos_get_num_devices( void )
    {
-      return 0;
+      return sys.getNumAccelerators();
    }
 
    //! Return the ID of the active device
@@ -320,14 +320,19 @@ extern "C" {
       return 0;
    }
 
-   static int ompt_nanos_target_get_device_info( int32_t device_id, const char **type,
+   //Declarations to be used in lookup function
+   int ompt_nanos_target_get_device_info( int32_t device_id, const char **type,
          ompt_target_device_t **device, ompt_function_lookup_t *lookup,
-         const char *documentation )
-   {
-      return 0;
-   }
-
+         const char *documentation );
+   int ompt_nanos_target_start_trace( ompt_target_device_t *device,
+         ompt_target_buffer_request_callback_t request,
+         ompt_target_buffer_complete_callback_t );
+   int ompt_nanos_target_advance_buffer_cursor( ompt_target_buffer_t *buffer,
+         ompt_target_buffer_cursor_t current,
+         ompt_target_buffer_cursor_t *next );
+   ompt_interface_fn_t ompt_nanos_target_lookup ( const char *entry_point );
    ompt_interface_fn_t ompt_nanos_lookup ( const char *entry_point );
+
    ompt_interface_fn_t ompt_nanos_lookup ( const char *entry_point )
    {
       if ( strncmp( entry_point, "ompt_set_callback", strlen("ompt_set_callback") ) == 0 )
@@ -367,50 +372,45 @@ extern "C" {
 
    static ompt_target_time_t ompt_nanos_target_get_time( ompt_target_device_t *device )
    {
-      return 0;
+      DeviceInstrumentation *devInstr = ( DeviceInstrumentation * ) device;
+      return (ompt_target_time_t)devInstr->getDeviceTime();
    }
 
    static double ompt_nanos_target_translate_time( ompt_target_device_t *device,
          ompt_target_time_t time)
    {
-      return 0;
+      DeviceInstrumentation *devInstr = ( DeviceInstrumentation * ) device;
+      return (double) devInstr->translateDeviceTime( time );
    }
 
+   //! Enables or disables individual ompt events
    static int ompt_nanos_target_set_trace_ompt( ompt_target_device_t *device, _Bool enable,
-         ompt_record_type_t rtype )
+         uint32_t flags )
    {
-      return 0;
+      //Current implementation will always enable all events
+      return 0;   //Success
    }
 
    static int ompt_nanos_target_set_trace_native( ompt_target_device_t *device, _Bool enable,
          ompt_record_type_t rtype )
    {
-      return 0;
+      warning( "OMPT native instrumentation is currently not supported" );
+      return -1; //Fail
    }
 
-   static int ompt_nanos_target_start_trace( ompt_target_device_t *device,
-         ompt_target_buffer_request_callback_t request,
-         ompt_target_buffer_complete_callback_t )
-   {
-      return 0;
-   }
 
    static int ompt_nanos_target_pause_trace( ompt_target_device_t *device, _Bool begin_pause )
    {
+      ( ( DeviceInstrumentation * )device )->pauseDeviceTrace( begin_pause );
       return 0;
    }
 
    static int ompt_nanos_target_stop_trace ( ompt_target_device_t *device )
    {
+      ( ( DeviceInstrumentation * )device )->stopDeviceTrace( );
       return 0;
    }
 
-   static int ompt_nanos_target_advance_buffer_cursor( ompt_target_buffer_t *buffer,
-         ompt_target_buffer_cursor_t current,
-         ompt_target_buffer_cursor_t *next )
-   {
-      return 0;
-   }
 
   static ompt_record_type_t ompt_nanos_target_buffer_get_record_type( ompt_target_buffer_t *buffer, ompt_target_buffer_cursor_t current)
   {
@@ -440,7 +440,6 @@ extern "C" {
     * Lookup function that will manage target (device) related functions
     * A single target lookup function is used for any device
     */
-   ompt_interface_fn_t ompt_nanos_target_lookup ( const char *entry_point );
    ompt_interface_fn_t ompt_nanos_target_lookup ( const char *entry_point )
    {
       //TODO: Use a smarter way to look for a function
@@ -481,6 +480,25 @@ namespace nanos
       private:
          ompt_task_id_t * _previousTask;
          int            * _threadActive;
+         std::vector < DeviceInstrumentation * > _devices;
+         int            _deviceCount;
+
+         //target buffer callbacks
+         //TODO these should be inside a vector, per accelerator
+         ompt_target_buffer_request_callback_t     _requestBufferCallback;
+         ompt_target_buffer_complete_callback_t    _completeBufferCallback;
+
+         struct BufferInfo {
+            int omptBufferBegin;
+            int omptBufferEnd;
+            int omptBufferSize;
+            int omptBufferRecords;
+            ompt_record_ompt_t *omptBuffer;
+         };
+
+         std::vector < BufferInfo > _devEventBuffers;
+
+
       public:
          InstrumentationOMPT( ) : Instrumentation( *NEW InstrumentationContextDisabled()), _previousTask(NULL) {}
          ~InstrumentationOMPT() { }
@@ -735,7 +753,84 @@ namespace nanos
             }
          }
          void incrementMaxThreads( void ) {}
+
+         virtual void registerInstrumentDevice( DeviceInstrumentation *devInstr ) {
+            _devices.push_back( devInstr );
+            _devEventBuffers.push_back( BufferInfo() );
+            devInstr->setId( _deviceCount++ );
+         }
+
+         int getNumDevices() { return _deviceCount; }
+
+         void setRequestBufferCallback( ompt_target_buffer_request_callback_t callback )
+         {
+            _requestBufferCallback = callback;
+         }
+
+         void setCompleteBufferCallback ( ompt_target_buffer_complete_callback_t callback )
+         {
+            _completeBufferCallback = callback;
+         }
+
+         int advanceBuffer( ompt_target_buffer_t buffer, 
+               ompt_target_buffer_cursor_t current,
+               ompt_target_buffer_cursor_t *next ) { return 0; }
    };
+
+extern "C" {
+
+   /*
+    * The following functions need to be redeclared declarations are inside an extern "C"
+    * block. This makes these previous declarations non visible from here.
+    */
+   int ompt_nanos_target_get_device_info( int32_t device_id, const char **type,
+         ompt_target_device_t **device, ompt_function_lookup_t *lookup,
+         const char *documentation );
+   int ompt_nanos_target_get_device_info( int32_t device_id, const char **type,
+         ompt_target_device_t **device, ompt_function_lookup_t *lookup,
+         const char *documentation )
+   {
+      /* FIXME Looks like documentation should be const char **documentation
+       * as specification suggests that it is an output parameter but still provides
+       * this type signature
+       */
+      return 0;
+   }
+
+   int ompt_nanos_target_start_trace( ompt_target_device_t *device,
+         ompt_target_buffer_request_callback_t request,
+         ompt_target_buffer_complete_callback_t complete );
+   int ompt_nanos_target_start_trace( ompt_target_device_t *device,
+         ompt_target_buffer_request_callback_t request,
+         ompt_target_buffer_complete_callback_t complete )
+   {
+      DeviceInstrumentation *devInstr = ( DeviceInstrumentation * )device;
+      devInstr->startDeviceTrace();
+      //we can assume that we are using ompt instrumentation as we've got so far
+      InstrumentationOMPT *instr = ( InstrumentationOMPT *) sys.getInstrumentation();
+      instr->setRequestBufferCallback( request );
+      instr->setCompleteBufferCallback( complete );
+
+      return 0; //Success
+   }
+
+   /*!
+    * Advances cursor to point to the next position in the buffer
+    * \return 0 on success. 1 if cursor goes out of bounds
+    */
+   int ompt_nanos_target_advance_buffer_cursor( ompt_target_buffer_t *buffer,
+         ompt_target_buffer_cursor_t current,
+         ompt_target_buffer_cursor_t *next );
+   int ompt_nanos_target_advance_buffer_cursor( ompt_target_buffer_t *buffer,
+         ompt_target_buffer_cursor_t current,
+         ompt_target_buffer_cursor_t *next )
+   {
+      //Need to forward the call to the instrumentation class as we need buffer information
+      //(length) in order to know if cursor goes out of bounds
+      InstrumentationOMPT *instr = ( InstrumentationOMPT * ) sys.getInstrumentation();
+      return instr->advanceBuffer(buffer, current, next);
+   }
+}
    namespace ext
    {
       class InstrumentationOMPTPlugin : public Plugin
