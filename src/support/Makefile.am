@@ -189,16 +189,25 @@ support_sources = \
 	printbt.cpp \
 	genericevent_decl.hpp \
 	genericevent.cpp \
+	exception/checkpointfailure.hpp \
 	exception/exceptiontracer.hpp \
+	exception/executionfailure.hpp \
 	exception/genericexception.hpp \
-	exception/mpierror.hpp \
-	exception/mpierrorhandler.hpp \
-	exception/mpierrortranslator.hpp \
-	exception/mpierrorhandler.hpp \
-	exception/mpierrortranslator.hpp \
+	exception/operationfailure.hpp \
 	exception/signalexception.hpp \
 	exception/signalexception.cpp \
+	exception/signalinfo.hpp \
+	exception/signaltranslator.hpp \
 	$(END) 
+
+mpi_exception_sources = \
+	exception/mpierror.hpp \
+	exception/mpierror.cpp \
+	exception/mpierrorhandler.hpp \
+	exception/mpierrortranslator.hpp \
+	exception/mpierrorhandler.hpp \
+	exception/mpierrortranslator.hpp \
+	$(END)
 
 debug_sources = \
 	memtracker_fwd.hpp\
