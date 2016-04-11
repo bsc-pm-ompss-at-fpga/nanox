@@ -24,18 +24,21 @@
 #include "taskexception_fwd.hpp"
 
 #include "workdescriptor_fwd.hpp"
-#include <exception>
-#include <signal.h>
-#include <ucontext.h>
 
 #include "atomic_decl.hpp"
 #include "xstring.hpp"
+
+#include <exception>
+#include <stdexcept>
+
+#include <signal.h>
+#include <ucontext.h>
 
 namespace nanos {
    class InvalidatedRegionFound : public std::runtime_error {
       public:
          InvalidatedRegionFound () : runtime_error( "Tried to read a corrupted memory region." ) {}
-         virtual ~InvalidatedRegionFound() {}
+         virtual ~InvalidatedRegionFound() noexcept {}
    };
 
    class TaskExceptionStats

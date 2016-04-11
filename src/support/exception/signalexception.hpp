@@ -31,7 +31,7 @@ class SignalException : public GenericException {
 				_executionContextWhenHandled( executionContext ) 
 		{}
 
-		virtual ~SignalException() {
+		virtual ~SignalException() noexcept {
 			// Unblock the signal when the exception is deleted
 			// Deletion should be performed at the end of the catch block.
 			sigset_t thisSignalMask;

@@ -33,6 +33,8 @@
 #include "printbt_decl.hpp"
 #include <stdio.h>
 
+#include <string>
+
 namespace nanos
 {
    inline TeamData::~TeamData ()
@@ -295,7 +297,7 @@ namespace nanos
         _description.append("-");
  
         /* adding global id */
-        _description.append( toString<int>(getId()) );
+        _description.append( std::to_string(getId()) );
      }
  
      return _description;
