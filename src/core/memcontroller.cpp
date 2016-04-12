@@ -346,12 +346,13 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
                AllocatedChunk *backup = _backupCacheCopies[index]._chunk;
                if( backup ) {
                   CachedRegionStatus* entry = (CachedRegionStatus*)backup->getNewRegions()->getRegionData( backup->getAllocatedRegion().id );
-                  const bool invalid_entry = entry && !entry->isValid();
-                  if( invalid_entry ) {
+                  const bool valid_entry = entry && entry->isValid();
+                  if( entry && !valid_entry ) {
                      // If the entry is not valid, we set up its version to 0 so future backup overwrites aren't given any errors
                      entry->resetVersion();
-                     _backupCacheCopies[ index ].setVersion( 0 );
-                  } else {
+                     _backupCacheCopies[index].setVersion( 0 );
+                  }
+                  if( entry && valid_entry ) {
                      _backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
                      _backupCacheCopies[index]._locations.clear();
                      _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
