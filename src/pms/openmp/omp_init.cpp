@@ -280,8 +280,6 @@ namespace nanos
          if ( requested_workers > 0 ) {
             _numThreads = requested_workers;
          } else if ( _numThreadsOMP > 0 ) {
-            warning0( "Using OMP_NUM_THREADS in an OmpSs applications is discouraged, the recommended "
-                  "way to set the number of worker smp threads is using the flag --smp-workers." );
             _numThreads = _numThreadsOMP;
          } else {
             _numThreads = max_workers;
