@@ -263,8 +263,13 @@ paraver_config_files = \
      paraver_configs/ompss/runtime/2dp_thread_state.cfg\
      paraver_configs/ompss/runtime/num_threads.cfg\
      paraver_configs/ompss/runtime/thread_cpuid.cfg\
-     paraver_configs/ompss/runtime/resiliency/3dh_checkpoint_duration.cfg\
-     paraver_configs/ompss/runtime/resiliency/in_checkpoint.cfg\
+     paraver_configs/ompss/runtime/setting_up_task.cfg\
+     paraver_configs/ompss/runtime/released_task.cfg\
+     paraver_configs/ompss/runtime/resiliency/2dh_task_checkpoint_duration.cfg\
+     paraver_configs/ompss/runtime/resiliency/3dh_checkpoint_task_duration.cfg\
+     paraver_configs/ompss/runtime/resiliency/checkpoint_task.cfg\
+     paraver_configs/ompss/runtime/resiliency/in_input_checkpoint.cfg\
+     paraver_configs/ompss/runtime/resiliency/in_output_checkpoint.cfg\
      paraver_configs/ompss/2d_general.cfg\
      paraver_configs/general/link_to_source/by_call_stack/MPI_caller_line.cfg\
      paraver_configs/general/link_to_source/by_call_stack/MPI_caller.cfg\
