@@ -256,8 +256,13 @@ void MemController::copyDataIn() {
                // Note: we dont want to make the regular backup for inouts, as children tasks' "in" 
                // parameters will always do the backup later if they exist no matter if now we perform the copy or not
                //if(sys.getVerboseCopies()) //message( "Private copyIn (inout) wd:", std::dec, _wd.getId() );
+               NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
+               NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_INOUT );
+               NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
+
                _is_private_backup_aborted |= !dev.checkpointCopy( dev_addr, host_addr, size, sys.getBackupMemory(), _wd );
-               //if(sys.getVerboseCopies()) //message( "Private copyIn (inout) wd:", std::dec, _wd.getId(), " done. Private backup aborted?: ", _is_private_backup_aborted );
+
+               NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
 
             } else {
                _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
@@ -269,8 +274,15 @@ void MemController::copyDataIn() {
          }
       }
 
-      if( queuedOps )
+      if( queuedOps ) {
+         NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
+         NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_IN );
+         NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
+
          _backupOpsIn->issue(_wd);
+
+         NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
+      }
    }
 #endif
    //NANOS_INSTRUMENT( inst2.close(); );
@@ -326,15 +338,6 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
 #ifdef NANOS_RESILIENCY_ENABLED
    if (sys.isResiliencyEnabled() && _wd.isRecoverable() ) {
 
-      BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
-      for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
-         if( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
-            // Inoutparameters' backup have to be cleaned: they are private
-            dev.memFree( _backupInOutCopies[index].getAddress(),
-                          sys.getBackupMemory() );
-         }
-      }
-
       if( !_wd.isInvalid() ) {
          ensure( _backupOpsOut, "Backup ops array has not been initialized!" );
 
@@ -367,17 +370,32 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
 
          // We try to issue valid copies' checkpoint, if any.
          if( ops_queued ) {
+            NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
+            NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_OUT );
+            NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
+
             _backupOpsOut->issue( _wd );
+
+            NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
+         }
+      }
+
+      BackupManager& dev = (BackupManager&)sys.getBackupMemory().getCache().getDevice();
+      for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
+         if( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
+            // Inoutparameters' backup have to be cleaned: they are private
+            dev.memFree( _backupInOutCopies[index].getAddress(),
+                          sys.getBackupMemory() );
          }
       }
    }
-
 #endif
 }
 
 #ifdef NANOS_RESILIENCY_ENABLED
 void MemController::restoreBackupData ( )
 {
+
    ensure( _preinitialized == true, "MemController::restoreBackupData: MemController not initialized!");
    ensure( _initialized == true, "MemController::restoreBackupData: MemController not initialized!");
    ensure( _wd.isRecoverable(), "Cannot restore data of an unrecoverable task!" );
@@ -401,8 +419,14 @@ void MemController::restoreBackupData ( )
             if( _is_private_backup_aborted ) {
                failed = true;
             } else {
+               NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
+               NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_RT_INOUT );
+               NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
+
                failed = !dev.restoreCopy( host_addr, dev_addr, size,
                                                sys.getBackupMemory(), _wd );
+
+               NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
             }
          } else if (_wd.getCopies()[index].isInput()) {
             _backupCacheCopies[index]._chunk->copyRegionToHost( *_restoreOps,
@@ -413,7 +437,13 @@ void MemController::restoreBackupData ( )
       }
 
       if( !failed ) {
+         NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
+         NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_RT_IN );
+         NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
+
          _restoreOps->issue(_wd);
+
+         NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
       } else {
          WorkDescriptor* recoverableAncestor = NULL;
          if( _wd.getParent() != NULL )

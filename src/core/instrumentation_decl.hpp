@@ -646,12 +646,16 @@ namespace nanos {
             registerEventValue("copy-dir-devices", "NANOS_DEVS_CPDIR_D2H_GPU_EVENT", "GPU device to host transfer (CUDA)" );                     /* 2 */
 
 
-            /* 53 */ registerEventKey("ft-checkpoint", "Fault tolerance task checkpoint/restore." );
-            registerEventValue("ft-checkpoint", "NANOS_FT_CP_IN", "Making task's input data backup." );   /* 1 */
-            registerEventValue("ft-checkpoint", "NANOS_FT_CP_OUT", "Making task's output data backup." ); /* 2 */
-            registerEventValue("ft-checkpoint", "NANOS_FT_CP_RESTORE", "Restoring task's input data from existing backup." ); /* 3 */
+            /* 53 */ registerEventKey("ft-checkpoint", "Fault tolerance task checkpoint." );
+            registerEventValue("ft-checkpoint", "NANOS_FT_CP_IN",   "Making task's input data backup." );            /* 1 */
+            registerEventValue("ft-checkpoint", "NANOS_FT_CP_OUT",  "Making task's output data backup." );           /* 2 */
+            registerEventValue("ft-checkpoint", "NANOS_FT_CP_INOUT","Making private backup for task's inout data." );/* 3 */
 
-            /* 54 */ registerEventKey("ft-task-operation", "Fault tolerance task control." );
+            /* 54 */ registerEventKey("ft-restore", "Fault tolerance task restore." );
+            registerEventValue("ft-restore", "NANOS_FT_RT_IN",   "Restore backup for task's in data." );   /* 1 */
+            registerEventValue("ft-restore", "NANOS_FT_RT_INOUT","Restore backup for task's inout data." );/* 2 */
+
+            /* 55 */ registerEventKey("ft-task-operation", "Fault tolerance task control." );
             registerEventValue("ft-task-operation", "NANOS_FT_RESTART", "Current task is being executed again because its execution was erroneous." ); /* 1 */
             registerEventValue("ft-task-operation", "NANOS_FT_DISCARD", "Skipping task execution due to invalidation." );                              /* 2 */
 

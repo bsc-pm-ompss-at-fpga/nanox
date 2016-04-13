@@ -194,6 +194,7 @@ support_sources = \
 	exception/executionfailure.hpp \
 	exception/genericexception.hpp \
 	exception/operationfailure.hpp \
+	exception/operationfailure.cpp \
 	exception/signalexception.hpp \
 	exception/signalexception.cpp \
 	exception/signalinfo.hpp \

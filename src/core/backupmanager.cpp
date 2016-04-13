@@ -19,7 +19,7 @@
 
 #include "backupmanager.hpp"
 #include "deviceops.hpp"
-#include "taskexception.hpp"
+#include "exception/checkpointfailure.hpp"
 #include <sys/mman.h>
 #include <iostream>
 
@@ -85,10 +85,6 @@ bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
     * to create and manage private checkpoints, so passing through the dictionary and
     * region cache is necessary.
     */
-   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
-   NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP );
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
-
    bool success;
    try {
       char* begin = reinterpret_cast<char*>(hostAddr);
@@ -103,15 +99,13 @@ bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
       rawCopy(begin, end, dest);
 
       success = true;
-   } catch ( TaskException &e ) {
-      e.handleCheckpointError( wd, hostAddr, devAddr, len );
+   } catch ( error::OperationFailure &e ) {
+      error::CheckpointFailure error(e);
       sys.getExceptionStats().incrInitializationErrors();
       debug("Resiliency: error detected during task ", wd.getId(), " data backup.");
 
       success = false;
    }
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
-
    return success;
 }
 
@@ -125,10 +119,6 @@ bool BackupManager::restoreCopy ( uint64_t hostAddr, uint64_t devAddr,
     * to create and manage private checkpoints, so passing through the dictionary and
     * region cache is necessary.
     */
-   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
-   NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_RT );
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
-
    bool success;
    try {
       char* begin = reinterpret_cast<char*>(devAddr);
@@ -143,16 +133,14 @@ bool BackupManager::restoreCopy ( uint64_t hostAddr, uint64_t devAddr,
       rawCopy(begin, end, dest);
 
       success = true;
-   } catch ( TaskException &e ) {
-      e.handleCheckpointError( wd, devAddr, hostAddr, len );
+   } catch ( error::OperationFailure &e ) {
+      error::CheckpointFailure error(e);
       //sys.getExceptionStats().incrInitializationErrors();
       // FIXME: This is not an initialization error. should I add another type?
       debug("Resiliency: error detected during task ", wd.getId(), " data restore.");
 
       success = false;
    }
-
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
 
    return success;
 }
@@ -209,10 +197,6 @@ void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
                                        WorkDescriptor const& wd,
                                        void *hostObject, reg_t hostRegionId )
 {
-   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
-   NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP );
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
-
    ops->addOp();
    try {
       char* hostAddresses = (char*) hostAddr;
@@ -224,15 +208,13 @@ void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
       }
       ops->completeOp();
 
-   } catch ( TaskException &e ) {
-
-      e.handleCheckpointError( wd, hostAddr, devAddr, len );
+   } catch ( error::OperationFailure &e ) {
+      error::CheckpointFailure error(e);
       sys.getExceptionStats().incrInitializationErrors();
       debug("Resiliency: error detected during task ", wd.getId(), " data backup.");
 
       ops->abortOp();
    }
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
 }
 
 void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
@@ -243,10 +225,6 @@ void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
                                         WorkDescriptor const& wd,
                                         void *hostObject, reg_t hostRegionId )
 {
-   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
-   NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_RT );
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
-
    ops->addOp();
    try {
       char* hostAddresses = (char*) hostAddr;
@@ -257,15 +235,13 @@ void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
          rawCopy((char*) &deviceAddresses[i * ld], (char*) &deviceAddresses[i * ld]+len, (char*) &hostAddresses[i * ld]);
       }
       ops->completeOp();
-   } catch ( TaskException &e ) {
-
-      e.handleCheckpointError( wd, devAddr, hostAddr, len );
+   } catch ( error::OperationFailure &e ) {
+      error::CheckpointFailure error(e);
       sys.getExceptionStats().incrInitializationErrors();
       debug("Resiliency: error detected during task ", wd.getId(), " input data restoration.");
 
       ops->abortOp();
    }
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
 }
 
 bool BackupManager::_copyDevToDevStrided1D (

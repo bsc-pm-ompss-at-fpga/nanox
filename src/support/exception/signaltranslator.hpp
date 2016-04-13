@@ -1,3 +1,10 @@
+
+#ifndef SIGNALTRANSLATOR_HPP
+#define SIGNALTRANSLATOR_HPP
+
+namespace nanos {
+namespace error {
+
 // Source code based in the following article:
 // http://www.ibm.com/developerworks/library/l-cppexcep/
 
@@ -36,3 +43,7 @@ class SignalTranslator {
 		}
 };
 
+}
+}
+
+#endif

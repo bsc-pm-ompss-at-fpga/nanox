@@ -27,9 +27,6 @@ class OperationFailure : public SegmentationFaultException {
 		WorkDescriptor& getTask() { return _runningTaskWhenHandled; }
 };
 
-// Singleton object that installs the signal handler for OperationFailureException
-SignalTranslator<OperationFailure> g_objOperationFailureTranslator;
-
 } // namespace error
 } // namespace nanos
 
