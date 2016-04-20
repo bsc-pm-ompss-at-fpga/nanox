@@ -26,6 +26,8 @@
 #include "fpgathread.hpp"
 #include "fpgadd.hpp"
 #include "smpprocessor.hpp"
+#include "instrumentationmodule_decl.hpp"
+#include "fpgainstrumentation.hpp"
 
 #include "libxdma.h"
 
@@ -45,6 +47,15 @@ class FPGAPlugin : public ArchPlugin
       {
          FPGAConfig::prepare( cfg );
       }
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+      void registerDeviceInstrumentation( FPGAProcessor *fpga ) {
+          FPGAInstrumentation *instr = new FPGAInstrumentation();
+          instr->init();
+          //sys.getInstrumentation()->registerInstrumentDevice( instr );
+          sys.addDeviceInstrumentation( instr );
+      }
+#endif
 
       /*!
        * \brief Initialize fpga device plugin.
@@ -100,6 +111,11 @@ class FPGAPlugin : public ArchPlugin
                }
                FPGAProcessor* fpga = NEW FPGAProcessor( memSpaceId, core );
                (*_fpgas)[i] = fpga;
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+               //Register device in the instrumentation system
+               registerDeviceInstrumentation( fpga );
+#endif
             }
          } //!FPGAConfig::isDisabled()
       }

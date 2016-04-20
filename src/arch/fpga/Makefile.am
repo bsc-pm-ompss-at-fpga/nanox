@@ -36,6 +36,7 @@ devinclude_HEADERS = \
     fpgamemorytransfer.hpp \
     fpgaworker.hpp \
     fpgapinnedallocator.hpp \
+	fpgainstrumentation.hpp \
     $(END) 
 
 fpga_api_sources = \
@@ -61,6 +62,8 @@ fpga_sources = \
     fpgaworker.cpp \
     fpgapinnedallocator.hpp \
     fpgapinnedallocator.cpp \
+	fpgainstrumentation.hpp \
+	fpgainstrumentation.cpp \
     $(END)
 
 pe_fpga_sources = \
