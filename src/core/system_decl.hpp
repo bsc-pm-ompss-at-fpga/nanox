@@ -218,6 +218,7 @@ namespace nanos
          std::list<std::string>    _disableEvents;
          std::string               _instrumentDefault;
          bool                      _enableCpuidEvent;
+         std::vector < DeviceInstrumentation * > _deviceInstrumentation;
 #endif
 
          const int                 _lockPoolSize;
@@ -473,6 +474,8 @@ namespace nanos
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          bool isCpuidEventEnabled ( void ) const;
+         DeviceInstrumentation * getDeviceInstrumentation( int accId );
+         void addDeviceInstrumentation( DeviceInstrumentation *dev );
 #endif
 
          void registerSlicer ( const std::string &label, Slicer *slicer);

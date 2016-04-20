@@ -772,12 +772,20 @@ namespace nanos {
          virtual void pauseDeviceTrace( bool pause ) = 0;
          virtual void stopDeviceTrace() = 0;
 
-         int getID() { return _id; }
+         int getId() { return _id; }
          void setId( int id ) { _id = id; }
       private:
          int _id;   //! Instrumentation device ID
 
    };
+
+   //Event types that can be emmitted in the device
+   enum DeviceEventType {
+      TaskBegin = 3,
+      TaskEnd = 4,
+      TaskSwitch = 26,
+   };
+
 
 //! \class Instrumentation
 //! \brief Instrumentation main class is the core of the insrumentation behaviour.
@@ -920,6 +928,7 @@ namespace nanos {
                 */
                void reverseType ( );
          };
+
          class State : public Event {
             private:
               /*! \brief State event default constructor (private)
@@ -988,6 +997,30 @@ namespace nanos {
                 */
                PtP ( bool start, nanos_event_domain_t domain, nanos_event_id_t id, nanos_event_key_t key,  nanos_event_value_t value, unsigned int partner = NANOX_INSTRUMENTATION_PARTNER_MYSELF );
                friend class Instrumentation;
+         };
+
+         //TODO: This is the minimal event information for an event generated inside a device
+         // We may add fields as needed
+         class DeviceEvent {
+            private:
+               unsigned long long _deviceTime;     //! Raw device time
+               WorkDescriptor *_wd;                //! WorkDescriptor which caused the event
+               WorkDescriptor *_auxWd;             //! Aux workdescriptor used for events that require 2 tasks (previous, parent, etc)
+               DeviceInstrumentation *_deviceInstr;//! Device instrumentation context
+               DeviceEventType _type;               //! Type of device event
+            public:
+               DeviceEvent( unsigned long long int time, DeviceEventType type,
+                     DeviceInstrumentation *devInstr, WorkDescriptor *mainWd,
+                     WorkDescriptor *auxWd = NULL):
+                  _deviceTime( time ), _wd( mainWd ), _auxWd( auxWd ),
+                  _deviceInstr( devInstr ), _type( type ) { }
+
+               unsigned long long int getDeviceTime() const { return _deviceTime; }
+               WorkDescriptor *getWD() const { return _wd; }
+               WorkDescriptor *getAuxWD() const { return _auxWd; }
+               DeviceInstrumentation *getDeviceInstrumentation() const
+                  { return _deviceInstr; }
+               DeviceEventType getEventType() const { return _type; }
          };
 
 #ifndef NANOS_INSTRUMENTATION_ENABLED
@@ -1210,6 +1243,10 @@ namespace nanos {
          void raiseOpenStateAndBurst ( nanos_event_state_value_t state, nanos_event_key_t key, nanos_event_value_t val );
          void raiseCloseStateAndBurst ( nanos_event_key_t key, nanos_event_value_t value );
          virtual void registerInstrumentDevice( DeviceInstrumentation *devInstr ) {}
+
+         virtual void addDeviceEvent( const DeviceEvent  &deviceEvent ) {
+            //warning( "Device events are not supported in current instrumentation plugin" );
+         }
 #endif
    };
 }

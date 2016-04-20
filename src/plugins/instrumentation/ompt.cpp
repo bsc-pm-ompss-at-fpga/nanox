@@ -414,27 +414,31 @@ extern "C" {
 
   static ompt_record_type_t ompt_nanos_target_buffer_get_record_type( ompt_target_buffer_t *buffer, ompt_target_buffer_cursor_t current)
   {
-     return (ompt_record_type_t)0;
+     //Only ompt records are supported now
+     return ompt_record_ompt;
   }
 
-  static ompt_record_ompt_t *ompt_nanos_target_buffer_get_record_ompt( ompt_target_buffer_t *buffer,
+  static ompt_record_ompt_t *ompt_nanos_target_buffer_get_record_ompt(
+        ompt_target_buffer_t *buffer,
         ompt_target_buffer_cursor_t current )
   {
-     return 0;
+     ompt_record_ompt_t *record = ( ompt_record_ompt_t* )buffer;
+     return &record[ current ];
   }
 
   static void *ompt_nanos_target_buffer_get_record_native( ompt_target_buffer_cursor_t *buffer,
         ompt_target_buffer_cursor_t current, ompt_target_id_t *host_op_id )
   {
+     warning( "Trying to get OMPT native record" );
      return 0;
   }
 
   static ompt_record_native_abstract_t *ompt_nanos_target_buffer_get_record_native_abstract(
         void *native_record )
   {
+     warning( "Trying to get OMPT abstract native record" );
      return ( ompt_record_native_abstract_t* )NULL;
   }
-
 
    /*!
     * Lookup function that will manage target (device) related functions
@@ -489,18 +493,19 @@ namespace nanos
          ompt_target_buffer_complete_callback_t    _completeBufferCallback;
 
          struct BufferInfo {
-            int omptBufferBegin;
-            int omptBufferEnd;
-            int omptBufferSize;
-            int omptBufferRecords;
-            ompt_record_ompt_t *omptBuffer;
+            unsigned int begin;
+            unsigned int current;
+            size_t size;
+            unsigned int records;
+            ompt_record_ompt_t *buffer;
+            BufferInfo() : begin( 0 ), current( 0 ), size( 0 ), records( 0 ) { }
          };
 
          std::vector < BufferInfo > _devEventBuffers;
 
 
       public:
-         InstrumentationOMPT( ) : Instrumentation( *NEW InstrumentationContextDisabled()), _previousTask(NULL) {}
+         InstrumentationOMPT( ) : Instrumentation( *NEW InstrumentationContextDisabled()), _previousTask(NULL), _requestBufferCallback(NULL), _completeBufferCallback(NULL) {}
          ~InstrumentationOMPT() { }
          void initialize( void )
          {
@@ -756,7 +761,6 @@ namespace nanos
 
          virtual void registerInstrumentDevice( DeviceInstrumentation *devInstr ) {
             _devices.push_back( devInstr );
-            _devEventBuffers.push_back( BufferInfo() );
             devInstr->setId( _deviceCount++ );
          }
 
@@ -772,9 +776,92 @@ namespace nanos
             _completeBufferCallback = callback;
          }
 
-         int advanceBuffer( ompt_target_buffer_t buffer, 
+         DeviceInstrumentation *getDeviceInstrumentation( int id )
+         {
+            //return _devices[ id ];
+            return sys.getDeviceInstrumentation( id );
+         }
+
+         int advanceBuffer( ompt_target_buffer_t targetBuffer,
                ompt_target_buffer_cursor_t current,
-               ompt_target_buffer_cursor_t *next ) { return 0; }
+               ompt_target_buffer_cursor_t *next )
+         {
+            //Get the right buffer
+            //Use naive linear search, as we usually have a small number of accelerators
+            //this will be enough, even faster than using a more complex structure
+            BufferInfo *buffer = NULL;
+            for ( std::vector< BufferInfo >::iterator it = _devEventBuffers.begin();
+                  it != _devEventBuffers.end();
+                  it++ ) {
+               if ( it->buffer == ( ompt_record_ompt_t *)targetBuffer ) {
+                  buffer = &(*it);
+                  break;
+               }
+            }
+            ensure( buffer != NULL,
+                  "Could not get event buffer information for current buffer");
+            *next = current + 1;
+            if ( current >= buffer->records ) {
+               return 1;
+            } else {
+               return 0;
+            }
+         }
+
+         void addDeferredEvent( const DeviceEvent &event ) {
+            DeviceInstrumentation *devInstr = event.getDeviceInstrumentation();
+            int deviceId = devInstr->getId();
+            BufferInfo &buffer = _devEventBuffers[ deviceId ];
+            //Request buffer if it's not initialized
+            if ( buffer.buffer == NULL ) {
+               //buffer request
+               _requestBufferCallback( (ompt_target_buffer_t**)&buffer.buffer, &buffer.size );
+               buffer.begin = 0;
+               buffer.current = 0;
+               buffer.records = buffer.size / sizeof( ompt_record_ompt_t );
+            }
+
+            //Call to complete if no more records fit in current buffer
+            if ( buffer.current == buffer.records ) {
+               //There is no space to save the event -> call completion
+               _completeBufferCallback( deviceId, ( ompt_target_buffer_t *) buffer.buffer,
+                       buffer.size,
+                     buffer.begin, buffer.current );
+               //reset current pointer to recycle the buffer
+               buffer.current = buffer.begin;
+            }
+            //add event to buffer
+            ompt_record_ompt_t *omptEvent = &buffer.buffer[ buffer.current ];
+            //Nanos device events are already conveniently set to match ompt spec
+            omptEvent->type = ( ompt_event_t ) event.getEventType();
+            omptEvent->time = event.getDeviceTime();
+            //Host thread that emits the event (TODO check)
+            omptEvent->thread_id = (ompt_thread_id_t) nanos::myThread->getId();
+            //Task ID (TODO check)
+            WorkDescriptor * wd = event.getWD();
+            omptEvent->dev_task_id = wd->getId();
+
+            switch ( event.getEventType() ) {
+               case TaskBegin:
+                  omptEvent->record.new_task.parent_task_id = wd->getParent()->getId();
+                  omptEvent->record.new_task.parent_task_frame = NULL;
+                  omptEvent->record.new_task.new_task_id = wd->getId();
+                  omptEvent->record.new_task.codeptr_ofn =
+                     ( void * ) event.getWD()->getActiveDevice().getWorkFct();
+                  break;
+               case TaskEnd:
+                  omptEvent->record.task.task_id = wd->getId();
+                  break;
+               case TaskSwitch:
+                  omptEvent->record.task_switch.first_task_id = wd->getId();
+                  omptEvent->record.task_switch.second_task_id = event.getAuxWD()->getId();
+                  break;
+            }
+            buffer.current++;
+         }
+         void createEventBuffer() {
+             _devEventBuffers.push_back( BufferInfo() );
+         }
    };
 
 extern "C" {
@@ -794,6 +881,15 @@ extern "C" {
        * as specification suggests that it is an output parameter but still provides
        * this type signature
        */
+      InstrumentationOMPT *instr = ( InstrumentationOMPT *) sys.getInstrumentation();
+      DeviceInstrumentation *devInstr = sys.getDeviceInstrumentation( device_id );
+      *type = devInstr->getDeviceType();
+      *device = (ompt_target_device_t*)devInstr;
+      *lookup = ompt_nanos_target_lookup;
+
+      //Create event buffer for this device
+      instr->createEventBuffer();
+
       return 0;
    }
 

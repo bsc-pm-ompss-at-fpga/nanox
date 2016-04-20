@@ -319,6 +319,14 @@ inline void System::setInstrumentation ( Instrumentation *instr ) { _instrumenta
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 inline bool System::isCpuidEventEnabled ( void ) const { return _enableCpuidEvent; }
+
+inline DeviceInstrumentation * System::getDeviceInstrumentation( int accId ) {
+    return _deviceInstrumentation[accId];
+}
+
+inline void System::addDeviceInstrumentation( DeviceInstrumentation * dev ) {
+    _deviceInstrumentation.push_back( dev );
+}
 #endif
 
 inline void System::registerSlicer ( const std::string &label, Slicer *slicer) { _slicers[label] = slicer; }
