@@ -355,7 +355,7 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
                      entry->resetVersion();
                      _backupCacheCopies[index].setVersion( 0 );
                   }
-                  if( entry && valid_entry ) {
+                  if( !entry || valid_entry ) {
                      _backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
                      _backupCacheCopies[index]._locations.clear();
                      _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
