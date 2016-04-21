@@ -69,10 +69,6 @@
 #include "backupmanager.hpp"
 #endif
 
-#ifdef NANOS_FAULT_INJECTION
-#include "mpoison.h"
-#endif
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -105,15 +101,10 @@ System::System () :
 #endif
       , _lockPoolSize(37), _lockPool( NULL ), _mainTeam (NULL), _simulator(false)
 #ifdef NANOS_RESILIENCY_ENABLED
+      , _injectionPolicy( "none" )
       , _resiliency_disabled(false)
       , _task_max_trials(1)
       , _backup_pool_size(sysconf(_SC_PAGESIZE ) * sysconf(_SC_PHYS_PAGES) / 2)
-#endif
-#ifdef NANOS_FAULT_INJECTION
-      , _memory_poison_enabled(false)
-      , _memory_poison_seed(time(0))
-      , _memory_poison_rate(0.0f)
-      , _memory_poison_amount(-1)
 #endif
       , _affinityFailureCount( 0 )
       , _createLocalTasks( false )
@@ -235,7 +226,15 @@ void System::loadModules ()
 
    ensure0( _defBarrFactory,"No default system barrier factory" );
    
+#ifdef NANOS_RESILIENCY_ENABLED
+	// load default error injection plugin
+   verbose0( "loading ", getInjectionPolicy(), " injection policy" );
 
+   if ( !loadPlugin( std::string("injection-")+getInjectionPolicy() ) )
+      fatal0( "Could not load main error injection policy" );
+
+   ensure0( !_injectionPolicy.empty(),"No error injection policy defined" );
+#endif
 }
 
 void System::unloadModules ()
@@ -404,31 +403,10 @@ void System::config ()
    cfg.registerArgOption("backup_pool_size", "backup-pool-size");
    cfg.registerEnvOption("backup_pool_size", "NX_BACKUP_POOL_SIZE");
 
-#endif
-#ifdef NANOS_FAULT_INJECTION
-   cfg.registerConfigOption("memory_poisoning",
-         NEW Config::FlagOption(_memory_poison_enabled, true),
-         "Enables random memory page poisoning (resiliency testing)");
-   cfg.registerArgOption("memory_poisoning", "memory-poisoning");
-   cfg.registerEnvOption("memory_poisoning", "NX_ENABLE_POISONING");
-
-   cfg.registerConfigOption("mp_seed",
-         NEW Config::IntegerVar(_memory_poison_seed),
-         "Seed used by memory page poisoning RNG (default: 'time(0)')");
-   cfg.registerArgOption("mp_seed", "mpoison-seed");
-   cfg.registerEnvOption("mp_seed", "NX_MPOISON_SEED");
-
-   cfg.registerConfigOption("mp_rate",
-         NEW Config::FloatVar(_memory_poison_rate),
-         "Memory poisoning rate (error/s). Default: '0')");
-   cfg.registerArgOption("mp_rate", "mpoison-rate");
-   cfg.registerEnvOption("mp_rate", "NX_MPOISON_RATE");
-
-   cfg.registerConfigOption("mp_amount",
-         NEW Config::IntegerVar(_memory_poison_amount),
-         "Maximum number of injected errors (default: infinite )");
-   cfg.registerArgOption("mp_amount", "mpoison-amount");
-   cfg.registerEnvOption("mp_amount", "NX_MPOISON_AMOUNT");
+   registerPluginOption("error_injection", "error-injection", _injectionPolicy,
+         "Selects error injection policy. Used for resiliency evaluation.", cfg);
+   cfg.registerArgOption("error_injection", "error-injection");
+   cfg.registerEnvOption("error_injection", "NX_ERROR_INJECTION");
 #endif
 
    cfg.registerConfigOption ( "verbose-devops", NEW Config::FlagOption ( _verboseDevOps, true ), "Verbose cache ops" );
@@ -556,9 +534,6 @@ void System::start ()
 
       memory_space_id_t backup_id = addSeparateMemoryAddressSpace( *mgr, true /*allocWide*/);
       _backupMemory = &getSeparateMemory( backup_id );
-
-      // Setup signal handlers
-      myThread->setupSignalHandlers();
    }
 #endif
 
@@ -653,6 +628,7 @@ void System::start ()
       environmentSummary();
 
 #ifdef HAVE_CXX11
+		// TODO: move this to the new exception design directory
       // If the summary is enabled, print the final execution summary
       // even if the application is terminated by an error.
       std::set_terminate( [](){
@@ -722,7 +698,9 @@ void System::finish ()
 
    verbose ( "NANOS++ statistics");
    verbose ( std::dec, (unsigned int) getCreatedTasks(),         " tasks have been executed" );
-#ifdef NANOS_RESILIENCY_ENABLED
+
+// TODO: review statistic gathering for resiliency
+#if 0 //def NANOS_RESILIENCY_ENABLED
    verbose ( std::dec, (unsigned int) getInjectedErrors(),       " errors injected" );
    verbose ( std::dec, (unsigned int) getInitializationErrors(), " tasks could not be initialized (backup failed)" );
    verbose ( std::dec, (unsigned int) getExecutionErrors(),      " task executions failed" );
@@ -1550,7 +1528,8 @@ void System::executionSummary( void )
    message0( "============ Nanos++ Final Execution Summary ==================" );
    message0( "=== Application ended in ", seconds, " seconds" );
    message0( "=== ", std::dec, getCreatedTasks(),         " tasks have been executed" );
-#ifdef NANOS_RESILIENCY_ENABLED
+// TODO review statistic gathering for resiliency
+#if 0 //def NANOS_RESILIENCY_ENABLED
    message0( "=== ", std::dec, getInjectedErrors(),       " errors injected" );
    message0( "=== ", std::dec, getInitializationErrors(), " tasks could not be initialized (backup failed)" );
    message0( "=== ", std::dec, getExecutionErrors(),      " task executions failed" );

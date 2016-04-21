@@ -1,6 +1,24 @@
+/*************************************************************************************/
+/*      Copyright 2009-2015 Barcelona Supercomputing Center                          */
+/*                                                                                   */
+/*      This file is part of the NANOS++ library.                                    */
+/*                                                                                   */
+/*      NANOS++ is free software: you can redistribute it and/or modify              */
+/*      it under the terms of the GNU Lesser General Public License as published by  */
+/*      the Free Software Foundation, either version 3 of the License, or            */
+/*      (at your option) any later version.                                          */
+/*                                                                                   */
+/*      NANOS++ is distributed in the hope that it will be useful,                   */
+/*      but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*      GNU Lesser General Public License for more details.                          */
+/*                                                                                   */
+/*      You should have received a copy of the GNU Lesser General Public License     */
+/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*************************************************************************************/
 
-#ifndef OPERATIONFAILURE_HPP
-#define OPERATIONFAILURE_HPP
+#ifndef OPERATION_FAILURE_HPP
+#define OPERATION_FAILURE_HPP
 
 #include "signalexception.hpp"
 
@@ -14,21 +32,16 @@ namespace error {
  */
 class OperationFailure : public SegmentationFaultException {
 	private:
-		WorkDescriptor &_runningTaskWhenHandled;
-		//WorkDescriptor &plannedTaskWhenHandled;
 		using super=SegmentationFaultException;
 	public:
 		OperationFailure( siginfo_t* signalInfo, ucontext_t* executionContext ) :
-				super( signalInfo, executionContext ),
-				_runningTaskWhenHandled( *(getMyThreadSafe()->getCurrentWD()) )
-				//plannedTaskWhenHandled( *(getMyThreadSafe()->getPlannedWD()) )
-		{}
-
-		WorkDescriptor& getTask() { return _runningTaskWhenHandled; }
+				super( signalInfo, executionContext )
+		{
+		}
 };
 
 } // namespace error
 } // namespace nanos
 
-#endif // OPERATIONFAILURE_HPP
+#endif // OPERATION_FAILURE_HPP
 

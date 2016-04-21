@@ -395,7 +395,6 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
 #ifdef NANOS_RESILIENCY_ENABLED
 void MemController::restoreBackupData ( )
 {
-
    ensure( _preinitialized == true, "MemController::restoreBackupData: MemController not initialized!");
    ensure( _initialized == true, "MemController::restoreBackupData: MemController not initialized!");
    ensure( _wd.isRecoverable(), "Cannot restore data of an unrecoverable task!" );

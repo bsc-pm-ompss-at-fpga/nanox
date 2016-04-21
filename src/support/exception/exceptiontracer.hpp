@@ -20,11 +20,12 @@
 #ifndef EXCEPTION_TRACER_HPP
 #define EXCEPTION_TRACER_HPP
 
-#include "debug.hpp"
-#include "system.hpp" // required for using debug macros
+//#include "debug.hpp"
+//#include "system.hpp" // required for using debug macros
 
 #include <execinfo.h>
 #include <signal.h>
+#include <stdlib.h>
 
 #include <exception>
 
@@ -45,7 +46,7 @@ class ExceptionTracer {
 			int length = backtrace(array,25);
 			char** symbols = backtrace_symbols(array,length);
 			for( int i = 0; i < length; i++) {
-				debug(symbols[i]);
+//				debug(symbols[i]);
 			}
 			free(symbols);
 		}

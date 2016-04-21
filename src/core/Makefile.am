@@ -134,15 +134,14 @@ devinclude_HEADERS = \
 	trackableobject_decl.hpp \
 	trackableobject.hpp \
 	hwloc_decl.hpp \
-	regionset_decl.hpp
-if RESILIENCY
-devinclude_HEADERS+=\
-	taskexception_fwd.hpp \
+	regionset_decl.hpp \
 	$(END)
-else
-devinclude_HEADERS+=\
-	$(END)
-endif
+
+#if RESILIENCY
+#devinclude_HEADERS+=\
+#	taskexception_fwd.hpp \
+#	$(END)
+#endif
 
 common_sources=\
 	nanos-int.h \
@@ -284,12 +283,13 @@ common_sources=\
 
 if RESILIENCY
 common_sources+= \
-	taskexception_fwd.hpp \
-	taskexception.hpp \
-	taskexception.cpp \
 	backupmanager.hpp \
 	backupmanager.cpp \
 	$(END)
+
+#	taskexception_fwd.hpp
+#	taskexception.hpp
+#	taskexception.cpp
 
 resiliency_aux_sources=\
 	backupmanager_aux.cpp \

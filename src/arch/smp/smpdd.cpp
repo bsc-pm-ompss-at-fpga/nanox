@@ -29,7 +29,6 @@
 
 #ifdef NANOS_RESILIENCY_ENABLED
 #include <cstdint>
-#include "taskexception.hpp"
 #include "memcontroller_decl.hpp"
 #include "exception/operationfailure.hpp"
 #include "exception/executionfailure.hpp"
@@ -223,8 +222,7 @@ bool SMPDD::recover( TaskException const& err ) {
          switch(err.getSignalInfo().si_code) {
             case SEGV_MAPERR: /* Address not mapped to object.  */
                message( "SEGV_MAPERR error recovery is not supported yet." );
-               //return false;
-               return true;
+               return false;
             case SEGV_ACCERR: /* Invalid permissions for mapped object.  */
                uintptr_t page_addr = (uintptr_t)err.getSignalInfo().si_addr;
                // Align faulting address with virtual page address

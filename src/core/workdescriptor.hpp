@@ -524,7 +524,7 @@ inline WorkDescriptor *WorkDescriptor::propagateInvalidationAndGetRecoverableAnc
 	WorkDescriptor *next = current->getParent();
 
    current->setInvalid(true);
-	while ( !current->isRecoverable() && next ) {
+	while ( next && !next->isRecoverable() && !next->isInvalid() ) {
 		current = next;
 		current->setInvalid(true);
 		next = current->getParent();

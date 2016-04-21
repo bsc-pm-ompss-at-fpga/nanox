@@ -347,12 +347,6 @@ namespace nanos
           */
          void setMainThread ( bool v = true );
 
-#ifdef NANOS_RESILIENCY_ENABLED
-         /*! \brief Change the action taken by default if some specified signals are received.
-          */
-         virtual void setupSignalHandlers() = 0;
-
-#endif
          //! \brief Wake up a thread and add it to the team, considering all the possible thread states
          void tryWakeUp( ThreadTeam *team );
 
