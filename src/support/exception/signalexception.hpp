@@ -37,15 +37,11 @@ class SignalException : public GenericException {
 		SignalInfo       _handledSignalInfo;
 		ExecutionContext _executionContextWhenHandled;
 
-	protected:
-		SignalInfo const& getHandledSignalInfo() const { return _handledSignalInfo; }
-
-		ExecutionContext const& getExecutionContextWhenHandled() { return _executionContextWhenHandled; }
 	public:
 		SignalException( siginfo_t* signalInfo, ucontext_t* executionContext, std::string const& message ) :
 				GenericException( message ),
-				_handledSignalInfo( signalInfo ), 
-				_executionContextWhenHandled( executionContext ) 
+				_handledSignalInfo( *signalInfo ),
+				_executionContextWhenHandled( *executionContext )
 		{}
 
 		/* \brief Deallocates resources and restores 
@@ -62,9 +58,9 @@ class SignalException : public GenericException {
 			pthread_sigmask(SIG_UNBLOCK, &thisSignalMask, NULL);
 		}
 
-		SignalInfo const& getHandledSignalInfo() const { return handledSignalInfo; }
+		SignalInfo const& getSignalInfo() const { return _handledSignalInfo; }
 
-		ExecutionContext const& getExecutionContextWhenHandled() { return executionContextWhenHandled; }
+		ExecutionContext const& getExecutionContext() { return _executionContextWhenHandled; }
 
 };
 

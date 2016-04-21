@@ -369,8 +369,8 @@ namespace nanos {
                   
                   // FIXME
                   tdata._next = ( winner+1 ) % sys.getNumNumaNodes();
-                  verbose0( toString( "[NUMA] wd ") + toString( wd.getId() ) + toString( "(" ) + toString( wd.getDescription() )
-                     + toString(")") + toString( " is init task, assigned to NUMA node " ) + toString( winner ) );
+                  verbose0( "[NUMA] wd ", wd.getId(), "(", wd.getDescription(), ") "
+                            "is init task, assigned to NUMA node ", winner );
                   //fprintf( stderr, "[socket] Round.robbin next = %d\n", tdata._next.value() );
                }
                else

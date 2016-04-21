@@ -1246,15 +1246,15 @@ debug_LTLIBRARIES += \
 
 debug_libnanox_injection_none_la_CPPFLAGS= -I$(top_builddir)/src/plugins/error-injection
 debug_libnanox_injection_none_la_CXXFLAGS= $(nanos_debug_cxxflags)
-debug_libnanox_injection_none_la_LDFLAGS= $(ld_plugin_flags)
+debug_libnanox_injection_none_la_LDFLAGS= $(ld_plugin_flags) -L$(abs_top_builddir)/src/apis/debug
 debug_libnanox_injection_none_la_SOURCES= $(stubinjection_sources)
-debug_libnanox_injection_none_la_LIBADD=$(top_builddir)/src/apis/debug/libnanox-error-injection.la
+debug_libnanox_injection_none_la_LIBADD=-lnanox-error-injection
 
 debug_libnanox_injection_block_access_la_CPPFLAGS= -I$(top_builddir)/src/plugins/error-injection
 debug_libnanox_injection_block_access_la_CXXFLAGS= $(nanos_debug_cxxflags)
-debug_libnanox_injection_block_access_la_LDFLAGS= $(ld_plugin_flags)
+debug_libnanox_injection_block_access_la_LDFLAGS= $(ld_plugin_flags) -L$(abs_top_builddir)/src/apis/debug
 debug_libnanox_injection_block_access_la_SOURCES = $(blockaccess_sources)
-debug_libnanox_injection_block_access_la_LIBADD=$(top_builddir)/src/apis/debug/libnanox-error-injection.la
+debug_libnanox_injection_block_access_la_LIBADD=-lnanox-error-injection
 
 endif
 
@@ -1265,16 +1265,16 @@ instrumentation_LTLIBRARIES += \
 	$(END)
 
 instrumentation_libnanox_injection_none_la_CPPFLAGS = -I$(top_builddir)/src/plugins/error-injection
-instrumentation_libnanox_injection_none_la_CXXFLAGS = $(nanos_instrumentation_cxxflags)
-instrumentation_libnanox_injection_none_la_LDFLAGS = $(ld_plugin_flags)
+instrumentation_libnanox_injection_none_la_CXXFLAGS = $(nanos_instr_cxxflags)
+instrumentation_libnanox_injection_none_la_LDFLAGS = $(ld_plugin_flags) -L$(abs_top_builddir)/src/apis/instrumentation
 instrumentation_libnanox_injection_none_la_SOURCES = $(stubinjection_sources)
-instrumentation_libnanox_injection_none_la_LIBADD=$(top_builddir)/src/apis/instrumentation/libnanox-error-injection.la
+instrumentation_libnanox_injection_none_la_LIBADD=-lnanox-error-injection
 
 instrumentation_libnanox_injection_block_access_la_CPPFLAGS = -I$(top_builddir)/src/plugins/error-injection
-instrumentation_libnanox_injection_block_access_la_CXXFLAGS = $(nanos_instrumentation_cxxflags)
-instrumentation_libnanox_injection_block_access_la_LDFLAGS = $(ld_plugin_flags)
+instrumentation_libnanox_injection_block_access_la_CXXFLAGS = $(nanos_instr_cxxflags)
+instrumentation_libnanox_injection_block_access_la_LDFLAGS = $(ld_plugin_flags) -L$(abs_top_builddir)/src/apis/instrumentation
 instrumentation_libnanox_injection_block_access_la_SOURCES = $(blockaccess_sources)
-instrumentation_libnanox_injection_block_access_la_LIBADD=$(top_builddir)/src/apis/instrumentation/libnanox-error-injection.la
+instrumentation_libnanox_injection_block_access_la_LIBADD=-lnanox-error-injection
 
 endif
 
@@ -1286,15 +1286,15 @@ instrumentation_debug_LTLIBRARIES += \
 
 instrumentation_debug_libnanox_injection_none_la_CPPFLAGS = -I$(top_builddir)/src/plugins/error-injection
 instrumentation_debug_libnanox_injection_none_la_CXXFLAGS = $(nanos_instrdebug_cxxflags)
-instrumentation_debug_libnanox_injection_none_la_LDFLAGS = $(ld_plugin_flags)
+instrumentation_debug_libnanox_injection_none_la_LDFLAGS = $(ld_plugin_flags) -L$(abs_top_builddir)/src/apis/instrumentation-debug
 instrumentation_debug_libnanox_injection_none_la_SOURCES = $(stubinjection_sources)
-instrumentation_debug_libnanox_injection_none_la_LIBADD=$(top_builddir)/src/apis/instrumentation-debug/libnanox-error-injection.la
+instrumentation_debug_libnanox_injection_none_la_LIBADD=-lnanox-error-injection
 
 instrumentation_debug_libnanox_injection_block_access_la_CPPFLAGS = -I$(top_builddir)/src/plugins/error-injection
 instrumentation_debug_libnanox_injection_block_access_la_CXXFLAGS = $(nanos_instrdebug_cxxflags)
-instrumentation_debug_libnanox_injection_block_access_la_LDFLAGS = $(ld_plugin_flags)
+instrumentation_debug_libnanox_injection_block_access_la_LDFLAGS = $(ld_plugin_flags) -L$(abs_top_builddir)/src/apis/instrumentation-debug
 instrumentation_debug_libnanox_injection_block_access_la_SOURCES = $(blockaccess_sources)
-instrumentation_debug_libnanox_injection_block_access_la_LIBADD=$(top_builddir)/src/apis/instrumentation-debug/libnanox-error-injection.la
+instrumentation_debug_libnanox_injection_block_access_la_LIBADD=-lnanox-error-injection
 
 endif
 
@@ -1306,15 +1306,15 @@ performance_LTLIBRARIES += \
 
 
 performance_libnanox_injection_none_la_CPPFLAGS = -I$(top_builddir)/src/plugins/error-injection
-performance_libnanox_injection_none_la_CXXFLAGS = $(nanos_performance_cxxflags)
-performance_libnanox_injection_none_la_LDFLAGS = $(ld_plugin_flags)
+performance_libnanox_injection_none_la_CXXFLAGS = $(nanos_perfo_cxxflags)
+performance_libnanox_injection_none_la_LDFLAGS = $(ld_plugin_flags) -L$(abs_top_builddir)/src/apis/performance
 performance_libnanox_injection_none_la_SOURCES = $(stubinjection_sources)
-performance_libnanox_injection_none_la_LIBADD=$(top_builddir)/src/performance/libnanox-error-injection.la
+performance_libnanox_injection_none_la_LIBADD=-lnanox-error-injection
 
 performance_libnanox_injection_block_access_la_CPPFLAGS = -I$(top_builddir)/src/plugins/error-injection
-performance_libnanox_injection_block_access_la_CXXFLAGS = $(nanos_performance_cxxflags)
-performance_libnanox_injection_block_access_la_LDFLAGS = $(ld_plugin_flags)
+performance_libnanox_injection_block_access_la_CXXFLAGS = $(nanos_perfo_cxxflags)
+performance_libnanox_injection_block_access_la_LDFLAGS = $(ld_plugin_flags) -L$(abs_top_builddir)/src/apis/performance
 performance_libnanox_injection_block_access_la_SOURCES = $(blockaccess_sources)
-performance_libnanox_injection_block_access_la_LIBADD=$(top_builddir)/src/performance/libnanox-error-injection.la
+performance_libnanox_injection_block_access_la_LIBADD=-lnanox-error-injection
 
 endif

@@ -24,12 +24,25 @@
 #include "wddeque.hpp"
 #include "smpthread.hpp"
 
+#include "exception/signaltranslator.hpp"
+#include "exception/operationfailure.hpp"
+
 using namespace nanos;
 
 __thread BaseThread * nanos::myThread = NULL;
 
 void BaseThread::run ()
 {
+    #ifdef NANOS_RESILIENCY_ENABLED
+    if(sys.isResiliencyEnabled()) {
+       // Register signal handlers again.
+       // May be necessary if some other library overloads
+       // our handler on initialization (e.g. Fortran)
+       using namespace nanos::error;
+       SignalTranslator<OperationFailure> operationFailureTranslator;
+    }
+    #endif
+
    _threadWD.tied().tieTo( *this );
    associate();
    initializeDependent();

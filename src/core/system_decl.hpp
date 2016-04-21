@@ -57,7 +57,7 @@
 #include <config.h>
 #endif
 
-#ifdef NANOS_RESILIENCY_ENABLED
+#if 0 //NANOS_RESILIENCY_ENABLED
 #include "taskexception.hpp"
 #endif
 
@@ -230,8 +230,6 @@ namespace nanos
          unsigned                  _task_max_trials;
          //! Specifies the size of the memory pool used to store task input data backups.
          size_t                    _backup_pool_size;
-         //! Keeps the count of the number of error events that appear during the execution
-         TaskExceptionStats        _resiliencyStats;
 #endif
 #ifdef NANOS_FAULT_INJECTION
          //! Enables random memory page poisoning for resiliency testing.
@@ -422,11 +420,6 @@ namespace nanos
           * \brief Returns current skipped task count.
           */
          int getDiscardedTasks ( ) const;
-         
-         /*!
-          * \brief Returns a reference to the object that keeps the count for task exception events.
-          */
-         TaskExceptionStats& getExceptionStats ( );
 #endif
 
 #ifdef NANOS_FAULT_INJECTION

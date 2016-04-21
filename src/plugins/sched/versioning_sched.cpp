@@ -24,6 +24,7 @@
 #include "os.hpp"
 #include "config.hpp"
 #include "hashmap.hpp"
+#include "xstring.hpp"
 
 #include <math.h>
 #include <limits>
@@ -290,10 +291,9 @@ namespace ext
                {
                   unsigned int numVersions = wd->getNumDevices();
 
-                  debug( "[versioning] First record for wd key ("
-                        + toString<unsigned long>( wd->getVersionGroupId() )
-                        + ", " + toString<size_t>( wd->getParamsSize() ) + ") with "
-                        + toString<int>( numVersions ) + " versions" );
+                  debug( "[versioning] First record for wd key (",
+                        wd->getVersionGroupId(), ", ", wd->getParamsSize(),
+                        ") with ", numVersions, " versions" );
 
                   _statsLock.acquire();
                   // Reserve as much memory as we need for all the implementations
@@ -464,8 +464,8 @@ namespace ext
 
                NANOS_SCHED_VER_RAISE_EVENT( NANOS_SCHED_VER_SETDEVICE_CANRUN );
 
-               debug( "[versioning] Setting device #" + toString<unsigned int>( deviceIdx )
-                     + " for WD " + toString<int>( wd->getId() ) + " (compatible with my PE)" );
+               debug( "[versioning] Setting device #", deviceIdx,
+                      " for WD ", wd->getId(), " (compatible with my PE)" );
 
                WD * next = NULL;
                setWorker( tdata, wd, deviceIdx, thread->getId(), time );
@@ -480,7 +480,7 @@ namespace ext
                   if ( next->getActiveDeviceIdx() != version ) next->activateDevice( version );
 #endif
 
-                  debug( "[versioning] Getting front task of my queue: " + toString<int>( next ? next->getId() : -1 ) + " from setDevice()" );
+                  debug( "[versioning] Getting front task of my queue: ", next ? next->getId() : -1, " from setDevice()" );
                }
 
                NANOS_SCHED_VER_CLOSE_EVENT;
@@ -497,8 +497,8 @@ namespace ext
 
                NANOS_SCHED_VER_RAISE_EVENT( NANOS_SCHED_VER_SETDEVICE_CANNOTRUN );
 
-               debug( "[versioning] Setting device #" + toString<unsigned int>( deviceIdx )
-                     + " for WD " + toString<int>( wd->getId() ) + " (not compatible with my PE)" );
+               debug( "[versioning] Setting device #", deviceIdx,
+                     + " for WD ", wd->getId(), " (not compatible with my PE)" );
 
                WD * next = NULL;
                if ( getTask ) {
@@ -511,7 +511,7 @@ namespace ext
                   }
 #endif
 
-                  debug( "[versioning] Getting front task of my queue: " + toString<int>( next ? next->getId() : -1 ) + " from setDevice()" );
+                  debug( "[versioning] Getting front task of my queue: ", next ? next->getId() : -1, " from setDevice()" );
                }
 
                NANOS_SCHED_VER_CLOSE_EVENT;
@@ -539,8 +539,8 @@ namespace ext
             wd->activateDevice( deviceIdx );
             tdata._executionMap[workerIdx]->addTask( time, wd );
 
-            debug( "[versioning] Setting worker #" + toString<unsigned int>( workerIdx ) + " for WD "
-                  + toString<int>( wd->getId() ) + " and vId " + toString<unsigned int>( deviceIdx ) );
+            debug( "[versioning] Setting worker #", workerIdx, " for WD ", wd->getId(),
+                   " and vId ", deviceIdx );
          }
 
 
@@ -843,12 +843,9 @@ namespace ext
                         if ( record._numAssigned < _minRecordTrial ) {
                            // Not enough records to have reliable values, so go on with this versionId
 
-                           debug("[versioning] Less than 3 records for my device ("
-                                 + toString<int>( record._numAssigned.value() ) + ") for key ("
-                                 + toString<unsigned long>( next->getVersionGroupId() ) + ", "
-                                 + toString<size_t>( next->getParamsSize() ) + ") vId "
-                                 + toString<unsigned int>( i ) + " device "
-                                 + next->getDevices()[i]->getDevice()->getName() );
+                           debug("[versioning] Less than 3 records for my device (", record._numAssigned.value(),
+                                 ") for key (", next->getVersionGroupId(), ", ", next->getParamsSize(),
+                                 ") vId ", i, " device ", next->getDevices()[i]->getDevice()->getName() );
 
                            // If this PE can run the task, run it
                            if ( next->getDevices()[i]->isCompatible( *pe->getDeviceType(), pe ) ) {
@@ -1206,7 +1203,7 @@ namespace ext
                qsize = wq->_assignedTasksList.size();
 
                s +=  "\n+ ";
-               s +=  toString<unsigned int>( i );
+               s +=  toString(i);
                s +=  " + ";
 
                // Since we cannot access the queue objects directly, we will pop front and

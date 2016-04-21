@@ -21,6 +21,7 @@
 #define EXECUTION_FAILURE_HPP
 
 #include "operationfailure.hpp"
+#include "failurestats.hpp"
 
 namespace nanos {
 namespace error {
@@ -32,11 +33,12 @@ class ExecutionFailure {
       ExecutionFailure( OperationFailure& operation ) :
             _failedOperation( operation )
       {
-         sys.getExceptionStats().incrExecutionErrors();
+         debug("Resiliency: execution error detected ", operation.what() );
+			FailureStats<ExecutionFailure>::increase();
 
-         WorkDescriptor* recoverableAncestor = _failedOperation.getTask().propagateInvalidationAndGetRecoverableAncestor();
+         WorkDescriptor* recoverableAncestor = operation.getTask().propagateInvalidationAndGetRecoverableAncestor();
          if( !recoverableAncestor ) {
-            fatal( "Could not find a recoverable task when recovering from ", _failedOperation.what() );
+            fatal( "Could not find a recoverable task when recovering from ", operation.what() );
          }
       }
 };

@@ -24,11 +24,13 @@
 
 using namespace nanos::error;
 
+// Probably we could add a class specialization
+// for each SIGBUS/SIGSEGV signal codes
 std::string BusErrorException::getErrorMessage() const
 {
 	std::stringstream ss;
 	ss << "BusErrorException:";
-	switch ( getHandledSignalInfo().getSignalCode() ) {
+	switch ( getSignalInfo().getSignalCode() ) {
 		case BUS_ADRALN:
 			ss << " Invalid address alignment.";
 			break;
@@ -56,7 +58,7 @@ std::string SegmentationFaultException::getErrorMessage() const
 {
 	std::stringstream ss;
 	ss << "SegmentationFaultException:";
-	switch ( getHandledSignalInfo().getSignalCode() ) {
+	switch ( getSignalInfo().getSignalCode() ) {
 		case SEGV_MAPERR:
 			ss << " Address not mapped to object.";
 			break;

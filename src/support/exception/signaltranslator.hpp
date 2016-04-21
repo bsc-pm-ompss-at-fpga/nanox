@@ -30,23 +30,25 @@ template < class SignalException >
 class SignalTranslator {
 	private:
 		class SingletonTranslator {
+			private:
+				struct sigaction _recoveryAction;
 			public:
 				SingletonTranslator() {
-	   			// Set up the structure to specify task-recovery.
-	   			struct sigaction recovery_action;
-	   			recovery_action.sa_sigaction = &signalHandler;
-	   			sigemptyset(&recovery_action.sa_mask);
+					// Set up the structure to specify task-recovery.
+					_recoveryAction.sa_sigaction = &signalHandler;
+					sigemptyset(&_recoveryAction.sa_mask);
 					// SA_SIGINFO: Provides context information to the handler.
 					// SA_RESTART: Resume system calls interrupted by the signal.
-	   			recovery_action.sa_flags = SA_SIGINFO | SA_RESTART;
+					_recoveryAction.sa_flags = SA_SIGINFO | SA_RESTART;
+				}
 
-	   			// Program signal to use the default recovery handler.
-	   			int err =
+				void registerHandler() {
+					int err =
 						sigaction(
 							SignalException::getSignalNumber(),
-							&recovery_action,
+							&_recoveryAction,
 							NULL);
-	   			fatal_cond( err != 0, "Signal handling setup failed");
+					fatal_cond( err != 0, "Signal handling setup failed");
 				}
 
 				static void signalHandler( int signalNumber, siginfo_t* signalInfo, void* executionContext ) {
@@ -58,6 +60,7 @@ class SignalTranslator {
 		SignalTranslator()
 		{
 			static SingletonTranslator s_objTranslator;
+			s_objTranslator.registerHandler();
 		}
 };
 

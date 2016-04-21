@@ -83,11 +83,6 @@ public:
    virtual void wakeup();
    virtual int getCpuId() const;   
    virtual void idle( bool debug );
-   #ifdef NANOS_RESILIENCY_ENABLED
-      virtual void setupSignalHandlers() { _pthread.setupSignalHandlers(); }
-   #endif
-   
-   
    
    void switchTo( WD *work, SchedulerHelper *helper );
    void exitTo( WD *work, SchedulerHelper *helper );

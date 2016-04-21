@@ -520,15 +520,14 @@ inline bool WorkDescriptor::isRecoverable() const { return _flags.is_recoverable
 
 inline WorkDescriptor *WorkDescriptor::propagateInvalidationAndGetRecoverableAncestor ()
 {
-   WorkDescriptor *current = this;
-	WorkDescriptor *next = current->getParent();
+   WorkDescriptor *current;
+	WorkDescriptor *next = this;
 
-   current->setInvalid(true);
-	while ( next && !next->isRecoverable() && !next->isInvalid() ) {
+   do {
 		current = next;
 		current->setInvalid(true);
 		next = current->getParent();
-	}
+	} while ( !current->isRecoverable() && next && !next->isInvalid() );
 
 	return current;
 }

@@ -67,6 +67,8 @@
 
 #ifdef NANOS_RESILIENCY_ENABLED
 #include "backupmanager.hpp"
+#include "exception/signaltranslator.hpp"
+#include "exception/operationfailure.hpp"
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -584,6 +586,10 @@ void System::start ()
        }
    }
 
+#ifdef NANOS_RESILIENCY_ENABLED
+   error::SignalTranslator<error::OperationFailure> signalToExceptionTranslator;
+#endif
+
    if ( getSynchronizedStart() ) threadReady();
    switch ( getInitialMode() )
    {
@@ -699,13 +705,12 @@ void System::finish ()
    verbose ( "NANOS++ statistics");
    verbose ( std::dec, (unsigned int) getCreatedTasks(),         " tasks have been executed" );
 
-// TODO: review statistic gathering for resiliency
-#if 0 //def NANOS_RESILIENCY_ENABLED
-   verbose ( std::dec, (unsigned int) getInjectedErrors(),       " errors injected" );
-   verbose ( std::dec, (unsigned int) getInitializationErrors(), " tasks could not be initialized (backup failed)" );
-   verbose ( std::dec, (unsigned int) getExecutionErrors(),      " task executions failed" );
-   verbose ( std::dec, (unsigned int) getRecoveredTasks(),       " tasks have been reexecuted" );
-   verbose ( std::dec, (unsigned int) getDiscardedTasks(),       " tasks have been discarded (initialization, parent or sibling(s) failed" );
+#ifdef NANOS_RESILIENCY_ENABLED
+   verbose ( std::dec, error::FailureStats<error::ErrorInjection>::get(),    " errors injected" );
+   verbose ( std::dec, error::FailureStats<error::CheckpointFailure>::get(), " tasks could not be initialized (backup failed)" );
+   verbose ( std::dec, error::FailureStats<error::ExecutionFailure>::get(),  " task executions failed" );
+   verbose ( std::dec, error::FailureStats<error::TaskRecovery>::get(),      " tasks have been reexecuted" );
+   verbose ( std::dec, error::FailureStats<error::DiscardedTask>::get(),     " tasks have been discarded (initialization, parent or sibling(s) failed" );
 #endif // NANOS_RESILIENCY_ENABLED
    sys.getNetwork()->nodeBarrier();
 
@@ -1528,13 +1533,12 @@ void System::executionSummary( void )
    message0( "============ Nanos++ Final Execution Summary ==================" );
    message0( "=== Application ended in ", seconds, " seconds" );
    message0( "=== ", std::dec, getCreatedTasks(),         " tasks have been executed" );
-// TODO review statistic gathering for resiliency
-#if 0 //def NANOS_RESILIENCY_ENABLED
-   message0( "=== ", std::dec, getInjectedErrors(),       " errors injected" );
-   message0( "=== ", std::dec, getInitializationErrors(), " tasks could not be initialized (backup failed)" );
-   message0( "=== ", std::dec, getExecutionErrors(),      " task executions failed" );
-   message0( "=== ", std::dec, getRecoveredTasks(),       " tasks have been reexecuted" );
-   message0( "=== ", std::dec, getDiscardedTasks(),       " tasks have been discarded (initialization, parent or sibling(s) failed" );
+#ifdef NANOS_RESILIENCY_ENABLED
+   message0( "=== ", std::dec, error::FailureStats<error::ErrorInjection>::get(),    " errors injected" );
+   message0( "=== ", std::dec, error::FailureStats<error::CheckpointFailure>::get(), " tasks could not be initialized (backup failed)" );
+   message0( "=== ", std::dec, error::FailureStats<error::ExecutionFailure>::get(),  " task executions failed" );
+   message0( "=== ", std::dec, error::FailureStats<error::TaskRecovery>::get(),      " tasks have been reexecuted" );
+   message0( "=== ", std::dec, error::FailureStats<error::DiscardedTask>::get(),     " tasks have been discarded (initialization, parent or sibling(s) failed" );
 #endif // NANOS_RESILIENCY_ENABLED
    message0( "===============================================================" );
 }
@@ -1553,8 +1557,12 @@ void System::ompss_nanox_main(){
     #endif
     
     #ifdef NANOS_RESILIENCY_ENABLED
-    if(sys.isResiliencyEnabled()) {   // runtime disable
-       getMyThreadSafe()->setupSignalHandlers();// Needed if the language runtime overloads our handler on initialization (e.g. Fortran)
+    if(sys.isResiliencyEnabled()) {
+       // Register signal handlers again.
+       // May be necessary if some other library overloads
+       // our handler on initialization (e.g. Fortran)
+       using namespace nanos::error;
+       SignalTranslator<OperationFailure> operationFailureTranslator;
     }
     #endif
 

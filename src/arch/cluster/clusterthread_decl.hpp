@@ -93,17 +93,13 @@ namespace ext
       virtual void notifyOutlinedCompletionDependent( WD *completedWD ); 
       virtual bool isCluster();
 
+      virtual void switchTo( WD *work, SchedulerHelper *helper );
+      virtual void exitTo( WD *work, SchedulerHelper *helper );
+      virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
+      virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg );
+      virtual void initializeDependent( void );
 
-         virtual void switchTo( WD *work, SchedulerHelper *helper );
-         virtual void exitTo( WD *work, SchedulerHelper *helper );
-         virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
-         virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg );
-         virtual void initializeDependent( void );
-
-         virtual void switchToNextThread();
-
-      virtual void setupSignalHandlers();
-
+      virtual void switchToNextThread();
 
       bool acceptsWDsSMP() const;
       bool acceptsWDsGPU() const;
@@ -116,7 +112,6 @@ namespace ext
       WD *getWaitingDataWD();
       void addWaitingDataWD( WD *wd );
    };
-
 
 }
 }

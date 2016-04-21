@@ -63,9 +63,11 @@ class GenericException : public ExceptionTracer, public std::exception {
             _runningTaskOnError( *getMyThreadSafe()->getCurrentWD() )
       {}
 
-      void setErrorMessage( std::string const& message ) { _errorMessage = message; }
-
       ~GenericException() throw() {}
+
+      WorkDescriptor& getTask() { return _runningTaskOnError; }
+
+      void setErrorMessage( std::string const& message ) { _errorMessage = message; }
 
       /**
        * Provides access to an explanatory string

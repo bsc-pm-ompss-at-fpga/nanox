@@ -39,11 +39,20 @@
 #define PTHREAD_STACK_MIN 16384
 #endif
 
+#ifdef NANOS_RESILIENCY_ENABLED
+#include "exception/signaltranslator.hpp"
+#include "exception/operationfailure.hpp"
+#endif
+
 using namespace nanos;
 
 void * os_bootthread ( void *arg )
 {
    BaseThread *self = static_cast<BaseThread *>( arg );
+
+#ifdef NANOS_RESILIENCY_ENABLED
+   error::SignalTranslator<error::OperationFailure> signalToExceptionTranslator;
+#endif
 
    self->run();
 

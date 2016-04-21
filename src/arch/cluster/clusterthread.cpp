@@ -311,7 +311,3 @@ void ClusterThread::addWaitingDataWD( WD *wd ) {
 //std::cerr << "Added a wd ( " << wd << " )" << wd->getId() << ", count is " << _waitingDataWDs.size() << std::endl;
 }
 
-void ClusterThread::setupSignalHandlers() {
-   std::cerr << __FUNCTION__ << ": unimplemented in ClusterThread." << std::endl;
-}
-

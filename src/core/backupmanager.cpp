@@ -23,8 +23,6 @@
 #include <sys/mman.h>
 #include <iostream>
 
-#include "mpoison.h"
-
 BackupManager::BackupManager ( ) :
       Device("BackupMgr"), _memsize(0), _pool_addr(), _managed_pool() {}
 
@@ -101,8 +99,6 @@ bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
       success = true;
    } catch ( error::OperationFailure &e ) {
       error::CheckpointFailure error(e);
-      sys.getExceptionStats().incrInitializationErrors();
-      debug("Resiliency: error detected during task ", wd.getId(), " data backup.");
 
       success = false;
    }
@@ -208,10 +204,8 @@ void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
       }
       ops->completeOp();
 
-   } catch ( error::OperationFailure &e ) {
-      error::CheckpointFailure error(e);
-      sys.getExceptionStats().incrInitializationErrors();
-      debug("Resiliency: error detected during task ", wd.getId(), " data backup.");
+   } catch ( error::OperationFailure &error ) {
+      error::CheckpointFailure handler(error);
 
       ops->abortOp();
    }
@@ -235,10 +229,8 @@ void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
          rawCopy((char*) &deviceAddresses[i * ld], (char*) &deviceAddresses[i * ld]+len, (char*) &hostAddresses[i * ld]);
       }
       ops->completeOp();
-   } catch ( error::OperationFailure &e ) {
-      error::CheckpointFailure error(e);
-      sys.getExceptionStats().incrInitializationErrors();
-      debug("Resiliency: error detected during task ", wd.getId(), " input data restoration.");
+   } catch ( error::OperationFailure &error ) {
+      error::CheckpointFailure handler(error);
 
       ops->abortOp();
    }

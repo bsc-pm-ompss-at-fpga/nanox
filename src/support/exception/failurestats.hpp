@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2009 - 2016 Barcelona Supercomputing Center                        */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -16,13 +16,34 @@
 /*      You should have received a copy of the GNU Lesser General Public License     */
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
-#ifndef _NANOS_TASKEXCEPTION_FWD_H
-#define _NANOS_TASKEXCEPTION_FWD_H
 
-namespace nanos
-{
-   class TaskException;
+#ifndef FAILURE_STATS_HPP
+#define FAILURE_STATS_HPP
+
+#include "atomic.hpp"
+
+namespace nanos {
+namespace error {
+
+class CheckpointFailure;
+class ExecutionFailure;
+class ErrorInjection;
+class DiscardedTask;
+class TaskRecovery;
+
+template < class Error >
+class FailureStats {
+	private:
+		static Atomic<unsigned> _counter;
+
+	public:
+		static void increase() { _counter++; }
+
+		static unsigned get() { return _counter.value(); }
 };
 
-#endif // _NANOS_TASKEXCEPTION_FWD_H
+} // namespace error
+} // namespace nanos
+
+#endif // FAILURE_STATS_HPP
 

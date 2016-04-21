@@ -40,6 +40,10 @@
 #include <config.h>
 #endif
 
+#ifdef NANOS_RESILIENCY_ENABLED
+#include "exception/failurestats.hpp"
+#endif
+
 using namespace nanos;
 
 // methods to access configuration variable         
@@ -526,28 +530,8 @@ inline unsigned System::getTaskMaxRetrials() const { return _task_max_trials; }
 inline size_t System::getBackupPoolSize() const { return _backup_pool_size; }
 
 inline std::string const& System::getInjectionPolicy() const { return _injectionPolicy; }
-
-inline int System::getInjectedErrors() const { return _resiliencyStats.getInjectedErrors(); }
-
-inline int System::getExecutionErrors() const { return _resiliencyStats.getExecutionErrors(); }
-
-inline int System::getInitializationErrors() const { return _resiliencyStats.getInitializationErrors(); }
-
-inline int System::getRecoveredTasks() const { return _resiliencyStats.getRecoveredTasks(); }
-
-inline int System::getDiscardedTasks() const { return _resiliencyStats.getDiscardedTasks(); }
-
-inline TaskExceptionStats& System::getExceptionStats() { return _resiliencyStats; }
 #endif
-#ifdef NANOS_FAULT_INJECTION
-inline bool System::isPoisoningEnabled() const { return _memory_poison_enabled; }
-
-inline int System::getMPoisonSeed() const { return _memory_poison_seed; }
-
-inline float System::getMPoisonRate() const { return _memory_poison_rate; }
-
-inline float System::getMPoisonAmount() const { return _memory_poison_amount; }
-
+#if 0
 inline void System::setFaultyAddress(uintptr_t addr) { _faulty_address = addr; }
 
 inline uintptr_t System::getFaultyAddress() const { return _faulty_address; }
@@ -557,7 +541,6 @@ inline int System::getFaultsInInterestedMemoryRegion() const { return _resilienc
 inline int System::getTotalMemoryExposedToFaultInjection() const { return _resiliencyStats.getTotalMemoryExposedToFaultInjection(); }
 
 inline int System::getSizeOfMemoryInterestedInFaultInjection() const { return _resiliencyStats.getSizeOfMemoryInterestedInFaultInjection(); }
-
 #endif
 
 inline void System::setSMPPlugin(SMPBasePlugin *p) {

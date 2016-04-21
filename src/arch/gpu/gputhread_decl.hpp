@@ -103,10 +103,6 @@ namespace ext
          /** \brief Unset the flag */
          virtual void wakeup();
          virtual int getCpuId() const;
-#ifdef NANOS_RESILIENCY_ENABLED
-         virtual void setupSignalHandlers() { _pthread.setupSignalHandlers(); }
-#endif
-
 
          void switchTo( WD *work, SchedulerHelper *helper );
          void exitTo( WD *work, SchedulerHelper *helper );

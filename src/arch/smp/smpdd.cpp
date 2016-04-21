@@ -139,7 +139,7 @@ void SMPDD::execute ( WD &wd ) throw ()
       NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) NANOS_FT_DISCARD );
       NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_discard_key, &task_discard_val) );
 
-      sys.getExceptionStats().incrDiscardedTasks();
+      error::FailureStats<error::DiscardedTask>::increase();
    } else {
       bool restart = true;
       do {
@@ -173,7 +173,7 @@ void SMPDD::execute ( WD &wd ) throw ()
          try {
             if ( wd.isExecutionRepeatable() ) {// Our parent is not invalid (if we got one)
                if ( num_tries < sys.getTaskMaxRetrials() ) {// We are still able to retry
-                  sys.getExceptionStats().incrRecoveredTasks();
+                  error::FailureStats<error::TaskRecovery>::increase();
                   num_tries++;
                   restore(wd);
                } else {
@@ -210,6 +210,7 @@ void SMPDD::execute ( WD &wd ) throw ()
 #endif
 
 #ifdef NANOS_RESILIENCY_ENABLED
+#if 0
 bool SMPDD::recover( TaskException const& err ) {
    bool result = true;
 
@@ -247,6 +248,7 @@ bool SMPDD::recover( TaskException const& err ) {
    }
    return result;
 }
+#endif
 
 void SMPDD::restore( WD & wd ) {
    debug ( "Resiliency: Task ", wd.getId(), " is being recovered to be re-executed further on.");

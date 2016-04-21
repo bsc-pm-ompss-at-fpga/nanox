@@ -42,7 +42,6 @@
 #include "dependenciesdomain_decl.hpp"
 #include "simpleallocator_decl.hpp"
 
-#include "taskexception_fwd.hpp"
 
 #include "schedule_fwd.hpp"   // ScheduleWDData
 
@@ -184,12 +183,14 @@ typedef std::set<const Device *>  DeviceList;
             * execution can continue (e.g. use a different memory page if we find one
             * corrupted/invalid.
             */
+#if 0 // disabled
             virtual bool recover ( TaskException const& err ) {
                fatal( "Recovery error: recover function is not implemented for device ",
                       getName()
                     );
                return false;
             }
+#endif
 
             /*! \brief Restores the workdescriptor to its original state.
              * Leaving the recovery dependent to the arch allows more

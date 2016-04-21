@@ -22,7 +22,7 @@
 
 #include "basethread_fwd.hpp"
 #include "smpprocessor_fwd.hpp"
-#include "taskexception_fwd.hpp"
+
 #include <pthread.h>
 #include <signal.h>
 
@@ -72,10 +72,6 @@ namespace nanos {
 
          virtual void condWait();
          virtual void condSignal();
-
-#ifdef NANOS_RESILIENCY_ENABLED
-         virtual void setupSignalHandlers();
-#endif
    };
 
 }

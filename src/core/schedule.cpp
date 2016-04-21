@@ -1024,7 +1024,7 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
       // because it will be done at a higher call level
       finishWork( wd, schedule );
 
-      sys.getExceptionStats().incrDiscardedTasks();
+      error::FailureStats<error::DiscardedTask>::increase();
 
       NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
       NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) NANOS_FT_DISCARD );

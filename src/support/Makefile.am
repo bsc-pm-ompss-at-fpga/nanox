@@ -100,6 +100,23 @@ devinclude_HEADERS = \
 	genericevent_decl.hpp \
 	$(END) 
 
+exceptiondir = $(devincludedir)/exception
+
+exception_HEADERS= \
+	exception/checkpointfailure.hpp \
+	exception/exceptiontracer.hpp \
+	exception/executionfailure.hpp \
+   exception/failurestats.hpp \
+	exception/genericexception.hpp \
+	exception/operationfailure.hpp \
+	exception/signalexception.hpp \
+	exception/signalinfo.hpp \
+	exception/signaltranslator.hpp \
+	exception/mpierror.hpp \
+	exception/mpierrorhandler.hpp \
+	exception/mpierrortranslator.hpp \
+	$(END)
+
 support_sources = \
 	resourcemanager.hpp\
 	resourcemanager.cpp\
@@ -187,9 +204,10 @@ support_sources = \
 	exception/checkpointfailure.hpp \
 	exception/exceptiontracer.hpp \
 	exception/executionfailure.hpp \
+	exception/failurestats.hpp \
+	exception/failurestats.cpp \
 	exception/genericexception.hpp \
 	exception/operationfailure.hpp \
-	exception/operationfailure.cpp \
 	exception/signalexception.hpp \
 	exception/signalexception.cpp \
 	exception/signalinfo.hpp \
@@ -200,8 +218,6 @@ support_sources = \
 mpi_exception_sources = \
 	exception/mpierror.hpp \
 	exception/mpierror.cpp \
-	exception/mpierrorhandler.hpp \
-	exception/mpierrortranslator.hpp \
 	exception/mpierrorhandler.hpp \
 	exception/mpierrortranslator.hpp \
 	$(END)

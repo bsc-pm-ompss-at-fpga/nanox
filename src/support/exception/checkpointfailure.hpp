@@ -21,6 +21,7 @@
 #define CHECKPOINTFAILURE_HPP
 
 #include "operationfailure.hpp"
+#include "failurestats.hpp"
 
 namespace nanos {
 namespace error {
@@ -32,9 +33,12 @@ class CheckpointFailure {
 		CheckpointFailure( OperationFailure& operation ) :
 				_failedOperation( operation )
 		{
-			WorkDescriptor* recoverableAncestor = _failedOperation.getTask().propagateInvalidationAndGetRecoverableAncestor();
+			debug("Resiliency: checkpoint error detected ", operation.what() );
+			FailureStats<CheckpointFailure>::increase();
+
+			WorkDescriptor* recoverableAncestor = operation.getTask().propagateInvalidationAndGetRecoverableAncestor();
 			if( !recoverableAncestor ) {
-				fatal( "Could not find a recoverable task when recovering from ", _failedOperation.what() );
+				fatal( "Could not find a recoverable task when recovering from ", operation.what() );
 			}
 		}
 };

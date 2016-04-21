@@ -564,7 +564,7 @@ bool MemController::isDataRestored( WD const &wd ) {
                CachedRegionStatus* entry = (CachedRegionStatus*)backup->getNewRegions()->getRegionData( backup->getAllocatedRegion().id );
                const bool invalid_entry = entry && !entry->isValid();
                if( invalid_entry ) {
-                  throw InvalidatedRegionFound();
+                  throw std::runtime_error("Invalidated region found");
                }
             }
          }

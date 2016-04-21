@@ -32,8 +32,6 @@ test_schedule=bf
 #include "smpprocessor.hpp"
 #include "system.hpp"
 
-using namespace std;
-
 using namespace nanos;
 using namespace nanos::ext;
 

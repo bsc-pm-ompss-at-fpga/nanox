@@ -62,14 +62,14 @@ namespace error {
 
 class ExecutionContext {
 	private:
-		ucontext_t savedContext;
+		ucontext_t _savedContext;
 	public:
-		ExecutionContext( ucontext_t * context ) :
-			savedContext( *context)
+		ExecutionContext( ucontext_t const& context ) :
+			_savedContext( context)
 		{}
 
 		/* TODO: finish ucontext encapsulation */
-		ucontext_t &get() { return savedContext; }
+		ucontext_t &get() { return _savedContext; }
 };
 
 /* \brief C++ wrapper for siginfo_t struct.
@@ -92,8 +92,8 @@ class SignalInfo {
 	private:
 		siginfo_t _info;
 	public:
-		SignalInfo( siginfo_t * info ) :
-			_info( *info )
+		SignalInfo( siginfo_t const& info ) :
+			_info( info )
 		{}
 
 		int getSignalNumber() const { return _info.si_signo; }
@@ -117,7 +117,7 @@ class SignalInfo {
 		MemoryChunk getAffectedMemoryLocation() const
 		{
 			return MemoryChunk( 
-						Address( savedInfo.si_addr ),
+						getAddress(),
 						1<<_info.si_addr_lsb
 					);
 		}

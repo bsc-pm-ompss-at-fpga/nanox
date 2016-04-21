@@ -35,8 +35,6 @@
 #include "regiondict.hpp"
 #include "memoryops_decl.hpp"
 
-#include "taskexception.hpp"
-
 #define VERBOSE_DEV_OPS ( sys.getVerboseDevOps() )
 #define VERBOSE_INVAL 0
 
@@ -121,7 +119,8 @@ void AllocatedChunk::copyRegionToHost( SeparateAddressSpaceOutOps &ops, reg_t re
    CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg );
 
    if( !entry->isValid() ) {
-      throw InvalidatedRegionFound();
+      // TODO replace by custom exception
+      throw std::runtime_error("Invalidated region found");
    }
 
    if ( entry->getVersion() == version || entry->getVersion() == (version+1) ) {
