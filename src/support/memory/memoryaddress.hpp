@@ -86,8 +86,7 @@ class Address {
 		 */
 		constexpr
 		size_t operator-( Address const& base ) {
-			return reinterpret_cast<uintptr_t>(base.value)
-				  - reinterpret_cast<uintptr_t>(value);
+			return base.value-value;
 		}
 
 		Address operator+=( size_t size ) {
@@ -210,14 +209,6 @@ class Address {
 						);
 		}
 };
-
-/*! \brief Checks that an alignment constraint is fulfilled
- */
-constexpr
-bool is_properly_aligned( Address address, size_t alignment_constraint )
-{
-   return ( static_cast<uintptr_t>(address) & (alignment_constraint-1) ) == 0;
-}
 
 /*! \brief Prints an address object to an output stream.
  *  \details String representation of an address in hexadecimal.

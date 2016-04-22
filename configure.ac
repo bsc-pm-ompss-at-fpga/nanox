@@ -1180,9 +1180,10 @@ AC_ARG_ENABLE([fault-injection],
    ])
 AC_MSG_RESULT([$fault_injection])
 
+# Debug messages are not compatible with C++0x (usage of variadic macros)
+AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+
 if test "x$fault_injection" = "xyes"; then
-    # Check compiler support for C++ 2011 standard (required for fault injection)
-    AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
     # Check if random generators and engines are compilable (icpc 14.0 with gcc<4.7.0 fail to compile it)
     AC_LANG_PUSH(C++)
     AC_COMPILE_IFELSE(
@@ -1202,8 +1203,6 @@ if test "x$fault_injection" = "xyes"; then
 
     AC_DEFINE([NANOS_FAULT_INJECTION],[1],[Defined when page corruption injection module is enabled by the user.])
 else
-    # Debug messages are not compatible with C++0x (usage of variadic macros)	
-    AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 fi
 AM_CONDITIONAL([fault_injection_enabled],[test "x$fault_injection" = "xyes"])
 

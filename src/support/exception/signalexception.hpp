@@ -51,7 +51,7 @@ class SignalException : public GenericException {
 		 * the exception is thrown through the heap (catch by pointer), where the user 
 		 * is responsible for calling the delete operation explicitly.
 		 */
-		virtual ~SignalException() {
+		virtual ~SignalException() noexcept {
 			sigset_t thisSignalMask;
 			sigemptyset(&thisSignalMask);
 			sigaddset(&thisSignalMask, _handledSignalInfo.getSignalNumber());
@@ -72,7 +72,12 @@ class SegmentationFaultException : public SignalException {
 
 		SegmentationFaultException( siginfo_t* signalInfo, ucontext_t* executionContext ) :
 				SignalException( signalInfo, executionContext, getErrorMessage() )
-		{}
+		{
+		}
+
+		virtual ~SegmentationFaultException() noexcept
+		{
+		}
 };
 
 class BusErrorException : public SignalException {
@@ -83,7 +88,12 @@ class BusErrorException : public SignalException {
 
 		BusErrorException( siginfo_t* signalInfo, ucontext_t* executionContext ) :
 				SignalException( signalInfo, executionContext, getErrorMessage()  )
-		{}
+		{
+		}
+
+		virtual ~BusErrorException() noexcept
+		{
+		}
 };
 
 } // namespace error

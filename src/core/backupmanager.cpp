@@ -76,7 +76,7 @@ std::size_t BackupManager::getMemCapacity (
 
 bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
                               std::size_t len, SeparateMemoryAddressSpace &mem,
-                              WorkDescriptor const& wd ) throw()
+                              WorkDescriptor const& wd ) noexcept
 {
    /* This is called on backup operations. Data is copied from host to device.
     * The operation is defined outside _copyIn because, for inout args we need
@@ -145,7 +145,7 @@ void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
                               std::size_t len, SeparateMemoryAddressSpace &mem,
                               DeviceOps *ops, Functor *f,
                               WorkDescriptor const& wd, void *hostObject,
-                              reg_t hostRegionId ) throw()
+                              reg_t hostRegionId ) noexcept
 {
    ops->addOp();
 

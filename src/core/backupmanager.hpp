@@ -20,10 +20,13 @@
 #ifndef BACKUPMANAGER_HPP_
 #define BACKUPMANAGER_HPP_
 
+#include <cstddef>
+
 #include <boost/interprocess/managed_external_buffer.hpp>
 #include <boost/interprocess/indexes/null_index.hpp>
 
 #include "workdescriptor_decl.hpp"
+
 
 namespace boost {
    namespace interprocess {
@@ -66,10 +69,10 @@ namespace nanos {
          void rawCopy ( char *begin, char *end, char *dest );
 
          //! \brief Makes a copy of the given chunk into device memory. This should be called on checkpoint operations only.
-         virtual bool checkpointCopy ( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) throw();
+         virtual bool checkpointCopy ( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) noexcept;
 
          //! \brief Makes a copy of the given chunk back into host memory. This should be called on restore operations only.
-         virtual bool restoreCopy ( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) throw();
+         virtual bool restoreCopy ( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, WorkDescriptor const& wd ) noexcept;
 
          virtual void _copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId ) noexcept;
 

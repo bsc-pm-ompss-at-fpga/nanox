@@ -1132,7 +1132,7 @@ AllocatedChunk *RegionCache::_getAllocatedChunk( global_reg_t const &reg, bool c
    return allocChunkPtr;
 }
 
-void RegionCache::NEWcopyIn( unsigned int srcLocation, global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx, DeviceOps *givenOps, AllocatedChunk *chunk ) throw() {
+void RegionCache::NEWcopyIn( unsigned int srcLocation, global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx, DeviceOps *givenOps, AllocatedChunk *chunk ) noexcept {
    //RecursiveLockBlock lb( _lock );
    //AllocatedChunk *chunk = getAllocatedChunk( reg );
    //std::cerr << " NEWcopyIn for reg: "; reg.key->printRegion( std::cerr, reg.id ); std::cerr << std::endl;

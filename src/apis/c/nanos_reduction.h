@@ -19,6 +19,7 @@
 /*! \file nanos_reduction.h
  *  \brief 
  */
+#include "nanos.h"
 #include "nanos-int.h"
 
 #ifndef _NANOS_REDUCTION_H_

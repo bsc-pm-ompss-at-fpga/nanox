@@ -31,6 +31,8 @@
 #include "system.hpp"
 #include "wddeque.hpp"
 #include "printbt_decl.hpp"
+#include "xstring.hpp"
+
 #include <stdio.h>
 
 #include <string>
@@ -297,7 +299,7 @@ namespace nanos
         _description.append("-");
  
         /* adding global id */
-        _description.append( std::to_string(getId()) );
+        _description.append( toString(getId()) );
      }
  
      return _description;

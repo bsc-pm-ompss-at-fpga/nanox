@@ -17,14 +17,14 @@ namespace error {
 class BlockMemoryPageAccessInjector : public PeriodicInjectionPolicy<>
 {
 	private:
-		std::deque<MemoryPage> candidatePages;
-		std::set<BlockedMemoryPage> blockedPages;
+		std::deque<MemoryPage> _candidatePages;
+		std::set<BlockedMemoryPage> _blockedPages;
 
 	public:
 		BlockMemoryPageAccessInjector( ErrorInjectionConfig const& properties ) noexcept :
 			PeriodicInjectionPolicy( properties ),
-			candidatePages(),
-			blockedPages()
+			_candidatePages(),
+			_blockedPages()
 		{
 		}
 
@@ -39,35 +39,35 @@ class BlockMemoryPageAccessInjector : public PeriodicInjectionPolicy<>
 
 			static distribution pageFaultDistribution;
 			
-			if( !candidatePages.empty() ) {
-				dist_param parameter( 0, candidatePages.size() );
+			if( !_candidatePages.empty() ) {
+				dist_param parameter( 0, _candidatePages.size() );
 				size_t position = pageFaultDistribution( getRandomGenerator(), parameter );
 
-				blockedPages.emplace( candidatePages[position] );
+				_blockedPages.emplace( _candidatePages[position] );
 			}
 		}
 
 		void injectError( void *address )
 		{
-			blockedPages.emplace( MemoryPage(address) );
+			_blockedPages.emplace( MemoryPage(address) );
 		}
 
 		void declareResource( void *address, size_t size )
 		{
-			MemoryPage::retrievePagesInsideChunk( candidatePages, ::MemoryChunk( static_cast<Address>(address), size) );
+			MemoryPage::retrievePagesInsideChunk( _candidatePages, ::MemoryChunk( static_cast<Address>(address), size) );
 		}
 
 		void insertCandidatePage( MemoryPage const& page )
 		{
-			candidatePages.push_back( page );
+			_candidatePages.push_back( page );
 		}
 
 		void recoverError( void* handle ) noexcept {
 			Address failedAddress( handle );
 
-			for( auto it = blockedPages.begin(); it != blockedPages.end(); it++ ) {
+			for( auto it = _blockedPages.begin(); it != _blockedPages.end(); it++ ) {
 				if( it->contains( failedAddress ) ) {
-					blockedPages.erase( it );
+					_blockedPages.erase( it );
 					return;
 				}
 			}

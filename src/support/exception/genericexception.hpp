@@ -63,7 +63,7 @@ class GenericException : public ExceptionTracer, public std::exception {
             _runningTaskOnError( *getMyThreadSafe()->getCurrentWD() )
       {}
 
-      ~GenericException() throw() {}
+      ~GenericException() noexcept {}
 
       WorkDescriptor& getTask() { return _runningTaskOnError; }
 
@@ -73,7 +73,7 @@ class GenericException : public ExceptionTracer, public std::exception {
        * Provides access to an explanatory string
        * \returns a brief description of the error that was found
        */
-      virtual const char* what() const throw() {
+      virtual const char* what() const noexcept {
          return _errorMessage.c_str();
       }
 };

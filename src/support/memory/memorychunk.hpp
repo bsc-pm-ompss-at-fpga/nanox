@@ -22,7 +22,7 @@
 
 #include "memoryaddress.hpp"
 
-template <class ChunkType>
+template < typename ChunkType >
 struct is_contiguous_memory_region : public std::false_type
 {
 };
@@ -143,12 +143,12 @@ class AlignedMemoryChunk : public ::MemoryChunk {
 };
 
 template <>
-struct is_contiguous_memory_region<::MemoryChunk> : public std::true_type
+struct is_contiguous_memory_region< ::MemoryChunk > : public std::true_type
 {
 };
 
 template <size_t alignment>
-struct is_contiguous_memory_region<AlignedMemoryChunk<alignment> > : public std::true_type
+struct is_contiguous_memory_region< AlignedMemoryChunk<alignment> > : public std::true_type
 {
 };
 

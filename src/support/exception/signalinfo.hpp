@@ -22,6 +22,7 @@
 
 #include "memory/memoryaddress.hpp"
 
+#include <signal.h>
 #include <ucontext.h>
 
 namespace nanos {
@@ -116,9 +117,12 @@ class SignalInfo {
 		 */
 		MemoryChunk getAffectedMemoryLocation() const
 		{
-			return MemoryChunk( 
-						getAddress(),
-						1<<_info.si_addr_lsb
+			return MemoryChunk( getAddress(),
+#ifdef si_addr_lsb
+						1 << (_info.si_addr_lsb)
+#else
+						1 << 12 // 4K, a memory page
+#endif
 					);
 		}
 };

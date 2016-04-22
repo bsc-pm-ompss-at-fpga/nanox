@@ -70,10 +70,10 @@ namespace nanos
    };
 
 template <typename...Ts>
-inline void fatal( const Ts&... msg )
+inline void fatal( const Ts&... message )
 {
    std::stringstream sts;
-   join( sts, msg... );
+   join( sts, message... );
    throw nanos::FatalError( sts.str(), getMyThreadSafe()->getId() );
 }
 

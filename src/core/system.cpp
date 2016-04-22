@@ -17,8 +17,12 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#include <exception>
-#include <mutex>
+
+#ifdef NANOS_RESILIENCY_ENABLED
+#include "backupmanager.hpp"
+#include "exception/signaltranslator.hpp"
+#include "exception/operationfailure.hpp"
+#endif
 
 #include "system.hpp"
 #include "config.hpp"
@@ -34,11 +38,6 @@
 #include "allocator.hpp"
 #include "debug.hpp"
 #include "resourcemanager.hpp"
-#include <cassert>
-#include <cstring>
-#include <csignal>
-#include <set>
-#include <climits>
 
 #include "smpthread.hpp"
 #include "regiondict.hpp"
@@ -65,11 +64,15 @@
 #include "openclprocessor.hpp"
 #endif
 
-#ifdef NANOS_RESILIENCY_ENABLED
-#include "backupmanager.hpp"
-#include "exception/signaltranslator.hpp"
-#include "exception/operationfailure.hpp"
-#endif
+#include <cassert>
+#include <climits>
+#include <cstring>
+#include <csignal>
+#include <cstddef>
+
+#include <exception>
+#include <mutex>
+#include <set>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>

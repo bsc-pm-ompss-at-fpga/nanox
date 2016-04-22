@@ -20,6 +20,8 @@
 #ifndef SIGNAL_TRANSLATOR_HPP
 #define SIGNAL_TRANSLATOR_HPP
 
+#include <signal.h>
+
 // Source code based in the following article:
 // http://www.ibm.com/developerworks/library/l-cppexcep/
 

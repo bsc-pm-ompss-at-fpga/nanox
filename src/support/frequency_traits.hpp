@@ -36,6 +36,11 @@ struct to_duration
 	typedef std::chrono::duration<_rep,_duration> type;
 };
 
+template <class ToFrequency, class Rep, class Resolution>
+constexpr
+typename std::enable_if< is_frequency<ToFrequency>::value, ToFrequency >::type
+frequency_cast( frequency<Rep,Resolution> const& f );
+
 template<typename ToFreq, typename CF, typename CR,
         bool NumIsOne = false, bool DenIsOne = false>
 struct _frequency_cast_impl
