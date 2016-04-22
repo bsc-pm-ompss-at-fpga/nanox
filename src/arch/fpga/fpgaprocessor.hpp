@@ -62,6 +62,7 @@ namespace nanos
             static FPGAPinnedAllocator _allocator;
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
+            DeviceInstrumentation *_devInstr;
 #endif
 
          public:
@@ -133,6 +134,17 @@ namespace nanos
 
             BaseThread &startFPGAThread();
             static  FPGAPinnedAllocator& getPinnedAllocator() { return _allocator; }
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+            void setDeviceInstrumentation( DeviceInstrumentation * devInstr ) {
+               _devInstr = devInstr;
+            }
+            DeviceInstrumentation *getDeviceInstrumentation() {
+               return _devInstr;
+            }
+#endif
+
+
       };
    }
 }

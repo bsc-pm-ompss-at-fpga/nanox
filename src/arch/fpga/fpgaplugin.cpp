@@ -54,6 +54,7 @@ class FPGAPlugin : public ArchPlugin
           instr->init();
           //sys.getInstrumentation()->registerInstrumentDevice( instr );
           sys.addDeviceInstrumentation( instr );
+          fpga->setDeviceInstrumentation( instr );
       }
 #endif
 

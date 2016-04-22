@@ -23,6 +23,7 @@
 #include "fpgamemorytransfer.hpp"
 #include "fpgaworker.hpp"
 #include "fpgaprocessorinfo.hpp"
+#include "instrumentation_decl.hpp"
 
 using namespace nanos;
 using namespace nanos::ext;
@@ -133,6 +134,24 @@ void FPGAThread::finishAllWD() {
 void FPGAThread::readInstrCounters( WD *wd ) {
    xdma_instr_times *counters = _hwInstrCounters[ wd ];
    //TODO: Submit data to instrumentation layer
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   Instrumentation *instr = sys.getInstrumentation();
+   DeviceInstrumentation *devInstr =
+      ( ( FPGAProcessor* )runningOn() )->getDeviceInstrumentation();
+
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->start, TaskBegin, devInstr, wd ) );
+   //Beginning kernel execution is represented as a task switch from NULL to a WD
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->inTransfer, TaskSwitch, devInstr, NULL, wd ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->computation, TaskSwitch, devInstr, wd, NULL ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, devInstr, wd ) );
+#endif
+
+
    xdmaClearTaskTimes( counters );
    _hwInstrCounters.erase( wd );
 
