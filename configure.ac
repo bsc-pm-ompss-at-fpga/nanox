@@ -298,13 +298,6 @@ if test x$ac_cv_prog_cc_xlc_r_c_o = xyes; then
     use_xlc=yes
 fi
 
-if test x$use_gnu = xyes; then
-    if test x$use_bgq = xno -a x$use_icc = xno; then
-        CFLAGS="$CFLAGS -Wredundant-decls"
-        CXXFLAGS="$CXXFLAGS -Wredundant-decls"
-    fi
-fi
-
 if test x$use_bgq = xyes; then
     if test x$use_gnu = xyes; then
         LDFLAGS="$LDFLAGS -dynamic"
@@ -1202,7 +1195,6 @@ if test "x$fault_injection" = "xyes"; then
     fi
 
     AC_DEFINE([NANOS_FAULT_INJECTION],[1],[Defined when page corruption injection module is enabled by the user.])
-else
 fi
 AM_CONDITIONAL([fault_injection_enabled],[test "x$fault_injection" = "xyes"])
 
