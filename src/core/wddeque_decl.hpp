@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -23,10 +23,14 @@
 #include <list>
 #include <functional>
 #include <map>
+
+#include "debug.hpp"
 #include "atomic_decl.hpp"
-#include "debug_decl.hpp"
-#include "workdescriptor_decl.hpp"
+#include "lock_decl.hpp"
+
 #include "basethread_fwd.hpp"
+
+#include "workdescriptor_decl.hpp"
 
 #define NANOS_ABA_MASK (15)
 #define NANOS_ABA_PTR(x) ((volatile WDNode *)(((uintptr_t)(x))& ~(uintptr_t)NANOS_ABA_MASK))
@@ -300,6 +304,8 @@ namespace nanos
       public:
          typedef T         type;
          typedef std::const_mem_fun_t<T, WD> PriorityValueFun;
+         typedef std::map< const Device *, Atomic<unsigned int> > WDDeviceCounter;
+
       private:
          // TODO (gmiranda): Measure if vector is better as a container
          WDPQ::BaseContainer _dq;
@@ -314,7 +320,11 @@ namespace nanos
          
          /*! \brief Revert insertion */
          bool              _reverse;
-         
+
+         /*! \brief Counts the number of WDs in the queue for each architecture */
+         WDDeviceCounter   _ndevs;
+         bool              _deviceCounter;
+
          /*! \brief Functor that will be used to get the priority or
           *  deadline */
          PriorityValueFun  _getter;
@@ -342,10 +352,12 @@ namespace nanos
         
          /*! \brief Performs lower bound reversely or not depending on the settings */
          WDPQ::BaseContainer::iterator lower_bound( const WD *wd );
+
+
       public:
          /*! \brief WDPriorityQueue default constructor
           */
-         WDPriorityQueue( bool optimise = true, bool reverse = false,
+         WDPriorityQueue( bool enableDeviceCounter = true, bool optimise = true, bool reverse = false,
                PriorityValueFun getter = std::mem_fun( &WD::getPriority ) );
          
          /*! \brief WDPriorityQueue destructor

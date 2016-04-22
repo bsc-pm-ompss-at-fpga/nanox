@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2013 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -87,6 +87,20 @@ inline uint32_t gnuHash( const char *str, const char *end )
       h = h * 33 + c;
 
    return h;
+}
+
+/**
+ * @brief Returns whether the local parameters are suitable for these
+ * global dimensions
+ */
+inline bool wgChecker( size_t *global, size_t * local, unsigned int dims )
+{
+   for ( unsigned int i=0; i<dims; i++ )
+   {
+      if ( (global[i]%local[i])!=0 )
+         return false;
+   }
+   return true;
 }
 
 } // End namespace ext.

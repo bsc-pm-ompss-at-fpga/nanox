@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -21,7 +21,9 @@
 #define _NANOS_SMP_THREAD
 
 #include "smpdd.hpp"
-#include "basethread.hpp"
+#include "basethread_decl.hpp"
+#include "processingelement_decl.hpp"
+#include "system_decl.hpp"
 #include <nanos-int.h>
 #include "smpprocessor_fwd.hpp"
 #include "pthread_decl.hpp"
@@ -138,6 +140,9 @@ namespace ext
          {
             return _totalThreads;
          }
+
+         void addThreadsFromPEs(unsigned int representingPEsCount, PE **representingPEs);
+         virtual bool canBlock() { return false;}
    };
 }
 }

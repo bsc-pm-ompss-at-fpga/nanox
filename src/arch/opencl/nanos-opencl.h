@@ -1,6 +1,5 @@
-
 /*************************************************************************************/
-/*      Copyright 2013 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -40,7 +39,8 @@ NANOS_API_DECL(void *, nanos_opencl_factory, (void *args));
 NANOS_API_DECL(void*, nanos_create_current_kernel, (const char* kernel_name, const char* opencl_code, const char* compiler_opts)); 
 NANOS_API_DECL(nanos_err_t,nanos_opencl_set_bufferarg, (void* opencl_kernel, int arg_num, const void* pointer));
 NANOS_API_DECL(nanos_err_t,nanos_opencl_set_arg, (void* opencl_kernel, int arg_num, size_t size, const void* pointer));
-NANOS_API_DECL(nanos_err_t,nanos_exec_kernel, (void* opencl_kernel, int work_dim, size_t* ndr_offset, size_t* ndr_local_size, size_t* ndr_global_size));
+NANOS_API_DECL(nanos_err_t,nanos_exec_kernel, (void* opencl_kernel, int work_dim, size_t* ndr_local_size, size_t* ndr_global_size));
+NANOS_API_DECL(nanos_err_t,nanos_profile_exec_kernel, (void* opencl_kernel, int work_dim, size_t* ndr_global_size));
 
 #ifndef _MF03
 unsigned int nanos_get_opencl_num_devices (void);

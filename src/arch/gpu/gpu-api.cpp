@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -38,6 +38,11 @@ NANOS_API_DEF( cudaStream_t, nanos_get_kernel_execution_stream, ( void ) )
 NANOS_API_DEF( cublasHandle_t, nanos_get_cublas_handle, ( void ) )
 {
    return ( cublasHandle_t ) ( ( nanos::ext::GPUThread * ) getMyThreadSafe() )->getCUBLASHandle();
+}
+
+NANOS_API_DEF( cusparseHandle_t, nanos_get_cusparse_handle, ( void ) )
+{
+   return ( cusparseHandle_t ) ( ( nanos::ext::GPUThread * ) getMyThreadSafe() )->getCUSPARSEHandle();
 }
 
 NANOS_API_DEF( void *, nanos_malloc_pinned_cuda, ( size_t size ) )

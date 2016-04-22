@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -35,23 +35,24 @@ namespace nanos {
 
       class ClusterNode : public ProcessingElement
       {
+         public:
+            typedef std::map<unsigned int, const Device *> ClusterSupportedArchMap;
 
          private:
             // config variables
             static Atomic<int>      _deviceSeed; // Number of cluster devices assigned to threads
             unsigned int            _clusterNode; // Assigned cluster device Id
+            unsigned int _executedWorkDesciptors;
+            ClusterSupportedArchMap _supportedArchsById;
 
             // disable copy constructor and assignment operator
             ClusterNode( const ClusterNode &pe );
             const ClusterNode & operator= ( const ClusterNode &pe );
 
-            //SimpleAllocator _memSegment;
-            unsigned int _executedWorkDesciptors;
-
          public:
             // constructors
-            ClusterNode( int nodeId, memory_space_id_t memId );
-
+            ClusterNode( int nodeId, memory_space_id_t memId,
+               ClusterSupportedArchMap const &archs, const Device **archsArray );
             virtual ~ClusterNode();
 
             virtual WD & getWorkerWD () const;
@@ -66,6 +67,7 @@ namespace nanos {
             virtual unsigned int getMyNodeNumber() const;
 
             unsigned int getClusterNodeNum() const;
+            ClusterSupportedArchMap const &getSupportedArchs() const;
             SimpleAllocator & getAllocator( void );
 
             void incExecutedWDs();

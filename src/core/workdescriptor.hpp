@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -52,11 +52,12 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
                                  _cudaStreamIdx( -1 ),
 #endif
                                  _numCopies( numCopies ), _copies( copies ), _paramsSize( 0 ),
-                                 _versionGroupId( 0 ), _executionTime( 0.0 ), _estimatedExecTime( 0.0 ),
+                                 _versionGroupId( 0 ), _executionTime( 0.0 ), _estimatedExecTime( 0.0 ), _runTime( 0.0 ), _estimatedRunTime( 0.0 ),
                                  _doSubmit(NULL), _doWait(), _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ), 
                                  _translateArgs( translate_args ),
                                  _priority( 0 ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
                                  _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL),
+                                 _taskReductions(),
                                  _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL ), _mcontrol( *this )
                                  {
                                     _flags.is_final = 0;
@@ -84,11 +85,11 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                  _cudaStreamIdx( -1 ),
 #endif
                                  _numCopies( numCopies ), _copies( copies ), _paramsSize( 0 ),
-                                 _versionGroupId( 0 ), _executionTime( 0.0 ), _estimatedExecTime( 0.0 ), 
+                                 _versionGroupId( 0 ), _executionTime( 0.0 ), _estimatedExecTime( 0.0 ),  _runTime( 0.0 ), _estimatedRunTime( 0.0 ),
                                  _doSubmit(NULL), _doWait(), _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ),
                                  _translateArgs( translate_args ),
                                  _priority( 0 ),  _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
-                                 _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL),
+                                 _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL), _taskReductions(),
                                  _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL ), _mcontrol( *this )
                                  {
                                      _devices = new DeviceData*[1];
@@ -118,15 +119,16 @@ inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **d
 #endif
                                  _numCopies( wd._numCopies ), _copies( wd._numCopies == 0 ? NULL : copies ), _paramsSize( wd._paramsSize ),
                                  _versionGroupId( wd._versionGroupId ), _executionTime( wd._executionTime ),
-                                 _estimatedExecTime( wd._estimatedExecTime ), _doSubmit(NULL), _doWait(),
+                                 _estimatedExecTime( wd._estimatedExecTime ), _runTime( wd._runTime ), _estimatedRunTime( wd._estimatedRunTime ),
+                                 _doSubmit(NULL), _doWait(),
                                  _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ),
                                  _translateArgs( wd._translateArgs ),
                                  _priority( wd._priority ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
-                                 _copiesNotInChunk( wd._copiesNotInChunk), _description(description), _instrumentationContextData(), _slicer(wd._slicer),
+                                 _copiesNotInChunk( wd._copiesNotInChunk), _description(description), _instrumentationContextData(), _slicer(wd._slicer), _taskReductions(),
                                  _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL ), _mcontrol( *this )
                                  {
                                     if ( wd._parent != NULL ) wd._parent->addWork(*this);
-                                    _flags.is_final = false;
+                                    _flags.is_final = wd._flags.is_final;
                                     _flags.is_ready = false;
                                     _flags.to_tie = wd._flags.to_tie;
                                     _flags.is_submitted = false;
@@ -345,9 +347,19 @@ inline double WorkDescriptor::getEstimatedExecutionTime() const { return _estima
 
 inline void WorkDescriptor::setEstimatedExecutionTime( double time ) { _estimatedExecTime = time; }
 
+inline double WorkDescriptor::getRunTime() const { return _runTime; }
+
+inline void WorkDescriptor::setRunTime( double time ) { _runTime = time; }
+
+inline double WorkDescriptor::getEstimatedRunTime() const { return _estimatedRunTime; }
+
+inline void WorkDescriptor::setEstimatedRunTime( double time ) { _estimatedRunTime = time; }
+
 inline DOSubmit * WorkDescriptor::getDOSubmit() { return _doSubmit; }
 
 inline int WorkDescriptor::getNumDepsPredecessors() { return ( _doSubmit == NULL ? 0 : _doSubmit->numPredecessors() ); }
+
+inline bool WorkDescriptor::hasDepsPredecessors() { return ( _doSubmit == NULL ? false : ( _doSubmit->numPredecessors() != 0 ) ); }
 
 inline void WorkDescriptor::submitWithDependencies( WorkDescriptor &wd, size_t numDeps, DataAccess* deps )
 {
@@ -387,13 +399,14 @@ class DOIsSchedulable : public DependableObjectPredicate
 
 inline WorkDescriptor * WorkDescriptor::getImmediateSuccessor ( BaseThread &thread )
 {
-   if ( _doSubmit == NULL ) return NULL;
+   if ( _doSubmit == NULL || !sys.isImmediateSuccessorEnabled() ) return NULL;
    else {
       DOIsSchedulable predicate( thread );
       DependableObject * found = _doSubmit->releaseImmediateSuccessor( predicate, thread.keepWDDeps() );
       if ( found ) {
          WD *successor = found->getWD();
          //successor->predecessorFinished( this );
+         successor->_mcontrol.preInit();
          return successor;
       } else {
          return NULL;
@@ -496,6 +509,11 @@ inline bool WorkDescriptor::dequeue ( WorkDescriptor **slice )
 inline void WorkDescriptor::convertToRegularWD()
 {
    _slicer = NULL;
+}
+
+inline void WorkDescriptor::copyReductions(WorkDescriptor *parent)
+{
+	_taskReductions = parent->_taskReductions;
 }
 
 inline void WorkDescriptor::setId( unsigned int id ) {

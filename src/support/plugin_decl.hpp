@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -82,7 +82,7 @@ namespace nanos
          bool load ( const std::string &plugin_name, const bool init=true );
          Plugin* loadAndGetPlugin ( const char *plugin_name, const bool init=true );
          Plugin* loadAndGetPlugin ( const std::string &plugin_name, const bool init=true );
-
+         void unloadPlugins();
    };
 
 }

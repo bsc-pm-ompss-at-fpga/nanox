@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -28,21 +28,14 @@ using namespace nanos;
 using namespace nanos::ext;
 
 
-ClusterNode::ClusterNode( int nodeId, memory_space_id_t memId ) : 
-   ProcessingElement( &SMP,
-#ifdef GPU_DEV
-   &GPU,
-#else
-   NULL,
-#endif
-   memId,
-   nodeId,
+ClusterNode::ClusterNode( int nodeId, memory_space_id_t memId,
+   ClusterSupportedArchMap const &archs, const Device **archsArray ) :
+   ProcessingElement( archsArray, archs.size(), memId, nodeId,
    0, /* TODO: should be NumaNode, use HWLoc to get the correct value (NIC numa node) */
    true,
    0,
    false ),
-   _clusterNode ( nodeId ),
-   _executedWorkDesciptors ( 0 ) {
+   _clusterNode ( nodeId ), _executedWorkDesciptors ( 0 ), _supportedArchsById( archs ) {
 }
 
 ClusterNode::~ClusterNode() {
@@ -64,7 +57,7 @@ WD & ClusterNode::getMultiWorkerWD () const {
 
 BaseThread &ClusterNode::createThread ( WorkDescriptor &helper, SMPMultiThread *parent ) {
    // In fact, the GPUThread will run on the CPU, so make sure it canRunIn( SMP )
-   ensure( helper.canRunIn( SMP ), "Incompatible worker thread" );
+   ensure( helper.canRunIn( getSMPDevice() ), "Incompatible worker thread" );
    ClusterThread &th = *new ClusterThread( helper, this, parent, _clusterNode );
 
    return th;
@@ -107,4 +100,8 @@ void ClusterNode::clusterWorker() {
       Scheduler::workerLoop();
       exit(0);
    }
+}
+
+ClusterNode::ClusterSupportedArchMap const &ClusterNode::getSupportedArchs() const {
+   return _supportedArchsById;
 }

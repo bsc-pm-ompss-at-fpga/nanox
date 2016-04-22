@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -16,6 +16,7 @@
 /*      You should have received a copy of the GNU Lesser General Public License     */
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
+
 #ifndef _NANOS_H_
 #define _NANOS_H_
 /*!
@@ -112,6 +113,8 @@
  *   - 5022: Adding const char* description in task creation.
  *   - 5024: Adding is final attribute in wd's dynamic properties.
  *   - 5025: Changed WD priority from unsigned to int.
+ *   - 5029: Adding implicit parameter to work descriptor flags.
+ *   - 5030: Adding instrumentation support to wrap main function.
  * - nanos interface family: worksharing
  *   - 1000: First implementation of work-sharing services (create and next-item)
  * - nanos interface family: deps_api
@@ -230,6 +233,8 @@ NANOS_API_DECL(nanos_err_t, nanos_get_num_blocked_tasks, ( unsigned int *blocked
 
 NANOS_API_DECL(nanos_err_t, nanos_in_final, ( bool *result ));
 NANOS_API_DECL(nanos_err_t, nanos_set_final, ( bool value ));
+NANOS_API_DECL(nanos_err_t, nanos_switch_to_thread, ( unsigned int *thid ));
+NANOS_API_DECL(nanos_err_t, nanos_is_tied, ( bool *result ));
 
 // Team related functions
 
@@ -252,14 +257,21 @@ NANOS_API_DECL(nanos_err_t, nanos_release_sync_init, ( void ));
 
 NANOS_API_DECL(nanos_err_t, nanos_memory_fence, (void));
 
-NANOS_API_DECL(nanos_err_t, nanos_team_get_num_starring_threads_FIXME, ( int *n ) );
-NANOS_API_DECL(nanos_err_t, nanos_team_get_starring_threads_FIXME, ( int *n, nanos_thread_t *list_of_threads ) );
 NANOS_API_DECL(nanos_err_t, nanos_team_get_num_supporting_threads, ( int *n ) );
 NANOS_API_DECL(nanos_err_t, nanos_team_get_supporting_threads, ( int *n, nanos_thread_t *list_of_threads) );
 NANOS_API_DECL(nanos_err_t, nanos_register_reduction, ( nanos_reduction_t *red) );
 NANOS_API_DECL(nanos_err_t, nanos_reduction_get_private_data, ( void **copy, void *original ) );
 
 NANOS_API_DECL(nanos_err_t, nanos_reduction_get, ( nanos_reduction_t **dest, void *original ) );
+
+NANOS_API_DECL(nanos_err_t, nanos_task_reduction_register, ( void *orig, size_t size_target, size_t size_elem,
+            void (*init)( void *, void * ), void (*reducer)( void *, void * ) ) );
+
+NANOS_API_DECL(nanos_err_t, nanos_task_fortran_array_reduction_register, ( void *orig, void *dep,
+         size_t array_descriptor_size, void (*init)( void *, void * ), void (*reducer)( void *, void * ),
+         void (*reducer_orig_var)( void *, void * ) ) );
+
+NANOS_API_DECL(nanos_err_t, nanos_task_reduction_get_thread_storage, ( void *orig, void **tpd ) );
 
 NANOS_API_DECL(nanos_err_t, nanos_admit_current_thread, (void));
 NANOS_API_DECL(nanos_err_t, nanos_expel_current_thread, (void));
@@ -318,6 +330,7 @@ NANOS_API_DECL(nanos_err_t, nanos_get_num_sockets, ( int *num_sockets ));
 NANOS_API_DECL(nanos_err_t, nanos_malloc, ( void **p, size_t size, const char *file, int line ));
 NANOS_API_DECL(nanos_err_t, nanos_memalign, ( void **p, size_t size, const char *file, int line ));
 NANOS_API_DECL(nanos_err_t, nanos_cmalloc, ( void **p, size_t size, unsigned int node, const char *file, int line ));
+NANOS_API_DECL(nanos_err_t, nanos_cmalloc_2dim_distributed, ( void **p, size_t rows, size_t cols, size_t elem_size, unsigned int start_node, size_t num_nodes, const char *file, int line ));
 NANOS_API_DECL(nanos_err_t, nanos_stick_to_producer, ( void *p, size_t size ));
 NANOS_API_DECL(nanos_err_t, nanos_free, ( void *p ));
 NANOS_API_DECL(void, nanos_free0, ( void *p )); 
@@ -355,8 +368,9 @@ NANOS_API_DECL(nanos_err_t, nanos_set_create_local_tasks, ( bool value ));
 #endif
 
 NANOS_API_DECL(nanos_err_t, nanos_instrument_begin_burst, (nanos_string_t key, nanos_string_t key_descr, nanos_string_t value, nanos_string_t value_descr));
-
 NANOS_API_DECL(nanos_err_t, nanos_instrument_end_burst, (nanos_string_t key, nanos_string_t value));
+NANOS_API_DECL(nanos_err_t, nanos_instrument_begin_burst_with_val, (nanos_string_t key, nanos_string_t key_descr, nanos_event_value_t *val));
+NANOS_API_DECL(nanos_err_t, nanos_instrument_end_burst_with_val, (nanos_string_t key, nanos_event_value_t *val));
 
 #ifdef _MF03
 NANOS_API_DECL(nanos_err_t, nanos_memcpy, (void *dest, const void *src, ptrdiff_t n));
@@ -365,6 +379,7 @@ NANOS_API_DECL(nanos_err_t, nanos_memcpy, (void *dest, const void *src, size_t n
 #endif
 
 NANOS_API_DECL(nanos_err_t, nanos_register_object, (int num_objects, nanos_copy_data_t *obj));
+NANOS_API_DECL(nanos_err_t, nanos_unregister_object, (int num_objects, void *base_addresses));
 
 // scheduling interface
 NANOS_API_DECL(const char *, nanos_get_default_scheduler, ());
@@ -376,9 +391,18 @@ NANOS_API_DECL(nanos_err_t, nanos_wait_until_threads_unpaused, () );
 NANOS_API_DECL(nanos_err_t, nanos_scheduler_get_stealing, ( bool *res ));
 NANOS_API_DECL(nanos_err_t, nanos_scheduler_set_stealing, ( bool value ));
 
-//funtion which will be called by mercurium
-//on first line of user main (in some cases, offload and cluster)
+// This funtion tells the runtime that we are at the entry point of the program
+// (typically the main)
+NANOS_API_DECL(void, ompss_nanox_main_begin, (void *addr, const char* filename, int line));
+// This funtion tells the runtime that we have just left (or about to leave)
+// the top level function of the program (typically the main)
+NANOS_API_DECL(void, ompss_nanox_main_end, ());
+
+// DEPRECATED API: OLD API, do not use, kept here for binary compatibility
 NANOS_API_DECL(void, ompss_nanox_main, ());
+
+// Small wrapper around atexit to be useable from Fortran
+NANOS_API_DECL(void, nanos_atexit, (void*));
 
 // utility macros
 
@@ -389,6 +413,11 @@ do {\
 } while (0)
 
 void nanos_reduction_int_vop ( int, void *, void * );
+
+NANOS_API_DECL(int, nanos_cmpi_init, (int *argc, char **argv[]) );
+NANOS_API_DECL(void, nanos_cmpi_finalize, (void) );
+NANOS_API_DECL(void, nanos_into_blocking_mpi_call, (void) );
+NANOS_API_DECL(void, nanos_out_of_blocking_mpi_call, (void) );
 
 #ifdef __cplusplus
 }

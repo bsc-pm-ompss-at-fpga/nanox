@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -21,7 +21,11 @@
 #include "schedule.hpp"
 #include "debug.hpp"
 #include "config.hpp"
+#include "basethread.hpp"
 #include <iostream>
+#ifdef CLUSTER_DEV
+#include "clusterthread_decl.hpp"
+#endif
 
 using namespace nanos;
 using namespace nanos::ext;
@@ -32,16 +36,17 @@ System::CachePolicyType SMPProcessor::_cachePolicy = System::DEFAULT;
 size_t SMPProcessor::_cacheDefaultSize = 1048580;
 
 SMPProcessor::SMPProcessor( int bindingId, memory_space_id_t memId, bool active, unsigned int numaNode, unsigned int socket ) :
-   PE( &SMP, NULL, memId, 0 /* always local node */, numaNode, true, socket, true ),
+   PE( &getSMPDevice(), memId, 0 /* always local node */, numaNode, true, socket, true ),
    _bindingId( bindingId ), _reserved( false ), _active( active ), _futureThreads( 0 ) {}
 
 void SMPProcessor::prepareConfig ( Config &config )
 {
-   config.registerConfigOption( "user-threads", NEW Config::FlagOption( _useUserThreads, false), "Disable use of user threads to implement workdescriptor" );
+   config.registerConfigOption( "user-threads", NEW Config::FlagOption( _useUserThreads, false), "Disable User Level Threads" );
    config.registerArgOption( "user-threads", "disable-ut" );
 
-   config.registerConfigOption ( "pthreads-stack-size", NEW Config::SizeVar( _threadsStackSize ), "Defines pthreads stack size" );
-   config.registerArgOption( "pthreads-stack-size", "pthreads-stack-size" );
+   config.registerConfigOption ( "thread-stack-size", NEW Config::SizeVar( _threadsStackSize ), "Defines thread stack size" );
+   config.registerArgOption( "thread-stack-size", "thread-stack-size" );
+   config.registerEnvOption( "thread-stack-size", "OMP_STACKSIZE" );
 }
 
 WorkDescriptor & SMPProcessor::getWorkerWD () const
@@ -50,7 +55,8 @@ WorkDescriptor & SMPProcessor::getWorkerWD () const
    DeviceData **dd_ptr = NEW DeviceData*[1];
    dd_ptr[0] = (DeviceData*)dd;
 
-   WD *wd = NEW WD( 1, dd_ptr );
+   WD * wd = NEW WD( 1, dd_ptr, 0, 1, 0, 0, NULL, NULL, "SMP Worker" );
+   wd->_mcontrol.preInit();
 
    return *wd;
 }
@@ -58,11 +64,13 @@ WorkDescriptor & SMPProcessor::getWorkerWD () const
 WorkDescriptor & SMPProcessor::getMultiWorkerWD () const
 {
 #ifdef CLUSTER_DEV
-   SMPDD * dd = NEW SMPDD( ( SMPDD::work_fct )Scheduler::workerClusterLoop );
+   SMPDD * dd = NEW SMPDD( ( SMPDD::work_fct )ClusterThread::workerClusterLoop );
 #else
    SMPDD * dd = NEW SMPDD( ( SMPDD::work_fct )NULL); //this is an error if we are not runnig with cluster
 #endif
-   WD *wd = NEW WD( dd );
+   WD *wd = NEW WD( dd, 0, 1, 0, 0, NULL, NULL, "SMP MultiWorker" );
+   wd->_mcontrol.preInit();
+
    return *wd;
 }
 
@@ -72,14 +80,15 @@ WorkDescriptor & SMPProcessor::getMasterWD () const
    DeviceData **dd_ptr = NEW DeviceData*[1];
    dd_ptr[0] = (DeviceData*)dd;
 
-   WD * wd = NEW WD( 1, dd_ptr );
+   WD * wd = NEW WD( 1, dd_ptr, 0, 1, 0, 0, NULL, NULL, "SMP Main" );
+   wd->_mcontrol.preInit();
 
    return *wd;
 }
 
 BaseThread &SMPProcessor::createThread ( WorkDescriptor &helper, SMPMultiThread *parent )
 {
-   ensure( helper.canRunIn( SMP ),"Incompatible worker thread" );
+   ensure( helper.canRunIn( getSMPDevice() ),"Incompatible worker thread" );
    SMPThread &th = *NEW SMPThread( helper, this, this );
    th.stackSize( _threadsStackSize ).useUserThreads( _useUserThreads );
 
@@ -88,7 +97,7 @@ BaseThread &SMPProcessor::createThread ( WorkDescriptor &helper, SMPMultiThread 
 
 BaseThread &SMPProcessor::createMultiThread ( WorkDescriptor &helper, unsigned int numPEs, PE **repPEs )
 {
-   ensure( helper.canRunIn( SMP ),"Incompatible worker thread" );
+   ensure( helper.canRunIn( getSMPDevice() ),"Incompatible worker thread" );
    SMPThread &th = *NEW SMPMultiThread( helper, this, numPEs, repPEs );
    th.stackSize(_threadsStackSize).useUserThreads(_useUserThreads);
 

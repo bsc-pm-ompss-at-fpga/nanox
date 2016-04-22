@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -55,7 +55,7 @@ MPIDevice::~MPIDevice() {
 
 /* \breif allocate size bytes in the device
  */
-void * MPIDevice::memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WorkDescriptor const &wd, unsigned int copyIdx ) {
+void * MPIDevice::memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WD const *wd, unsigned int copyIdx ) {
     NANOS_MPI_CREATE_IN_MPI_RUNTIME_EVENT(ext::NANOS_MPI_ALLOC_EVENT);
     //std::cerr << "Inicio allocate\n";
     nanos::ext::MPIProcessor * myPE = (nanos::ext::MPIProcessor *) &mem.getConstPE();
@@ -95,7 +95,7 @@ void MPIDevice::memFree( uint64_t addr, SeparateMemoryAddressSpace &mem ) {
     //std::cerr << "Fin free\n";
 }
 
-size_t MPIDevice::getMemCapacity( SeparateMemoryAddressSpace const &mem ) const{
+size_t MPIDevice::getMemCapacity( SeparateMemoryAddressSpace &mem ) {
     //MAXSIZE-1
     return (size_t)-1;
 }
@@ -125,7 +125,7 @@ void * MPIDevice::realloc(void *address, size_t size, size_t old_size, Processin
 /* \brief Copy from remoteSrc in the host to localDst in the device
  *        Returns true if the operation is synchronous
  */
-void MPIDevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WD const &wd, void *hostObject, reg_t hostRegionId ) const {
+void MPIDevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId ) {
     NANOS_MPI_CREATE_IN_MPI_RUNTIME_EVENT(ext::NANOS_MPI_COPYIN_SYNC_EVENT);
     //std::cerr << "Inicio copyin\n";
     nanos::ext::MPIProcessor * myPE = (nanos::ext::MPIProcessor *) &mem.getConstPE();
@@ -151,7 +151,7 @@ void MPIDevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, S
 /* \brief Copy from localSrc in the device to remoteDst in the host
  *        Returns true if the operation is synchronous
  */
-void MPIDevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, Functor *f, WD const &wd, void *hostObject, reg_t hostRegionId ) const {
+void MPIDevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId ) {
     NANOS_MPI_CREATE_IN_MPI_RUNTIME_EVENT(ext::NANOS_MPI_COPYOUT_SYNC_EVENT);
     nanos::ext::MPIProcessor * myPE = (nanos::ext::MPIProcessor *) &mem.getConstPE();
     cacheOrder order;
@@ -165,8 +165,8 @@ void MPIDevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, 
     order.devAddr = (uint64_t) devAddr;
     order.hostAddr = (uint64_t) hostAddr;    
     order.size = len;
-    //printf("Inicio copyout host %p %lu\n",(void*) order.hostAddr, order.size);
     //MPI_Status status;
+    //TODO: Make this async
     nanos::ext::MPIRemoteNode::nanosMPISend(&order, 1, cacheStruct, myPE->getRank(), TAG_M2S_ORDER, myPE->getCommunicator());
     nanos::ext::MPIRemoteNode::nanosMPIRecv((void*) order.hostAddr, order.size, MPI_BYTE, myPE->getRank(), TAG_CACHE_DATA_OUT, myPE->getCommunicator(), MPI_STATUS_IGNORE );
     //short ans;
@@ -193,7 +193,7 @@ void MPIDevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, 
 //}
 
 
-bool MPIDevice::_copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memOrig, DeviceOps *ops, Functor *f, WD const &wd, void *hostObject, reg_t hostRegionId ) const {
+bool MPIDevice::_copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memOrig, DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId ) {
     NANOS_MPI_CREATE_IN_MPI_RUNTIME_EVENT(ext::NANOS_MPI_COPYDEV2DEV_SYNC_EVENT);
     //This will never be another PE type which is not MPI (or something is broken in core :) )
     nanos::ext::MPIProcessor * src = (nanos::ext::MPIProcessor *) &memOrig.getConstPE();
@@ -223,9 +223,6 @@ bool MPIDevice::_copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::
         //Send one to the dst telling him who's the source  (-1) and where to store
         nanos::ext::MPIRemoteNode::nanosMPISend(&order, 1, cacheStruct, dst->getRank(), TAG_M2S_ORDER, dst->getCommunicator());
         ops->completeOp(); 
-        if ( f ) {
-           (*f)(); 
-        }
         return true;
         //Wait for ACK from receiver
         //printf("espero ACK\n");
@@ -245,15 +242,6 @@ void MPIDevice::initMPICacheStruct() {
         MPI_Type_create_struct(4, blocklen, disp, typelist, &cacheStruct);
         MPI_Type_commit(&cacheStruct);
     }
-}
-
-void MPIDevice::taskPreInit(MPI_Comm& comm, int pendingCopies){
-    NANOS_MPI_CREATE_IN_MPI_RUNTIME_EVENT(ext::NANOS_MPI_WAIT_FOR_COPIES_EVENT);
-    NANOS_MPI_CLOSE_IN_MPI_RUNTIME_EVENT;
-}
-
-void MPIDevice::taskPostFinish(MPI_Comm& comm){
-    _executingTask=0;
 }
 
 static void createExtraCacheThread(){    
@@ -417,7 +405,7 @@ void MPIDevice::remoteNodeCacheWorker() {
                         } else {
                            posix_memalign((void**)&ptr,alignment,order.size);
                         }
-                        order.devAddr = (uint64_t) ptr;
+                        order.devAddr = (uint64_t) ptr;    
                         nanos::ext::MPIRemoteNode::nanosMPISend(&order, 1, cacheStruct, parentRank, TAG_CACHE_ANSWER_ALLOC, parentcomm);
                         NANOS_MPI_CLOSE_IN_MPI_RUNTIME_EVENT;
                         break;
@@ -452,10 +440,10 @@ void MPIDevice::remoteNodeCacheWorker() {
                         NANOS_MPI_CLOSE_IN_MPI_RUNTIME_EVENT;
                         break;
                     }
-                    //If not a fixed code, its a dev2dev copy where i act as the source
+                    //If not a fixed code, its a dev2dev copy
                     default:
                     {
-                        //Opid >= DEV2DEV (largest OPID) is dev2dev+rank
+                        //Opid >= DEV2DEV (largest OPID) is dev2dev+rank and im source
                         if (order.opId>=OPID_DEVTODEV){
                             NANOS_MPI_CREATE_IN_MPI_RUNTIME_EVENT(ext::NANOS_MPI_RNODE_DEV2DEV_OUT_EVENT);
                             //Get the rank
@@ -463,7 +451,7 @@ void MPIDevice::remoteNodeCacheWorker() {
                             //MPI_Comm_get_parent(&parentcomm);
                             nanos::ext::MPIRemoteNode::nanosMPISend((void *) order.hostAddr, order.size, MPI_BYTE, dstRank, TAG_CACHE_DEV2DEV, MPI_COMM_WORLD);
                             NANOS_MPI_CLOSE_IN_MPI_RUNTIME_EVENT;
-                        //Opid <= 0 (largest OPID) is -rank (in a dev2dev communication)
+                        //Opid <= 0 (smallest OPID) is -rank (in a dev2dev communication) and im destination
                         } else if (order.opId<=0) {
                             NANOS_MPI_CREATE_IN_MPI_RUNTIME_EVENT(ext::NANOS_MPI_RNODE_DEV2DEV_IN_EVENT);
 //                                DirectoryEntry *ent = _masterDir->findEntry( (uint64_t) order.devAddr );

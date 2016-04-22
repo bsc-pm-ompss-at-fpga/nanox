@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2013 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -84,6 +84,9 @@ namespace nanos
          virtual unsigned int getMaxPEs() const;
          virtual unsigned int getNumWorkers() const;
          virtual unsigned int getMaxWorkers() const;
+
+         virtual int initNetwork(int *argc, char ***argv) { return 0; }
+         virtual BaseThread *getClusterThread() const { return NULL; }
    };
 }
 

@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -26,8 +26,7 @@
 #include "system.hpp"
 #include "os.hpp"
 #include "synchronizedcondition.hpp"
-#include "printbt_decl.hpp"
-#include "resourcemanager.hpp"
+#include "basethread.hpp"
 
 using namespace nanos;
 
@@ -130,6 +129,10 @@ void WorkDescriptor::start (ULTFlag isUserLevelThread, WorkDescriptor *previous)
    // Setting state to ready
    _state = READY; //! \bug This should disapear when handling properly states as flags (#904)
    _mcontrol.setCacheMetaData();
+
+   // Getting run time
+   _runTime = ( sys.getDefaultSchedulePolicy()->isCheckingWDRunTime() ? OS::getMonotonicTimeUs() : 0.0 );
+
 }
 
 
@@ -170,6 +173,10 @@ bool WorkDescriptor::isInputDataReady() {
       // Setting state to ready
       setReady();
       //_mcontrol.setCacheMetaData();
+
+      // Getting run time
+      _runTime = ( sys.getDefaultSchedulePolicy()->isCheckingWDRunTime() ? OS::getMonotonicTimeUs() : 0.0 );
+
    }
    return result;
 }
@@ -238,8 +245,9 @@ bool WorkDescriptor::canRunIn ( const ProcessingElement &pe ) const
    bool result;
    if ( started() && !pe.supportsUserLevelThreads() ) return false;
 
-   if ( pe.getDeviceType() == NULL )  result = canRunIn( *pe.getSubDeviceType(), &pe );
-   else result = canRunIn( *pe.getDeviceType(), &pe ) ;
+  // if ( pe.getDeviceType() == NULL )  result = canRunIn( *pe.getSubDeviceType(), &pe );
+  // else 
+   result = canRunIn( *pe.getDeviceType(), &pe ) ;
 
    return result;   
    //return ( canRunIn( pe.getDeviceType() )  || ( pe.getSubDeviceType() != NULL && canRunIn( *pe.getSubDeviceType() ) ));
@@ -252,50 +260,48 @@ void WorkDescriptor::submit( bool force_queue )
    if ( _slicer ) {
       _slicer->submit(*this);
    } else {
-      memory_space_id_t loc = 0;
-      if ( _mcontrol.isRooted( loc ) ) {
-         //std::cerr << " rooting " << this->getId()  << " to " << loc << std::endl;
-         this->tieToLocation( loc );
-         //if ( loc != 0 ) {
-         //   SeparateMemoryAddressSpace &mem = sys.getSeparateMemory( loc );
-         //   this->tieTo( *(mem.getPE().getFirstThread()) );
-         //}
-      }
       Scheduler::submit(*this, force_queue );
    }
 } 
 
+void WorkDescriptor::submitOutputCopies ()
+{
+   if ( getNumCopies() > 0 ) {
+      _mcontrol.copyDataOut( MemController::WRITE_BACK );
+   }
+}
 
+void WorkDescriptor::waitOutputCopies ()
+{
+   if ( getNumCopies() > 0 ) {
+      while ( !_mcontrol.isOutputDataReady( *this ) ) {
+         myThread->idle();
+      }
+   }
+}
 
-void WorkDescriptor::finish() {
-
-#ifdef ARM_RECOVERY_WORKAROUND
-   //jam
-   /*
-    * A task is only re-executed when the following conditions meet:
-    * 1) The execution was invalid
-    * 2) The task is marked as recoverable
-    * 3) The task parent is not invalid (it doesn't make sense to recover ourselves if our parent is going to undo our work)
-    * 4) The task has not run out of trials (a limit is set to avoid infinite loop)
-    */
-   if (this->isInvalid())
-      return;
-#endif
+void WorkDescriptor::finish ()
+{
+   // Getting run time
+   _runTime = ( sys.getDefaultSchedulePolicy()->isCheckingWDRunTime() ? OS::getMonotonicTimeUs() - _runTime : 0.0 );
 
    // At that point we are ready to copy data out
-   if (getNumCopies() > 0) {
-      _mcontrol.copyDataOut(MemController::WRITE_BACK);
-      while (!_mcontrol.isOutputDataReady(*this)) {
+   if ( getNumCopies() > 0 ) {
+      _mcontrol.copyDataOut( MemController::WRITE_BACK );
+      while ( !_mcontrol.isOutputDataReady( *this ) ) {
          myThread->processTransfers();
       }
    }
 
    // Getting execution time
-   _executionTime = (_numDevices == 1 ? 0.0 : OS::getMonotonicTimeUs() - _executionTime);
+   _executionTime = ( _numDevices == 1 ? 0.0 : OS::getMonotonicTimeUs() - _executionTime );
 }
 
 void WorkDescriptor::preFinish ()
 {
+   // Getting run time
+   _runTime = ( sys.getDefaultSchedulePolicy()->isCheckingWDRunTime() ? OS::getMonotonicTimeUs() - _runTime : 0.0 );
+
    // At that point we are ready to copy data out
    if ( getNumCopies() > 0 ) {
       _mcontrol.copyDataOut( MemController::WRITE_BACK );
@@ -513,14 +519,17 @@ void WorkDescriptor::setCopies(size_t numCopies, CopyData * copies)
 
 void WorkDescriptor::waitCompletion( bool avoidFlush )
 {
+   _depsDomain->finalizeAllReductions();
    // Ask for more resources once we have finished creating tasks
-   ResourceManager::returnClaimedCpus();
-   ResourceManager::acquireResourcesIfNeeded();
+   sys.getThreadManager()->returnClaimedCpus();
+   sys.getThreadManager()->acquireResourcesIfNeeded();
 
    _componentsSyncCond.waitConditionAndSignalers();
    if ( !avoidFlush ) {
       _mcontrol.synchronize();
    }
+
+   _depsDomain->clearDependenciesDomain();
 }
 
 void WorkDescriptor::exitWork ( WorkDescriptor &work )
@@ -530,6 +539,133 @@ void WorkDescriptor::exitWork ( WorkDescriptor &work )
    //! \note It seems that _syncCond.check() generates a race condition here?
    if (componentsLeft == 0) _componentsSyncCond.signal();
    _componentsSyncCond.unreference();
+}
+
+void WorkDescriptor::registerTaskReduction( void *p_orig, size_t p_size, size_t p_el_size,
+      void (*p_init)( void *, void * ), void (*p_reducer)( void *, void * ) )
+{
+   //! Check if we have registered a reduction with this address
+   task_reduction_vector_t::reverse_iterator it;
+   for ( it = _taskReductions.rbegin(); it != _taskReductions.rend(); it++) {
+      if ( (*it)->has( p_orig) )
+      {
+    	  return;
+      }
+   }
+
+   if ( it == _taskReductions.rend() ) {
+       //! We must register p_orig as a new reduction
+       //No padding now as this leads to incorrect number of elements for certain cases. Fix: compute total number of elements before padding and pass it to the construct below
+       //NANOS_ARCHITECTURE_PADDING_SIZE(p_size);
+       //NANOS_ARCHITECTURE_PADDING_SIZE(p_el_size);
+       _taskReductions.push_back(
+               new TaskReduction(
+            		   p_orig,
+					   p_init,
+					   p_reducer,
+					   p_size,
+					   p_el_size,
+					   myThread->getTeam()->getFinalSize(),
+					   myThread->getCurrentWD()->getDepth(),
+					   sys._lazyPrivatizationEnabled
+					   )
+       );
+   }
+}
+
+void WorkDescriptor::registerFortranArrayTaskReduction( void *p_orig, void *p_dep, size_t array_descriptor_size,
+      void (*p_init)( void *, void * ), void (*p_reducer)( void *, void * ), void (*p_reducer_orig_var)( void *, void * ) )
+{
+   //! Check if we have registered a reduction with this address
+   task_reduction_vector_t::reverse_iterator it;
+   for ( it = _taskReductions.rbegin(); it != _taskReductions.rend(); it++) {
+      if ( (*it)->has( p_dep) ) break;
+   }
+
+   if ( it == _taskReductions.rend() ) {
+      //! We must register p_orig as a new reduction
+      NANOS_ARCHITECTURE_PADDING_SIZE(array_descriptor_size);
+
+     _taskReductions.push_back(
+            new TaskReduction(
+            		p_orig,
+					p_dep,
+					p_init,
+					p_reducer,
+					p_reducer_orig_var,
+					array_descriptor_size,
+					myThread->getTeam()->getFinalSize(),
+					myThread->getCurrentWD()->getDepth(),
+					sys._lazyPrivatizationEnabled
+					)
+     );
+   }
+}
+
+void * WorkDescriptor::getTaskReductionThreadStorage( void *p_addr, size_t id )
+{
+   //! Check if we have registered a reduction with this address
+   task_reduction_vector_t::reverse_iterator it;
+   for ( it = _taskReductions.rbegin(); it != _taskReductions.rend(); it++) {
+      if((*it)->has( p_addr )) break;
+   }
+
+   if ( it != _taskReductions.rend() ) {
+	  void * ptr = (*it)->get(id);
+
+      if ( ptr != NULL ) {
+    	  if((*it)->isInitialized(id))
+    	  {
+    		  //std::cout << "1:" << ptr << ",WD:"<<this <<", "<< _taskReductions[0]->_original<< "," << _taskReductions[0]->_original << "," << _taskReductions[0]  << std::endl;
+			  return ptr;
+      	  }
+      	  else
+      	  {
+      		//std::cout << "2:" << ptr << ",WD:"<<this<< ", "<< _taskReductions[0]->_original << "," << _taskReductions[0]->_original << "," << _taskReductions[0]  << std::endl;
+      		return (*it)->initialize(id);
+      	  }
+      }else
+      {
+    	  //allocate memory
+    	  //std::cout << "3:" << ptr << ",WD:"<<this<<", "<< _taskReductions[0]->_original << "," << _taskReductions[0]->_original << "," << _taskReductions[0]  << std::endl;
+		  (*it)->allocate(id);
+		  return (*it)->initialize(id);
+      }
+   }
+
+   if(isFinal()) return NULL;
+  // std::cout << "4:" << p_addr << ",WD:"<<this<< ", "<< _taskReductions[0]->_original << "," << _taskReductions[0]->_original << "," << _taskReductions[0]  << std::endl;
+
+   //this should never be reached
+   return NULL;
+}
+
+bool WorkDescriptor::removeTaskReduction( void *p_dep, bool del )
+{
+   // Check if we have registered a reduction with this address
+   task_reduction_vector_t::reverse_iterator it;
+   for ( it = _taskReductions.rbegin(); it != _taskReductions.rend(); it++) {
+      if ( (*it)->has( p_dep ) ) break;
+   }
+
+   if ( it != _taskReductions.rend() ) {
+      if ( del ) delete (*it);
+      // Reverse iterators cannot be erased directly, we need to transform them
+      // to common iterators
+      _taskReductions.erase( --(it.base()) );
+      return true;
+   }
+   return false;
+}
+
+TaskReduction * WorkDescriptor::getTaskReduction( const void *p_dep )
+{
+   // Check if we have registered a reduction with this address
+   task_reduction_vector_t::reverse_iterator it;
+   for ( it = _taskReductions.rbegin(); it != _taskReductions.rend(); it++) {
+	   if ( (*it)->has( p_dep ) ) return (*it);
+   }
+   return NULL;
 }
 
 bool WorkDescriptor::resourceCheck( BaseThread const &thd, bool considerInvalidations ) const {

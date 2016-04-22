@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -19,9 +19,11 @@
 
 /*
 <testinfo>
-test_generator=gens/mixed-generator
-test_max_cpus=1
-test_schedule="bf"
+   test_generator="gens/core-generator -a --no-warmup-threads|--warmup-threads"
+   test_generator_ENV=( "NX_TEST_MAX_CPUS=1"
+                        "NX_TEST_SCHEDULE=bf"
+                        "NX_TEST_ARCH=smp")
+   test_exec_command="timeout 5m"
 </testinfo>
 */
 

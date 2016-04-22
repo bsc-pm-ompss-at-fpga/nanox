@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -40,8 +40,10 @@ namespace ext
          int                           _kernelStreamIdx;
          bool                          _wdClosingEvents; //! controls whether an instrumentation event should be generated at WD completion
          void *                        _cublasHandle; //! Context pointer for CUBLAS library
+         void *                        _cusparseHandle; //! Context pointer for cuSPARSE library
          BaseThread *                  _cudaThreadInst;
          PThread                       _pthread;
+         unsigned int _prefetchedWDs;
 
          // disable copy constructor and assignment operator
          GPUThread( const GPUThread &th );
@@ -58,7 +60,7 @@ namespace ext
          // constructor
          GPUThread( WD &w, PE *pe, SMPProcessor *core, int device ) :
             AsyncThread( sys.getSMPPlugin()->getNewSMPThreadId(), w, pe ), _gpuDevice( device ), _kernelStreamIdx ( 0 ),
-               _wdClosingEvents( false ), _cublasHandle( NULL ), _cudaThreadInst( NULL ), _pthread( core ) { setCurrentWD( w ); }
+               _wdClosingEvents( false ), _cublasHandle( NULL ), _cusparseHandle( NULL ), _cudaThreadInst( NULL ), _pthread( core ), _prefetchedWDs(0) { setCurrentWD( w ); }
 
          // destructor
          ~GPUThread() {}
@@ -83,6 +85,9 @@ namespace ext
          int getGPUDevice ();
 
          void * getCUBLASHandle();
+         unsigned int getPrefetchedWDsCount() const;
+
+         void * getCUSPARSEHandle();
 
          BaseThread * getCUDAThreadInst();
          void setCUDAThreadInst( BaseThread * thread );

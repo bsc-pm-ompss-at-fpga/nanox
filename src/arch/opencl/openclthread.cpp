@@ -1,6 +1,5 @@
-
 /*************************************************************************************/
-/*      Copyright 2013 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -19,6 +18,7 @@
 /*************************************************************************************/
 
 #include "openclprocessor.hpp"
+#include "basethread.hpp"
 #include "openclthread.hpp"
 #include "pthread.hpp"
 #include "openclevent.hpp"
@@ -46,11 +46,6 @@ void OpenCLThread::runDependent() {
    OpenCLDD &dd = static_cast<OpenCLDD &> (wd.activateDevice(OpenCLDev));
 
    while ( getTeam() == NULL ) { OS::nanosleep( 100 ); }
-
-   if ( getTeam() == NULL ) {
-      warning( "This OpenCLThread needs a team to work, but no team was found. The thread will exit.");
-      return;
-   }
     
    dd.getWorkFct()(wd.getData());    
    ( ( OpenCLProcessor * ) myThread->runningOn() )->cleanUp();
@@ -148,12 +143,12 @@ void OpenCLThread::join()
 
 void OpenCLThread::wait()
 {
-   fatal("A OpenCLThread cannot call wait function.");
+   fatal("An OpenCLThread cannot call wait function.");
 }
 
 void OpenCLThread::wakeup()
 {
-   fatal("A OpenCLThread cannot call wakeup function.");
+   // For convenience we may call wakeup for all threads, just ignore then
 }
 
 void OpenCLThread::idle( bool debug )

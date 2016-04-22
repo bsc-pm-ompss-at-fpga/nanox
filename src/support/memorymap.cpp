@@ -1,3 +1,22 @@
+/*************************************************************************************/
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*                                                                                   */
+/*      This file is part of the NANOS++ library.                                    */
+/*                                                                                   */
+/*      NANOS++ is free software: you can redistribute it and/or modify              */
+/*      it under the terms of the GNU Lesser General Public License as published by  */
+/*      the Free Software Foundation, either version 3 of the License, or            */
+/*      (at your option) any later version.                                          */
+/*                                                                                   */
+/*      NANOS++ is distributed in the hope that it will be useful,                   */
+/*      but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*      GNU Lesser General Public License for more details.                          */
+/*                                                                                   */
+/*      You should have received a copy of the GNU Lesser General Public License     */
+/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*************************************************************************************/
+
 #ifdef STANDALONE_TEST
 
 #ifdef message
@@ -227,7 +246,7 @@ uint64_t MemoryMap< uint64_t >::getExactByAddress( uint64_t addr, uint64_t valIf
 }
 
 
-uint64_t MemoryMap< uint64_t >::getExactOrFullyOverlappingInsertIfNotFound( uint64_t addr, std::size_t len, bool &exact, uint64_t valIfNotFound, uint64_t valIfNotValid ) {
+uint64_t MemoryMap< uint64_t >::getExactOrFullyOverlappingInsertIfNotFound( uint64_t addr, std::size_t len, bool &exact, uint64_t valIfNotFound, uint64_t valIfNotValid, uint64_t &conflictAddr, std::size_t &conflictSize ) {
    uint64_t val = valIfNotValid;
    MemoryChunk key( addr, len );
    iterator it = this->lower_bound( key );
@@ -278,6 +297,8 @@ uint64_t MemoryMap< uint64_t >::getExactOrFullyOverlappingInsertIfNotFound( uint
             //exact = true;
          }
       } else {
+         conflictAddr = it->first.getAddress();
+         conflictSize = it->first.getLength();
          val = valIfNotValid;
          exact = false;
       }
@@ -290,6 +311,8 @@ uint64_t MemoryMap< uint64_t >::getExactOrFullyOverlappingInsertIfNotFound( uint
          val = it->second;
          exact = false;
       } else {
+         conflictAddr = it->first.getAddress();
+         conflictSize = it->first.getLength();
          val = valIfNotValid;
          exact = false;
       }
@@ -299,6 +322,18 @@ uint64_t MemoryMap< uint64_t >::getExactOrFullyOverlappingInsertIfNotFound( uint
       exact = true;
    }
    return val;
+}
+
+void MemoryMap< uint64_t >::eraseByAddress( uint64_t addr ) {
+   MemoryChunk key( addr, 0 );
+   iterator it = this->lower_bound( key );
+   if ( it == this->end() || this->key_comp()( key, it->first ) )
+   {
+      std::cerr << "Could not erase, address not found." << std::endl;
+      exit(-1);
+   } else {
+      this->erase( it );
+   }
 }
 
 #endif

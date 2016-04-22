@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -25,6 +25,7 @@
 #include "smpprocessor.hpp"
 #include "schedule.hpp"
 #include "simpleallocator.hpp"
+#include "basethread.hpp"
 
 #include "cuda_runtime.h"
 
@@ -35,7 +36,7 @@ Atomic<int> GPUProcessor::_deviceSeed = 0;
 
 
 GPUProcessor::GPUProcessor( int gpuId, memory_space_id_t memId, SMPProcessor *core, GPUMemorySpace &gpuMem ) :
-      ProcessingElement( &GPU, NULL, memId, 0 /* local node */, core->getNumaNode() /* numa */, true, 0 /* socket: n/a */, false ),
+      ProcessingElement( &GPU, memId, 0 /* local node */, core->getNumaNode() /* numa */, true, 0 /* socket: n/a */, false ),
       _gpuDevice( _deviceSeed++ ), _gpuProcessorStats(),
       _initialized( false ), _gpuMemory( gpuMem ), _core( core ), _thread( NULL)
 {
@@ -161,7 +162,7 @@ WorkDescriptor & GPUProcessor::getMasterWD () const
 BaseThread &GPUProcessor::createThread ( WorkDescriptor &helper, SMPMultiThread *parent )
 {
    // In fact, the GPUThread will run on the CPU, so make sure it canRunIn( SMP )
-   ensure( helper.canRunIn( SMP ), "Incompatible worker thread" );
+   ensure( helper.canRunIn( getSMPDevice() ), "Incompatible worker thread" );
    GPUThread &th = *NEW GPUThread( helper, this, _core, _gpuDevice );
 
    return ( BaseThread& )  th;
@@ -257,7 +258,7 @@ void GPUProcessor::GPUProcessorInfo::initTransferStreams ( bool &inputStream, bo
 
       // Create as many kernel streams as the number of prefetching tasks
       _numExecStreams = GPUConfig::isConcurrentExecutionEnabled() ? GPUConfig::getNumPrefetch() + 1 : 1;
-      std::cout << "Creating " << _numExecStreams << " exec streams" << std::endl;
+
       _kernelExecStream = ( cudaStream_t * ) malloc( _numExecStreams * sizeof( cudaStream_t ) );
       for ( int i = 0; i < _numExecStreams; i++ ) {
          NANOS_GPU_CREATE_IN_CUDA_RUNTIME_EVENT( GPUUtils::NANOS_GPU_CUDA_STREAM_CREATE_EVENT );

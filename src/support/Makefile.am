@@ -1,5 +1,5 @@
 #####################################################################################
-#      Copyright 2009 Barcelona Supercomputing Center                               #
+#      Copyright 2015 Barcelona Supercomputing Center                               #
 #                                                                                   #
 #      This file is part of the NANOS++ library.                                    #
 #                                                                                   #
@@ -17,7 +17,7 @@
 #      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             #
 #####################################################################################
 
-include ../common.am
+include $(top_srcdir)/src/common.am
 
 devinclude_HEADERS = \
 	containeradapter_fwd.hpp \
@@ -28,19 +28,21 @@ devinclude_HEADERS = \
 	regionpart_fwd.hpp \
 	regiontree_fwd.hpp \
 	regiontreenode_fwd.hpp \
-	resourcemanager.hpp\
 	new_decl.hpp\
 	allocator_fwd.hpp\
 	allocator_decl.hpp\
 	allocator.hpp\
 	atomic_decl.hpp\
 	atomic.hpp\
+	atomic_flag.hpp\
+	lock_decl.hpp\
+	lock.hpp\
+	recursivelock_decl.hpp\
 	lazy.hpp\
 	lazy_decl.hpp\
 	compatibility.hpp\
 	queue_decl.hpp\
 	queue.hpp\
-	debug_decl.hpp\
 	debug.hpp\
 	config_fwd.hpp\
 	config_decl.hpp\
@@ -94,10 +96,10 @@ devinclude_HEADERS = \
 	functor_decl.hpp \
 	requestqueue_decl.hpp \
 	requestqueue.hpp \
-	printbt_decl.hpp \
 	smpbaseplugin_decl.hpp \
 	pinnedallocator_decl.hpp \
 	genericevent_decl.hpp \
+	hwloc_decl.hpp \
 	$(END) 
 
 exceptiondir = $(devincludedir)/exception
@@ -118,8 +120,6 @@ exception_HEADERS= \
 	$(END)
 
 support_sources = \
-	resourcemanager.hpp\
-	resourcemanager.cpp\
 	new_decl.hpp\
 	new.cpp\
 	allocator_fwd.hpp\
@@ -128,12 +128,18 @@ support_sources = \
 	allocator.cpp\
 	atomic_decl.hpp\
 	atomic.hpp\
+	atomic_flag.hpp\
+	lock_decl.hpp\
+	lock.hpp\
+	recursivelock_decl.hpp\
+	recursivelock.cpp\
 	lazy.hpp\
 	lazy_decl.hpp\
 	compatibility.hpp\
 	queue_decl.hpp\
 	queue.hpp\
 	debug.hpp\
+	debug.cpp\
 	config_fwd.hpp\
 	config_decl.hpp\
 	config.hpp\
@@ -197,10 +203,11 @@ support_sources = \
 	functor_decl.hpp \
 	requestqueue_decl.hpp \
 	requestqueue.hpp \
-	printbt_decl.hpp \
-	printbt.cpp \
 	genericevent_decl.hpp \
 	genericevent.cpp \
+	hwloc_decl.hpp \
+	hwloc.cpp \
+	dbmanager.hpp \
 	exception/checkpointfailure.hpp \
 	exception/exceptiontracer.hpp \
 	exception/executionfailure.hpp \
@@ -222,55 +229,72 @@ mpi_exception_sources = \
 	exception/mpierrortranslator.hpp \
 	$(END)
 
+if SQLITE3_SUPPORT
+support_sources += \
+	dbmanager_sqlite3.hpp \
+	dbmanager_sqlite3.cpp \
+	$(END)
+else
+	dbmanager_sqlite3_empty.hpp \
+	dbmanager_sqlite3_empty.cpp \
+	$(END)
+endif
+
 debug_sources = \
 	memtracker_fwd.hpp\
 	memtracker_decl.hpp\
 	memtracker.hpp\
 	memtracker.cpp
-	$(END)
+        $(END)
 
 if GPU_SUPPORT
 gpu_support_sources = \
 	pinnedallocator_decl.hpp \
 	pinnedallocator.hpp \
 	pinnedallocator.cpp \
-	$(END)
+        $(END)
 endif
 	
+
 noinst_LTLIBRARIES =
 
-if DEBUG_VERSION
+if is_debug_enabled
 noinst_LTLIBRARIES += debug/libsupport.la
 
-debug_libsupport_la_CXXFLAGS=$(common_includes) $(common_debug_cxxflags)
+debug_libsupport_la_CPPFLAGS=$(common_debug_CPPFLAGS) @dlbinc@ @cudainc@ @sqlite3inc@
+debug_libsupport_la_CXXFLAGS=$(common_debug_CXXFLAGS)
 debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources) $(gpu_support_sources)
-debug_libsupport_la_LDFLAGS=$(dlb_debug_ldflags)
-
+debug_libsupport_la_LDFLAGS=$(AM_LDFLAGS) @dlblib@ @cudalib@ @sqlite3lib@
+debug_libsupport_la_LIBADD=@dlb_dbg@ @sqlite3libs@
 endif
 
-if INSTRUMENTATION_VERSION
-noinst_LTLIBRARIES += instrumentation/libsupport.la
-
-instrumentation_libsupport_la_CXXFLAGS=$(common_includes) $(common_instr_cxxflags)
-instrumentation_libsupport_la_SOURCES=$(support_sources) $(gpu_support_sources)
-instrumentation_libsupport_la_LDFLAGS=$(dlb_instr_ldflags)
-
-endif
-
-if INSTRUMENTATION_DEBUG_VERSION
+if is_instrumentation_debug_enabled
 noinst_LTLIBRARIES += instrumentation-debug/libsupport.la
 
-instrumentation_debug_libsupport_la_CXXFLAGS=$(common_includes) $(common_instrdebug_cxxflags)
-instrumentation_debug_libsupport_la_SOURCES=$(support_sources) $(debug_sources) $(gpu_support_sources)
-instrumentation_debug_libsupport_la_LDFLAGS=$(dlb_instrdebug_ldflags)
-
+instrumentation_debug_libsupport_la_CPPFLAGS=$(common_instrumentation_debug_CPPFLAGS) @dlbinc@ @cudainc@ @sqlite3inc@
+instrumentation_debug_libsupport_la_CXXFLAGS=$(common_instrumentation_debug_CXXFLAGS)
+instrumentation_debug_libsupport_la_SOURCES=$(support_sources) $(instrumentation_debug_sources) $(gpu_support_sources)
+instrumentation_debug_libsupport_la_LDFLAGS=$(AM_LDFLAGS) @dlblib@ @cudalib@ @sqlite3lib@
+instrumentation_debug_libsupport_la_LIBADD=@dlb_instr_dbg@ @sqlite3libs@
 endif
 
-if PERFORMANCE_VERSION
+if is_instrumentation_enabled
+noinst_LTLIBRARIES += instrumentation/libsupport.la
+
+instrumentation_libsupport_la_CPPFLAGS=$(common_instrumentation_CPPFLAGS) @dlbinc@ @cudainc@ @sqlite3inc@
+instrumentation_libsupport_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS)
+instrumentation_libsupport_la_SOURCES=$(support_sources) $(instrumentation_sources) $(gpu_support_sources)
+instrumentation_libsupport_la_LDFLAGS=$(AM_LDFLAGS) @dlblib@ @cudalib@ @sqlite3lib@
+instrumentation_libsupport_la_LIBADD=@dlb_instr@ @sqlite3libs@
+endif
+
+if is_performance_enabled
 noinst_LTLIBRARIES += performance/libsupport.la
 
-performance_libsupport_la_CXXFLAGS=$(common_includes) $(common_perfo_cxxflags)
-performance_libsupport_la_SOURCES=$(support_sources) $(gpu_support_sources)
-performance_libsupport_la_LDFLAGS=$(dlb_perfo_ldflags)
-
+performance_libsupport_la_CPPFLAGS=$(common_performance_CPPFLAGS) @dlbinc@ @cudainc@ @sqlite3inc@
+performance_libsupport_la_CXXFLAGS=$(common_performance_CXXFLAGS)
+performance_libsupport_la_SOURCES=$(support_sources) $(performance_sources) $(gpu_support_sources)
+performance_libsupport_la_LDFLAGS=$(AM_LDFLAGS) @dlblib@ @cudalib@ @sqlite3lib@
+performance_libsupport_la_LIBADD=@dlb@ @sqlite3libs@
 endif
+

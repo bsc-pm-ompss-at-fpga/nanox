@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -22,7 +22,8 @@
 
 #include <queue>
 #include "atomic_decl.hpp"
-#include "debug_decl.hpp"
+#include "lock_decl.hpp"
+#include "debug.hpp"
 
 namespace nanos
 {

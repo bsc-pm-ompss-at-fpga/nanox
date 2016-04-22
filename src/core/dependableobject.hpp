@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -23,12 +23,17 @@
 #include <list>
 #include <set>
 #include <vector>
+
 #include "atomic.hpp"
+#include "lock.hpp"
+
 #include "dependableobject_decl.hpp"
-#include "dataaccess.hpp"
 #include "basedependency_decl.hpp"
-#include "functors.hpp"
 #include "workdescriptor_decl.hpp"
+#include "system_decl.hpp"
+
+#include "dataaccess.hpp"
+#include "functors.hpp"
 
 using namespace nanos;
 
@@ -154,6 +159,9 @@ inline DependableObject::DependableObjectVector & DependableObject::getSuccessor
 
 inline bool DependableObject::addPredecessor ( DependableObject &depObj )
 {
+   // Avoiding create cycles in dependence graph
+   if ( this == &depObj ) return false;
+
    bool inserted = false;
    {
       SyncLockBlock lock( this->getLock() );
@@ -165,6 +173,9 @@ inline bool DependableObject::addPredecessor ( DependableObject &depObj )
 
 inline bool DependableObject::addSuccessor ( DependableObject &depObj )
 {
+   // Avoiding create cycles in dependence graph
+   if ( this == &depObj ) return false;
+
    //Maintain the list of predecessors
    if(sys.getPredecessorLists())
       depObj.addPredecessor( *this );
@@ -227,14 +238,27 @@ inline void DependableObject::resetReferences()
 
 inline bool DependableObject::isSubmitted()
 {
-   return _submitted;
+   return
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+      __atomic_load_n(&_submitted, __ATOMIC_ACQUIRE)
+#else
+      _submitted
+#endif
+      ;
 }
 
 inline void DependableObject::submitted()
 {
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+   __atomic_store_n(&_submitted, true, __ATOMIC_RELEASE);
+#else
    _submitted = true;
+#endif
    enableSubmission();
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+#else
    memoryFence();
+#endif
 }
 
 inline bool DependableObject::needsSubmission() const
@@ -250,8 +274,12 @@ inline void DependableObject::enableSubmission()
 inline void DependableObject::disableSubmission()
 {
    _needsSubmission = false;
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+   __atomic_store_n(&_submitted, false, __ATOMIC_RELEASE);
+#else
    _submitted = false;
    memoryFence();
+#endif
 }
 
 inline Lock& DependableObject::getLock()

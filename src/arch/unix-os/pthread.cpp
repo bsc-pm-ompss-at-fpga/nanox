@@ -1,22 +1,21 @@
-/**************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                    */
-/*      Copyright 2009 Barcelona Supercomputing Center                    */
-/*                                                                        */
-/*      This file is part of the NANOS++ library.                         */
-/*                                                                        */
-/*      NANOS++ is free software: you can redistribute it and/or modify   */
+/*************************************************************************************/
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*                                                                                   */
+/*      This file is part of the NANOS++ library.                                    */
+/*                                                                                   */
+/*      NANOS++ is free software: you can redistribute it and/or modify              */
 /*      it under the terms of the GNU Lesser General Public License as published by  */
-/*      the Free Software Foundation, either version 3 of the License, or  */
-/*      (at your option) any later version.                               */
-/*                                                                        */
-/*      NANOS++ is distributed in the hope that it will be useful,        */
-/*      but WITHOUT ANY WARRANTY; without even the implied warranty of    */
-/*      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the     */
-/*      GNU Lesser General Public License for more details.               */
-/*                                                                        */
-/*      You should have received a copy of the GNU Lesser General Public License  */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.  */
-/**************************************************************************/
+/*      the Free Software Foundation, either version 3 of the License, or            */
+/*      (at your option) any later version.                                          */
+/*                                                                                   */
+/*      NANOS++ is distributed in the hope that it will be useful,                   */
+/*      but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*      GNU Lesser General Public License for more details.                          */
+/*                                                                                   */
+/*      You should have received a copy of the GNU Lesser General Public License     */
+/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*************************************************************************************/
 
 #include "pthread.hpp"
 #include "os.hpp"
@@ -28,11 +27,6 @@
 #include <signal.h>
 #include <assert.h>
 
-#ifdef NANOS_DEBUG_ENABLED
-#include <execinfo.h>
-#include <ucontext.h>
-#include <cstddef>
-#endif
 
 // TODO: detect at configure
 #ifndef PTHREAD_STACK_MIN
@@ -80,25 +74,26 @@ void PThread::start ( BaseThread * th )
    pthread_attr_t attr;
    pthread_attr_init( &attr );
 
-   // user-defined stack size
+   //! \note Checking user-defined stack size
    if ( _stackSize > 0 ) {
       if ( _stackSize < PTHREAD_STACK_MIN ) {
-         warning("specified thread stack too small, adjusting it to minimum size");
+         warning("Specified thread stack size (" << _stackSize << " bytes) too small, adjusting to " << PTHREAD_STACK_MIN << " bytes");
          _stackSize = PTHREAD_STACK_MIN;
       }
-
       if (pthread_attr_setstacksize( &attr, _stackSize ) )
-         warning( "couldn't set pthread stack size stack" );
+         warning( "Couldn't set pthread stack size stack" );
    }
+ 
+   verbose( "Creating thread with " << _stackSize << " bytes of stack size" );
 
    if ( pthread_create( &_pth, &attr, os_bootthread, th ) )
-      fatal( "couldn't create thread" );
+      fatal( "Couldn't create thread" );
 
    if ( pthread_cond_init( &_condWait, NULL ) < 0 )
-      fatal( "couldn't create pthread condition wait" );
+      fatal( "Couldn't create pthread condition wait" );
 
    if ( pthread_mutex_init(&_mutexWait, NULL) < 0 )
-      fatal( "couldn't create pthread mutex wait" );
+      fatal( "Couldn't create pthread mutex wait" );
 }
 
 void PThread::finish ()
@@ -127,13 +122,21 @@ void PThread::bind()
    cpu_set_t cpu_set;
    CPU_ZERO( &cpu_set );
    CPU_SET( cpu_id, &cpu_set );
-   verbose( " Binding thread ", getMyThreadSafe()->getId(), " to cpu ", cpu_id );
+   verbose( "Binding thread " << getMyThreadSafe()->getId() << " to cpu " << cpu_id );
    pthread_setaffinity_np( _pth, sizeof(cpu_set_t), &cpu_set );
 
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
    NANOS_INSTRUMENT ( static nanos_event_key_t cpuid_key = ID->getEventKey("cpuid"); )
-   NANOS_INSTRUMENT ( nanos_event_value_t cpuid_value =  (nanos_event_value_t) cpu_id + 1; )
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &cpuid_key, &cpuid_value); )
+   NANOS_INSTRUMENT ( static nanos_event_key_t numa_key = ID->getEventKey("thread-numa-node"); )
+   
+   NANOS_INSTRUMENT ( nanos_event_key_t keys[2]; )
+   NANOS_INSTRUMENT ( keys[0] = cpuid_key )
+   NANOS_INSTRUMENT ( keys[1] = numa_key )
+   
+   NANOS_INSTRUMENT ( nanos_event_value_t values[2]; )
+   NANOS_INSTRUMENT ( values[0] = (nanos_event_value_t) cpu_id + 1; )
+   NANOS_INSTRUMENT ( values[1] = (nanos_event_value_t) _core->getNumaNode() + 1; )
+   NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(2, keys, values); )
 }
 
 void PThread::yield()

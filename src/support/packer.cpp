@@ -1,7 +1,24 @@
+/*************************************************************************************/
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*                                                                                   */
+/*      This file is part of the NANOS++ library.                                    */
+/*                                                                                   */
+/*      NANOS++ is free software: you can redistribute it and/or modify              */
+/*      it under the terms of the GNU Lesser General Public License as published by  */
+/*      the Free Software Foundation, either version 3 of the License, or            */
+/*      (at your option) any later version.                                          */
+/*                                                                                   */
+/*      NANOS++ is distributed in the hope that it will be useful,                   */
+/*      but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*      GNU Lesser General Public License for more details.                          */
+/*                                                                                   */
+/*      You should have received a copy of the GNU Lesser General Public License     */
+/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*************************************************************************************/
 
 #include "packer_decl.hpp"
 #include "system.hpp"
-#include "printbt_decl.hpp"
 
 #include <iostream>
 
@@ -25,10 +42,12 @@ void * Packer::give_pack( uint64_t addr, std::size_t len, std::size_t count ) {
    PackInfo key( addr, len, count );
 
 #if 1 /* simple implementation */
+   _lock.acquire();
    if ( _allocator == NULL ) _allocator = sys.getNetwork()->getPackerAllocator();
    _allocator->lock();
    result = _allocator->allocate( len * count );
    _allocator->unlock();
+   _lock.release();
 #else
    _lock.acquire();
    //std::map< PackInfo, void *>::iterator it = _packs.lower_bound( key );
@@ -81,11 +100,16 @@ void * Packer::give_pack( uint64_t addr, std::size_t len, std::size_t count ) {
    return result;
 }
 
-void Packer::free_pack( uint64_t addr, std::size_t len, std::size_t count, void *allocAddr ) {
+bool Packer::free_pack( uint64_t addr, std::size_t len, std::size_t count, void *allocAddr ) {
+   bool result = true;
 #if 1
+   _lock.acquire();
    _allocator->lock();
-   _allocator->free( allocAddr );
+   if ( _allocator->free( allocAddr ) == 0 ) {
+      result = false;
+   }
    _allocator->unlock();
+   _lock.release();
 #else
    PackInfo key( addr, len, count );
    _lock.acquire();
@@ -99,6 +123,7 @@ void Packer::free_pack( uint64_t addr, std::size_t len, std::size_t count, void 
    _allocator->unlock();
    _lock.release();
 #endif
+   return result;
 }
 
 void Packer::setAllocator( SimpleAllocator *alloc ) {

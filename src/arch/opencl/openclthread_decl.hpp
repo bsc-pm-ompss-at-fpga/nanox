@@ -1,6 +1,5 @@
-
 /*************************************************************************************/
-/*      Copyright 2013 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -25,7 +24,6 @@
 #include "opencldd.hpp"
 #include "genericevent_decl.hpp"
 #include "asyncthread_decl.hpp"
-#include "openclconfig.hpp"
 
 namespace nanos {
 namespace ext {
@@ -49,9 +47,8 @@ private:
    
 public:
    OpenCLThread( WD &wd, PE *pe, SMPProcessor* core ) : nanos::AsyncThread( sys.getSMPPlugin()->getNewSMPThreadId(), wd, pe ), _pthread(core), _externalEventsList(), _openclStreamIdx(1) 
-   { 
-      setMaxPrefetch( OpenCLConfig::getPrefetchNum() );
-   }
+   { }
+
    ~OpenCLThread() {}
    
    GenericEvent* getCurrKernelEvent() { return _currKernelEvent; };

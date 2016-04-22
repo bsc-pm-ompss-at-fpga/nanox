@@ -1,5 +1,5 @@
 #####################################################################################
-#      Copyright 2009 Barcelona Supercomputing Center                               #
+#      Copyright 2015 Barcelona Supercomputing Center                               #
 #                                                                                   #
 #      This file is part of the NANOS++ library.                                    #
 #                                                                                   #
@@ -17,7 +17,7 @@
 #      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             #
 #####################################################################################
 
-include ../../common.am
+include $(top_srcdir)/src/common.am
 
 EXTRA_DIST= \
 	x86/stack.cpp \
@@ -30,8 +30,12 @@ EXTRA_DIST= \
 	ppc32/stack_asm.s \
 	ppc64/stack.cpp \
 	ppc64/stack_asm.s \
+	ppc64_v2/stack.cpp \
+	ppc64_v2/stack_asm.s \
 	armv71/stack.cpp \
 	armv71/stack_asm.s \
+	aarch64/stack.cpp \
+	aarch64/stack_asm.s \
 	tile64/stack.cpp \
 	tile64/stack_asm.s \
 	smp_ult.hpp \
@@ -39,28 +43,24 @@ EXTRA_DIST= \
 
 devinclude_HEADERS = \
 	smpdevice.hpp \
+	smpdevice_decl.hpp \
 	smpdd.hpp \
 	smpprocessor.hpp \
 	smpprocessor_fwd.hpp \
 	smpthread.hpp \
 	smpthread_fwd.hpp \
+	smptransferqueue_decl.hpp \
+	smptransferqueue.hpp \
 	$(END) 
 
 common_libadd=\
         $(END)
 
-ult_sources= \
-   @SMP_ARCH@/stack.cpp \
-   @SMP_ARCH@/stack_asm.s \
-   $(END)
-
-
-ult_flags=-DSMP_SUPPORTS_ULT
-
-smp_numa_flags=-DSMP_NUMA
-
 smp_sources = \
 	smpdevice.hpp \
+	smpdevice_decl.hpp \
+	smptransferqueue.hpp \
+	smptransferqueue_decl.hpp \
 	smpdd.hpp \
 	smpdd.cpp \
 	smpprocessor.hpp \
@@ -75,99 +75,78 @@ pe_smp_sources = \
 	smpplugin.cpp \
 	$(END)
 
-
 if SMP_SUPPORTS_ULT
-smp_ult_sources=$(ult_sources)
-smp_ult_flags=$(ult_flags)
+  ult_sources= \
+@SMP_ARCH@/stack.cpp \
+@SMP_ARCH@/stack_asm.s \
+$(END)
+else
+  ult_sources=
 endif
 
 noinst_LTLIBRARIES = 
 
-if DEBUG_VERSION
+if is_debug_enabled
 noinst_LTLIBRARIES += debug/libsmp.la
 debug_LTLIBRARIES = debug/libnanox-pe-smp.la
-debug_LTLIBRARIES += debug/libnanox-pe-smp-numa.la
 
-nanos_debug_cxxflags=$(common_includes) $(common_debug_cxxflags) $(smp_ult_flags)
+debug_libsmp_la_CPPFLAGS=$(common_debug_CPPFLAGS)
+debug_libsmp_la_CXXFLAGS=$(common_debug_CXXFLAGS)
+debug_libsmp_la_CCASFLAGS=$(common_debug_CXXFLAGS)
+debug_libsmp_la_SOURCES=$(smp_sources) $(ult_sources)
 
-debug_libsmp_la_CXXFLAGS=$(nanos_debug_cxxflags)
-debug_libsmp_la_CCASFLAGS=$(nanos_debug_cxxflags)
-debug_libsmp_la_SOURCES=$(smp_sources) $(smp_ult_sources)
-
-debug_libnanox_pe_smp_la_CXXFLAGS=$(nanos_debug_cxxflags)
-debug_libnanox_pe_smp_la_LDFLAGS=$(ld_plugin_flags)
-debug_libnanox_pe_smp_la_LIBADD=$(common_libadd)
+debug_libnanox_pe_smp_la_CPPFLAGS=$(common_debug_CPPFLAGS) @memkindinc@
+debug_libnanox_pe_smp_la_CXXFLAGS=$(common_debug_CXXFLAGS)
+debug_libnanox_pe_smp_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags) @memkindlib@
+debug_libnanox_pe_smp_la_LIBADD=$(common_libadd) @memkindlibs@
 debug_libnanox_pe_smp_la_SOURCES=$(pe_smp_sources)
-
-debug_libnanox_pe_smp_numa_la_CXXFLAGS=$(nanos_debug_cxxflags) $(smp_numa_flags)
-debug_libnanox_pe_smp_numa_la_LDFLAGS=$(ld_plugin_flags)
-debug_libnanox_pe_smp_numa_la_LIBADD=$(common_libadd)
-debug_libnanox_pe_smp_numa_la_SOURCES=$(pe_smp_sources)
 endif
 
-if INSTRUMENTATION_VERSION
+if is_instrumentation_enabled
 noinst_LTLIBRARIES += instrumentation/libsmp.la
 instrumentation_LTLIBRARIES = instrumentation/libnanox-pe-smp.la
-instrumentation_LTLIBRARIES += instrumentation/libnanox-pe-smp-numa.la
 
-nanos_instr_cxxflags=$(common_includes) $(common_instr_cxxflags) $(smp_ult_flags)
+instrumentation_libsmp_la_CPPFLAGS=$(common_instrumentation_CPPFLAGS)
+instrumentation_libsmp_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS)
+instrumentation_libsmp_la_CCASFLAGS=$(common_instrumentation_CXXFLAGS)
+instrumentation_libsmp_la_SOURCES=$(smp_sources) $(ult_sources)
 
-instrumentation_libsmp_la_CXXFLAGS=$(nanos_instr_cxxflags)
-instrumentation_libsmp_la_CCASFLAGS=$(nanos_instr_cxxflags)
-instrumentation_libsmp_la_SOURCES=$(smp_sources) $(smp_ult_sources)
-
-instrumentation_libnanox_pe_smp_la_CXXFLAGS=$(nanos_instr_cxxflags)
-instrumentation_libnanox_pe_smp_la_LDFLAGS=$(ld_plugin_flags)
-instrumentation_libnanox_pe_smp_la_LIBADD=$(common_libadd)
+instrumentation_libnanox_pe_smp_la_CPPFLAGS=$(common_instrumentation_CPPFLAGS) @memkindinc@
+instrumentation_libnanox_pe_smp_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS)
+instrumentation_libnanox_pe_smp_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags) @memkindlib@
+instrumentation_libnanox_pe_smp_la_LIBADD=$(common_libadd) @memkindlibs@
 instrumentation_libnanox_pe_smp_la_SOURCES=$(pe_smp_sources)
-
-instrumentation_libnanox_pe_smp_numa_la_CXXFLAGS=$(nanos_instr_cxxflags) $(smp_numa_flags)
-instrumentation_libnanox_pe_smp_numa_la_LDFLAGS=$(ld_plugin_flags)
-instrumentation_libnanox_pe_smp_numa_la_LIBADD=$(common_libadd)
-instrumentation_libnanox_pe_smp_numa_la_SOURCES=$(pe_smp_sources)
 endif
 
-if INSTRUMENTATION_DEBUG_VERSION
+if is_instrumentation_debug_enabled
 noinst_LTLIBRARIES += instrumentation-debug/libsmp.la
 instrumentation_debug_LTLIBRARIES = instrumentation-debug/libnanox-pe-smp.la
-instrumentation_debug_LTLIBRARIES += instrumentation-debug/libnanox-pe-smp-numa.la
 
-nanos_instrdebug_cxxflags=$(common_includes) $(common_instrdebug_cxxflags) $(smp_ult_flags)
+instrumentation_debug_libsmp_la_CPPFLAGS=$(common_instrumentation_debug_CPPFLAGS)
+instrumentation_debug_libsmp_la_CXXFLAGS=$(common_instrumentation_debug_CXXFLAGS)
+instrumentation_debug_libsmp_la_CCASFLAGS=$(common_instrumentation_debug_CXXFLAGS)
+instrumentation_debug_libsmp_la_SOURCES=$(smp_sources) $(ult_sources)
 
-instrumentation_debug_libsmp_la_CXXFLAGS=$(nanos_instrdebug_cxxflags)
-instrumentation_debug_libsmp_la_CCASFLAGS=$(nanos_instrdebug_cxxflags)
-instrumentation_debug_libsmp_la_SOURCES=$(smp_sources) $(smp_ult_sources)
-
-instrumentation_debug_libnanox_pe_smp_la_CXXFLAGS=$(nanos_instrdebug_cxxflags)
-instrumentation_debug_libnanox_pe_smp_la_LDFLAGS=$(ld_plugin_flags)
-instrumentation_debug_libnanox_pe_smp_la_LIBADD=$(common_libadd)
+instrumentation_debug_libnanox_pe_smp_la_CPPFLAGS=$(common_instrumentation_debug_CPPFLAGS) @memkindinc@
+instrumentation_debug_libnanox_pe_smp_la_CXXFLAGS=$(common_instrumentation_debug_CXXFLAGS)
+instrumentation_debug_libnanox_pe_smp_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags) @memkindlib@
+instrumentation_debug_libnanox_pe_smp_la_LIBADD=$(common_libadd) @memkindlibs@
 instrumentation_debug_libnanox_pe_smp_la_SOURCES=$(pe_smp_sources)
-
-instrumentation_debug_libnanox_pe_smp_numa_la_CXXFLAGS=$(nanos_instrdebug_cxxflags) $(smp_numa_flags)
-instrumentation_debug_libnanox_pe_smp_numa_la_LDFLAGS=$(ld_plugin_flags)
-instrumentation_debug_libnanox_pe_smp_numa_la_LIBADD=$(common_libadd)
-instrumentation_debug_libnanox_pe_smp_numa_la_SOURCES=$(pe_smp_sources)
 endif
 
-if PERFORMANCE_VERSION
+if is_performance_enabled
 noinst_LTLIBRARIES += performance/libsmp.la
 performance_LTLIBRARIES = performance/libnanox-pe-smp.la
-performance_LTLIBRARIES += performance/libnanox-pe-smp-numa.la
 
-nanos_perfo_cxxflags=$(common_includes) $(common_perfo_cxxflags) $(smp_ult_flags)
+performance_libsmp_la_CPPFLAGS=$(common_performance_CPPFLAGS)
+performance_libsmp_la_CXXFLAGS=$(common_performance_CXXFLAGS)
+performance_libsmp_la_CCASFLAGS=$(common_performance_CXXFLAGS)
+performance_libsmp_la_SOURCES=$(smp_sources) $(ult_sources)
 
-performance_libsmp_la_CXXFLAGS=$(nanos_perfo_cxxflags)
-performance_libsmp_la_CCASFLAGS=$(nanos_perfo_cxxflags)
-performance_libsmp_la_SOURCES=$(smp_sources) $(smp_ult_sources)
-
-performance_libnanox_pe_smp_la_CXXFLAGS=$(nanos_perfo_cxxflags)
-performance_libnanox_pe_smp_la_LDFLAGS=$(ld_plugin_flags)
-performance_libnanox_pe_smp_la_LIBADD=$(common_libadd)
+performance_libnanox_pe_smp_la_CPPFLAGS=$(common_performance_CPPFLAGS) @memkindinc@
+performance_libnanox_pe_smp_la_CXXFLAGS=$(common_performance_CXXFLAGS)
+performance_libnanox_pe_smp_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags) @memkindlib@
+performance_libnanox_pe_smp_la_LIBADD=$(common_libadd) @memkindlibs@
 performance_libnanox_pe_smp_la_SOURCES=$(pe_smp_sources)
-
-performance_libnanox_pe_smp_numa_la_CXXFLAGS=$(nanos_perfo_cxxflags) $(smp_numa_flags)
-performance_libnanox_pe_smp_numa_la_LDFLAGS=$(ld_plugin_flags)
-performance_libnanox_pe_smp_numa_la_LIBADD=$(common_libadd)
-performance_libnanox_pe_smp_numa_la_SOURCES=$(pe_smp_sources)
 endif
 

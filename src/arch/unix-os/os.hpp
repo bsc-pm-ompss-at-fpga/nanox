@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -20,17 +20,14 @@
 #ifndef _NANOS_OS
 #define _NANOS_OS
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
 #include <string>
 #include <vector>
 #include <stdlib.h>
 #include <unistd.h>
 #include <dlfcn.h>
 #include <time.h>
-#include <sched.h>
 #include "nanos-int.h"
+#include "cpuset.hpp"
 
 namespace nanos
 {
@@ -89,8 +86,8 @@ namespace nanos
          static InitList   *_initList;
          static InitList   *_postInitList;
          static ModuleList *_moduleList;
-         static cpu_set_t  _systemMask;
-         static cpu_set_t  _processMask;
+         static CpuSet      _systemMask;
+         static CpuSet      _processMask;
       public:
 
          static void init ();
@@ -118,8 +115,8 @@ namespace nanos
          static const InitList & getPostInitializationFunctions ( ) { return *_postInitList;}
          static const ModuleList & getRequestedModules () { return *_moduleList; }
 
-         static void getSystemAffinity( cpu_set_t *cpu_set );
-         static void getProcessAffinity( cpu_set_t *cpu_set );
+         static const CpuSet& getSystemAffinity() { return _systemMask; }
+         static const CpuSet& getProcessAffinity() { return _processMask; }
 
          static int getMaxProcessors ( void );
 

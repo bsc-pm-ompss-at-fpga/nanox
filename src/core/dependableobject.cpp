@@ -1,5 +1,5 @@
-
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*************************************************************************************/
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -20,6 +20,7 @@
 #include "dependableobject.hpp"
 #include "instrumentation.hpp"
 #include "system.hpp"
+#include "basethread.hpp"
 #include <alloca.h>
 
 using namespace nanos;

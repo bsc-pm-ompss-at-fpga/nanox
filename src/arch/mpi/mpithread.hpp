@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -95,6 +95,9 @@ namespace ext
          bool switchToPE(int rank, int uuid);
 
          virtual bool inlineWorkDependent( WD &work );
+         
+         virtual bool canBlock() { return false;}
+
          
          /**
           * Deletes an WD if no thread is executing it

@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -60,8 +60,10 @@ namespace ext
          static bool                      _overlapOutputs;
          static transfer_mode             _transferMode; //! Data transfer's mode (synchronous / asynchronous, ...)
          static size_t                    _maxGPUMemory; //! Maximum amount of memory for each GPU to use
+         static bool                      _allocatePinnedBuffers; //! Enable / disable allocation of pinned memory buffers used by transfers
          static bool                      _gpuWarmup; //! Enable / disable driver warmup (during runtime startup)
          static bool                      _initCublas; //! Init CUBLAS library during runtime startup
+         static bool                      _initCuSparse; //! Init cuSPARSE library during runtime startup
          static void *                    _gpusProperties; //! Array of structs of cudaDeviceProp
          static bool                      _allocWide; //! Use wide allocation policy for the region cache
 
@@ -98,9 +100,13 @@ namespace ext
 
          static size_t getGPUMaxMemory( void ) { return _maxGPUMemory; }
 
+         static bool isAllocatePinnedBuffersEnabled ( void ) { return _allocatePinnedBuffers; }
+
          static bool isGPUWarmupDefined ( void ) { return _gpuWarmup; }
 
          static bool isCUBLASInitDefined ( void ) { return _initCublas; }
+
+         static bool isCUSPARSEInitDefined ( void ) { return _initCuSparse; }
 
          static void getGPUsProperties( int device, void * deviceProps );
 

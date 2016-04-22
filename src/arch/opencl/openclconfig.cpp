@@ -1,6 +1,5 @@
-
 /*************************************************************************************/
-/*      Copyright 2013 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -19,7 +18,9 @@
 /*************************************************************************************/
 
 #include "openclconfig.hpp"
+#include "openclplugin.hpp"
 #include "system.hpp"
+#include <dlfcn.h>
 
 using namespace nanos;
 using namespace nanos::ext;
@@ -35,8 +36,7 @@ int OpenCLConfig::_prefetchNum = 1;
 unsigned int OpenCLConfig::_currNumDevices = 0;
 System::CachePolicyType OpenCLConfig::_cachePolicy = System::DEFAULT;
 //System::CachePolicyType OpenCLConfig::_cachePolicy = System::WRITE_BACK;
-//This var name has to be consistant with the one which the compiler "fills" (basically, do not change it)
-extern __attribute__((weak)) char ompss_uses_opencl;
+bool OpenCLConfig::_enableProfiling = false;
 
 std::map<cl_device_id,cl_context>* OpenCLConfig::_devicesPtr=0;
 
@@ -130,14 +130,29 @@ void OpenCLConfig::prepare( Config &cfg )
    cfg.registerConfigOption ( "opencl-cache-policy", cachePolicyCfg, "Defines the cache policy for OpenCL architectures: write-through / write-back (wb by default)" );
    cfg.registerEnvOption ( "opencl-cache-policy", "NX_OPENCL_CACHE_POLICY" );
    cfg.registerArgOption( "opencl-cache-policy", "opencl-cache-policy" );
+
+   // Enable/disable Profiling.
+   const std::string openclProfilingOptName = "opencl-profiling";
+   cfg.registerConfigOption( openclProfilingOptName,
+                             NEW Config::FlagOption( _enableProfiling ),
+                             "Enable the OpenCL Profiling mode");
+   cfg.registerEnvOption( openclProfilingOptName, "NX_OPENCL_PROFILING" );
+   cfg.registerArgOption( openclProfilingOptName, openclProfilingOptName );
 }
 
-void OpenCLConfig::apply(std::string &_devTy, std::map<cl_device_id, cl_context>& _devices) {
-    _devicesPtr = &_devices;
+void OpenCLConfig::apply(const std::string devTypeIn, std::map<cl_device_id, cl_context>* devices) {
+    std::string devTyStr = devTypeIn;
+    _devicesPtr = devices;
+    
+    //ompss_uses_opencl pointer will be null if the compiler did not fill it (#1050)
+    void * myself = dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
+    bool mercuriumHasTasks = dlsym(myself, "ompss_uses_opencl") != NULL;
+    dlclose( myself );
+    
     //Auto-enable CUDA if it was not done before
     if (!_enableOpenCL) {
-        //ompss_uses_opencl pointer will be null (is extern) if the compiler did not fill it
-        _enableOpenCL = ((&ompss_uses_opencl) != NULL);
+        
+        _enableOpenCL = mercuriumHasTasks;
     }
     if (_forceDisableOpenCL || !_enableOpenCL)
         return;
@@ -168,16 +183,16 @@ void OpenCLConfig::apply(std::string &_devTy, std::map<cl_device_id, cl_context>
 
     cl_device_type devTy=0;
 
-    std::transform(_devTy.begin(), _devTy.end(), _devTy.begin(), ::toupper);
+    std::transform(devTyStr.begin(), devTyStr.end(), devTyStr.begin(), ::toupper);
     // Parse the requested device type.
-    if (_devTy == "" || _devTy.find("ALL") != std::string::npos)
+    if (devTyStr == "" || devTyStr.find("ALL") != std::string::npos)
             devTy = CL_DEVICE_TYPE_ALL;
     else {
-        if (_devTy.find("CPU") != std::string::npos)
+        if (devTyStr.find("CPU") != std::string::npos)
             devTy |= CL_DEVICE_TYPE_CPU;
-        if (_devTy.find("GPU") != std::string::npos)
+        if (devTyStr.find("GPU") != std::string::npos)
             devTy |= CL_DEVICE_TYPE_GPU;
-        if (_devTy.find("ACCELERATOR") != std::string::npos)
+        if (devTyStr.find("ACCELERATOR") != std::string::npos)
             devTy |= CL_DEVICE_TYPE_ACCELERATOR;
     }
 
@@ -186,7 +201,7 @@ void OpenCLConfig::apply(std::string &_devTy, std::map<cl_device_id, cl_context>
             e = _plats.end();
             i != e;
             ++i) {
-#ifndef NANOS_DISABLE_ALLOCATOR
+#ifdef NANOS_ENABLE_ALLOCATOR
         char buffer[200];
         clGetPlatformInfo(*i, CL_PLATFORM_VENDOR, 200, buffer, NULL);
         if (std::string(buffer) == "Intel(R) Corporation" || std::string(buffer) == "ARM") {
@@ -223,7 +238,7 @@ void OpenCLConfig::apply(std::string &_devTy, std::map<cl_device_id, cl_context>
                 continue;
 
             unsigned int maxDevs= (unsigned int) _devNum;
-            if (available && _devices.size() + devicesToUse < maxDevs) {
+            if (available && _devicesPtr->size() + devicesToUse < maxDevs) {
                 avaiableDevs[devicesToUse++] = *j;
             }
         }
@@ -238,15 +253,14 @@ void OpenCLConfig::apply(std::string &_devTy, std::map<cl_device_id, cl_context>
         //NANOS_OPENCL_CLOSE_IN_OCL_RUNTIME_EVENT;
         // Put all available devices inside the vector.
         for (cl_device_id *j = avaiableDevs, *f = avaiableDevs + devicesToUse; j != f; ++j) {
-            _devices.insert(std::make_pair(*j, ctx));
+            _devicesPtr->insert(std::make_pair(*j, ctx));
         }
 
         delete [] devs;
     }   
-    _currNumDevices = _devices.size();
+    _currNumDevices = _devicesPtr->size();
     
     if ( _currNumDevices == 0 ) {
-       bool mercuriumHasTasks = ((&ompss_uses_opencl) != NULL);
        if ( mercuriumHasTasks ) {
           message0( " OpenCL tasks were compiled and no OpenCL devices were found, execution"
                   " could have unexpected behavior and can even hang" );

@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -90,7 +90,11 @@ namespace nanos
    class DOWait : public DependableObject
    {
       private:
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+         bool       _depsSatisfied; /**< Condition to satisfy before execution can go forward */
+#else
          volatile bool       _depsSatisfied; /**< Condition to satisfy before execution can go forward */
+#endif
          SingleSyncCond<EqualConditionChecker<bool> >  _syncCond; /**< TODO */
       public:
          /*! \brief DOWait default constructor

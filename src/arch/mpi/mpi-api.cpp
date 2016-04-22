@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -246,6 +246,9 @@ NANOS_API_DEF(MPI_Datatype, ompss_get_mpi_type, (int type)) {
             break;
         case mpitype_ompss_unsigned_long_long:
             result = MPI_UNSIGNED_LONG_LONG;
+            break;
+        case mpitype_ompss_signed_long_long:
+            result = MPI_LONG_LONG;
             break;
         default:
         break;

@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -21,6 +21,7 @@
 #define _NANOS_LAZY_INIT_DECL
 
 #include "atomic_decl.hpp"
+#include "lock_decl.hpp"
 
 using namespace nanos;
 

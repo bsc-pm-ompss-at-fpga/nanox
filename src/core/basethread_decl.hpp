@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -20,15 +20,19 @@
 #ifndef _BASE_THREAD_DECL
 #define _BASE_THREAD_DECL
 
-#include "workdescriptor_decl.hpp"
-#include "processingelement_fwd.hpp"
-#include "debug_decl.hpp"
-#include "atomic_decl.hpp"
-#include "schedule_fwd.hpp"
-#include "threadteam_fwd.hpp"
-#include "allocator_decl.hpp"
 #include <set>
 #include <fstream>
+
+#include "processingelement_fwd.hpp"
+#include "schedule_fwd.hpp"
+#include "threadteam_fwd.hpp"
+
+#include "debug.hpp"
+#include "atomic_decl.hpp"
+#include "lock_decl.hpp"
+
+#include "workdescriptor_decl.hpp"
+#include "allocator_decl.hpp"
 #include "wddeque_decl.hpp"
 
 namespace nanos
@@ -118,26 +122,62 @@ namespace nanos
       friend class Scheduler;
       private:
          typedef void (*callback_t)(void);
-         typedef struct StatusFlags_t{
-            bool is_main_thread:1;
-            bool has_started:1;
-            bool must_stop:1;
-            bool must_sleep:1;
-            bool is_idle:1;
-            bool is_paused:1;
-            bool has_team:1;
-            bool has_joined:1;
-            bool is_waiting:1;
-            bool can_get_work:1;    /**< Set whether the thread can get more WDs to run or not */
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+             struct AtomicBool
+             {
+                 private:
+                     bool value;
+                 public:
+                     AtomicBool() : value() { }
+                     /* explicit */ operator bool() const {
+                         return __atomic_load_n(&value, __ATOMIC_ACQUIRE);
+                     };
+                     AtomicBool& operator=(bool b)
+                     {
+                         __atomic_store_n(&value, b, __ATOMIC_RELEASE);
+                         return *this;
+                     }
 
-            StatusFlags_t() { memset( this, 0, sizeof(*this)); }
-         } StatusFlags;
+                     bool operator!() const
+                     {
+                         return !this->operator bool();
+                     }
+             };
+#endif
+         struct StatusFlags {
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+             typedef AtomicBool StatusFlag;
+#else
+             typedef bool StatusFlag;
+#endif
+            StatusFlag is_main_thread;
+            StatusFlag has_started;
+            StatusFlag must_stop;
+            StatusFlag must_sleep;
+            StatusFlag is_idle;
+            StatusFlag is_paused;
+            StatusFlag has_team;
+            StatusFlag has_joined;
+            StatusFlag is_waiting;
+            StatusFlag can_get_work;    /**< Set whether the thread can get more WDs to run or not */
+            StatusFlag must_leave_team; /**< Set whether to leave the team when thread is blocked */
+
+            StatusFlags()
+                : is_main_thread(), has_started(), must_stop(),
+                must_sleep(), is_idle(), is_paused(), has_team(), has_joined(),
+                is_waiting(), can_get_work()
+             { }
+         };
       private:
          // Thread info/status
          unsigned short          _id;            /**< Thread identifier */
          unsigned int            _osId;          /**< OS Thread identifier */
          unsigned short          _maxPrefetch;   /**< Maximum number of tasks that the thread can be running simultaneously */
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+         StatusFlags    _status;        /**< BaseThread status flags */
+#else
          volatile StatusFlags    _status;        /**< BaseThread status flags */
+#endif
          ext::SMPMultiThread    *_parent;
          // Relationships:
          ProcessingElement      *_pe;            /**< Threads are binded to a PE for its life-time */
@@ -145,8 +185,8 @@ namespace nanos
          Lock                    _mlock;         /**< Thread Lock */
          // Current/following tasks: 
          WD                     &_threadWD;      /**< Thread implicit WorkDescriptor */
-         WD                     *_plannedWD;     /**< Used for the recovery workaround for ARM. Current WorkDescriptor the thread is executing */
          WD                     *_currentWD;     /**< Current WorkDescriptor the thread is executing */
+         WD                     *_heldWD;
          WDDeque                 _nextWDs;       /**< Queue with all the tasks that the thread is being run simultaneously */
          // Thread's Team info:
          TeamData               *_teamData;      /**< Current team data, thread is registered and also it has entered to the team */
@@ -159,7 +199,7 @@ namespace nanos
          Allocator               _allocator;     /**< Per thread allocator */
          unsigned short          _steps;         //!< Number of scheduler steps (zero means infinite)
          callback_t              _bpCallBack;    //!< Break point callback. We call it after _steps scheduler ops
-         
+         ThreadTeam             *_nextTeam;      //!< If thread has no team, which team should it join
 
       private:
          virtual void initializeDependent () = 0;
@@ -169,15 +209,9 @@ namespace nanos
          virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) = 0;
          virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) = 0;
          virtual bool inlineWorkDependent (WD &work) = 0;
-         virtual void outlineWorkDependent (WD &work) = 0;
-         virtual void preOutlineWorkDependent (WD &work) = 0;
          virtual void switchTo( WD *work, SchedulerHelper *helper ) = 0;
          virtual void exitTo( WD *work, SchedulerHelper *helper ) = 0;
 
-      protected:
-         /*! \brief Must be called by children classes after the join operation (protected)
-          */ 
-         void joined ( void ); 
       private:
          //! \brief BaseThread default constructor (private)
          BaseThread ();
@@ -187,6 +221,7 @@ namespace nanos
          const BaseThread & operator= ( const BaseThread & );
       public:
          std::ostream          *_file;
+         bool                   _gasnetAllowAM;
          std::set<void *> _pendingRequests;
          //! \brief BaseThread constructor
          BaseThread ( unsigned int osId, WD &wd, ProcessingElement *creator = 0, ext::SMPMultiThread *parent = NULL );
@@ -205,7 +240,7 @@ namespace nanos
          void unlock ();
 
          virtual void start () = 0;
-         virtual void finish () { if ( _status.has_team ) leaveTeam(); };
+         virtual void finish ();
          void run();
          void stop();
          virtual void sleep();
@@ -218,20 +253,22 @@ namespace nanos
          virtual void processTransfers();
          virtual void yield() {};
 
+         /*! \brief Must be called by children classes after the join operation (protected)
+          */ 
+         void joined ( void ); 
          virtual void join() = 0;
          virtual void bind() {};
+         virtual void outlineWorkDependent (WD &work) = 0;
+         virtual void preOutlineWorkDependent (WD &work) = 0;
 
          virtual void wait();
          virtual void resume();
 
          virtual bool canBlock() { return false; }
 
-#ifdef ARM_RECOVERY_WORKAROUND
-         void setPlannedWD ( WD &planned );
-
-         WD * getPlannedWD () const;
-#endif
-
+         // set/get methods
+         void setHeldWD ( WD *wd );
+         WD * getHeldWD () const;
          void setCurrentWD ( WD &current );
 
          WD * getCurrentWD () const;
@@ -245,6 +282,9 @@ namespace nanos
          virtual void addNextWD ( WD *next );
          virtual WD * getNextWD ();
          virtual bool hasNextWD () const;
+
+         // Return the number of concurrent tasks (tasks that can be run by this thread at the same time)
+         int getMaxConcurrentTasks() const;
 
          // Set whether the thread will schedule WDs or not used by getImmediateSuccessor()
          // If so, WD's dependencies should be kept till WD is finished
@@ -292,6 +332,10 @@ namespace nanos
          void enableGettingWork ();
 
          void disableGettingWork ();
+
+         bool isLeavingTeam () const;
+
+         void setLeaveTeam ( bool leave );
 
          ProcessingElement * runningOn() const;
          
@@ -362,6 +406,11 @@ namespace nanos
          void setSteps( unsigned short s );
          //! \brief Set break point callback
          void setCallBack( callback_t cb );
+
+         //! \brief Get next Team to enter
+         ThreadTeam* getNextTeam() const;
+         //! \brief Set next Team to enter
+         void setNextTeam( ThreadTeam *team );
    };
 
    extern __thread BaseThread *myThread;

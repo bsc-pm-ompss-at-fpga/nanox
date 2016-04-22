@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -31,10 +31,6 @@ using namespace nanos::ext;
 void GPUMemoryTransfer::completeTransfer()
 {
    _hostAddress._ops->completeOp();
-   if ( _hostAddress._functor ) {
-      ( *_hostAddress._functor ) ();
-   }
-
    delete this;
 }
 
@@ -47,18 +43,18 @@ GPUMemoryTransferOutList::~GPUMemoryTransferOutList()
    }
 }
 
-void GPUMemoryTransferOutList::addMemoryTransfer ( CopyDescriptor &hostAddress, void * deviceAddress, size_t size )
+void GPUMemoryTransferOutList::addMemoryTransfer ( CopyDescriptor &hostAddress, void * deviceAddress, size_t len, size_t count, size_t ld )
 {
-   GPUMemoryTransfer * mt = NEW GPUMemoryTransfer ( hostAddress, deviceAddress, size );
+   GPUMemoryTransfer * mt = NEW GPUMemoryTransfer ( hostAddress, deviceAddress, len, count, ld );
    _lock.acquire();
    _pendingTransfersAsync.push_back( mt );
    _lock.release();
 }
 
 
-void GPUMemoryTransferOutAsyncList::addMemoryTransfer ( CopyDescriptor &hostAddress, void * deviceAddress, size_t size )
+void GPUMemoryTransferOutAsyncList::addMemoryTransfer ( CopyDescriptor &hostAddress, void * deviceAddress, size_t len, size_t count, size_t ld )
 {
-   GPUMemoryTransfer * mt = NEW GPUMemoryTransfer ( hostAddress, deviceAddress, size );
+   GPUMemoryTransfer * mt = NEW GPUMemoryTransfer ( hostAddress, deviceAddress, len, count, ld );
    _lock.acquire();
    _pendingTransfersAsync.push_back( mt );
    _lock.release();
@@ -81,9 +77,9 @@ GPUMemoryTransferInAsyncList::~GPUMemoryTransferInAsyncList()
                      + toString<size_t>( _requestedTransfers.size() ) + " pending transfers to perform" );
 }
 
-void GPUMemoryTransferInAsyncList::addMemoryTransfer ( CopyDescriptor &hostAddress, void * deviceAddress, size_t size )
+void GPUMemoryTransferInAsyncList::addMemoryTransfer ( CopyDescriptor &hostAddress, void * deviceAddress, size_t len, size_t count, size_t ld )
 {
-   GPUMemoryTransfer * mt = NEW GPUMemoryTransfer ( hostAddress, deviceAddress, size );
+   GPUMemoryTransfer * mt = NEW GPUMemoryTransfer ( hostAddress, deviceAddress, len, count, ld );
    _lock.acquire();
    _requestedTransfers.push_back( mt );
    _lock.release();

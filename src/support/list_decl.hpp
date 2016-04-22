@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -21,6 +21,7 @@
 #define _NANOS_LIST_DECL
 
 #include "atomic_decl.hpp"
+#include "lock_decl.hpp"
 #include <list>
 #include <limits.h>
 #include <iterator>
@@ -44,7 +45,11 @@ class List {
             _T             _object; /**< Element stored in this node */
             ListNode*     _next; /**< Pointer to next node in the list */
             Atomic<int>   _refs; /**< Atomic references counter */
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+            bool _valid; /**< Valid flag */
+#else
             volatile bool _valid; /**< Valid flag */
+#endif
 
          public:
            /*! \brief Default constructor
@@ -66,7 +71,13 @@ class List {
            /*! \brief Copy constructor
             *  \param node Another list node
             */
-            ListNode( ListNode const &node ) : _object(node._object), _next(node._next), _refs(node._refs), _valid(node._valid) {}
+            ListNode( ListNode const &node ) : _object(node._object), _next(node._next), _refs(node._refs), 
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+            _valid(__atomic_load_n(&node._valid, __ATOMIC_ACQUIRE))
+#else
+            _valid(node._valid)
+#endif
+          {}
 
            /*! \brief Copy operator
             *  \param node Another list node
@@ -152,13 +163,21 @@ class List {
            /*! \brief returns whether the 
             */
             bool isValid() const
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+               { return __atomic_load_n(&_valid, __ATOMIC_ACQUIRE); }
+#else
                { return _valid; }
+#endif
 
            /*! \brief Set valid flag to 'valid'
             *  \param valid
             */
             void setValid( bool valid )
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+               { __atomic_store_n(&_valid, valid, __ATOMIC_RELEASE); }
+#else
                { _valid = valid; }
+#endif
       };
 
       class const_iterator;

@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -21,41 +21,38 @@
 #define _NANOS_SMP_WD
 
 #include <stdint.h>
-#include "smpdevice.hpp"
-#include "workdescriptor.hpp"
+#include "smpdevice_decl.hpp"
+#include "workdescriptor_fwd.hpp"
 #include "config.hpp"
 
 namespace nanos {
 namespace ext
 {
 
-   extern SMPDevice SMP;
+   //extern SMPDevice SMP;
+   SMPDevice &getSMPDevice();
 
+   //! \brief Device Data for SMP
    class SMPDD : public DD
    {
       private:
-         intptr_t *     _stack;
-         intptr_t *     _state;
-         static size_t     _stackSize;
-
+         void               *_stack;             //!< Stack base
+         void               *_state;             //!< Stack pointer
+         static size_t       _stackSize;         //!< Stack size
       protected:
          SMPDD( work_fct w, Device *dd ) : DD( dd, w ),_stack( 0 ),_state( 0 ) {}
          SMPDD( Device *dd ) : DD( dd, NULL ), _stack( 0 ),_state( 0 ) {}
-
       public:
-         // constructors
-         SMPDD( work_fct w ) : DD( &SMP, w ), _stack( 0 ),_state( 0 ) {}
-
-         SMPDD() : DD( &SMP, NULL ), _stack( 0 ),_state( 0 ) {}
-
-         // copy constructors
+         //! \brief Constructor using work function
+         SMPDD( work_fct w ) : DD( &getSMPDevice(), w ), _stack( 0 ),_state( 0 ) {}
+         //! \brief Default constructor 
+         SMPDD() : DD( &getSMPDevice(), NULL ), _stack( 0 ),_state( 0 ) {}
+         //! \brief Copy constructor
          SMPDD( const SMPDD &dd ) : DD( dd ), _stack( 0 ), _state( 0 ) {}
-
-         // assignment operator
+         //! \brief Assignment operator
          const SMPDD & operator= ( const SMPDD &wd );
-         // destructor
-
-         virtual ~SMPDD() { if ( _stack ) delete[] _stack; }
+         //! \brief Destructor
+         virtual ~SMPDD() { if ( _stack ) delete[] (char *) _stack; }
 
          bool hasStack() { return _state != NULL; }
 
@@ -68,9 +65,10 @@ namespace ext
          */
          static void workWrapper( WD &data );
 
-         intptr_t *getState() const { return _state; }
-
-         void setState ( intptr_t * newState ) { _state = newState; }
+         //! \brief Getting current stack pointer
+         void * getState() const { return _state; }
+         //! \brief Setting current stack pointer
+         void setState ( void * newState ) { _state = newState; }
 
          static void prepareConfig( Config &config );
 

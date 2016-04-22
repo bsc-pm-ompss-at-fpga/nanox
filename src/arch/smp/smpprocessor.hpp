@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -21,8 +21,8 @@
 #define _NANOS_SMP_PROCESSOR
 
 #include "config.hpp"
+#include "smpdevice_decl.hpp"
 #include "smpthread.hpp"
-#include "smpdevice.hpp"
 #include "processingelement.hpp"
 
 // xlc/icc compilers require the next include to emit the vtable of WDDeque
@@ -76,7 +76,7 @@ namespace ext
 #endif
          bool isReserved() const { return _reserved; }
          void reserve() { _reserved = true; }
-         bool isActive() const { return _active; }
+         virtual bool isActive() const { return _active; }
          void setActive( bool value = true) { _active = value; }
          //virtual void* getAddressDependent( uint64_t tag );
          //virtual void* waitInputsDependent( WorkDescriptor &work );

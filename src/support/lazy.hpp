@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -22,6 +22,7 @@
 
 #include "lazy_decl.hpp"
 #include "atomic.hpp"
+#include "lock.hpp"
 
 template <class T>
 inline void LazyInit<T>::construct ()

@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -22,6 +22,7 @@
 #include "plugin.hpp"
 // We need to include system.hpp (to use verbose0(msg)), as debug.hpp does not include it
 #include "system.hpp"
+#include <dlfcn.h>
 
 #include <cuda_runtime.h>
 
@@ -39,8 +40,10 @@ bool GPUConfig::_overlapInputs = true;
 bool GPUConfig::_overlapOutputs = true;
 transfer_mode GPUConfig::_transferMode = NANOS_GPU_TRANSFER_NORMAL;
 size_t GPUConfig::_maxGPUMemory = 0;
+bool GPUConfig::_allocatePinnedBuffers = true;
 bool GPUConfig::_gpuWarmup = true;
 bool GPUConfig::_initCublas = false;
+bool GPUConfig::_initCuSparse = false;
 void * GPUConfig::_gpusProperties = NULL;
 bool GPUConfig::_allocWide = false;
 
@@ -114,6 +117,13 @@ void GPUConfig::prepare( Config& config )
    config.registerEnvOption ( "gpu-max-memory", "NX_GPUMAXMEM" );
    config.registerArgOption ( "gpu-max-memory", "gpu-max-memory" );
 
+   // Enable / disable overlapping of outputs
+   config.registerConfigOption( "gpu-pinned-buffers", NEW Config::FlagOption( _allocatePinnedBuffers ),
+                                "Set whether GPU component should allocate pinned buffers used by data transfers (enabled by default)" );
+   config.registerEnvOption( "gpu-pinned-buffers", "NX_GPU_PINNED_BUFFERS" );
+   config.registerArgOption( "gpu-pinned-buffers", "gpu-pinned-buffers" );
+
+
    // Enable / disable GPU warmup
    config.registerConfigOption( "gpu-warmup", NEW Config::FlagOption( _gpuWarmup ),
                                 "Enable or disable warming up the GPU (enabled by default)" );
@@ -126,6 +136,12 @@ void GPUConfig::prepare( Config& config )
    config.registerEnvOption( "gpu-cublas-init", "NX_GPUCUBLASINIT" );
    config.registerArgOption( "gpu-cublas-init", "gpu-cublas-init" );
 
+   // Enable / disable cuSPARSE initialization
+   config.registerConfigOption( "gpu-cusparse-init", NEW Config::FlagOption( _initCuSparse ),
+                                "Enable or disable cuSPARSE initialization (disabled by default)" );
+   config.registerEnvOption( "gpu-cusparse-init", "NX_GPUCUBLASINIT" );
+   config.registerArgOption( "gpu-cusparse-init", "gpu-cusparse-init" );
+
    config.registerConfigOption( "gpu-alloc-wide", NEW Config::FlagOption( _allocWide ),
                                 "Alloc full objects in the cache." );
    config.registerEnvOption( "gpu-alloc-wide", "NX_GPUALLOCWIDE" );
@@ -134,15 +150,23 @@ void GPUConfig::prepare( Config& config )
 
 void GPUConfig::apply()
 {
-   //Auto-enable CUDA if it was not done before
+   //Auto-enable CUDA if it was not done before (#1050)
+   void * myself = dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
+   bool mercuriumHasTasks = dlsym(myself, "ompss_uses_cuda") != NULL;
+   
+   // Init cublas if it wasn't manually enabled, but detected in the binary (#1050)
+   _initCublas = _initCublas || ( dlsym(myself, "gpu_cublas_init") != NULL );
+   // Init cuSPARSE if it wasn't manually enabled, but detected in the binary (#1050)
+   _initCuSparse = _initCuSparse || ( dlsym(myself, "gpu_sparse_init") != NULL );
+   
+   dlclose( myself );
+   
    if ( !_enableCUDA ) {
       //ompss_uses_cuda pointer will be null (it's extern) if the compiler didn't fill it
-      _enableCUDA = ( sys.getOmpssUsesCuda() != NULL );
+      _enableCUDA = mercuriumHasTasks;
    }
 
    if ( _forceDisableCUDA || !_enableCUDA || _numGPUs == 0 ) {
-      bool mercuriumHasTasks = ( sys.getOmpssUsesCuda() != NULL );
-
       if ( mercuriumHasTasks ) {
          message0( " CUDA tasks were compiled and CUDA was disabled, execution"
                " could have unexpected behavior and can even hang, check configuration parameters" );
@@ -157,6 +181,7 @@ void GPUConfig::apply()
       _maxGPUMemory = 0;
       _gpuWarmup = false;
       _initCublas = false;
+      _initCuSparse = false;
       _gpusProperties = NULL;
 
    } else {
@@ -177,6 +202,7 @@ void GPUConfig::apply()
          _maxGPUMemory = 0;
          _gpuWarmup = false;
          _initCublas = false;
+         _initCuSparse = false;
          _gpusProperties = NULL;
          warning0( "Couldn't initialize the GPU support component at runtime startup: " << cudaGetErrorString( cudaErr ) );
 
@@ -254,18 +280,23 @@ void GPUConfig::apply()
          }
       }
 
-      if ( _initCublas || ( sys.getOmpssUsesCublas() != 0 ) ) {
-         //gpu_cublas_init pointer will be null (it's extern) if the compiler did not fill it
-         _initCublas = true;
+      if ( _initCublas ) {
          verbose0( "Initializing CUBLAS Library" );
          if ( !sys.loadPlugin( "gpu-cublas" ) ) {
             _initCublas = false;
             warning0( "Couldn't initialize CUBLAS library at runtime startup" );
          }
       }
+
+      if ( _initCuSparse ) {
+         verbose0( "Initializing cuSPARSE Library" );
+         if ( !sys.loadPlugin( "gpu-cusparse" ) ) {
+            _initCuSparse = false;
+            warning0( "Couldn't initialize cuSPARSE library at runtime startup" );
+         }
+      }
       
       if ( _numGPUs == 0 ) {
-         bool mercuriumHasTasks = ( sys.getOmpssUsesCuda() != NULL );
          if ( mercuriumHasTasks ) {
             message0( " CUDA tasks were compiled and no CUDA devices were found, execution"
                     " could have unexpected behavior and can even hang" );
@@ -299,6 +330,7 @@ void GPUConfig::printConfiguration()
    else {
       verbose0( "  Limited memory: Disabled" );
    }
+   verbose0( "  Allocate pinned buffers: " << ( _allocatePinnedBuffers ? "Enabled" : "Disabled" ) );
    verbose0( "  GPU warm up: " << ( _gpuWarmup ? "Enabled" : "Disabled" ) );
    verbose0( "  CUBLAS initialization: " << ( _initCublas ? "Enabled" : "Disabled" ) );
 

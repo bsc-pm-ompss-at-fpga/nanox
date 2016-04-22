@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -23,7 +23,10 @@
 #include <stdint.h>
 #include <map>
 #include <list>
+#include <ostream>
+
 #include "atomic_decl.hpp"
+#include "lock_decl.hpp"
 
 namespace nanos {
 
@@ -63,7 +66,7 @@ namespace nanos {
          void canAllocate( std::size_t *sizes, unsigned int numChunks, std::size_t *remainingSizes ) const;
          void getFreeChunksList( ChunkList &list ) const;
 
-         void printMap();
+         void printMap( std::ostream &o );
          std::size_t getCapacity() const;
          uint64_t getBasePointer( uint64_t address, size_t size );
 

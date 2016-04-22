@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -20,22 +20,24 @@
 #ifndef _BASE_THREAD_ELEMENT
 #define _BASE_THREAD_ELEMENT
 
-#include "workdescriptor_fwd.hpp"
-#include "atomic.hpp"
-#include "processingelement.hpp"
-#include "debug.hpp"
-#include "schedule_fwd.hpp"
-#include "threadteam_fwd.hpp"
-#include "basethread_decl.hpp"
-#include "atomic.hpp"
-#include "system.hpp"
-#include "wddeque.hpp"
-#include "printbt_decl.hpp"
-#include "xstring.hpp"
-
 #include <stdio.h>
 
-#include <string>
+#include "atomic.hpp"
+#include "debug.hpp"
+
+#include "schedule_fwd.hpp"
+#include "threadteam_fwd.hpp"
+
+#include "workdescriptor_decl.hpp"
+#include "processingelement.hpp"
+#include "basethread_decl.hpp"
+#include "wddeque.hpp"
+#include "smpthread.hpp"
+#include "xstring.hpp"
+
+#include "system.hpp"
+
+#include <stdio.h>
 
 namespace nanos
 {
@@ -111,18 +113,23 @@ namespace nanos
 
    inline BaseThread::BaseThread ( unsigned int osId, WD &wd, ProcessingElement *creator, ext::SMPMultiThread *parent ) :
       _id( sys.nextThreadId() ), _osId( osId ), _maxPrefetch( 1 ), _status( ), _parent( parent ), _pe( creator ), _mlock( ),
-      _threadWD( wd ), _currentWD( NULL ), _nextWDs( /* enableDeviceCounter */ false ), _teamData( NULL ), _nextTeamData( NULL ),
-      _name( "Thread" ), _description( "" ), _allocator( ), _steps(0), _bpCallBack( NULL )
+      _threadWD( wd ), _currentWD( NULL ), _heldWD( NULL ), _nextWDs( /* enableDeviceCounter */ false ), _teamData( NULL ), _nextTeamData( NULL ),
+      _name( "Thread" ), _description( "" ), _allocator( ), _steps(0), _bpCallBack( NULL ), _nextTeam( NULL ), _gasnetAllowAM( true ), _pendingRequests()
    {
          if ( sys.getSplitOutputForThreads() ) {
-            char tmpbuf[64];
-            sprintf(tmpbuf, "thd_out.%04d.%04d.log", sys.getNetwork()->getNodeNum(), _id );
-            _file = NEW std::ofstream(tmpbuf);
+            if ( _parent != NULL ) {
+               _file = _parent->_file;
+            } else {
+               char tmpbuf[64];
+               sprintf(tmpbuf, "thd_out.%04d.%04d.log", sys.getNetwork()->getNodeNum(), _id );
+               _file = NEW std::ofstream(tmpbuf);
+            }
          } else {
             _file = &std::cerr;
          }
 
          _status.can_get_work = true;
+         _status.must_leave_team = false;
    }
 
    inline bool BaseThread::isMainThread ( void ) const { return _status.is_main_thread; }
@@ -137,14 +144,6 @@ namespace nanos
    inline void BaseThread::unlock () { _mlock--; }
  
    inline void BaseThread::stop() { _status.must_stop = true; }
-
-   inline void BaseThread::sleep() {
-      if (!_status.must_sleep) {
-         _status.must_sleep = true;
-         if ( ThreadTeam *team = getTeam() )
-            team->decreaseFinalSize();
-      }
-   }
 
    inline void BaseThread::wakeup() { _status.must_sleep = false; }
 
@@ -170,15 +169,12 @@ namespace nanos
  
    inline void BaseThread::processTransfers () { this->idle(); }
 
-#ifdef ARM_RECOVERY_WORKAROUND
-   // The Planned WD is used to implement the workaround for task recovery from checkpoint.
-   inline void BaseThread::setPlannedWD ( WD &planned ) { _plannedWD = &planned; }
- 
-   inline WD * BaseThread::getPlannedWD () const { return _plannedWD; }
-#endif
+   // set/get methods
+   inline void BaseThread::setHeldWD ( WD *wd ) { _heldWD = wd; }
+   inline WD * BaseThread::getHeldWD () const { return _heldWD; }
 
    inline void BaseThread::setCurrentWD ( WD &current ) { _currentWD = &current; }
-
+ 
    inline WD * BaseThread::getCurrentWD () const { return _currentWD; }
  
    inline WD & BaseThread::getThreadWD () const { return _threadWD; }
@@ -190,7 +186,9 @@ namespace nanos
    inline bool BaseThread::canPrefetch () const { return _nextWDs.size() < _maxPrefetch; }
 
    inline bool BaseThread::hasNextWD () const { return !_nextWDs.empty(); }
- 
+
+   inline int BaseThread::getMaxConcurrentTasks () const { return 1; }
+
    inline ext::SMPMultiThread * BaseThread::getParent() { return _parent; }
 
    // team related methods
@@ -211,10 +209,7 @@ namespace nanos
       if ( _teamData ) 
       {
          TeamData *td = _teamData;
-         debug( "removing thread ", this,
-                " with id ", getTeamId(), 
-                " from ", _teamData->getTeam()
-              );
+         debug( "removing thread " << this << " with id " << toString<int>(getTeamId()) << " from " << _teamData->getTeam() );
 
          size_t final_size = td->getTeam()->removeThread( getTeamId() );
          if ( final_size == td->getTeam()->getFinalSize() ) td->getTeam()->setStable(true);
@@ -257,12 +252,14 @@ namespace nanos
 
    inline void BaseThread::wait ( void ) { _status.is_waiting = true; }
 
-   inline void BaseThread::resume ( void ) {_status.is_waiting = false; }
+   inline void BaseThread::resume ( void ) { _status.is_waiting = false; }
 
    inline bool BaseThread::isWaiting () const { return _status.is_waiting; }
 
    inline bool BaseThread::isPaused () const { return _status.is_paused; }
- 
+
+   inline bool BaseThread::isLeavingTeam () const { return _status.must_leave_team; }
+
    inline ProcessingElement * BaseThread::runningOn() const { return _pe; }
    
    inline void BaseThread::setRunningOn(ProcessingElement* element) { _pe=element; }
@@ -299,7 +296,7 @@ namespace nanos
         _description.append("-");
  
         /* adding global id */
-        _description.append( toString(getId()) );
+        _description.append( toString<int>(getId()) );
      }
  
      return _description;
@@ -319,6 +316,9 @@ namespace nanos
 
    inline void BaseThread::setSteps ( unsigned short s ) { _steps = s; }
 
+   inline ThreadTeam* BaseThread::getNextTeam() const { return _nextTeam; }
+
+   inline void BaseThread::setNextTeam( ThreadTeam *team ) { _nextTeam = team; }
 }
 
 #endif

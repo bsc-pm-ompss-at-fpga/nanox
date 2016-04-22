@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -25,6 +25,8 @@
 #include <vector>
 #include "dependenciesdomain_decl.hpp"
 #include "atomic.hpp"
+#include "recursivelock_decl.hpp"
+#include "lock.hpp"
 #include "dependableobject.hpp"
 #include "trackableobject.hpp"
 #include "dataaccess_decl.hpp"
@@ -69,7 +71,11 @@ inline bool DependenciesDomain::haveDependencePendantWrites ( void *addr )
    fatal("haveDependencePendantWrites service has not been implemented in that dependence plugin!");
    return true;
 }
+inline void DependenciesDomain::finalizeAllReductions ( void ) 
+{
+}
 
+inline void DependenciesDomain::clearDependenciesDomain ( void ) { }
 }
 
 #endif

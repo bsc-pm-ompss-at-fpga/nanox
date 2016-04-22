@@ -1,10 +1,31 @@
+/*************************************************************************************/
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*                                                                                   */
+/*      This file is part of the NANOS++ library.                                    */
+/*                                                                                   */
+/*      NANOS++ is free software: you can redistribute it and/or modify              */
+/*      it under the terms of the GNU Lesser General Public License as published by  */
+/*      the Free Software Foundation, either version 3 of the License, or            */
+/*      (at your option) any later version.                                          */
+/*                                                                                   */
+/*      NANOS++ is distributed in the hope that it will be useful,                   */
+/*      but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*      GNU Lesser General Public License for more details.                          */
+/*                                                                                   */
+/*      You should have received a copy of the GNU Lesser General Public License     */
+/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*************************************************************************************/
+
 #ifndef DEVICEOPS_HPP
 #define DEVICEOPS_HPP
 
 #include <iostream>
 
-#include "deviceops_decl.hpp"
 #include "atomic.hpp"
+#include "debug.hpp"
+#include "deviceops_decl.hpp"
+#include "os.hpp"
 
 #define VERBOSE_CACHE_OPS 0
 
@@ -35,28 +56,20 @@ inline bool DeviceOps::allCompleted() {
 
 inline bool DeviceOps::addCacheOp( /* debug: */ WorkDescriptor const *wd, int loc ) {
    bool b = _pendingCacheOp.tryAcquire();
-   ensure( wd != NULL, "Invalid WD adding a Cache Op.");
-   if ( b ) {
-      if ( VERBOSE_CACHE_OPS ) {
-         *(myThread->_file) << "[" << myThread->getId() << "] "<< (void *)this << " Added an op by " << wd->getId() << " at loc " << loc << std::endl;
+      ensure( wd != NULL, "Invalid WD adding a Cache Op.")
+      if ( b ) {
+         if ( VERBOSE_CACHE_OPS ) {
+            *(myThread->_file) << "[" << myThread->getId() << "] "<< (void *)this << " Added an op by " << wd->getId() << " at loc " << loc << std::endl;
+         }
+         _wd = wd;
+         _owner = wd->getId();
+         _loc = loc;
       }
-      _wd = wd;
-      _owner = wd->getId();
-      _loc = loc;
-   }
    return b;
 }
 
 inline bool DeviceOps::allCacheOpsCompleted() {
    return _pendingCacheOp.getState() == NANOS_LOCK_FREE;
-}
-
-inline void DeviceOps::syncAndDisableInvalidations() {
-   _lock.acquire();
-}
-
-inline void DeviceOps::resumeInvalidations() {
-   _lock.release();
 }
 
 inline void DeviceOps::completeOp() {
@@ -72,12 +85,17 @@ inline void DeviceOps::completeCacheOp( /* debug: */ WorkDescriptor const *wd ) 
    ensure( _pendingCacheOp.getState() != NANOS_LOCK_FREE, "Already completed op!" );
         ensure( wd == _wd, "Invalid owner clearing a cache op." );
         if ( VERBOSE_CACHE_OPS ) {
-           *(myThread->_file) << "[" << myThread->getId() << "] "<< (void *)this << " cleared an op by " << wd->getId() << std::endl;
+           *(myThread->_file) << "[" << myThread->getId() << "] " << OS::getMonotonicTime() << " " << (void *)this << " cleared an op by " << wd->getId() << std::endl;
         }
         _wd = NULL;
         _owner = -1;
         _loc = 0;
    _pendingCacheOp.release();
+}
+
+inline std::ostream & nanos::operator<< (std::ostream &o, DeviceOps const &ops) {
+   o << "{_pDeviceOps: " << ops._pendingDeviceOps.value() << " _pCacheOp: " << ops._pendingCacheOp.getState() << " _owner " << ops._owner <<"}";
+   return o;
 }
 
 #endif /* DEVICEOPS_HPP */

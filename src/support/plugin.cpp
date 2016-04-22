@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -107,4 +107,10 @@ Plugin * PluginManager::loadAndGetPlugin( const char *name, const bool initPlugi
    _activePlugins[plugin->getName()] = plugin;
 
    return plugin;
+}
+void PluginManager::unloadPlugins() {
+   for (PluginMap::iterator it = _activePlugins.begin();
+         it != _activePlugins.end(); it++ ) {
+      delete it->second;
+   }
 }

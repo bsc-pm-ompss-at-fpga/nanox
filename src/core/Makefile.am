@@ -1,5 +1,5 @@
 #####################################################################################
-#      Copyright 2009 Barcelona Supercomputing Center                               #
+#      Copyright 2015 Barcelona Supercomputing Center                               #
 #                                                                                   #
 #      This file is part of the NANOS++ library.                                    #
 #                                                                                   #
@@ -19,12 +19,9 @@
 
 #SUBDIRS = performance debug instrumentation instrumentation-debug
 
-include ../common.am
+include $(top_srcdir)/src/common.am
 
 pkginclude_HEADERS=nanos-int.h nanos_error.h
-
-common_libadd=\
-	$(END)
 
 devinclude_HEADERS = \
 	nanos-int.h \
@@ -34,6 +31,7 @@ devinclude_HEADERS = \
 	barrier.hpp \
 	cachedaccelerator_decl.hpp \
 	cachedaccelerator.hpp \
+	threadmanager_decl.hpp \
 	threadteam_fwd.hpp \
 	threadteam_decl.hpp \
 	threadteam.hpp \
@@ -120,28 +118,32 @@ devinclude_HEADERS = \
 	memcontroller_fwd.hpp  \
 	memcontroller_decl.hpp  \
 	memcachecopy_decl.hpp \
+	memcachecopy.hpp \
 	memcachecopy_fwd.hpp \
 	memoryops_decl.hpp \
 	memoryops_fwd.hpp \
 	globalregt_decl.hpp \
+	globalregt.hpp \
 	address_fwd.hpp \
 	address_decl.hpp \
 	address.hpp \
 	basedependency_fwd.hpp \
 	basedependency_decl.hpp \
 	graphentry_decl.hpp \
+	taskexecutionexception_decl.hpp \
+	taskexecutionexception.hpp \
 	trackableobject_fwd.hpp \
 	trackableobject_decl.hpp \
 	trackableobject.hpp \
-	hwloc_decl.hpp \
 	regionset_decl.hpp \
+	router_fwd.hpp \
+	router_decl.hpp \
+	router.hpp \
+	invalidationcontroller_decl.hpp \
+	invalidationcontroller_fwd.hpp \
+	task_reduction_decl.hpp \
+	task_reduction.hpp \
 	$(END)
-
-#if RESILIENCY
-#devinclude_HEADERS+=\
-#	taskexception_fwd.hpp \
-#	$(END)
-#endif
 
 common_sources=\
 	nanos-int.h \
@@ -260,11 +262,13 @@ common_sources=\
 	memcontroller.cpp  \
 	memcachecopy_decl.hpp \
 	memcachecopy_fwd.hpp \
+	memcachecopy.hpp \
 	memcachecopy.cpp \
 	memoryops_decl.hpp \
 	memoryops_fwd.hpp \
 	memoryops.cpp \
 	globalregt_decl.hpp \
+	globalregt.hpp \
 	globalregt.cpp \
 	address_fwd.hpp \
 	address_decl.hpp \
@@ -275,26 +279,16 @@ common_sources=\
 	basedependency_fwd.hpp \
 	basedependency_decl.hpp \
 	graphentry_decl.hpp \
-	hwloc_decl.hpp \
-	hwloc.cpp \
 	regionset_decl.hpp \
 	regionset.cpp \
-        $(END)
-
-if RESILIENCY
-common_sources+= \
-	backupmanager.hpp \
-	backupmanager.cpp \
+	invalidationcontroller_decl.hpp \
+	invalidationcontroller_fwd.hpp \
+	invalidationcontroller.cpp \
+	threadmanager_decl.hpp \
+	threadmanager.cpp \
+   task_reduction_decl.hpp \
+   task_reduction.hpp \
 	$(END)
-
-#	taskexception_fwd.hpp
-#	taskexception.hpp
-#	taskexception.cpp
-
-resiliency_aux_sources=\
-	backupmanager_aux.cpp \
-        $(END)
-endif
 
 instr_sources = \
 	instrumentation.cpp \
@@ -306,76 +300,65 @@ debug_LTLIBRARIES=
 instrumentation_LTLIBRARIES=
 instrumentation_debug_LTLIBRARIES=
 performance_LTLIBRARIES=
-noinst_LTLIBRARIES=
 
-if DEBUG_VERSION
+if is_debug_enabled
 debug_LTLIBRARIES+=debug/libnanox.la
 
-debug_libnanox_la_CPPFLAGS=$(BOOST_CPPFLAGS)
-debug_libnanox_la_CFLAGS=$(common_cflags) $(common_debug_cflags)
-debug_libnanox_la_CXXFLAGS =$(common_includes) $(common_debug_cxxflags) $(hwloc_cxxflags)
-debug_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(debugdir) $(ignore_muldefs) $(hwloc_ldflags)
-debug_libnanox_la_LIBADD=$(common_libadd) @NANOS_CONFIG_LIBS_DEBUG@
+debug_libnanox_la_CPPFLAGS=$(common_includes) $(common_debug_CPPFLAGS) @dlbinc@
+debug_libnanox_la_CXXFLAGS=$(common_includes) $(common_debug_CXXFLAGS)
+debug_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/debug
+debug_libnanox_la_LIBADD=$(common_libadd) @dlb_dbg@ @nanos_config_libs_debug@
 debug_libnanox_la_SOURCES=$(common_sources) $(resiliency_aux_sources)
-debug_libnanox_la_DEPENDENCIES=$(common_libadd) @NANOS_CONFIG_LIBS_DEBUG@
+debug_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_debug@
 endif
 
+if is_instrumentation_debug_enabled
+instrumentation_debug_LTLIBRARIES+=instrumentation-debug/libnanox.la
 
-if INSTRUMENTATION_VERSION
+instrumentation_debug_libnanox_la_CPPFLAGS=$(common_includes) $(common_instrumentation_debug_CPPFLAGS) @dlbinc@
+instrumentation_debug_libnanox_la_CXXFLAGS=$(common_includes) $(common_instrumentation_debug_CXXFLAGS)
+instrumentation_debug_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation-debug
+instrumentation_debug_libnanox_la_LIBADD=$(common_libadd) @dlb_instr_dbg@ @nanos_config_libs_instrumentation_debug@
+instrumentation_debug_libnanox_la_SOURCES=$(common_sources) $(instr_sources) $(resiliency_aux_sources)
+instrumentation_debug_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_instrumentation_debug@
+endif
+
+if is_instrumentation_enabled
 instrumentation_LTLIBRARIES+=instrumentation/libnanox.la
 
 if RESILIENCY # workaround for gcc bug
 noinst_LTLIBRARIES+=instrumentation/libresiliency.la # Need this to compile some source files with specific optimizations disabled
-instrumentation_libresiliency_la_CPPFLAGS=$(BOOST_CPPFLAGS)
-instrumentation_libresiliency_la_CFLAGS=$(common_cflags) $(common_instr_cflags)
-instrumentation_libresiliency_la_CXXFLAGS =-fno-inline -fno-ipa-pure-const $(common_instr_cxxflags) $(common_includes)
-instrumentation_libresiliency_la_LDFLAGS=-Wl,-rpath,$(instrumentationdir) $(ignore_muldefs)
+instrumentation_libresiliency_la_CPPFLAGS=$(common_includes) $(common_instrumentation_CPPFLAGS) $(BOOST_CPPFLAGS)
+instrumentation_libresiliency_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS) -fno-inline -fno-ipa-pure-const $(common_instr_cxxflags) $(common_includes)
+instrumentation_libresiliency_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation
 instrumentation_libresiliency_la_SOURCES=$(resiliency_aux_sources)
 endif
 
-instrumentation_libnanox_la_CPPFLAGS=$(BOOST_CPPFLAGS)
-instrumentation_libnanox_la_CFLAGS=$(common_cflags) $(common_instr_cflags)
-instrumentation_libnanox_la_CXXFLAGS =$(common_includes) $(common_instr_cxxflags) $(hwloc_cxxflags)
-instrumentation_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(instrumentationdir) $(ignore_muldefs) $(hwloc_ldflags)
-instrumentation_libnanox_la_LIBADD=$(common_libadd) instrumentation/libresiliency.la @NANOS_CONFIG_LIBS_INSTR@
+instrumentation_libnanox_la_CPPFLAGS=$(common_includes) $(common_instrumentation_CPPFLAGS) @dlbinc@
+instrumentation_libnanox_la_CXXFLAGS=$(common_includes) $(common_instrumentation_CXXFLAGS)
+instrumentation_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation
+instrumentation_libnanox_la_LIBADD=$(common_libadd) @dlb_instr@ @nanos_config_libs_instrumentation@
 instrumentation_libnanox_la_SOURCES=$(common_sources) $(instr_sources)
-instrumentation_libnanox_la_DEPENDENCIES=$(common_libadd) instrumentation/libresiliency.la @NANOS_CONFIG_LIBS_INSTR@
+instrumentation_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_instrumentation@
 endif
 
-if INSTRUMENTATION_DEBUG_VERSION
-instrumentation_debug_LTLIBRARIES+=instrumentation-debug/libnanox.la
-
-instrumentation_debug_libnanox_la_CPPFLAGS=$(BOOST_CPPFLAGS)
-instrumentation_debug_libnanox_la_CFLAGS=$(common_cflags) $(common_instrdebug_cflags)
-instrumentation_debug_libnanox_la_CXXFLAGS =$(common_includes) $(common_instrdebug_cxxflags) $(hwloc_cxxflags)
-instrumentation_debug_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(instrumentation_debugdir) $(ignore_muldefs) $(hwloc_ldflags)
-instrumentation_debug_libnanox_la_LIBADD=$(common_libadd) @NANOS_CONFIG_LIBS_INSTRDEBUG@
-instrumentation_debug_libnanox_la_SOURCES=$(common_sources) $(instr_sources) $(resiliency_aux_sources)
-instrumentation_debug_libnanox_la_DEPENDENCIES=$(common_libadd) @NANOS_CONFIG_LIBS_INSTRDEBUG@
-endif
-
-if PERFORMANCE_VERSION
+if is_performance_enabled
 performance_LTLIBRARIES+=performance/libnanox.la
 
 if RESILIENCY # workaround for gcc bug
-noinst_LTLIBRARIES+=performance/libresiliency.la #performance/libcore.la# Need this to compile some source files with specific optimizations disabled
-performance_libresiliency_la_CPPFLAGS=$(BOOST_CPPFLAGS)
-performance_libresiliency_la_CFLAGS=$(common_cflags) $(common_perfo_cflags)
-performance_libresiliency_la_CXXFLAGS =-fno-inline -fno-ipa-pure-const $(common_perfo_cxxflags) $(common_includes)
-performance_libresiliency_la_LDFLAGS=-Wl,-rpath,$(performancedir) $(ignore_muldefs)
+noinst_LTLIBRARIES+=performance/libresiliency.la # Need this to compile some source files with specific optimizations disabled
+performance_libresiliency_la_CPPFLAGS=$(common_includes) $(common_performance_CPPFLAGS) $(BOOST_CPPFLAGS)
+performance_libresiliency_la_CXXFLAGS=$(common_performance_CXXFLAGS) -fno-inline -fno-ipa-pure-const $(common_instr_cxxflags) $(common_includes)
+performance_libresiliency_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/performance
 performance_libresiliency_la_SOURCES=$(resiliency_aux_sources)
 endif
 
-performance_libnanox_la_CPPFLAGS=$(BOOST_CPPFLAGS)
-performance_libnanox_la_CFLAGS=$(common_cflags) $(common_perfo_cflags)
-performance_libnanox_la_CXXFLAGS =$(common_includes) $(common_perfo_cxxflags) $(hwloc_cxxflags)
-performance_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(performancedir) $(ignore_muldefs) $(hwloc_ldflags)
-performance_libnanox_la_LIBADD=$(common_libadd) @NANOS_CONFIG_LIBS_PERFO@ performance/libresiliency.la #this library already includes the rest of the required libraries
-performance_libnanox_la_SOURCES=$(common_sources)
-performance_libnanox_la_DEPENDENCIES=$(common_libadd) @NANOS_CONFIG_LIBS_PERFO@ performance/libresiliency.la #this library already includes the rest of the required libraries
 
-#performance_libnanox_la_LDFLAGS=$(version_flags) @NANOS_CONFIG_LIBDIRS@ -Wl,-rpath,$(performancedir) $(ignore_muldefs) $(hwloc_ldflags)
-#performance_libnanox_la_LIBADD=performance/libresiliency.la performance/libcore.la#this library already includes the rest of the required libraries
-#performance_libnanox_la_DEPENDENCIES=performance/libcore.la performance/libresiliency.la #this library already includes the rest of the required libraries
+performance_libnanox_la_CPPFLAGS=$(common_includes) $(common_performance_CPPFLAGS) @dlbinc@
+performance_libnanox_la_CXXFLAGS=$(common_includes) $(common_performance_CXXFLAGS)
+performance_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/performance
+performance_libnanox_la_LIBADD=$(common_libadd) @dlb@ @nanos_config_libs_performance@
+performance_libnanox_la_SOURCES=$(common_sources)
+performance_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_performance@
 endif
 

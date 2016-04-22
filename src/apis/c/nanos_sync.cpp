@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -16,12 +16,15 @@
 /*      You should have received a copy of the GNU Lesser General Public License     */
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
+
 /*! \file nanos_sync.cpp
  *  \brief
  */
+
 #include "nanos.h"
 #include "schedule.hpp"
 #include "system.hpp"
+#include "atomic.hpp"
 #include "synchronizedcondition.hpp"
 #include "instrumentationmodule_decl.hpp"
 #include "instrumentation.hpp"
@@ -61,7 +64,14 @@ NANOS_API_DEF(nanos_err_t, nanos_create_int_sync_cond, ( nanos_sync_cond_t *sync
    NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","*_create_sync_cond",NANOS_RUNTIME ) );
 
    try {
-      *sync_cond = ( nanos_sync_cond_t ) NEW MultipleSyncCond<EqualConditionChecker<int> >( EqualConditionChecker<int>( p, condition ) );
+      *sync_cond = ( nanos_sync_cond_t ) NEW MultipleSyncCond<EqualConditionChecker<int> >( EqualConditionChecker<int>(
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+                  // We cannot change the external interface of this API now
+                  (int*)p,
+#else
+                  p,
+#endif
+                  condition ) );
    } catch ( nanos_err_t e) {
       return e;
    }
@@ -74,7 +84,14 @@ NANOS_API_DEF(nanos_err_t, nanos_create_bool_sync_cond, ( nanos_sync_cond_t *syn
    NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","*_create_sync_cond",NANOS_RUNTIME) );
 
    try {
-      *sync_cond = ( nanos_sync_cond_t ) NEW MultipleSyncCond<EqualConditionChecker<bool> >( EqualConditionChecker<bool>( p, condition ) );
+      *sync_cond = ( nanos_sync_cond_t ) NEW MultipleSyncCond<EqualConditionChecker<bool> >( EqualConditionChecker<bool>(
+#ifdef HAVE_NEW_GCC_ATOMIC_OPS
+                  // We cannot change the external interface of this API now
+                  (bool*)p,
+#else
+                  p,
+#endif
+                  condition ) );
    } catch ( nanos_err_t e) {
       return e;
    }
@@ -197,7 +214,7 @@ NANOS_API_DEF(nanos_err_t, nanos_init_lock_at, ( nanos_lock_t *lock ))
 
 NANOS_API_DEF(nanos_err_t, nanos_set_lock, ( nanos_lock_t *lock ))
 {
-   NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","set_lock",NANOS_SYNCHRONIZATION) );
+   //NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","set_lock",NANOS_SYNCHRONIZATION) );
 
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
 
@@ -217,12 +234,12 @@ NANOS_API_DEF(nanos_err_t, nanos_set_lock, ( nanos_lock_t *lock ))
 
 NANOS_API_DEF(nanos_err_t, nanos_unset_lock, ( nanos_lock_t *lock ))
 {
-   NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","unset_lock",NANOS_SYNCHRONIZATION) );
+   //NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","unset_lock",NANOS_SYNCHRONIZATION) );
 
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
 
    NANOS_INSTRUMENT ( static nanos_event_key_t Keys = ID->getEventKey("lock-addr"); )
-   NANOS_INSTRUMENT ( nanos_event_value_t Values = (nanos_event_value_t) lock; )
+   NANOS_INSTRUMENT ( nanos_event_value_t Values = (nanos_event_value_t) 0; )
    NANOS_INSTRUMENT( sys.getInstrumentation()->raisePointEvents(1, &Keys, &Values); )
 
    try {

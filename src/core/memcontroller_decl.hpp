@@ -1,8 +1,28 @@
+/*************************************************************************************/
+/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*                                                                                   */
+/*      This file is part of the NANOS++ library.                                    */
+/*                                                                                   */
+/*      NANOS++ is free software: you can redistribute it and/or modify              */
+/*      it under the terms of the GNU Lesser General Public License as published by  */
+/*      the Free Software Foundation, either version 3 of the License, or            */
+/*      (at your option) any later version.                                          */
+/*                                                                                   */
+/*      NANOS++ is distributed in the hope that it will be useful,                   */
+/*      but WITHOUT ANY WARRANTY; without even the implied warranty of               */
+/*      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                */
+/*      GNU Lesser General Public License for more details.                          */
+/*                                                                                   */
+/*      You should have received a copy of the GNU Lesser General Public License     */
+/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*************************************************************************************/
+
 #ifndef MEMCONTROLLER_DECL
 #define MEMCONTROLLER_DECL
 #include <map>
 #include "workdescriptor_fwd.hpp"
 #include "atomic_decl.hpp"
+#include "lock_decl.hpp"
 #include "newregiondirectory_decl.hpp"
 #include "addressspace_decl.hpp"
 #include "memoryops_decl.hpp"
@@ -26,6 +46,7 @@ class MemController {
    bool                        _outputDataReady;
    bool                        _dataRestored;
    bool                        _memoryAllocated;
+   bool                        _invalidating;
    bool                        _mainWd;
    bool                        _is_private_backup_aborted;
    WD                         &_wd;
@@ -55,7 +76,8 @@ public:
    };
    MemCacheCopy *_memCacheCopies;
    MemController( WD &wd );
-   //bool hasVersionInfoForRegion( global_reg_t reg, unsigned int &version, NewLocationInfoList &locations );
+   ~MemController();
+   bool hasVersionInfoForRegion( global_reg_t reg, unsigned int &version, NewLocationInfoList &locations );
    void getInfoFromPredecessor( MemController const &predecessorController );
    void preInit();
    void initialize( ProcessingElement &pe );
@@ -77,12 +99,14 @@ public:
    std::size_t getAmountOfTransferredData() const;
    std::size_t getTotalAmountOfData() const;
    bool isRooted( memory_space_id_t &loc ) const ;
+   bool isMultipleRooted( std::list<memory_space_id_t> &locs ) const ;
    void setMainWD();
    void synchronize();
    bool isMemoryAllocated() const;
    void setCacheMetaData();
    bool ownsRegion( global_reg_t const &reg );
    bool hasObjectOfRegion( global_reg_t const &reg );
+   bool containsAllCopies( MemController const &target ) const;
 };
 
 }
