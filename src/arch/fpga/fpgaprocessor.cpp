@@ -65,15 +65,6 @@ FPGAProcessor::~FPGAProcessor(){
     delete _inputTransfers;
 }
 
-
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-void FPGAProcessor::registerDeviceInstrumentation( FPGAProcessor *fpga ) {
-    FPGAInstrumentation *instr = new FPGAInstrumentation();
-    instr->init();
-    sys.getInstrumentation()->registerInstrumentDevice( instr );
-}
-#endif
-
 void FPGAProcessor::init()
 {
    xdma_device *devices = NEW xdma_device[_numAcc];

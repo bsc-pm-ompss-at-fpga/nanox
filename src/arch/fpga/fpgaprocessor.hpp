@@ -62,7 +62,6 @@ namespace nanos
             static FPGAPinnedAllocator _allocator;
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-            void registerDeviceInstrumentation( FPGAProcessor *fpga );
 #endif
 
          public:
