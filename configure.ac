@@ -111,6 +111,11 @@ AC_C_CONST
 # Compiler dependent Configuration flags
 AX_CONFIG_CC
 
+# Check C++11 compatibility.
+# It is required since debugging functions
+# make use of variadic template parameters
+AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+
 ## -----------------------
 ## Check host architecture
 ## -----------------------
@@ -155,6 +160,9 @@ AX_CHECK_DLB
 
 # Check for Zynq Xilinx DMA driver library (fpga)
 AX_CHECK_XDMA
+
+# Check resiliency support
+AX_CHECK_RESILIENCY
 
 # Extrae check
 MPITRACE_HOME=""
@@ -265,70 +273,8 @@ AC_SUBST([mcc_valid])
 AC_SUBST([MCC])
 AC_SUBST([MCXX])
 
-
 # Build versions
 AX_BUILD_VERSIONS
-
-# Task-level resiliency support
-AC_MSG_CHECKING([if task resiliency is enabled])
-AC_ARG_ENABLE([resiliency],[AS_HELP_STRING([--enable-resiliency], [Enables task-level resiliency])],
-              [enable_resiliency=$enableval],[enable_resiliency=no])
-AC_MSG_RESULT([$enable_resiliency])
-AS_IF([test $enable_resiliency = yes],[
-  AX_CHECK_COMPILE_FLAG([-fnon-call-exceptions],
-    [],
-    [AC_MSG_ERROR([resiliency mechanism depends on using compiler flag -fnon-call-exceptions])],
-    [-Werror])
-
-    # Boost C++ library
-    AX_BOOST_BASE([1.38],
-       [],#nothing to do if it pass the test
-       [
-          AC_MSG_ERROR([resiliency mechanism requires Boost C++ library])
-       ])
-
-    AC_DEFINE([NANOS_RESILIENCY_ENABLED],[],[Indicates whether resiliency features should be used or not.])
-    resiliency_flags=-fnon-call-exceptions
-])
-AC_SUBST([enable_resiliency])
-AC_SUBST([resiliency_flags])
-
-# Fault injection
-AC_MSG_CHECKING([if fault injection is enabled])
-AC_ARG_ENABLE([fault-injection],
-   AS_HELP_STRING([--enable-fault-injection], [Enables page corruption injection module.]),
-   [
-      fault_injection=$enableval
-   ],
-   [
-      fault_injection=no
-   ])
-AC_MSG_RESULT([$fault_injection])
-
-# Debug messages are not compatible with C++0x (usage of variadic macros)
-AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
-
-if test "x$fault_injection" = "xyes"; then
-    # Check if random generators and engines are compilable (icpc 14.0 with gcc<4.7.0 fail to compile it)
-    AC_LANG_PUSH(C++)
-    AC_COMPILE_IFELSE(
-        [AC_LANG_PROGRAM(
-            [[@%:@include <random>
-            std::mt19937 generator;
-            std::uniform_int_distribution<size_t> distribution(0, 10);
-            ]], [[
-            size_t pos = distribution(generator);
-            ]])],
-        [rnd_supp=yes],
-        [rnd_supp=no])
-    AC_LANG_POP([C++])
-    if test "x$rnd_supp" != "xyes"; then
-        AC_MSG_ERROR([fault injection module depends on standard random number library. Try using a newer compiler version.])
-    fi
-
-    AC_DEFINE([NANOS_FAULT_INJECTION],[1],[Defined when page corruption injection module is enabled by the user.])
-fi
-AM_CONDITIONAL([fault_injection_enabled],[test "x$fault_injection" = "xyes"])
 
 # Generate plugin list
 PLUGINS="plugins pms arch/$OS"

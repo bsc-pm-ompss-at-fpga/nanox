@@ -296,9 +296,10 @@ instr_sources = \
 	$(END)
 
 
+noinst_LTLIBRARIES=
 debug_LTLIBRARIES=
-instrumentation_LTLIBRARIES=
 instrumentation_debug_LTLIBRARIES=
+instrumentation_LTLIBRARIES=
 performance_LTLIBRARIES=
 
 if is_debug_enabled
@@ -326,8 +327,9 @@ endif
 if is_instrumentation_enabled
 instrumentation_LTLIBRARIES+=instrumentation/libnanox.la
 
-if RESILIENCY # workaround for gcc bug
+if is_resiliency_enabled # workaround for gcc bug
 noinst_LTLIBRARIES+=instrumentation/libresiliency.la # Need this to compile some source files with specific optimizations disabled
+
 instrumentation_libresiliency_la_CPPFLAGS=$(common_includes) $(common_instrumentation_CPPFLAGS) $(BOOST_CPPFLAGS)
 instrumentation_libresiliency_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS) -fno-inline -fno-ipa-pure-const $(common_instr_cxxflags) $(common_includes)
 instrumentation_libresiliency_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation
@@ -345,7 +347,7 @@ endif
 if is_performance_enabled
 performance_LTLIBRARIES+=performance/libnanox.la
 
-if RESILIENCY # workaround for gcc bug
+if is_resiliency_enabled # workaround for gcc bug
 noinst_LTLIBRARIES+=performance/libresiliency.la # Need this to compile some source files with specific optimizations disabled
 performance_libresiliency_la_CPPFLAGS=$(common_includes) $(common_performance_CPPFLAGS) $(BOOST_CPPFLAGS)
 performance_libresiliency_la_CXXFLAGS=$(common_performance_CXXFLAGS) -fno-inline -fno-ipa-pure-const $(common_instr_cxxflags) $(common_includes)

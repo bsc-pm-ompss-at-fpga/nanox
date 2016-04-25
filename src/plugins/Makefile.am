@@ -1385,7 +1385,7 @@ blockaccess_sources= \
 	error-injection/blockaccessinjectionplugin.cpp \
 	$(END)
 
-if DEBUG_VERSION
+if is_debug_enabled
 debug_LTLIBRARIES += \
 	debug/libnanox-injection-none.la \
 	debug/libnanox-injection-block-access.la \
@@ -1405,7 +1405,7 @@ debug_libnanox_injection_block_access_la_LIBADD=-lnanox-error-injection
 
 endif
 
-if INSTRUMENTATION_VERSION
+if is_instrumentation_enabled
 instrumentation_LTLIBRARIES += \
 	instrumentation/libnanox-injection-none.la \
 	instrumentation/libnanox-injection-block-access.la \
@@ -1425,7 +1425,7 @@ instrumentation_libnanox_injection_block_access_la_LIBADD=-lnanox-error-injectio
 
 endif
 
-if INSTRUMENTATION_DEBUG_VERSION
+if is_instrumentation_debug_enabled
 instrumentation_debug_LTLIBRARIES += \
 	instrumentation_debug/libnanox-injection-none.la \
 	instrumentation_debug/libnanox-injection-block-access.la \
@@ -1445,7 +1445,7 @@ instrumentation_debug_libnanox_injection_block_access_la_LIBADD=-lnanox-error-in
 
 endif
 
-if PERFORMANCE_VERSION
+if is_performance_enabled
 performance_LTLIBRARIES += \
 	performance/libnanox-injection-none.la \
 	performance/libnanox-injection-block-access.la \
