@@ -32,6 +32,8 @@ namespace nanos {
 typedef GlobalRegionDictionary *reg_key_t;
 typedef GlobalRegionDictionary const * const_reg_key_t;
 
+typedef std::list< std::pair< reg_t, reg_t > > NewLocationInfoList;
+
 struct global_reg_t {
    reg_t id;
    union {

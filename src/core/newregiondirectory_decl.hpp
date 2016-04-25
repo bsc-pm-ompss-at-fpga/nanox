@@ -75,7 +75,6 @@ namespace nanos
   /*! \class NewDirectory
    *  \brief Stores copy accesses controls their versions and if they are dirty in any cache
    */
-   typedef std::list< std::pair< reg_t, reg_t > > NewLocationInfoList; 
    class NewNewRegionDirectory
    {
       private:

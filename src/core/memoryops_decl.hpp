@@ -102,6 +102,12 @@ class BaseAddressSpaceInOps : public BaseOps {
    virtual ~BaseAddressSpaceInOps();
 
    void addOp( SeparateMemoryAddressSpace *from, global_reg_t const &reg, unsigned int version, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const &wd,  unsigned int copyIdx );
+
+   // Bloquea los AllocatedChunks de origen para evitar invalidaciones.
+   // "Añade una operacion como pendiente" en el objeto de sincronizacion DeviceOps
+   // Busca en el directorio las regiones que serviran de origen
+   // [...]
+   // Nota: tanto WD como copyIdx se utilizan para debug
    void copyInputData( MemCacheCopy const &memCopy, WD const &wd, unsigned int copyIdx );
 
    // por que se usa esto aqui? host to host tiene sentido???
@@ -112,13 +118,6 @@ class BaseAddressSpaceInOps : public BaseOps {
 
    // workdescriptor y copyindex se usa por temas de debugging
    virtual unsigned int getVersionNoLock( global_reg_t const &reg, WD const &wd, unsigned int copyIdx );
-
-   // Bloquea los AllocatedChunks de origen para evitar invalidaciones.
-   // "Añade una operacion como pendiente" en el objeto de sincronizacion DeviceOps
-   // Busca en el directorio las regiones que serviran de origen
-   // [...]
-   // Nota: tanto WD como copyIdx se utilizan para debug
-   virtual void copyInputData( MemCacheCopy const &memCopy, WD const &wd, unsigned int copyIdx );
    
    // reserva memoria necesaria para almacenar los datos de output (no inout)
    virtual void allocateOutputMemory( global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx );
