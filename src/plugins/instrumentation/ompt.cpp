@@ -809,7 +809,7 @@ namespace nanos
             }
          }
 
-         void addDeferredEvent( const DeviceEvent &event ) {
+         void addDeviceEvent( const DeviceEvent &event ) {
             DeviceInstrumentation *devInstr = event.getDeviceInstrumentation();
             int deviceId = devInstr->getId();
             BufferInfo &buffer = _devEventBuffers[ deviceId ];
