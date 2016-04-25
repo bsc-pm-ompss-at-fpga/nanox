@@ -498,7 +498,8 @@ namespace nanos
             size_t size;
             unsigned int records;
             ompt_record_ompt_t *buffer;
-            BufferInfo() : begin( 0 ), current( 0 ), size( 0 ), records( 0 ) { }
+            BufferInfo() : begin( 0 ), current( 0 ), size( 0 ), records( 0 ),
+               buffer( NULL ) { }
          };
 
          std::vector < BufferInfo > _devEventBuffers;
