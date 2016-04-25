@@ -840,7 +840,13 @@ namespace nanos
             omptEvent->thread_id = (ompt_thread_id_t) nanos::myThread->getId();
             //Task ID (TODO check)
             WorkDescriptor * wd = event.getWD();
-            omptEvent->dev_task_id = wd->getId();
+            WorkDescriptor * auxWD = event.getAuxWD();
+            //When running a task (task switch from 0 to a task) wd may be null
+            if ( wd != NULL ) {
+               omptEvent->dev_task_id = wd->getId();
+            } else {
+               omptEvent->dev_task_id = auxWD->getId();
+            }
 
             switch ( event.getEventType() ) {
                case TaskBegin:
@@ -854,8 +860,10 @@ namespace nanos
                   omptEvent->record.task.task_id = wd->getId();
                   break;
                case TaskSwitch:
-                  omptEvent->record.task_switch.first_task_id = wd->getId();
-                  omptEvent->record.task_switch.second_task_id = event.getAuxWD()->getId();
+                  omptEvent->record.task_switch.first_task_id =
+                     ( wd != NULL ) ? wd->getId() : 0;
+                  omptEvent->record.task_switch.second_task_id =
+                     ( auxWD != NULL ) ? auxWD->getId() : 0;
                   break;
             }
             buffer.current++;
