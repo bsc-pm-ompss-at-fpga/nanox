@@ -506,7 +506,9 @@ namespace nanos
 
 
       public:
-         InstrumentationOMPT( ) : Instrumentation( *NEW InstrumentationContextDisabled()), _previousTask(NULL), _requestBufferCallback(NULL), _completeBufferCallback(NULL) {}
+         InstrumentationOMPT( ) : Instrumentation( *NEW InstrumentationContextDisabled()),
+            _previousTask( NULL ), _deviceCount( 0 ), _requestBufferCallback( NULL ),
+            _completeBufferCallback( NULL ) {}
          ~InstrumentationOMPT() { }
          void initialize( void )
          {
