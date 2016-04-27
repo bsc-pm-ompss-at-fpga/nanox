@@ -20,6 +20,7 @@
 include $(top_srcdir)/src/common.am
 
 devinclude_HEADERS = \
+	mutex.hpp \
 	os.hpp \
 	pthread_decl.hpp \
 	pthread.hpp \
@@ -29,6 +30,8 @@ devinclude_HEADERS = \
 os_sources = \
 	cpuset.cpp \
 	cpuset.hpp \
+	mutex.cpp \
+	mutex.hpp \
 	os.hpp \
 	os.cpp \
 	osallocator_decl.hpp \
