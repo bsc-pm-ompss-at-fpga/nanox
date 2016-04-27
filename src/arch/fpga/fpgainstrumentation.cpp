@@ -2,10 +2,10 @@
 #include "libxdma.h"
 
 unsigned long long int FPGAInstrumentation::getDeviceTime() {
-   unsigned long long time;
+   uint64_t time;
    //TODO error checking
    xdmaGetDeviceTime(&time);
-   return time;
+   return (unsigned long long)time;
 }
 
 unsigned long long FPGAInstrumentation::translateDeviceTime( unsigned long long devTime ) {
