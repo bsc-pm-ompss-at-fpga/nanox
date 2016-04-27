@@ -24,6 +24,12 @@
 #include "memcachecopy.hpp"
 #include "globalregt.hpp"
 
+#include "cachedregionstatus.hpp"
+
+#ifdef NANOS_RESILIENCY_ENABLED
+#   include "backupmanager.hpp"
+#endif
+
 #if VERBOSE_CACHE
  #define _VERBOSE_CACHE 1
 #else
@@ -410,10 +416,10 @@ void MemController::copyDataIn() {
 
                std::size_t size = _wd.getCopies()[index].getSize();
                uint64_t host_addr = _wd.getCopies()[index].getFitAddress();
-               uint64_t dev_addr = (uint64_t) dev.memAllocate(size, sys.getBackupMemory(), _wd, index);
+               uint64_t dev_addr = (uint64_t) dev.memAllocate(size, sys.getBackupMemory(), &_wd, index);
 
                // FIXME Maybe it would be better to store is_private_backup_aborted value inside _backupInOutCopies...
-               new (&_backupInOutCopies[index]) Chunk( dev_addr, host_addr, size );
+               new (&_backupInOutCopies[index]) RemoteChunk( dev_addr, host_addr, size );
 
                // Note: we dont want to make the regular backup for inouts, as children tasks' "in" 
                // parameters will always do the backup later if they exist no matter if now we perform the copy or not
@@ -422,7 +428,7 @@ void MemController::copyDataIn() {
                NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_INOUT );
                NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
 
-               _is_private_backup_aborted |= !dev.checkpointCopy( dev_addr, host_addr, size, sys.getBackupMemory(), _wd );
+               _is_private_backup_aborted |= !dev.checkpointCopy( dev_addr, host_addr, size, sys.getBackupMemory(), &_wd );
 
                NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
 
@@ -441,7 +447,7 @@ void MemController::copyDataIn() {
          NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_IN );
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
 
-         _backupOpsIn->issue(_wd);
+         _backupOpsIn->issue(&_wd);
 
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
       }
@@ -541,7 +547,7 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
             NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_OUT );
             NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
 
-            _backupOpsOut->issue( _wd );
+            _backupOpsOut->issue( &_wd );
 
             NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
          }
@@ -551,7 +557,7 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
       for ( unsigned int index = 0; index < _wd.getNumCopies(); index += 1) {
          if( _wd.getCopies()[index].isInput() && _wd.getCopies()[index].isOutput() ) {
             // Inoutparameters' backup have to be cleaned: they are private
-            dev.memFree( _backupInOutCopies[index].getAddress(),
+            dev.memFree( _backupInOutCopies[index].getDeviceAddress(),
                           sys.getBackupMemory() );
          }
       }
@@ -590,7 +596,7 @@ void MemController::restoreBackupData ( )
                NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
 
                failed = !dev.restoreCopy( host_addr, dev_addr, size,
-                                               sys.getBackupMemory(), _wd );
+                                               sys.getBackupMemory(), &_wd );
 
                NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
             }
@@ -607,7 +613,7 @@ void MemController::restoreBackupData ( )
          NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_RT_IN );
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
 
-         _restoreOps->issue(_wd);
+         _restoreOps->issue(&_wd);
 
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
       } else {
@@ -674,7 +680,7 @@ bool MemController::isDataReady ( WD const &wd )
    if ( _initialized ) {
       if ( !_inputDataReady ) {
          _inputDataReady = _inOps->isDataReady( wd );
-#if NANOS_RESILIENCY_ENABLED
+#ifdef NANOS_RESILIENCY_ENABLED
          if ( _wd.isRecoverable() && _backupOpsIn) {
             _inputDataReady &= _backupOpsIn->isDataReady(wd);
             _backupOpsIn->releaseLockedSourceChunks(wd);
@@ -700,7 +706,7 @@ bool MemController::isOutputDataReady( WD const &wd ) {
             //}
          }
       }
-#if NANOS_RESILIENCY_ENABLED
+#ifdef NANOS_RESILIENCY_ENABLED
       if ( _wd.isRecoverable() && _backupOpsOut) {
          _outputDataReady = _backupOpsOut->isDataReady(wd);
          _backupOpsOut->releaseLockedSourceChunks(wd);
@@ -841,7 +847,6 @@ void MemController::setCacheMetaData() {
       if ( _wd.getCopies()[index].isOutput() ) {
          unsigned int newVersion = _memCacheCopies[ index ].getVersion() + 1;
          _memCacheCopies[ index ]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion ); //update directory, OUT copies, (upgrade version)
-         unsigned int newVersion = 0;
          if( _memCacheCopies[index].getVersion() > _memCacheCopies[index].getChildrenProducedVersion() ){
             //message("Setting memCacheCopies[",index,"] version to " , _memCacheCopies[index].getVersion()+1 );
             newVersion = _memCacheCopies[ index ].getVersion() + 1;
@@ -853,7 +858,7 @@ void MemController::setCacheMetaData() {
          _memCacheCopies[ index ].setChildrenProducedVersion( newVersion );
 
          if ( _pe->getMemorySpaceId() != 0 /* HOST_MEMSPACE_ID */) {
-            sys.getSeparateMemory( _pe->getMemorySpaceId() ).setRegionVersion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ].getVersion() + 1, _wd, index );
+            sys.getSeparateMemory( _pe->getMemorySpaceId() ).setRegionVersion( _memCacheCopies[ index ]._reg, _memCacheCopies[ index ]._chunk, _memCacheCopies[ index ].getVersion() + 1, _wd, index );
          }
       } else if ( _wd.getCopies()[index].isInput() ) {
          _memCacheCopies[ index ].setChildrenProducedVersion( _memCacheCopies[ index ].getVersion() );

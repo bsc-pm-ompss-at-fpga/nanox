@@ -61,22 +61,21 @@ void BackupManager::memFree ( uint64_t addr, SeparateMemoryAddressSpace &mem )
    _managed_pool.deallocate((void*) addr);
 }
 
-void BackupManager::_canAllocate ( SeparateMemoryAddressSpace const& mem,
+void BackupManager::_canAllocate ( SeparateMemoryAddressSpace& mem,
                                    size_t *sizes, uint numChunks,
-                                   size_t *remainingSizes ) const
+                                   size_t *remainingSizes )
 {
-
 }
 
 std::size_t BackupManager::getMemCapacity (
-      SeparateMemoryAddressSpace const& mem ) const
+      SeparateMemoryAddressSpace& mem )
 {
    return _managed_pool.get_size();
 }
 
 bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
                               std::size_t len, SeparateMemoryAddressSpace &mem,
-                              WorkDescriptor const& wd ) noexcept
+                              WorkDescriptor const* wd ) noexcept
 {
    /* This is called on backup operations. Data is copied from host to device.
     * The operation is defined outside _copyIn because, for inout args we need
@@ -107,7 +106,7 @@ bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
 
 bool BackupManager::restoreCopy ( uint64_t hostAddr, uint64_t devAddr,
                                std::size_t len, SeparateMemoryAddressSpace &mem,
-                               WorkDescriptor const& wd ) noexcept
+                               WorkDescriptor const* wd ) noexcept
 {
 
    /* This is called on restore operations. Data is copied from device to host.
@@ -143,9 +142,8 @@ bool BackupManager::restoreCopy ( uint64_t hostAddr, uint64_t devAddr,
 
 void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
                               std::size_t len, SeparateMemoryAddressSpace &mem,
-                              DeviceOps *ops, Functor *f,
-                              WorkDescriptor const& wd, void *hostObject,
-                              reg_t hostRegionId ) noexcept
+                              DeviceOps *ops, WorkDescriptor const* wd, void *hostObject,
+                              reg_t hostRegionId )
 {
    ops->addOp();
 
@@ -158,8 +156,7 @@ void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
 
 void BackupManager::_copyOut ( uint64_t hostAddr, uint64_t devAddr,
                                std::size_t len, SeparateMemoryAddressSpace &mem,
-                               DeviceOps *ops, Functor *f,
-                               WorkDescriptor const& wd, void *hostObject,
+                               DeviceOps *ops, WorkDescriptor const* wd, void *hostObject,
                                reg_t hostRegionId )
 {
    ops->addOp();
@@ -175,9 +172,8 @@ bool BackupManager::_copyDevToDev ( uint64_t devDestAddr, uint64_t devOrigAddr,
                                     std::size_t len,
                                     SeparateMemoryAddressSpace &memDest,
                                     SeparateMemoryAddressSpace &memorig,
-                                    DeviceOps *ops, Functor *f,
-                                    WorkDescriptor const& wd, void *hostObject,
-                                    reg_t hostRegionId )
+                                    DeviceOps *ops, WorkDescriptor const* wd,
+                                    void *hostObject, reg_t hostRegionId )
 {
    /* Device to device copies are not supported for BackupManager as only one instance
     * is expected for the whole process.
@@ -188,9 +184,8 @@ bool BackupManager::_copyDevToDev ( uint64_t devDestAddr, uint64_t devOrigAddr,
 void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
                                        std::size_t len, std::size_t numChunks,
                                        std::size_t ld,
-                                       SeparateMemoryAddressSpace const& mem,
-                                       DeviceOps *ops, Functor *f,
-                                       WorkDescriptor const& wd,
+                                       SeparateMemoryAddressSpace& mem,
+                                       DeviceOps *ops, WorkDescriptor const* wd,
                                        void *hostObject, reg_t hostRegionId )
 {
    ops->addOp();
@@ -215,8 +210,7 @@ void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
                                         std::size_t len, std::size_t numChunks,
                                         std::size_t ld,
                                         SeparateMemoryAddressSpace & mem,
-                                        DeviceOps *ops, Functor *f,
-                                        WorkDescriptor const& wd,
+                                        DeviceOps *ops, WorkDescriptor const* wd,
                                         void *hostObject, reg_t hostRegionId )
 {
    ops->addOp();
@@ -239,16 +233,16 @@ void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
 bool BackupManager::_copyDevToDevStrided1D (
       uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len,
       std::size_t numChunks, std::size_t ld,
-      SeparateMemoryAddressSpace const& memDest,
-      SeparateMemoryAddressSpace const& memOrig, DeviceOps *ops, Functor *f,
-      WorkDescriptor const& wd, void *hostObject, reg_t hostRegionId )
+      SeparateMemoryAddressSpace& memDest,
+      SeparateMemoryAddressSpace& memOrig, DeviceOps *ops,
+      WorkDescriptor const* wd, void *hostObject, reg_t hostRegionId )
 {
    return false;
 }
 
 void BackupManager::_getFreeMemoryChunksList (
-      SeparateMemoryAddressSpace const& mem,
-      SimpleAllocator::ChunkList &list ) const
+      SeparateMemoryAddressSpace& mem,
+      SimpleAllocator::ChunkList &list )
 {
    fatal(__PRETTY_FUNCTION__, "is not implemented.");
 }

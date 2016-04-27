@@ -120,7 +120,7 @@ class BaseAddressSpaceInOps : public BaseOps {
    virtual unsigned int getVersionNoLock( global_reg_t const &reg, WD const &wd, unsigned int copyIdx );
    
    // reserva memoria necesaria para almacenar los datos de output (no inout)
-   virtual void allocateOutputMemory( global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx );
+   //virtual void allocateOutputMemory( global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx );
 };
 
 typedef BaseAddressSpaceInOps HostAddressSpaceInOps;
