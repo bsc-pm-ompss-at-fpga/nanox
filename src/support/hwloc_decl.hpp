@@ -21,7 +21,8 @@
 #define HWLOC_DECL
 
 
-#include <config.hpp>
+#include <config_decl.hpp>
+
 #include <string>
 
 #ifdef HWLOC

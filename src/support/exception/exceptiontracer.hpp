@@ -20,14 +20,10 @@
 #ifndef EXCEPTION_TRACER_HPP
 #define EXCEPTION_TRACER_HPP
 
-//#include "debug.hpp"
-//#include "system.hpp" // required for using debug macros
+#include "debug.hpp"
 
 #include <execinfo.h>
-#include <signal.h>
 #include <stdlib.h>
-
-#include <exception>
 
 namespace nanos {
 namespace error {

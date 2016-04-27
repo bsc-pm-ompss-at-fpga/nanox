@@ -61,7 +61,7 @@ class MemController {
    SeparateAddressSpaceInOps  *_backupOpsOut;
    SeparateAddressSpaceOutOps *_restoreOps;
    MemCacheCopy               *_backupCacheCopies;
-   Chunk                      *_backupInOutCopies;
+   RemoteChunk                *_backupInOutCopies;
 #endif
    std::size_t                 _affinityScore;
    std::size_t                 _maxAffinityScore;

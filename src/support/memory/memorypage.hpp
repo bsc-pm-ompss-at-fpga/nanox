@@ -25,6 +25,9 @@
 #include <deque>
 #include <sys/user.h>
 
+namespace nanos {
+namespace memory {
+
 /*!
  * \brief Represents a virtual memory page.
  *
@@ -74,5 +77,8 @@ template<>
 struct is_contiguous_memory_region<MemoryPage> : public std::true_type
 {
 };
+
+} // namespace memory
+} // namespace nanos
 
 #endif // MEMORY_PAGE_HPP

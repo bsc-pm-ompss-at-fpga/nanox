@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2016 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,67 +17,17 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef _NANOS_DEPENDENCIES_DOMAIN
-#define _NANOS_DEPENDENCIES_DOMAIN
-#include "dataaccess_decl.hpp"
-#include "dependenciesdomain_decl.hpp"
-#include "recursivelock_decl.hpp"
-
-#include "atomic.hpp"
-#include "commutationdepobj.hpp"
-#include "dependableobject.hpp"
-#include "error.hpp"
-#include "lock.hpp"
-#include "trackableobject.hpp"
-
-#include <stdlib.h>
-#include <map>
-#include <list>
-#include <vector>
+#include "genericexception.hpp"
+#include "basethread_decl.hpp"
 
 namespace nanos {
+namespace error {
 
-inline DependenciesDomain::~DependenciesDomain ( )
-{
-}
+GenericException::GenericException( std::string const& message ) :
+		std::runtime_error( message ),
+		_runningTaskOnError( *getMyThreadSafe()->getCurrentWD() )
+	{}
 
-inline RecursiveLock& DependenciesDomain::getInstanceLock()
-{
-   return _instanceLock;
-}
+} // namespace error
+} // namespace nanos
 
-inline Lock& DependenciesDomain::getLock()
-{
-   return _lock;
-}
-
-inline void DependenciesDomain::lock ( )
-{
-   _lock.acquire();
-   memoryFence();
-}
-
-inline void DependenciesDomain::unlock ( )
-{
-   memoryFence();
-   _lock.release();
-}
-
-inline const std::string & DependenciesManager::getName () const
-{
-   return _name;
-}
-
-inline bool DependenciesDomain::haveDependencePendantWrites ( void *addr )
-{
-   fatal("haveDependencePendantWrites service has not been implemented in that dependence plugin!");
-   return true;
-}
-inline void DependenciesDomain::finalizeAllReductions ( void ) 
-{
-}
-
-inline void DependenciesDomain::clearDependenciesDomain ( void ) { }
-}
-
-#endif

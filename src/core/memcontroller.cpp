@@ -581,7 +581,7 @@ void MemController::restoreBackupData ( )
       bool failed = false;
       unsigned int index = 0;
       while( !failed && index < _wd.getNumCopies()) {
-         const uintptr_t dev_addr  = _backupInOutCopies[index].getAddress();
+         const uintptr_t dev_addr  = _backupInOutCopies[index].getDeviceAddress();
          const uintptr_t host_addr = _backupInOutCopies[index].getHostAddress();
          const size_t size         = _backupInOutCopies[index].getSize();
 

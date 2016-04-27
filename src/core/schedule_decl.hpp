@@ -31,7 +31,6 @@
 #include "functors_decl.hpp"
 #include "basethread_decl.hpp"
 
-
 namespace nanos
 {
    class Config; // FIXME: this should be on config_fwd

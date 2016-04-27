@@ -20,10 +20,11 @@
 #ifndef THREADMANAGER_DECL_HPP
 #define THREADMANAGER_DECL_HPP
 
-#include "config.hpp"
 #include "atomic_decl.hpp"
-#include "cpuset.hpp"
+#include "config_decl.hpp"
 #include "basethread_decl.hpp"
+
+#include "cpuset.hpp"
 
 namespace nanos
 {

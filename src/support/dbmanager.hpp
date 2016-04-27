@@ -65,7 +65,7 @@ public:
     * @param parameterIndex Parameter to choose the parameter to reference
     * @param value value to be set on the parameter
     */
-   virtual void bindIntParameter(const unsigned int stmtNumber, const unsigned int parameterIndex, int value) { fatal0("DbManager: bindIntParameter not implemented") };
+   virtual void bindIntParameter(const unsigned int stmtNumber, const unsigned int parameterIndex, int value) { fatal("DbManager: bindIntParameter not implemented"); };
 
    /**
     * @brief This function bind an integer64 value to a prepared statement

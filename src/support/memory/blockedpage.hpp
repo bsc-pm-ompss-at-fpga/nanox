@@ -24,6 +24,9 @@
 
 #include <sys/mman.h>
 
+namespace nanos {
+namespace memory {
+
 /*! \brief Object representation of a memory portion without any access rights.
  *  \details BlockedMemoryPage represents an area of memory whose access rights
  *  have been taken away.
@@ -85,6 +88,9 @@ class BlockedMemoryPage : public MemoryPage {
 			mprotect( begin(), size(), PROT_READ | PROT_WRITE );
 		}
 };
+
+} // namespace memory
+} // namespace nanos
 
 #endif // BLOCKED_PAGE_HPP
 

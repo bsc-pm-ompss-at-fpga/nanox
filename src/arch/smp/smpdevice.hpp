@@ -37,7 +37,9 @@ SMPDevice::SMPDevice ( const SMPDevice &arch ) : Device ( arch ), _transferQueue
 
 /*! \brief SMPDevice destructor
  */
-SMPDevice::~SMPDevice() {};
+SMPDevice::~SMPDevice()
+{
+};
 
 void *SMPDevice::memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WD const *wd, unsigned int copyIdx ) {
    void *retAddr = NULL;

@@ -20,13 +20,14 @@
 #ifndef _NANOS_CONFIG
 #define _NANOS_CONFIG
 
-#include <stdexcept>
-#include <vector>
+#include "config_decl.hpp"
+#include "debug.hpp"
+#include "error.hpp"
+
 #include <memory>
 #include <sstream>
 #include <string.h>
-#include "debug_decl.hpp"
-#include "config_decl.hpp"
+#include <vector>
 
 using namespace nanos;
 

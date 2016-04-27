@@ -17,6 +17,10 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
+#include <cstdint>
+#include <cstddef>
+#include <list>
+
 namespace nanos {
 
 class OSAllocator {

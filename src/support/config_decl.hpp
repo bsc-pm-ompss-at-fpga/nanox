@@ -289,6 +289,14 @@ namespace nanos
                virtual std::string operator()();
          };
 
+         class FloatPointHelpFormat : public HelpFormat
+         {
+            public:
+               virtual ~FloatPointHelpFormat() {}
+
+               virtual std::string operator()();
+         };
+
          typedef class VarOption<int,IntegerHelpFormat>                         IntegerVar;
 
          typedef class VarOption<size_t,MetricHelpFormat,isMetric<size_t> >     SizeVar;
@@ -303,6 +311,8 @@ namespace nanos
 
          typedef class VarOption<unsigned int,PositiveHelpFormat,isPositive<unsigned int> >
                                                                                 UintVar;
+
+         typedef class VarOption<float,FloatPointHelpFormat>                    FloatVar;
          
          typedef class ActionOption<int,IntegerHelpFormat>                      IntegerAction;
 

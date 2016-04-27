@@ -20,12 +20,11 @@
 #ifndef REGIONDICT_H
 #define REGIONDICT_H
 
-#include "regiondict_decl.hpp"
-#include "atomic.hpp"
-#include "lock.hpp"
+#include "error.hpp"
 #include "memorymap.hpp"
-#include "system_decl.hpp"
 #include "os.hpp"
+#include "regiondict_decl.hpp"
+#include "system_decl.hpp"
 
 #include "mutex.hpp"
 
@@ -265,9 +264,13 @@ CopyData *ContainerDense< T >::getRegisteredObject() const {
 }
 
 template <class T>
-ContainerSparse< T >::ContainerSparse( RegionDictionary< ContainerDense > &orig ) : _container(), _containerLock(), _orig( orig ), sparse( true ) {
+ContainerSparse< T >::ContainerSparse( RegionDictionary< ContainerDense > &orig ) :
+   _container(),
+   _containerLock(),
+   _orig( orig ),
+   sparse( true )
+{
 }
-
 
 template <class T>
 ContainerSparse< T >::~ContainerSparse() {
@@ -277,8 +280,7 @@ template <class T>
 RegionNode * ContainerSparse< T >::getRegionNode( reg_t id ) const {
    std::map< reg_t, RegionVectorEntry >::const_iterator it = _container.lower_bound( id );
    if ( it == _container.end() || _container.key_comp()(id, it->first) ) {
-     RegionNode *leaf = _orig.getRegionNode( id );
-   //if ( leaf == NULL ) { *(myThread->_file) << "NULL LEAF CHECK by orig: " << std::endl; printBt( *(myThread->_file) ); }
+      RegionNode *leaf = _orig.getRegionNode( id );
       return leaf;
    }
    return it->second.getLeaf();

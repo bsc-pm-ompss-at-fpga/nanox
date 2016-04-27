@@ -18,14 +18,16 @@
 /*************************************************************************************/
 
 #include "smpdd.hpp"
-#include "debug.hpp"
-#include "system.hpp"
-#include "smp_ult.hpp"
-#include "instrumentation.hpp"
-#include "taskexecutionexception.hpp"
 #include "smpdevice.hpp"
-#include "schedule.hpp"
-#include <string>
+
+#include "smp_ult.hpp"
+
+#include "instrumentation.hpp"
+
+#ifdef NANOS_RESILIENCY_ENABLED
+#include "exception/operationfailure.hpp"
+#include "exception/executionfailure.hpp"
+#endif
 
 using namespace nanos;
 using namespace nanos::ext;

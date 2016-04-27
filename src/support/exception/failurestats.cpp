@@ -1,6 +1,8 @@
 
+#include "atomic.hpp"
 #include "failurestats.hpp"
 
+using namespace nanos;
 using namespace nanos::error;
 
 template<>

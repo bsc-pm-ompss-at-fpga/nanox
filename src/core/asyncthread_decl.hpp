@@ -73,14 +73,7 @@ namespace nanos
 
         /*! \brief AsyncThread destructor
          */
-         virtual ~AsyncThread()
-         {
-            ensure0( _runningWDs.empty(), "WD list not empty in AsyncThread!" );
-            ensure0( _runningWDsCounter == 0, "Running WD list counter not 0 in AsyncThread!" );
-            ensure0( _pendingEvents.empty(), "Event list not empty in AsyncThread!" );
-            ensure0( _pendingEventsCounter == 0, "Event list counter not 0 in AsyncThread!" );
-         }
-
+         virtual ~AsyncThread();
 
          // TODO: Consider if we need them
          virtual void initializeDependent( void ) {}

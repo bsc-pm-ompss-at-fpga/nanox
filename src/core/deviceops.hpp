@@ -20,18 +20,22 @@
 #ifndef DEVICEOPS_HPP
 #define DEVICEOPS_HPP
 
-#include <iostream>
-
-#include "atomic.hpp"
-#include "debug.hpp"
+#include "basethread_decl.hpp"
 #include "deviceops_decl.hpp"
+#include "workdescriptor_decl.hpp"
+
+#include "debug.hpp"
+#include "error.hpp"
+#include "lock.hpp"
 #include "os.hpp"
+
+#include <iostream>
 
 #define VERBOSE_CACHE_OPS 0
 
 using namespace nanos;
 
-inline DeviceOps::DeviceOps() : _pendingDeviceOps ( 0 ), _aborted( false ), _lock() /* debug: */ , _owner( -1 ), _wd( NULL ), _loc( 0 ) {
+inline DeviceOps::DeviceOps() : _pendingDeviceOps ( 0 ), _aborted( false ), _owner( -1 ), _wd( NULL ), _loc( 0 ) {
 }
 
 inline DeviceOps::~DeviceOps() {

@@ -22,9 +22,8 @@
 
 #include "exceptiontracer.hpp"
 #include "workdescriptor_fwd.hpp"
-#include "basethread_decl.hpp"
 
-#include <exception>
+#include <stdexcept>
 #include <string>
 
 namespace nanos {
@@ -48,9 +47,8 @@ namespace error {
  * \details GenericException is the base class of every exception used inside the runtime.
  * \author Jorge Bellon
  */
-class GenericException : public ExceptionTracer, public std::exception {
+class GenericException : public ExceptionTracer, public std::runtime_error {
    private:
-      std::string     _errorMessage;//!< Explanatory string.
       WorkDescriptor &_runningTaskOnError;//!< WorkDescriptor that was being executed when the error was found.
 
    public:
@@ -58,24 +56,11 @@ class GenericException : public ExceptionTracer, public std::exception {
        * Constructor
        * @param[in] message Brief description of the error that was found.
        */
-      GenericException( std::string const& message ) : 
-            _errorMessage( message ), 
-            _runningTaskOnError( *getMyThreadSafe()->getCurrentWD() )
-      {}
+      GenericException( std::string const& message );
 
-      ~GenericException() noexcept {}
+      virtual ~GenericException() noexcept {}
 
       WorkDescriptor& getTask() { return _runningTaskOnError; }
-
-      void setErrorMessage( std::string const& message ) { _errorMessage = message; }
-
-      /**
-       * Provides access to an explanatory string
-       * \returns a brief description of the error that was found
-       */
-      virtual const char* what() const noexcept {
-         return _errorMessage.c_str();
-      }
 };
 
 }// namespace error

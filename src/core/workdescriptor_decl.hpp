@@ -24,27 +24,33 @@
 #include <utility>
 #include <vector>
 
-#include "workdescriptor_fwd.hpp"
-#include "slicer_fwd.hpp"
 #include "basethread_fwd.hpp"
 #include "processingelement_fwd.hpp"
+#include "schedule_fwd.hpp"
+#include "slicer_fwd.hpp"
 #include "wddeque_fwd.hpp"
+#include "workdescriptor_fwd.hpp"
 
-#include "dependableobjectwd_decl.hpp"
-#include "copydata_decl.hpp"
-#include "synchronizedcondition_decl.hpp"
 #include "atomic_decl.hpp"
-#include "lazy_decl.hpp"
+#include "copydata_decl.hpp"
+#include "dependableobjectwd_decl.hpp"
 #include "instrumentationcontext_decl.hpp"
-#include "compatibility.hpp"
+#include "lazy_decl.hpp"
 
-#include "regioncache_decl.hpp"
 #include "memcontroller_decl.hpp"
+#include "regioncache_decl.hpp"
+#include "synchronizedcondition_decl.hpp"
+
 
 #include "dependenciesdomain_decl.hpp"
 #include "task_reduction_decl.hpp"
 #include "simpleallocator_decl.hpp"
-#include "schedule_fwd.hpp"   // ScheduleWDData
+
+#include "compatibility.hpp"
+
+#ifdef NANOS_RESILIENCY_ENABLED
+#   include "exception/operationfailure.hpp"
+#endif
 
 namespace nanos
 {
@@ -185,27 +191,13 @@ typedef std::set<const Device *>  DeviceList;
             * execution can continue (e.g. use a different memory page if we find one
             * corrupted/invalid.
             */
-#if 0 // disabled
-            virtual bool recover ( TaskException const& err ) {
+            virtual bool recover ( error::OperationFailure const& error ) {
                fatal( "Recovery error: recover function is not implemented for device ",
                       getName()
                     );
-               return false;
             }
-#endif
-
-            /*! \brief Restores the workdescriptor to its original state.
-             * Leaving the recovery dependent to the arch allows more
-             * accurate recovery for each kind of device.
-             */
-            virtual void restore ( WD& wd ) {
-               fatal( "Restoration error: restore function is not implemented for device ",
-                       getName()
-                    );
-            }
-#endif
-
     };
+#endif
 
 /*! \brief This class identifies a single unit of work
  *

@@ -132,6 +132,13 @@ namespace nanos
          _status.must_leave_team = false;
    }
 
+   inline BaseThread::~BaseThread()
+   {
+      finish();
+      ensure( ( !_status.has_team ), "Destroying thread inside a team!" );
+      ensure( ( _status.has_joined || _status.is_main_thread ), "Trying to destroy running thread" );
+   }
+
    inline bool BaseThread::isMainThread ( void ) const { return _status.is_main_thread; }
 
    inline void BaseThread::setMainThread ( bool v ) { _status.is_main_thread = v; }
@@ -202,22 +209,6 @@ namespace nanos
    }
  
    inline bool BaseThread::hasTeam() const { return _status.has_team; }
- 
-   inline void BaseThread::leaveTeam()
-   {
-      ensure( this == myThread, "thread is not leaving team by itself" );
-      if ( _teamData ) 
-      {
-         TeamData *td = _teamData;
-         debug( "removing thread " << this << " with id " << toString<int>(getTeamId()) << " from " << _teamData->getTeam() );
-
-         size_t final_size = td->getTeam()->removeThread( getTeamId() );
-         if ( final_size == td->getTeam()->getFinalSize() ) td->getTeam()->setStable(true);
-         _teamData = _teamData->getParentTeamData();
-         _status.has_team = _teamData != NULL;
-         delete td;
-      }
-   }
 
    inline ThreadTeam * BaseThread::getTeam() const { return _teamData ? _teamData->getTeam() : NULL; }
  

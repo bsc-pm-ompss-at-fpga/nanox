@@ -50,7 +50,7 @@ BackupManager & BackupManager::operator= ( BackupManager & arch )
 
 void * BackupManager::memAllocate ( size_t size,
                                     SeparateMemoryAddressSpace &mem,
-                                    WD const& wd,
+                                    WorkDescriptor const* wd,
                                     uint copyIdx )
 {
    return _managed_pool.allocate(size);

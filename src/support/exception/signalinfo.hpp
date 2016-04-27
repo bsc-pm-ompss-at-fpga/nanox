@@ -21,6 +21,7 @@
 #define SIGNAL_INFO_HPP
 
 #include "memory/memoryaddress.hpp"
+#include "memory/memorychunk.hpp"
 
 #include <signal.h>
 #include <ucontext.h>
@@ -103,7 +104,7 @@ class SignalInfo {
 
 		int getSignalCode() const { return _info.si_code; }
 
-		Address getAddress() const { return Address( _info.si_addr ); }
+		memory::Address getAddress() const { return memory::Address( _info.si_addr ); }
 
 		/*! \brief Gets the portion of memory affected by an error
 		 * \details This does only applies for SIGBUS signals with 
@@ -115,9 +116,9 @@ class SignalInfo {
 		 * the value of lsb would be log2(sysconf(SC_PAGESIZE)).
 		 * \see sigaction(2).
 		 */
-		MemoryChunk getAffectedMemoryLocation() const
+		memory::MemoryChunk getAffectedMemoryLocation() const
 		{
-			return MemoryChunk( getAddress(),
+			return memory::MemoryChunk( getAddress(),
 #ifdef si_addr_lsb
 						1 << (_info.si_addr_lsb)
 #else

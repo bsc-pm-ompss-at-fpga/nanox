@@ -38,12 +38,7 @@
 #include "basethread.hpp"
 #include "allocator.hpp"
 #include "debug.hpp"
-#include "resourcemanager.hpp"
-#include <assert.h>
-#include <string.h>
-#include <signal.h>
-#include <set>
-#include <climits>
+
 #include "smpthread.hpp"
 #include "regiondict.hpp"
 #include "smpprocessor.hpp"
@@ -69,6 +64,11 @@
 
 #include "addressspace.hpp"
 
+#include <mutex>
+#include <set>
+
+#include <climits>
+#include <cstring>
 
 // extern "C" {
 // 
@@ -140,13 +140,14 @@ System::System () :
 #ifdef NANOS_INSTRUMENTATION_ENABLED
       , _enableEvents(), _disableEvents(), _instrumentDefault("default"), _enableCpuidEvent( false )
 #endif
-      , _lockPoolSize(37), _lockPool( NULL ), _mainTeam (NULL), _simulator(false),  _task_max_retries(1), _affinityFailureCount( 0 )
+      , _lockPoolSize(37), _lockPool( NULL ), _mainTeam (NULL), _simulator(false)
 #ifdef NANOS_RESILIENCY_ENABLED
       , _injectionPolicy( "none" )
       , _resiliency_disabled(false)
       , _task_max_trials(1)
       , _backup_pool_size(sysconf(_SC_PAGESIZE ) * sysconf(_SC_PHYS_PAGES) / 2)
 #endif
+      , _affinityFailureCount( 0 )
       , _createLocalTasks( false )
       , _verboseDevOps( false )
       , _verboseCopies( false )

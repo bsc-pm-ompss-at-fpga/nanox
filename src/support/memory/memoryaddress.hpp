@@ -23,6 +23,9 @@
 #include <algorithm>
 #include <ostream>
 
+namespace nanos {
+namespace memory {
+
 /*
  * \brief Abstraction layer for memory addresses.
  * \defails Address provides an easy to use wrapper

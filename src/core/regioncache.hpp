@@ -20,25 +20,36 @@
 #ifndef REGIONCACHE_HPP
 #define REGIONCACHE_HPP
 
-#include <stdio.h>
-#include "regioncache_decl.hpp"
 #include "processingelement_decl.hpp"
+#include "regioncache_decl.hpp"
+#include "system_decl.hpp"
+
 #include "atomic.hpp"
 
+#include <stdio.h>
 
-inline uint64_t Chunk::getAddress() const {
-   return _address;
+inline RemoteChunk::RemoteChunk( uint64_t hostAddr, uint64_t deviceAddr, std::size_t size ) :
+   _hostAddress(hostAddr), _deviceAddress(deviceAddr), _size(size)
+{
 }
 
-inline uint64_t Chunk::getHostAddress() const {
-   return _hostAddress;
+inline uint64_t RemoteChunk::getDeviceAddress() const {
+   return static_cast<uint64_t>(_deviceAddress);
 }
 
-inline void Chunk::setHostAddress( uint64_t addr ) {
+inline uint64_t RemoteChunk::getHostAddress() const {
+   return static_cast<uint64_t>(_hostAddress);
+}
+
+inline void RemoteChunk::setHostAddress( uint64_t addr ) {
    _hostAddress = addr;
 }
 
-inline std::size_t Chunk::getSize() const {
+inline void RemoteChunk::setDeviceAddress( uint64_t addr ) {
+   _deviceAddress = addr;
+}
+
+inline std::size_t RemoteChunk::getSize() const {
    return _size;
 }
 
@@ -91,7 +102,7 @@ inline bool AllocatedChunk::isRooted() const {
    return _rooted;
 }
 
-inline Device /*const*/ &RegionCache::getDevice() const {
+inline Device const &RegionCache::getDevice() const {
    return _device;
 }
 

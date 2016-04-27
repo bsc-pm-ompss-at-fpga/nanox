@@ -21,6 +21,7 @@
 #define _NANOS_TASK_REDUCTION_HPP
 
 #include "task_reduction_decl.hpp"
+#include "system_decl.hpp"
 
 inline bool TaskReduction::has( const void *ptr)
 {

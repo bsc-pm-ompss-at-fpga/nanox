@@ -22,6 +22,9 @@
 
 #include "memoryaddress.hpp"
 
+namespace nanos {
+namespace memory {
+
 template < typename ChunkType >
 struct is_contiguous_memory_region : public std::false_type
 {
@@ -103,7 +106,7 @@ class MemoryChunk {
  * \author Jorge Bellon
  */
 template <size_t alignment_restriction>
-class AlignedMemoryChunk : public ::MemoryChunk {
+class AlignedMemoryChunk : public MemoryChunk {
    public:
 		AlignedMemoryChunk() = delete;
 
@@ -143,7 +146,7 @@ class AlignedMemoryChunk : public ::MemoryChunk {
 };
 
 template <>
-struct is_contiguous_memory_region< ::MemoryChunk > : public std::true_type
+struct is_contiguous_memory_region< MemoryChunk > : public std::true_type
 {
 };
 
@@ -151,6 +154,9 @@ template <size_t alignment>
 struct is_contiguous_memory_region< AlignedMemoryChunk<alignment> > : public std::true_type
 {
 };
+
+} // namespace memory
+} // namespace nanos
 
 #endif // MEMORY_CHUNK
 

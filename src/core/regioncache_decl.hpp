@@ -35,6 +35,9 @@
 #include "memcontroller_fwd.hpp"
 #include "invalidationcontroller_fwd.hpp"
 
+#include "memory/memoryaddress.hpp"
+#include "memory/memorychunk.hpp"
+
 #define VERBOSE_CACHE 0
 
 namespace nanos {
@@ -51,7 +54,22 @@ namespace nanos {
       void releaseLockedObjects();
    };
 
-   class AllocatedChunk {
+   class RemoteChunk  {
+         memory::Address     _hostAddress;
+         memory::Address     _deviceAddress;
+         std::size_t         _size;
+      public:
+         RemoteChunk( uint64_t hostAddr, uint64_t deviceAddr, std::size_t size );
+         RemoteChunk( const RemoteChunk& other );
+
+         uint64_t getDeviceAddress() const;
+         uint64_t getHostAddress() const;
+         std::size_t getSize() const;
+         void setDeviceAddress( uint64_t addr );
+         void setHostAddress( uint64_t addr );
+   };
+
+   class AllocatedChunk : public RemoteChunk {
       private:
          RegionCache                      &_owner;
          RecursiveLock                     _lock;
@@ -75,13 +93,9 @@ namespace nanos {
          AllocatedChunk &operator=( AllocatedChunk const &chunk );
          ~AllocatedChunk();
 
-         uint64_t getAddress() const;
-         uint64_t getHostAddress() const;
-         std::size_t getSize() const;
          bool isDirty() const;
          unsigned int getLruStamp() const;
          void increaseLruStamp();
-         void setHostAddress( uint64_t addr );
 
          void clearRegions();
          void clearNewRegions( global_reg_t const &newAllocatedRegion );

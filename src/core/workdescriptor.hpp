@@ -20,22 +20,24 @@
 #ifndef _NANOS_WORK_DESCRIPTOR_H
 #define _NANOS_WORK_DESCRIPTOR_H
 
+#include "workdescriptor_decl.hpp"
+#include "synchronizedcondition_decl.hpp"
+#include "allocator_decl.hpp"
+#include "slicer_decl.hpp"
+
+#include "atomic.hpp"
+#include "dependableobjectwd.hpp"
+#include "dependenciesdomain.hpp"
+#include "copydata.hpp"
+#include "instrumentationcontext.hpp"
+#include "lazy.hpp"
+#include "schedule.hpp"
+#include "system.hpp"
+#include "debug.hpp"
+
 #include <stdlib.h>
 #include <utility>
 #include <vector>
-#include "workdescriptor_decl.hpp"
-#include "dependableobjectwd.hpp"
-#include "copydata.hpp"
-#include "synchronizedcondition_decl.hpp"
-#include "atomic.hpp"
-#include "lazy.hpp"
-#include "instrumentationcontext.hpp"
-#include "schedule.hpp"
-#include "dependenciesdomain.hpp"
-#include "allocator_decl.hpp"
-#include "system.hpp"
-#include "slicer_decl.hpp"
-#include "debug.hpp"
 
 using namespace nanos;
 
@@ -175,9 +177,6 @@ inline bool DeviceData::isCompatible ( const Device &arch , const ProcessingElem
 inline bool DeviceData::isCompatibleWithPE ( const ProcessingElement* pe) { return true; }
 
 /* WorkDescriptor inlined functions */
-
-inline void WorkDescriptor::setStart () { _state = WorkDescriptor::START; }
-
 inline bool WorkDescriptor::started ( void ) const { return (( _state != INIT ) && (_state != START)); }
 inline bool WorkDescriptor::initialized ( void ) const { return ( _state != INIT ) ; }
 

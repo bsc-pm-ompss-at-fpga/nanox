@@ -35,6 +35,8 @@
 #include "memcachecopy.hpp"
 #include "globalregt.hpp"
 
+#include "exception/exceptiontracer.hpp"
+
 #if VERBOSE_CACHE
  #define _VERBOSE_CACHE 1
 #else
@@ -194,10 +196,10 @@ void BaseAddressSpaceInOps::addOp( SeparateMemoryAddressSpace *from, global_reg_
    TransferList &list = _separateTransfers[ from ];
    addAmountTransferredData( reg.getDataSize() );
    if ( sourceChunk == (AllocatedChunk *) -1) {
-      printBt( *myThread->_file );
+      error::ExceptionTracer backTrace();
    }
    if ( destinationChunk == (AllocatedChunk *) -1) {
-      printBt( *myThread->_file );
+      error::ExceptionTracer backTrace();
    }
    if ( _lockedChunks.count( sourceChunk ) == 0 ) {
       sourceChunk->lock();

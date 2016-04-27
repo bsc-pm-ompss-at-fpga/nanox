@@ -17,8 +17,8 @@ namespace error {
 class BlockMemoryPageAccessInjector : public PeriodicInjectionPolicy<>
 {
 	private:
-		std::deque<MemoryPage> _candidatePages;
-		std::set<BlockedMemoryPage> _blockedPages;
+		std::deque<memory::MemoryPage> _candidatePages;
+		std::set<memory::BlockedMemoryPage> _blockedPages;
 
 	public:
 		BlockMemoryPageAccessInjector( ErrorInjectionConfig const& properties ) noexcept :
@@ -49,21 +49,21 @@ class BlockMemoryPageAccessInjector : public PeriodicInjectionPolicy<>
 
 		void injectError( void *address )
 		{
-			_blockedPages.emplace( MemoryPage(address) );
+			_blockedPages.emplace( memory::MemoryPage(address) );
 		}
 
 		void declareResource( void *address, size_t size )
 		{
-			MemoryPage::retrievePagesInsideChunk( _candidatePages, ::MemoryChunk( static_cast<Address>(address), size) );
+			memory::MemoryPage::retrievePagesInsideChunk( _candidatePages, memory::MemoryChunk( static_cast<memory::Address>(address), size) );
 		}
 
-		void insertCandidatePage( MemoryPage const& page )
+		void insertCandidatePage( memory::MemoryPage const& page )
 		{
 			_candidatePages.push_back( page );
 		}
 
 		void recoverError( void* handle ) noexcept {
-			Address failedAddress( handle );
+			memory::Address failedAddress( handle );
 
 			for( auto it = _blockedPages.begin(); it != _blockedPages.end(); it++ ) {
 				if( it->contains( failedAddress ) ) {

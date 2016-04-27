@@ -127,7 +127,7 @@ memory_space_id_t global_reg_t::getPreferedSourceLocation( memory_space_id_t des
    memory_space_id_t selected;
    if ( entry->isLocatedIn( dest ) ) {
       selected = dest;
-      printBt(*myThread->_file);
+      error::ExceptionTracer tracer();
       //fatal("Data already in destination.");
    } else {
       entry->lock();

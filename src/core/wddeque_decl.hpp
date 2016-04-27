@@ -20,16 +20,15 @@
 #ifndef _NANOS_LIB_WDDEQUE_DECL_H
 #define _NANOS_LIB_WDDEQUE_DECL_H
 
-#include <list>
-#include <functional>
-#include <map>
-
 #include "atomic_decl.hpp"
 #include "lock_decl.hpp"
+#include "workdescriptor_decl.hpp"
 
 #include "basethread_fwd.hpp"
 
-#include "workdescriptor_decl.hpp"
+#include <list>
+#include <functional>
+#include <map>
 
 #define NANOS_ABA_MASK (15)
 #define NANOS_ABA_PTR(x) ((volatile WDNode *)(((uintptr_t)(x))& ~(uintptr_t)NANOS_ABA_MASK))

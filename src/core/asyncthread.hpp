@@ -22,10 +22,19 @@
 
 #include "asyncthread_decl.hpp"
 #include "system.hpp"
-
+#include "debug.hpp"
 
 namespace nanos
 {
+
+AsyncThread::~AsyncThread()
+{
+   ensure( _runningWDs.empty(), "WD list not empty in AsyncThread!" );
+   ensure( _runningWDsCounter == 0, "Running WD list counter not 0 in AsyncThread!" );
+   ensure( _pendingEvents.empty(), "Event list not empty in AsyncThread!" );
+   ensure( _pendingEventsCounter == 0, "Event list counter not 0 in AsyncThread!" );
+}
+
 
 inline void AsyncThread::checkEvents()
 {

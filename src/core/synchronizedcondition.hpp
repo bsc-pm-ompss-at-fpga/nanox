@@ -39,11 +39,6 @@ inline void GenericSyncCond::unlock()
    _lock.release();
 }
 
-inline Lock &GenericSyncCond::getLock()
-{
-   return _lock;
-}
-
 template <class _T>
 inline void SynchronizedCondition< _T>::wait()
 {
