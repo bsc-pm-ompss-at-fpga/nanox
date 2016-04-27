@@ -427,8 +427,7 @@ void RegionDictionary< Sparsity >::_computeIntersect( reg_t regionIdA, reg_t reg
    RegionNode const *regB = this->getRegionNode( regionIdB );
 
    if ( regionIdA == regionIdB ) {
-      *(myThread->_file) << __FUNCTION__ << " Dummy check! regA == regB ( " << regionIdA << " )" << std::endl;
-      printBt( *(myThread->_file) );
+      message( __FUNCTION__, " Dummy check! regA == regB ( ", regionIdA, " )" );
       for ( int dimensionCount = this->getNumDimensions() - 1; dimensionCount >= 0; dimensionCount -= 1 ) {
          outReg[ dimensionCount ].accessed_length = 0;
          outReg[ dimensionCount ].lower_bound = 0;
@@ -697,25 +696,25 @@ reg_t RegionDictionary< Sparsity >::obtainRegionId( CopyData const &cd, WD const
    }
    CopyData const &realCd = deductedCd != NULL ? *deductedCd : cd;
    if ( realCd.getNumDimensions() != this->getNumDimensions() ) {
-     fatal("Error: cd.getNumDimensions() returns " << realCd.getNumDimensions()
-         << " but I already have the object registered with " << this->getNumDimensions()
-         << " dimensions. WD is : "
-         << ( wd.getDescription() != NULL ? wd.getDescription() : "n/a" )
-         << " copy index: " << idx << " got reg object? " << this->getRegisteredObject() );
+     fatal("Error: cd.getNumDimensions() returns ", realCd.getNumDimensions(),
+         " but I already have the object registered with ", this->getNumDimensions(),
+         " dimensions. WD is : ",
+         ( wd.getDescription() != NULL ? wd.getDescription() : "n/a" ),
+         " copy index: ", idx, " got reg object? ", this->getRegisteredObject() );
    }
    ensure( realCd.getNumDimensions() == this->getNumDimensions(), "ERROR" );
    ensure( this->getNumDimensions() > 0, "ERROR" );
    if ( realCd.getNumDimensions() != this->getNumDimensions() ) {
-      std::cerr << "Error, invalid numDimensions" << std::endl;
+      fatal( "Error, invalid numDimensions" );
    } else {
       for ( unsigned int cidx = 0; cidx < realCd.getNumDimensions(); cidx += 1 ) {
          if ( this->getDimensionSizes()[ cidx ] != realCd.getDimensions()[ cidx ].size ) {
-            fatal("Object with base address " << (void *)realCd.getBaseAddress() <<
-                  " was previously registered with a different size in dimension " <<
-                  std::dec << cidx << " (previously was " <<
-                  std::dec << this->getDimensionSizes()[ cidx ] <<
-                  " now received size " << std::dec <<
-                  realCd.getDimensions()[ cidx ].size << ")." );
+            fatal("Object with base address ", (void *)realCd.getBaseAddress(),
+                  " was previously registered with a different size"
+                  " in dimension ", std::dec, cidx,
+                  " (previously was ", std::dec, this->getDimensionSizes()[ cidx ],
+                  " now received size ", std::dec, realCd.getDimensions()[ cidx ].size,
+                  " )." );
          }
       }
       id = this->addRegion( realCd.getDimensions() );
@@ -738,8 +737,7 @@ reg_t RegionDictionary< Sparsity >::registerRegion( reg_t id, std::list< std::pa
 template < template <class> class Sparsity>
 bool RegionDictionary< Sparsity >::checkIntersect( reg_t regionIdA, reg_t regionIdB ) {
    if ( regionIdA == regionIdB ) {
-      *(myThread->_file) << __FUNCTION__ << " Dummy check! regA == regB ( " << regionIdA << " )" << std::endl;
-      printBt( *(myThread->_file) );
+      message( __FUNCTION__, " Dummy check! regA == regB ( ", regionIdA, " )" );
    }
 
    {

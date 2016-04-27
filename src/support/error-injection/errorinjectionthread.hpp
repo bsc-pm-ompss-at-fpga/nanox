@@ -24,14 +24,14 @@ ErrorInjectionThread<RandomEngine>::ErrorInjectionThread( InjectionPolicy& manag
 		_suspendCondition(),
 		_injectionThread( &ErrorInjectionThread::injectionLoop, this )
 {
-	debug0( "Starting injection thread" );
+	debug( "Starting injection thread" );
 }
 
 template < class RandomEngine >
 ErrorInjectionThread<RandomEngine>::~ErrorInjectionThread() noexcept
 {
 	terminate();
-	debug0( "Error injection thread finished." );
+	debug( "Error injection thread finished." );
 }
 
 template < class RandomEngine >

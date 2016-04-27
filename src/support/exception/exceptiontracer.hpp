@@ -42,13 +42,15 @@ class ExceptionTracer {
 	public:
 		ExceptionTracer()
 		{
+#ifdef NANOS_DEBUG_ENABLED
 			void *array[25];
 			int length = backtrace(array,25);
 			char** symbols = backtrace_symbols(array,length);
 			for( int i = 0; i < length; i++) {
-//				debug(symbols[i]);
+				debug(symbols[i]);
 			}
 			free(symbols);
+#endif
 		}
 };
 

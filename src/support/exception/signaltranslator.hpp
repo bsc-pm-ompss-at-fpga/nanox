@@ -20,6 +20,8 @@
 #ifndef SIGNAL_TRANSLATOR_HPP
 #define SIGNAL_TRANSLATOR_HPP
 
+#include "error.hpp"
+
 #include <signal.h>
 
 // Source code based in the following article:

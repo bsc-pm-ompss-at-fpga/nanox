@@ -57,7 +57,7 @@ void SQLite3DbManager::sqlCheck(const int err, const std::string &msg)
    if ( err != SQLITE_OK ) {
       std::string errMsg = msg;
       errMsg += sqlite3_errmsg(_db);
-      fatal0(errMsg);
+      fatal(errMsg);
    }
 }
 

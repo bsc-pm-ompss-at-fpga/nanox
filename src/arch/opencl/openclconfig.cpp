@@ -162,19 +162,19 @@ void OpenCLConfig::apply(const std::string devTypeIn, std::map<cl_device_id, cl_
     // Get the number of available platforms.
     cl_uint numPlats;
     if (clGetPlatformIDs(0, NULL, &numPlats) != CL_SUCCESS)
-        fatal0("Cannot detect the number of available OpenCL platforms");
+        fatal("Cannot detect the number of available OpenCL platforms");
 
     if (numPlats == 0)
-        fatal0("No OpenCL platform available");
+        fatal("No OpenCL platform available");
 
     // Read all platforms.
     cl_platform_id *plats = new cl_platform_id[numPlats];
     if (clGetPlatformIDs(numPlats, plats, NULL) != CL_SUCCESS)
-        fatal0("Cannot load OpenCL platforms");
+        fatal("Cannot load OpenCL platforms");
 
     // Is platform available?
     if (!numPlats)
-        fatal0("No OpenCL platform available");
+        fatal("No OpenCL platform available");
 
     std::vector<cl_platform_id> _plats;
     // Save platforms.

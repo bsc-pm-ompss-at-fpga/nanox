@@ -210,10 +210,13 @@ class Address {
 		}
 };
 
+} // namespace nanos 
+} // namespace memory
+
 /*! \brief Prints an address object to an output stream.
  *  \details String representation of an address in hexadecimal.
  */
-std::ostream& operator<<(std::ostream& out, Address const &entry);
+std::ostream& operator<<(std::ostream& out, nanos::memory::Address const &entry);
 
 #endif // ADDRESS_HPP
 

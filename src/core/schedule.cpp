@@ -54,7 +54,7 @@ void Scheduler::submit ( WD &wd, bool force_queue )
    NANOS_INSTRUMENT ( InstrumentState inst(NANOS_SCHEDULING, true) );
    BaseThread *mythread = myThread;
 
-   debug ( "submitting task " << wd.getId() << " " << ( wd.getDescription() != NULL ? wd.getDescription() : "") << " team: " << mythread->getTeam() << " this thread is " << mythread );
+   debug ( "submitting task ", wd.getId(), " ", ( wd.getDescription() != NULL ? wd.getDescription() : ""), " team: ", mythread->getTeam(), " this thread is ", mythread );
 
    wd.submitted();
    wd.setReady();
@@ -433,7 +433,7 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
 
             //! If found a wd to switch to, execute it
             if ( next ) {
-               verbose("   switching to " << next->getId() ); //FIXME:xteruel
+               verbose("   switching to ", next->getId() ); //FIXME:xteruel
                switchTo ( next );
                thread = getMyThreadSafe();
                supportULT = thread->runningOn()->supportsUserLevelThreads();
@@ -948,8 +948,8 @@ void Scheduler::switchTo ( WD *to )
          to->start(WD::IsAUserLevelThread);
       }
 
-      debug( "switching from task " << myThread->getCurrentWD() << ":" << myThread->getCurrentWD()->getId() <<
-            " to " << to << ":" << to->getId() );
+      debug( "switching from task ", myThread->getCurrentWD(), ":", myThread->getCurrentWD()->getId(),
+            " to ", to, ":", to->getId() );
 
       NANOS_INSTRUMENT( WD *oldWD = myThread->getCurrentWD(); )
       NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, to, false ) );
@@ -1046,8 +1046,8 @@ void Scheduler::exitTo ( WD *to )
        to->start(WD::IsAUserLevelThread,NULL);
     }
 
-    debug( "exiting task " << myThread->getCurrentWD() << ":" << myThread->getCurrentWD()->getId() <<
-          " to " << to << ":" << to->getId() );
+    debug( "exiting task ", myThread->getCurrentWD(), ":", myThread->getCurrentWD()->getId(),
+          " to ", to, ":", to->getId() );
 
     NANOS_INSTRUMENT( WD *oldWD = myThread->getCurrentWD(); )
     NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, to, true ) );

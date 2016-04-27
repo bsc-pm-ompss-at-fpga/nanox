@@ -77,14 +77,14 @@ void PThread::start ( BaseThread * th )
    //! \note Checking user-defined stack size
    if ( _stackSize > 0 ) {
       if ( _stackSize < PTHREAD_STACK_MIN ) {
-         warning("Specified thread stack size (" << _stackSize << " bytes) too small, adjusting to " << PTHREAD_STACK_MIN << " bytes");
+         warning("Specified thread stack size (", _stackSize, " bytes) too small, adjusting to ", PTHREAD_STACK_MIN, " bytes");
          _stackSize = PTHREAD_STACK_MIN;
       }
       if (pthread_attr_setstacksize( &attr, _stackSize ) )
          warning( "Couldn't set pthread stack size stack" );
    }
  
-   verbose( "Creating thread with " << _stackSize << " bytes of stack size" );
+   verbose( "Creating thread with ", _stackSize, " bytes of stack size" );
 
    if ( pthread_create( &_pth, &attr, os_bootthread, th ) )
       fatal( "Couldn't create thread" );
@@ -122,7 +122,7 @@ void PThread::bind()
    cpu_set_t cpu_set;
    CPU_ZERO( &cpu_set );
    CPU_SET( cpu_id, &cpu_set );
-   verbose( "Binding thread " << getMyThreadSafe()->getId() << " to cpu " << cpu_id );
+   verbose( "Binding thread ", getMyThreadId(), " to cpu ", cpu_id );
    pthread_setaffinity_np( _pth, sizeof(cpu_set_t), &cpu_set );
 
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )

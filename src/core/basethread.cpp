@@ -154,7 +154,7 @@ void BaseThread::leaveTeam()
    if ( _teamData )
    {
       TeamData *td = _teamData;
-      debug( "removing thread " << this << " with id " << toString<int>(getTeamId()) << " from " << _teamData->getTeam() );
+      debug( "removing thread ", this, " with id ", toString<int>(getTeamId()), " from ", _teamData->getTeam() );
 
       td->getTeam()->removeThread( getTeamId() );
       _teamData = _teamData->getParentTeamData();

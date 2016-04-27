@@ -42,7 +42,7 @@ class SlicerGuidedFor: public Slicer
 
 void SlicerGuidedFor::submit ( WorkDescriptor &work )
 {
-   debug0 ( "Using sliced work descriptor: Guided For" );
+   debug( "Using sliced work descriptor: Guided For" );
 
    nanos_loop_info_t *nli = (nanos_loop_info_t *) work.getData();
 

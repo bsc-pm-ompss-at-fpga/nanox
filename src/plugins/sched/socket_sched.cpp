@@ -251,7 +251,7 @@ namespace nanos {
                      // Convert to virtual
                      int vNode = sys.getVirtualNUMANode( node );
                      _gpuNodes.insert( vNode );
-                     verbose0( "[NUMA] Found GPU Worker in node ", node, 
+                     verbose( "[NUMA] Found GPU Worker in node ", node,
                                " (virtual ", vNode, ")"
                              );
                   }
@@ -396,7 +396,7 @@ namespace nanos {
                   wdata._initTask = true;
                   winner = tdata._next++ % sys.getNumNumaNodes();
                   
-                  verbose0( "[NUMA] wd ", wd.getId(), "(", wd.getDescription(), ") "
+                  verbose( "[NUMA] wd ", wd.getId(), "(", wd.getDescription(), ") "
                             "is init task, assigned to NUMA node ", winner );
                   //fprintf( stderr, "[socket] Round.robbin next = %d\n", tdata._next.value() );
                }
@@ -488,7 +488,7 @@ namespace nanos {
                      // Move the iterator to the random position
                      advance( it, pos );
                      winner = *it;
-                     verbose0( toString( "[NUMA] Tie resolved, candidate is pos: " ) + toString( pos ) + toString( " (node " ) + toString( winner ) );
+                     verbose( "[NUMA] Tie resolved, candidate is pos: ", pos, " (node ", winner, ")" );
                   }
                   // If there's only one element
                   else if ( candidateRanks.size() == 1 ) {
@@ -500,7 +500,7 @@ namespace nanos {
                   }
                }
 
-               verbose0( "[NUMA] Winner is " + toString( winner ) );
+               verbose( "[NUMA] Winner is ", winner );
 
                wd.setNUMANode( winner );
 
@@ -519,7 +519,7 @@ namespace nanos {
                _spins ( spins ), _randomSteal( randomSteal ), _useCopies( useCopies ),
                _config( config )
             {
-               message0("Steal: " + toString(steal) + ", _steal" + toString(_steal) );
+               message("Steal: " + toString(steal) + ", _steal" + toString(_steal) );
             }
 
             // destructor
@@ -532,7 +532,7 @@ namespace nanos {
             {
                if ( _steal && sys.getNumNumaNodes() == 1 )
                {
-                  message0( "[NUMA] Stealing can not be enabled with just one NUMA node available, disabling it" );
+                  message( "[NUMA] Stealing can not be enabled with just one NUMA node available, disabling it" );
                   _steal = false;
                }
                
@@ -542,19 +542,19 @@ namespace nanos {
                computeDistanceInfo();
                
                if ( sys.isSummaryEnabled() ){
-                  message0( "====================== NUMA Summary ======================" );
-                  message0( "=== Worker binding:" );
+                  message( "====================== NUMA Summary ======================" );
+                  message( "=== Worker binding:" );
                   for (System::ThreadList::iterator it=sys.getWorkersBegin();
                       it!=sys.getWorkersEnd(); it++) {
                      const BaseThread * w = it->second;
                      
-                     message0( "===  | Worker " << w->getId() << ", cpu id: " << w->getCpuId() << ", NUMA node " << w->runningOn()->getNumaNode() );
+                     message( "===  | Worker ", w->getId(), ", cpu id: ", w->getCpuId(), ", NUMA node ", w->runningOn()->getNumaNode() );
                   }
                   
                   std::stringstream ss;
                   std::ostream_iterator<int> outIt (ss ,", ");
                   std::copy( _gpuNodes.begin(), _gpuNodes.end(), outIt );
-                  message0( "=== CUDA devices in:     " << ss.str() );
+                  message( "=== CUDA devices in:     ", ss.str() );
                   
                   // Clear stringstream to reuse it
                   ss.str( std::string() );
@@ -569,9 +569,9 @@ namespace nanos {
                      if ( vNode != INT_MIN )
                         ss << vNode << "->" << pNode << ", ";
                   }
-                  message0( ss.str() );
+                  message( ss.str() );
                   
-                  message0( "=========================================================" );
+                  message( "=========================================================" );
                }
                
                // Create 2 queues per socket plus one for the global queue.
@@ -659,7 +659,7 @@ namespace nanos {
                TeamData &tdata = (TeamData &) *thread->getTeam()->getScheduleData();
                
                if( wdata._wakeUpQueue != std::numeric_limits<unsigned>::max() )
-                  warning0( "WD already has a queue (" << wdata._wakeUpQueue << ")" );
+                  warning( "WD already has a queue (", wdata._wakeUpQueue, ")" );
                
                unsigned index;
                unsigned node;
@@ -801,9 +801,7 @@ namespace nanos {
             
             WD * stealWork ( BaseThread *thread )
             {
-               message0("Steal: " + toString(_steal) );
-               // This fixes #1102
-               message( "AtSteal!!!" );
+               message("Steal: ", _steal );
                // WD to return
                WD* wd = NULL;
                
@@ -957,7 +955,7 @@ namespace nanos {
                   fatal( "SmartPriority::successorFound  successor->getRelatedObject() is NULL" );
                }
                
-               //debug( "Predecessor[" << pred->getId() << "]" << pred << ", Successor[" << succ->getId() << "]" );
+               //debug( "Predecessor[", pred->getId(), "]", pred, ", Successor[", succ->getId(), "]" );
                
                debug ( "Propagating priority "
                        "from " , (void*)succ, ":", succ->getId(), 

@@ -23,8 +23,6 @@
 #include <stddef.h>
 #include <string>
 
-#include "debug.hpp"
-
 #include "synchronizedcondition_fwd.hpp"
 #include "system_fwd.hpp"
 
@@ -100,10 +98,7 @@ namespace nanos
         //! \brief SchedulerConf default constructor (private)
         SchedulerConf() : _numSpins(1), _numChecks(1), _schedulerEnabled(true), _numStealAfterSpins(1) {}
         //! \brief SchedulerConf copy constructor (private)
-        SchedulerConf ( SchedulerConf &sc ) : _numSpins(), _numChecks(), _schedulerEnabled()
-        {
-           fatal("SchedulerConf: Illegal use of class");
-        }
+        SchedulerConf ( SchedulerConf &sc );
         //! \brief SchedulerConf copy assignment operator (private)
         SchedulerConf & operator= ( SchedulerConf &sc );
       public: /* PUBLIC METHODS */

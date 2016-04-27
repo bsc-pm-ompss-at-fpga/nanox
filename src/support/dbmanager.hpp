@@ -20,9 +20,10 @@
 #ifndef DBMANAGER_HPP_
 #define DBMANAGER_HPP_
 
+#include "error.hpp"
+
 #include <string>
 #include <vector>
-#include "debug.hpp"
 
 namespace nanos {
 
@@ -72,7 +73,7 @@ public:
     * @param parameterIndex Parameter to choose the parameter to reference
     * @param value value to be set on the parameter
     */
-   virtual void bindInt64Parameter(const unsigned int stmtNumber, const unsigned int parameterIndex, long long int value) { fatal0("DbManager: bindInt64Parameter not implemented") };
+   virtual void bindInt64Parameter(const unsigned int stmtNumber, const unsigned int parameterIndex, long long int value) { fatal("DbManager: bindInt64Parameter not implemented"); };
 
    /**
     * @brief This function return the value of a given column
@@ -80,13 +81,13 @@ public:
     * @param columnIndex Parameter to choose the column to reference
     * @return The value of a given column
     */
-   virtual int getIntColumnValue(const unsigned int stmtNumber, const unsigned int columnIndex) { fatal0("DbManager: getIntColumnValue not implemented") };
+   virtual int getIntColumnValue(const unsigned int stmtNumber, const unsigned int columnIndex) { fatal("DbManager: getIntColumnValue not implemented"); };
 
    /**
     * @brief This function makes to ask for a row with the according statement
     * @param stmtNumber stmtNumber Parameter to reference the prepared statement
     */
-   virtual bool doStep(const unsigned int stmtNumber) { fatal0("DbManager: doStep not implemented") };
+   virtual bool doStep(const unsigned int stmtNumber) { fatal("DbManager: doStep not implemented"); };
 
 private:
    /**

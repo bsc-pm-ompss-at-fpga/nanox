@@ -406,14 +406,14 @@ void Instrumentation::wdSwitch( WorkDescriptor* oldWD, WorkDescriptor* newWD, bo
       /* Creating a starting PtP event (if needed) */
       if (!last && _emitPtPEvents ) ASSIGN_EVENT( e[i++] , PtP , (true,  NANOS_WD_DOMAIN, (nanos_event_id_t) oldWD->getId(), 0, 0) );
 
-      ensure0(i == oldPtP, "Final point-to-point events doesn't fit with computed.");
+      ensure(i == oldPtP, "Final point-to-point events doesn't fit with computed.");
 
       /* Creating State event's */
       InstrumentationContextData::ConstStateIterator it_s;
       for ( it_s = _instrumentationContext.beginState( old_icd ); it_s != _instrumentationContext.endState( old_icd ); it_s++ ) {
          ASSIGN_EVENT( e[i++] ,  State , (NANOS_STATE_END, *it_s) );
       }
-      ensure0(i == oldPtP + oldStates, "Final state events doesn't fit with computed value.");
+      ensure(i == oldPtP + oldStates, "Final state events doesn't fit with computed value.");
 
       if ( csEvent ) {
          ASSIGN_EVENT( e[i++] , State , ( NANOS_STATE_START, NANOS_CONTEXT_SWITCH ) );
@@ -466,7 +466,7 @@ void Instrumentation::wdSwitch( WorkDescriptor* oldWD, WorkDescriptor* newWD, bo
 
    }
 
-   ensure0( i == numEvents , "Computed number of events doesn't fit with number of real events");
+   ensure( i == numEvents , "Computed number of events doesn't fit with number of real events");
 
    /* Spawning 'numEvents' events: specific instrumentation call */
    if ( _instrumentationContext.isContextSwitchEnabled() ) {

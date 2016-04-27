@@ -78,13 +78,13 @@ void SMPDD::workWrapper ( WD &wd )
 
 void SMPDD::lazyInit ( WD &wd, bool isUserLevelThread, WD *previous )
 {
-   verbose0("Task " << wd.getId() << " initialization"); 
+   verbose("Task ", wd.getId(), " initialization");
    if (isUserLevelThread) {
       if (previous == NULL) {
          _stack = (void *) NEW char[_stackSize];
-         verbose0("   new stack created: " << _stackSize << " bytes");
+         verbose("   new stack created: ", _stackSize, " bytes");
       } else {
-         verbose0("   reusing stacks");
+         verbose("   reusing stacks");
          SMPDD &oldDD = (SMPDD &) previous->getActiveDevice();
          std::swap(_stack, oldDD._stack);
       }

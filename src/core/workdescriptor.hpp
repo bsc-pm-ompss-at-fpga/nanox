@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <utility>
 #include <vector>
-#include "debug.hpp"
 #include "workdescriptor_decl.hpp"
 #include "dependableobjectwd.hpp"
 #include "copydata.hpp"
@@ -36,6 +35,7 @@
 #include "allocator_decl.hpp"
 #include "system.hpp"
 #include "slicer_decl.hpp"
+#include "debug.hpp"
 
 using namespace nanos;
 

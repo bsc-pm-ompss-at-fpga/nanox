@@ -66,7 +66,7 @@ class FPGAPlugin : public ArchPlugin
             //Abort if dma library failed to initialize
             //Otherwise this will cause problems (segfaults/hangs) later on the execution
             if (status)
-               fatal0("Error initializing DMA library: Returned status: " << status );
+               fatal("Error initializing DMA library: Returned status: ", status );
             //get a core to run the helper thread. First one available
             for ( int i = 0; i<FPGAConfig::getNumFPGAThreads(); i++) {
 
@@ -79,7 +79,7 @@ class FPGAPlugin : public ArchPlugin
                core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
                if ( !core ) {
                   //TODO: Run fpga threads in the core running least threads
-                  warning0( "Unable to get free core to run the FPGA thread, using the first one" );
+                  warning( "Unable to get free core to run the FPGA thread, using the first one" );
                   core = sys.getSMPPlugin()->getFirstSMPProcessor();
                   core->setNumFutureThreads( core->getNumFutureThreads()+1 );
                } else {

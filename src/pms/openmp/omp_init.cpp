@@ -98,7 +98,7 @@ namespace nanos
          int max_workers = sys.getSMPPlugin()->getNumWorkers();
 
          if ( requested_workers > 0 && _numThreadsOMP > 0 && requested_workers != _numThreadsOMP ) {
-            warning0( "Option --smp-workers value (", requested_workers, "), and OMP_NUM_THREADS "
+            warning( "Option --smp-workers value (", requested_workers, "), and OMP_NUM_THREADS "
                   "value (", _numThreadsOMP, ") differ. The value of OMP_NUM_THREADS will be used.");
          }
 
@@ -123,7 +123,7 @@ namespace nanos
          for (int i = omp_sched_static; i <= omp_sched_auto; i++) {
             ws_plugins[i] = sys.getWorkSharing ( ws_names[i] );
             if ( ws_plugins[i] == NULL ){
-               if ( !sys.loadPlugin( "worksharing-" + ws_names[i]) ) fatal0( "Could not load " + ws_names[i] + "worksharing" );
+               if ( !sys.loadPlugin( "worksharing-" + ws_names[i]) ) fatal( "Could not load " + ws_names[i] + "worksharing" );
                ws_plugins[i] = sys.getWorkSharing ( ws_names[i] );
             }
          }
@@ -303,7 +303,7 @@ namespace nanos
          int max_workers = sys.getSMPPlugin()->getNumWorkers();
 
          if ( requested_workers > 0 && _numThreadsOMP > 0 && requested_workers != _numThreadsOMP ) {
-            warning0( "Option --smp-workers value (", requested_workers, "), and OMP_NUM_THREADS "
+            warning( "Option --smp-workers value (", requested_workers, "), and OMP_NUM_THREADS "
                   "value (", _numThreadsOMP, ") differ. The value of --smp-workers will be used.");
          }
 
@@ -328,7 +328,7 @@ namespace nanos
          for (int i = omp_sched_static; i <= omp_sched_auto; i++) {
             ws_plugins[i] = sys.getWorkSharing ( ws_names[i] );
             if ( ws_plugins[i] == NULL ){
-               if ( !sys.loadPlugin( "worksharing-" + ws_names[i]) ) fatal0( "Could not load " + ws_names[i] + "worksharing" );
+               if ( !sys.loadPlugin( "worksharing-" + ws_names[i]) ) fatal( "Could not load " + ws_names[i] + "worksharing" );
                ws_plugins[i] = sys.getWorkSharing ( ws_names[i] );
             }
          }

@@ -21,11 +21,10 @@
 #define _NANOS_ATOMIC
 
 #include "atomic_decl.hpp"
-#include "basethread_decl.hpp"
 #include "compatibility.hpp"
 #include "nanos-int.h"
+
 #include <algorithm> // for min/max
-#include "instrumentationmodule_decl.hpp"
 
 /* TODO: move to configure
 #include <ext/atomicity.h>
@@ -33,7 +32,6 @@
 #error "Atomic gcc builtins support is mandatory at this point"
 #endif
 */
-
 
 namespace nanos {
 

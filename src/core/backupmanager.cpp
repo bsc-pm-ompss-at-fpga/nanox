@@ -133,7 +133,7 @@ bool BackupManager::restoreCopy ( uint64_t hostAddr, uint64_t devAddr,
       error::CheckpointFailure error(e);
       //sys.getExceptionStats().incrInitializationErrors();
       // FIXME: This is not an initialization error. should I add another type?
-      debug("Resiliency: error detected during task ", wd.getId(), " data restore.");
+      debug("Resiliency: error detected during task ", wd->getId(), " data restore.");
 
       success = false;
    }

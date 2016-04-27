@@ -19,10 +19,12 @@
 
 #ifndef _NANOS_THREAD_TEAM_H
 #define _NANOS_THREAD_TEAM_H
+
 #include "threadteam_decl.hpp"
+
 #include "atomic.hpp"
+#include "error.hpp"
 #include "lock.hpp"
-#include "debug.hpp"
 #include "system.hpp"
 #include "task_reduction.hpp"
 

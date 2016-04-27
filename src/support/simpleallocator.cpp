@@ -133,7 +133,7 @@ std::size_t SimpleAllocator::free( void *address )
 
    // Unknown address, simply ignore
    if( mapIter == _allocatedChunks.end() ) {
-      //ensure0( false,"Unknown address deallocation (Simple Allocator)" ); //It can happen in OpenCL
+      //ensure( false,"Unknown address deallocation (Simple Allocator)" ); //It can happen in OpenCL
       return 0;
    }
 
@@ -193,8 +193,7 @@ std::size_t SimpleAllocator::free( void *address )
       }
       //duplicate key, error
       else {
-         *(myThread->_file) << "Duplicate entry in segment map, addr " << address << ", size " << size << ". Got entry with size " << mapIter->second << ". Remaining: "<< _remaining << std::endl;
-         printBt(*(myThread->_file));
+         fatal( "Duplicate entry in segment map, addr ", address, ", size ", size, ". Got entry with size ", mapIter->second, ". Remaining: ", _remaining );
          printMap(*(myThread->_file));
          return 0;
       }

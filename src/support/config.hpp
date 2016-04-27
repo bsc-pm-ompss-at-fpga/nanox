@@ -77,7 +77,7 @@ inline bool Config::isMetric<T>::operator() ( T &value, char suffix ) const
 
 inline std::string Config::getOrphanOptions()
 {  
-   ensure0( _orphanOptionsMap != NULL, "Config::_orphanOptionsMap was not initialised" );
+   ensure( _orphanOptionsMap != NULL, "Config::_orphanOptionsMap was not initialised" );
    
    std::string str;
    bool first = true;

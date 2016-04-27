@@ -204,7 +204,7 @@ void GPUConfig::apply()
          _initCublas = false;
          _initCuSparse = false;
          _gpusProperties = NULL;
-         warning0( "Couldn't initialize the GPU support component at runtime startup: " << cudaGetErrorString( cudaErr ) );
+         warning( "Couldn't initialize the GPU support component at runtime startup: ", cudaGetErrorString( cudaErr ) );
 
          return;
       }
@@ -284,7 +284,7 @@ void GPUConfig::apply()
          verbose0( "Initializing CUBLAS Library" );
          if ( !sys.loadPlugin( "gpu-cublas" ) ) {
             _initCublas = false;
-            warning0( "Couldn't initialize CUBLAS library at runtime startup" );
+            warning( "Couldn't initialize CUBLAS library at runtime startup" );
          }
       }
 
@@ -292,7 +292,7 @@ void GPUConfig::apply()
          verbose0( "Initializing cuSPARSE Library" );
          if ( !sys.loadPlugin( "gpu-cusparse" ) ) {
             _initCuSparse = false;
-            warning0( "Couldn't initialize cuSPARSE library at runtime startup" );
+            warning( "Couldn't initialize cuSPARSE library at runtime startup" );
          }
       }
       

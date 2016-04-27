@@ -92,8 +92,10 @@ uint64_t NewNewRegionDirectory::_getKey( uint64_t addr, std::size_t len, WD cons
    std::size_t conflict_size = 0;
    uint64_t key = _keys.getExactOrFullyOverlappingInsertIfNotFound( addr, len, exact, keyIfNotFound, 0, conflict_addr, conflict_size );
    if ( key == 0 ) {
-      printBt(*myThread->_file);
-      fatal("invalid key, can not continue. Address " << (void *) addr << " w/len " << len << " [" << ( wd != NULL ? ( ( wd->getDescription() != NULL) ? wd->getDescription() : "wd desc. not available" ) : "null WD, comming from nanos_register probably" ) << "] conflicts with address: " << (void *) conflict_addr << ", size: " << conflict_size );
+      fatal("invalid key, can not continue. "
+            "Address ", (void *) addr, " w/len ", len,
+            " [", ( wd != NULL ? ( ( wd->getDescription() != NULL) ? wd->getDescription() : "wd desc. not available" ) : "null WD, comming from nanos_register probably" ), "] "
+            "conflicts with address: ", (void *) conflict_addr, ", size: ", conflict_size );
    } else if ( key == keyIfNotFound ) {
       _keysSeed += 1;
    }
@@ -187,15 +189,11 @@ GlobalRegionDictionary *NewNewRegionDirectory::getRegionDictionary( uint64_t obj
       myThread->idle();
    }
    if ( hb._bobjects == NULL ) {
-      *(myThread->_file) << "Error, CopyData object not registered in the RegionDictionary " << (void *) objectAddr << std::endl;
-      printBt( *(myThread->_file) );
-      fatal("can not continue");
+      fatal( "Error, CopyData object not registered in the RegionDictionary ", (void *) objectAddr );
    } else {
       Object *o = hb._bobjects->getExactByAddress( objectAddr );
       if ( o == NULL ) {
-         *(myThread->_file) << "Error, CopyData object not registered in the RegionDictionary " << (void *) objectAddr << std::endl;
-         printBt( *(myThread->_file) );
-         fatal("can not continue");
+         fatal( "Error, CopyData object not registered in the RegionDictionary ", (void *) objectAddr );
       } else {
          dict = o->getGlobalRegionDictionary();
       }
@@ -627,15 +625,11 @@ void NewNewRegionDirectory::unregisterObject(void *baseAddr) {
       myThread->idle();
    }
    if ( hb._bobjects == NULL ) {
-      *(myThread->_file) << "Error, unregister object: object not registered " << baseAddr << std::endl;
-      printBt( *(myThread->_file) );
-      fatal("can not continue");
+      fatal( "Error, unregister object: object not registered ", baseAddr );
    } else {
       Object *o = hb._bobjects->getExactByAddress( (uint64_t) baseAddr );
       if ( o == NULL ) {
-         *(myThread->_file) << "Error, unregister object: object not registered " << baseAddr << std::endl;
-         printBt( *(myThread->_file) );
-         fatal("can not continue");
+         fatal( "Error, unregister object: object not registered ", baseAddr );
       } else {
          GlobalRegionDictionary *dict = o->getGlobalRegionDictionary();
          CopyData *rcd = o->getRegisteredObject();

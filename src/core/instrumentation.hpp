@@ -85,13 +85,13 @@ inline nanos_event_value_t InstrumentationKeyDescriptor::registerValue ( const c
             _valueMap.insert( std::make_pair( value, valueDescriptor ) );
          }
          else {
-            if ( abort_when_registered ) fatal0("Event Value was already registered (lock taken)\n");
+            if ( abort_when_registered ) fatal("Event Value was already registered (lock taken)\n");
             valueDescriptor = it->second;
          }
       }
    }
    else {
-      if ( abort_when_registered ) fatal0("Event Value was already registered (lock not taken)\n");
+      if ( abort_when_registered ) fatal("Event Value was already registered (lock not taken)\n");
       valueDescriptor = it->second;
    }
 
@@ -129,12 +129,12 @@ inline void InstrumentationKeyDescriptor::registerValue ( const char *value, nan
             _valueMap.insert( std::make_pair( value, valueDescriptor ) );
          }
          else {
-            if ( abort_when_registered ) fatal0("Event Value was already registered (lock taken)\n");
+            if ( abort_when_registered ) fatal("Event Value was already registered (lock taken)\n");
          }
       }
    }
    else {
-      if ( abort_when_registered ) fatal0("Event Value was already registered (lock not taken)\n");
+      if ( abort_when_registered ) fatal("Event Value was already registered (lock not taken)\n");
    }
 }
 
@@ -202,13 +202,13 @@ inline nanos_event_key_t InstrumentationDictionary::registerEventKey ( const cha
             _keyMap.insert( std::make_pair( key, keyDescriptor ) );
          }
          else {
-            if ( abort_when_registered ) fatal0("Event Key was already registered (lock taken)\n");
+            if ( abort_when_registered ) fatal("Event Key was already registered (lock taken)\n");
             keyDescriptor = it->second;
          }
       }
    }
    else {
-      if ( abort_when_registered ) fatal0("Event Key was already registered (lock not taken)\n");
+      if ( abort_when_registered ) fatal("Event Key was already registered (lock not taken)\n");
       keyDescriptor = it->second;
    }
 

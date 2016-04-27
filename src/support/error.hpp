@@ -17,31 +17,71 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#include "basethread.hpp"
+#ifndef ERROR_DECL_HPP
+#define ERROR_DECL_HPP
+
+#include "xstring.hpp"
+
 #include "debug.hpp"
-#include "system.hpp"
+#include "exception/exceptiontracer.hpp"
+
+#include <stdexcept>
+#include <sstream>
 
 namespace nanos {
+namespace error {
 
-bool verboseEnabled()
+struct FatalError : public ExceptionTracer, public std::runtime_error {
+   FatalError ( const std::string &value ) :
+      runtime_error( join( std::stringstream(), "FATAL ERROR: [", getMyThreadId(), "] ", value).str() )
+   {
+   }
+};
+
+struct FailedAssertion : public ExceptionTracer, public std::runtime_error {
+   FailedAssertion ( const std::string &value, const std::string msg ) :
+      runtime_error( join( std::stringstream(), "ASSERT failed: [", getMyThreadId(), "] ", value, ": ", msg ).str() )
+   {
+   }
+};
+
+} // namespace error
+
+template <typename...Ts>
+void fatal( const Ts&... message ) __attribute__ ((noreturn));
+
+template <typename...Ts>
+inline void fatal( const Ts&... message )
 {
-   return sys.getVerbose();
+   std::stringstream sts;
+   join( sts, message... );
+   throw error::FatalError( sts.str() );
 }
 
-std::string getMyThreadId()
+template <typename...Ts>
+inline void fatal_cond( bool cond, const Ts&... msg )
 {
-   const BaseThread* thread = getMyThreadSafe();
-   if( !thread ) {
-      return "?";
-   } else {
-      return toString(thread->getId());
+   if( cond )
+      fatal( msg... );
+}
+
+#ifdef NANOS_DEBUG_ENABLED
+#define ensure(condition,message) nanos::_ensure( condition, #condition, message, "@", __FILE__, ":", __LINE__ )
+
+template <typename...Ts>
+inline void _ensure( bool condition, const char* conditionDefinition, const Ts&... msg )
+{
+   if( !condition ) {
+      std::stringstream sts;
+      join( sts, msg... );
+      throw error::FailedAssertion( conditionDefinition, sts.str() );
    }
 }
-
-int getNodeNumber()
-{
-   return sys.getNetwork()->getNodeNum();
-}
+#else
+#define ensure(condition,message)
+#endif
 
 } // namespace nanos
+
+#endif // ERROR_DECL_HPP
 

@@ -49,7 +49,7 @@ NANOS_API_DEF(nanos_slicer_t, nanos_find_slicer, ( const char * label ))
       std::string plugin = std::string(label);
       slicer = sys.getSlicer ( plugin );
       if ( slicer == NULL ) {
-         if ( !sys.loadPlugin( "slicer-" + plugin )) fatal0( "Could not load " + plugin + "slicer" );
+         if ( !sys.loadPlugin( "slicer-" + plugin )) fatal( "Could not load " + plugin + "slicer" );
          slicer = sys.getSlicer ( plugin );
       }
 
@@ -72,7 +72,7 @@ NANOS_API_DEF(nanos_ws_t, nanos_find_worksharing, ( const char * label ))
       std::string plugin = std::string(label);
       ws = sys.getWorkSharing ( plugin );
       if ( ws == NULL ) {
-         if ( !sys.loadPlugin( "worksharing-" + plugin )) fatal0( "Could not load " + plugin + "worksharing" );
+         if ( !sys.loadPlugin( "worksharing-" + plugin )) fatal( "Could not load " + plugin + "worksharing" );
          ws = sys.getWorkSharing ( plugin );
       }
 

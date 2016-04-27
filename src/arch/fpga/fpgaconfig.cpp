@@ -96,16 +96,16 @@ namespace nanos
          }
 
          if (_numAccelerators > _maxAccelerators) {
-             warning0( "The number of accelerators is greater then the accelerators in the system. Using "
-                     << _maxAccelerators << " accelerators" );
+             warning( "The number of accelerators is greater then the accelerators in the system. Using ",
+                     _maxAccelerators, " accelerators" );
              _numAccelerators = _maxAccelerators;
          }
 
          if ( _numFPGAThreads < 0 ) {
-            warning0( "Number of fpga threads cannot be negative. Using one thread per accelerator" );
+            warning( "Number of fpga threads cannot be negative. Using one thread per accelerator" );
             _numFPGAThreads = _numAccelerators;
          } else if ( _numFPGAThreads > _numAccelerators ) {
-            warning0( "Number of helper is greater than the number of accelerators. Using one thread per accelerator" );
+            warning( "Number of helper is greater than the number of accelerators. Using one thread per accelerator" );
             _numFPGAThreads = _numAccelerators;
          }
          _idleSyncBurst = ( _idleSyncBurst < 0 ) ? _burst : _idleSyncBurst;

@@ -53,7 +53,7 @@ namespace nanos {
       {
          //checking if the number of ready tasks is higher than the allowed maximum
          if ( sys.getReadyNum() > _limit )  {
-            verbose0( "Throttle Policy: avoiding task creation!" );
+            verbose( "Throttle Policy: avoiding task creation!" );
             return false;
          }
 

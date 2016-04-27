@@ -23,18 +23,31 @@
 #include <sstream>
 #include <string>
 
-namespace nanos
+namespace nanos {
+
+template <class T>
+inline std::string toString ( const T& t )
 {
-
-   template <class T>
-   inline std::string toString ( const T& t )
-   {
-      std::stringstream ss;
-      ss << t;
-      return ss.str();
-   }
-
+   std::stringstream ss;
+   ss << t;
+   return ss.str();
 }
 
-#endif
+template <typename OStreamType>
+static inline OStreamType &join( OStreamType &&os )
+{
+   os << std::endl;
+   return os;
+}
+
+template <typename OStreamType, typename T, typename...Ts>
+static inline OStreamType &join( OStreamType &&os, const T &first, const Ts&... rest)
+{
+   os << first;
+   return join( os, rest... );
+}
+
+} // namespace nanos
+
+#endif // _NANOS_XSTRING
 

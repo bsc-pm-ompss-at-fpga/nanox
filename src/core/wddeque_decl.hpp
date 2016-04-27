@@ -24,7 +24,6 @@
 #include <functional>
 #include <map>
 
-#include "debug.hpp"
 #include "atomic_decl.hpp"
 #include "lock_decl.hpp"
 

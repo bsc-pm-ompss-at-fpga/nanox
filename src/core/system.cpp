@@ -161,7 +161,7 @@ System::System () :
       , _inIdle( false )
 	  , _lazyPrivatizationEnabled (false)
 {
-   verbose0 ( "NANOS++ initializing... start" );
+   verbose( "NANOS++ initializing... start" );
 
    // OS::init must be called here and not in System::start() as it can be too late
    // to locate the program arguments at that point
@@ -174,7 +174,7 @@ System::System () :
       //std::cerr << "NX_ARGS is:" << (char *)(OS::getEnvironmentVariable( "NX_ARGS" ) != NULL ? OS::getEnvironmentVariable( "NX_ARGS" ) : "NO NX_ARGS: GG!") << std::endl;
       start();
    }
-   verbose0 ( "NANOS++ initializing... end" );
+   verbose( "NANOS++ initializing... end" );
 }
 
 struct LoadModule
@@ -182,7 +182,7 @@ struct LoadModule
    void operator() ( const char *module )
    {
       if ( module ) {
-        verbose0( "loading ", module, " module" );
+        verbose( "loading ", module, " module" );
         sys.loadPlugin(module);
       }
    }
@@ -190,59 +190,59 @@ struct LoadModule
 
 void System::loadArchitectures()
 {
-   verbose0 ( "Configuring module manager" );
+   verbose ( "Configuring module manager" );
    _pluginManager.init();
-   verbose0 ( "Loading architectures" );
+   verbose ( "Loading architectures" );
 
    
    // load host processor module
    if ( _hostFactory == NULL ) {
-     verbose0( "loading Host support" );
+     verbose( "loading Host support" );
 
      if ( !loadPlugin( "pe-"+getDefaultArch() ) )
-       fatal0 ( "Couldn't load host support" );
+       fatal ( "Couldn't load host support" );
    }
-   ensure0( _hostFactory,"No default host factory" );
+   ensure( _hostFactory,"No default host factory" );
 
 #ifdef GPU_DEV
-   verbose0( "loading GPU support" );
+   verbose( "loading GPU support" );
 
    if ( !loadPlugin( "pe-gpu" ) )
-      fatal0 ( "Couldn't load GPU support" );
+      fatal ( "Couldn't load GPU support" );
 #endif
    
 #ifdef OpenCL_DEV
-   verbose0( "loading OpenCL support" );
+   verbose( "loading OpenCL support" );
    if ( !loadPlugin( "pe-opencl" ) )
-     fatal0 ( "Couldn't load OpenCL support" );
+     fatal ( "Couldn't load OpenCL support" );
 #endif
 
 #ifdef FPGA_DEV
-   verbose0( "loading FPGA support" );
+   verbose( "loading FPGA support" );
 
    if ( !loadPlugin( "pe-fpga" ) )
-       fatal0 ( "couldn't load FPGA support" );
+       fatal ( "couldn't load FPGA support" );
 #endif
 
 #ifdef CLUSTER_DEV
    if ( usingCluster() && usingClusterMPI() ) {
-      fatal0("Can't use --cluster and --cluster-mpi at the same time,");
+      fatal("Can't use --cluster and --cluster-mpi at the same time,");
    } else if ( usingCluster() ) {
-      verbose0( "Loading Cluster plugin (" + getNetworkConduit() + ")" ) ;
+      verbose( "Loading Cluster plugin (" + getNetworkConduit() + ")" ) ;
       if ( !loadPlugin( "pe-cluster-"+getNetworkConduit() ) )
-         fatal0 ( "Couldn't load Cluster support" );
+         fatal ( "Couldn't load Cluster support" );
    } else if ( usingClusterMPI() ) {
-      verbose0( "Loading ClusterMPI plugin (" + getNetworkConduit() + ")" ) ;
+      verbose( "Loading ClusterMPI plugin (" + getNetworkConduit() + ")" ) ;
       _clusterMPIPlugin = (ext::ClusterMPIPlugin *) loadAndGetPlugin( "pe-clustermpi-"+getNetworkConduit() );
       if ( _clusterMPIPlugin == NULL ) {
-         fatal0 ( "Couldn't load ClusterMPI support" );
+         fatal ( "Couldn't load ClusterMPI support" );
       } else {
          _clusterMPIPlugin->init();
       }
    }
 #endif
 
-   verbose0( "Architectures loaded");
+   verbose( "Architectures loaded");
 
 #ifdef MPI_DEV
    char* isOffloadSlave = getenv(const_cast<char*> ("OMPSS_OFFLOAD_SLAVE")); 
@@ -254,55 +254,55 @@ void System::loadArchitectures()
 
 void System::loadModules ()
 {
-   verbose0 ( "Loading modules" );
+   verbose ( "Loading modules" );
 
    const OS::ModuleList & modules = OS::getRequestedModules();
    std::for_each(modules.begin(),modules.end(), LoadModule());
    
    if ( !loadPlugin( "instrumentation-"+getDefaultInstrumentation() ) )
-      fatal0( "Could not load " + getDefaultInstrumentation() + " instrumentation" );   
+      fatal( "Could not load " + getDefaultInstrumentation() + " instrumentation" );
 
    // load default dependencies plugin
-   verbose0( "loading ", getDefaultDependenciesManager(), " dependencies manager support" );
+   verbose( "loading ", getDefaultDependenciesManager(), " dependencies manager support" );
 
    if ( !loadPlugin( "deps-"+getDefaultDependenciesManager() ) )
-      fatal0 ( "Couldn't load main dependencies manager" );
+      fatal ( "Couldn't load main dependencies manager" );
 
-   ensure0( _dependenciesManager,"No default dependencies manager" );
+   ensure( _dependenciesManager,"No default dependencies manager" );
 
    // load default schedule plugin
-   verbose0( "loading ", getDefaultSchedule(), " scheduling policy support" );
+   verbose( "loading ", getDefaultSchedule(), " scheduling policy support" );
 
    if ( !loadPlugin( "sched-"+getDefaultSchedule() ) )
-      fatal0 ( "Couldn't load main scheduling policy" );
+      fatal ( "Couldn't load main scheduling policy" );
 
-   ensure0( _defSchedulePolicy,"No default system scheduling factory" );
+   ensure( _defSchedulePolicy,"No default system scheduling factory" );
 
-   verbose0( "loading ", getDefaultThrottlePolicy(), " throttle policy" );
+   verbose( "loading ", getDefaultThrottlePolicy(), " throttle policy" );
 
    if ( !loadPlugin( "throttle-"+getDefaultThrottlePolicy() ) )
-      fatal0( "Could not load main cutoff policy" );
+      fatal( "Could not load main cutoff policy" );
 
-   ensure0( _throttlePolicy, "No default throttle policy" );
+   ensure( _throttlePolicy, "No default throttle policy" );
 
-   verbose0( "loading ", getDefaultBarrier(), " barrier algorithm" );
+   verbose( "loading ", getDefaultBarrier(), " barrier algorithm" );
 
    if ( !loadPlugin( "barrier-"+getDefaultBarrier() ) )
-      fatal0( "Could not load main barrier algorithm" );
+      fatal( "Could not load main barrier algorithm" );
 
-   ensure0( _defBarrFactory,"No default system barrier factory" );
+   ensure( _defBarrFactory,"No default system barrier factory" );
    
 #ifdef NANOS_RESILIENCY_ENABLED
 	// load default error injection plugin
-   verbose0( "loading ", getInjectionPolicy(), " injection policy" );
+   verbose( "loading ", getInjectionPolicy(), " injection policy" );
 
    if ( !loadPlugin( std::string("injection-")+getInjectionPolicy() ) )
-      fatal0( "Could not load main error injection policy" );
+      fatal( "Could not load main error injection policy" );
 
-   ensure0( !_injectionPolicy.empty(),"No error injection policy defined" );
+   ensure( !_injectionPolicy.empty(),"No error injection policy defined" );
 #endif
 
-   verbose0( "Starting Thread Manager" );
+   verbose( "Starting Thread Manager" );
 
    _threadManager = _threadManagerConf.create();
 }
@@ -347,7 +347,7 @@ void System::config ()
 #endif
 
    //! Declare all configuration core's flags
-   verbose0( "Preparing library configuration" );
+   verbose( "Preparing library configuration" );
 
    cfg.setOptionsSection( "Core", "Core options of the core of Nanos++ runtime" );
 
@@ -513,7 +513,7 @@ void System::config ()
    _hwloc.config( cfg );
    _threadManagerConf.config( cfg );
 
-   verbose0 ( "Reading Configuration" );
+   verbose ( "Reading Configuration" );
 
    cfg.init();
    
@@ -536,7 +536,7 @@ void System::start ()
    loadArchitectures();
    loadModules();
 
-   verbose0( "Stating PM interface.");
+   verbose( "Stating PM interface.");
    Config cfg;
    void (*f)(void *) = nanos::PMInterfaceType::set_interface;
    f(NULL);
@@ -548,7 +548,7 @@ void System::start ()
    NANOS_INSTRUMENT ( sys.getInstrumentation()->filterEvents( _instrumentDefault, _enableEvents, _disableEvents ) );
    NANOS_INSTRUMENT ( sys.getInstrumentation()->initialize() );
 
-   verbose0 ( "Starting runtime" );
+   verbose ( "Starting runtime" );
 
    if ( _regionCachePolicyStr.compare("") != 0 ) {
       //value is set
@@ -561,7 +561,7 @@ void System::start ()
       } else if ( _regionCachePolicyStr.compare("fpga") == 0 ) {
          _regionCachePolicy = RegionCache::FPGA;
       } else {
-         warning0( "Invalid option for region cache policy '", _regionCachePolicyStr,
+         warning( "Invalid option for region cache policy '", _regionCachePolicyStr,
                    "', using default value."
                  );
       }
@@ -594,7 +594,7 @@ void System::start ()
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
    {
-      verbose0("addPEs for arch: ", (*it)->getName()); 
+      verbose("addPEs for arch: ", (*it)->getName());
       (*it)->addPEs( _pes );
       (*it)->addDevices( _devices );
    }
@@ -642,7 +642,7 @@ void System::start ()
       // If that node has not been translated, yet
       if ( _numaNodeMap[ node ] == INT_MIN )
       {
-         verbose0( "[NUMA] Mapping from physical node ", node, 
+         verbose( "[NUMA] Mapping from physical node ", node,
                    " to user node ", availNUMANodes
                  );
          _numaNodeMap[ node ] = availNUMANodes;
@@ -651,7 +651,7 @@ void System::start ()
       }
       // Otherwise, do nothing
    }
-   verbose0( "[NUMA] ", availNUMANodes, " NUMA node(s) available for the user." );
+   verbose( "[NUMA] ", availNUMANodes, " NUMA node(s) available for the user." );
 
    // For each plugin, notify it's the way to reserve PEs if they are required
    //for ( ArchitecturePlugins::const_iterator it = _archs.begin();
@@ -665,7 +665,7 @@ void System::start ()
       // Insert a new separate memory address space to store input backups
       BackupManager* mgr = new BackupManager("BackupMgr", _backup_pool_size);
 
-      memory_space_id_t backup_id = addSeparateMemoryAddressSpace( *mgr, true /*allocWide*/);
+      memory_space_id_t backup_id = addSeparateMemoryAddressSpace( *mgr, true /*allocWide*/, 0 /* slabSize*/ );
       _backupMemory = &getSeparateMemory( backup_id );
    }
 #endif   
@@ -713,11 +713,11 @@ void System::start ()
    switch ( getInitialMode() )
    {
       case POOL:
-         verbose0("Pool model enabled (OmpSs)");
+         verbose("Pool model enabled (OmpSs)");
          _mainTeam = createTeam( _workers.size(), /*constraints*/ NULL, /*reuse*/ true, /*enter*/ true, /*parallel*/ false );
          break;
       case ONE_THREAD:
-         verbose0("One-thread model enabled (OpenMP)");
+         verbose("One-thread model enabled (OpenMP)");
          _mainTeam = createTeam( 1, /*constraints*/ NULL, /*reuse*/ true, /*enter*/ true, /*parallel*/ true );
          break;
       default:
@@ -770,7 +770,7 @@ void System::start ()
             // This is a gnu extension
             __gnu_cxx::__verbose_terminate_handler();
 #else
-            message0( "An error was reported and this program will finish." );
+            message( "An error was reported and this program will finish." );
             std::abort();
 #endif
          });
@@ -856,8 +856,8 @@ void System::finish ()
          }
 #ifdef CLUSTER_DEV
          if ( _net.getNodeNum() == 0 && usingCluster() ) {
-            //message0("Master: Created " << createdWds << " WDs.");
-            //message0("Master: Failed to correctly schedule " << sys.getAffinityFailureCount() << " WDs.");
+            //message("Master: Created " << createdWds << " WDs.");
+            //message("Master: Failed to correctly schedule " << sys.getAffinityFailureCount() << " WDs.");
             //int soft_inv = 0;
             //int hard_inv = 0;
 
@@ -873,8 +873,8 @@ void System::finish ()
             //            //message("Memory space " << idx <<  " has performed " << _separateAddressSpaces[idx]->getHardInvalidationCount() << " hard invalidations." );
             //         }
             //      }
-            //      message0("OpenCLs Soft invalidations: " << soft_inv);
-            //      message0("OpenCLs Hard invalidations: " << hard_inv);
+            //      message("OpenCLs Soft invalidations: " << soft_inv);
+            //      message("OpenCLs Hard invalidations: " << hard_inv);
             //#endif
          }
 #endif
@@ -944,7 +944,7 @@ void System::finish ()
    //! \note deleting allocator (if any)
    if ( allocator != NULL ) free (allocator);
 
-   verbose0 ( "NANOS++ shutting down.... end" );
+   verbose ( "NANOS++ shutting down.... end" );
    //! \note printing execution summary
    if ( _summary ) executionSummary();
 
@@ -1617,39 +1617,39 @@ void System::environmentSummary( void )
          break;
    }
 
-   message0( "========== Nanos++ Initial Environment Summary ==========" );
-   message0( "=== PID:                 " << getpid() );
-   message0( "=== Num. worker threads: " << _workers.size() );
-   message0( "=== System CPUs:         " << _smpPlugin->getBindingMaskString() );
-   message0( "=== Binding:             " << std::boolalpha << _smpPlugin->getBinding() );
-   message0( "=== Prog. Model:         " << prog_model );
-   message0( "=== Priorities:          " << (getPrioritiesNeeded() ? "Needed" : "Not needed") << " / " << ( _defSchedulePolicy->usingPriorities() ? "enabled" : "disabled" ) );
+   message( "========== Nanos++ Initial Environment Summary ==========" );
+   message( "=== PID:                 ", getpid() );
+   message( "=== Num. worker threads: ", _workers.size() );
+   message( "=== System CPUs:         ", _smpPlugin->getBindingMaskString() );
+   message( "=== Binding:             ", std::boolalpha, _smpPlugin->getBinding() );
+   message( "=== Prog. Model:         ", prog_model );
+   message( "=== Priorities:          ", (getPrioritiesNeeded() ? "Needed" : "Not needed"), " / ", ( _defSchedulePolicy->usingPriorities() ? "enabled" : "disabled" ) );
 
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it ) {
-      message0( "=== Plugin:              " << (*it)->getName() );
-      message0( "===  | PEs:              " << (*it)->getNumPEs() );
-      message0( "===  | Threads:          " << (*it)->getNumThreads() );
-      message0( "===  | Worker Threads:   " << (*it)->getNumWorkers() );
+      message( "=== Plugin:              ", (*it)->getName() );
+      message( "===  | PEs:              ", (*it)->getNumPEs() );
+      message( "===  | Threads:          ", (*it)->getNumThreads() );
+      message( "===  | Worker Threads:   ", (*it)->getNumWorkers() );
    }
 #ifdef NANOS_RESILIENCY_ENABLED
-   message0( "=== Runtime resiliency:  ", ( sys.isResiliencyEnabled()? "Enabled": "Disabled") );
+   message( "=== Runtime resiliency:  ", ( sys.isResiliencyEnabled()? "Enabled": "Disabled") );
 #else
-   message0( "=== Runtime resiliency:  Disabled" );
+   message( "=== Runtime resiliency:  Disabled" );
 #endif
 #ifdef NANOS_FAULT_INJECTION
    if( sys.isPoisoningEnabled() ) {
-      message0( "=== Fault injection:     Enabled" );
-      message0( "===  | Rate:             ", sys.getMPoisonRate() );
-      message0( "===  | Seed:             ", sys.getMPoisonSeed() );
+      message( "=== Fault injection:     Enabled" );
+      message( "===  | Rate:             ", sys.getMPoisonRate() );
+      message( "===  | Seed:             ", sys.getMPoisonSeed() );
    } else
 #else
-      message0( "=== Fault injection:     Disabled" );
+      message( "=== Fault injection:     Disabled" );
 #endif
 
    NANOS_INSTRUMENT ( sys.getInstrumentation()->getInstrumentationDictionary()->printEventVerbosity(); )
 
-   message0( "=========================================================" );
+   message( "=========================================================" );
 
    // Get start time
    _summaryStartTime = time(NULL);
@@ -1658,17 +1658,17 @@ void System::environmentSummary( void )
 void System::executionSummary( void )
 {
    time_t seconds = time(NULL) -_summaryStartTime;
-   message0( "============ Nanos++ Final Execution Summary ==================" );
-   message0( "=== Application ended in ", seconds, " seconds" );
-   message0( "=== ", std::dec, getCreatedTasks(),         " tasks have been executed" );
+   message( "============ Nanos++ Final Execution Summary ==================" );
+   message( "=== Application ended in ", seconds, " seconds" );
+   message( "=== ", std::dec, getCreatedTasks(),         " tasks have been executed" );
 #ifdef NANOS_RESILIENCY_ENABLED
-   message0( "=== ", std::dec, error::FailureStats<error::ErrorInjection>::get(),    " errors injected" );
-   message0( "=== ", std::dec, error::FailureStats<error::CheckpointFailure>::get(), " tasks could not be initialized (backup failed)" );
-   message0( "=== ", std::dec, error::FailureStats<error::ExecutionFailure>::get(),  " task executions failed" );
-   message0( "=== ", std::dec, error::FailureStats<error::TaskRecovery>::get(),      " tasks have been reexecuted" );
-   message0( "=== ", std::dec, error::FailureStats<error::DiscardedTask>::get(),     " tasks have been discarded (initialization, parent or sibling(s) failed" );
+   message( "=== ", std::dec, error::FailureStats<error::ErrorInjection>::get(),    " errors injected" );
+   message( "=== ", std::dec, error::FailureStats<error::CheckpointFailure>::get(), " tasks could not be initialized (backup failed)" );
+   message( "=== ", std::dec, error::FailureStats<error::ExecutionFailure>::get(),  " task executions failed" );
+   message( "=== ", std::dec, error::FailureStats<error::TaskRecovery>::get(),      " tasks have been reexecuted" );
+   message( "=== ", std::dec, error::FailureStats<error::DiscardedTask>::get(),     " tasks have been discarded (initialization, parent or sibling(s) failed" );
 #endif // NANOS_RESILIENCY_ENABLED
-   message0( "===============================================================" );
+   message( "===============================================================" );
 }
 
 //If someone needs argc and argv, it may be possible, but then a fortran 

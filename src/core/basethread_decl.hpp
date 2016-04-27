@@ -27,7 +27,6 @@
 #include "schedule_fwd.hpp"
 #include "threadteam_fwd.hpp"
 
-#include "debug.hpp"
 #include "atomic_decl.hpp"
 #include "lock_decl.hpp"
 
@@ -227,12 +226,7 @@ namespace nanos
          BaseThread ( unsigned int osId, WD &wd, ProcessingElement *creator = 0, ext::SMPMultiThread *parent = NULL );
 
          //! \brief BaseThread destructor
-         virtual ~BaseThread()
-         {
-            finish();
-            ensure0( ( !_status.has_team ), "Destroying thread inside a team!" );
-            ensure0( ( _status.has_joined || _status.is_main_thread ), "Trying to destroy running thread" );
-         }
+         virtual ~BaseThread();
 
          // atomic access
          void lock ();

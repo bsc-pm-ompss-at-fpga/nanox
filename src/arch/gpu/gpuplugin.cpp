@@ -67,9 +67,9 @@ class GPUPlugin : public ArchPlugin
             if ( core == NULL ) {
                core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
                if ( core == NULL ) {
-                  fatal0("Unable to get a core to run the GPU thread.");
+                  fatal("Unable to get a core to run the GPU thread.");
                }
-               warning0("Unable to get a cpu on numa node " << node << " to run the CPU thread. Will run on numa node "<< core->getNumaNode());
+               warning("Unable to get a cpu on numa node ", node, " to run the CPU thread. Will run on numa node ", core->getNumaNode());
             }
             core->setNumFutureThreads( 1 );
             

@@ -111,7 +111,7 @@ void MPIRemoteNode::nanosMPIInit(int *argc, char ***argv, int userRequired, int*
     bool imSlave=getenv("OMPSS_OFFLOAD_SLAVE")!=NULL;
     if (!imSlave){  
         if ( !sys.loadPlugin( "arch-mpi" ) )
-          fatal0 ( "Couldn't load MPI support" );
+          fatal ( "Couldn't load MPI support" );
     } 
    
     _initialized=true;        
@@ -125,7 +125,7 @@ void MPIRemoteNode::nanosMPIInit(int *argc, char ***argv, int userRequired, int*
     //We'll trust user criteria, but show a warning
     if (!initialized) {
         if (userRequired != MPI_THREAD_MULTIPLE) {
-            warning0("Initializing MPI with MPI_THREAD_MULTIPLE instead of user required mode, this is a requeriment for OmpSs offload");
+            warning("Initializing MPI with MPI_THREAD_MULTIPLE instead of user required mode, this is a requeriment for OmpSs offload");
         }
         MPI_Init_thread(argc, argv, MPI_THREAD_MULTIPLE, userProvided);
     } else {
@@ -326,7 +326,7 @@ uint64_t MPIRemoteNode::getFreeChunk(int arraysLength, uint64_t** arrOfPtr,
 //        }
 //    }
 //    if (resul==0) {
-//        fatal0("Couldn't find any free virtual address common to all nodes when trying to allocate unified memory space");
+//        fatal("Couldn't find any free virtual address common to all nodes when trying to allocate unified memory space");
 //    }
 //    return result;
     return 0;
@@ -395,7 +395,7 @@ void MPIRemoteNode::DEEP_Booster_free(MPI_Comm *intercomm, int rank) {
                         int fdAux=-1;
                         std::string controlName=nanos::ext::MPIProcessor::getMpiControlFile();
                         fdAux=tryGetLock(const_cast<char*> (controlName.c_str()));
-                        if ( fdAux == -1 ) fatal0(controlName << " could not be opened/created, check your NX_OFFL_CONTROLFILE environment variable");
+                        if ( fdAux == -1 ) fatal(controlName, " could not be opened/created, check your NX_OFFL_CONTROLFILE environment variable");
                         FILE* fd=fdopen(fdAux,"r+");
                         size_t num_bytes=0;
                         for (int i=0; pph_list[i] != -1 ; ++i) {
@@ -452,10 +452,10 @@ void MPIRemoteNode::DEEPBoosterAlloc(MPI_Comm comm, int number_of_hosts, int pro
         int userProvided;
         MPI_Query_thread(&userProvided);        
         if (userProvided < MPI_THREAD_MULTIPLE ) {
-             message0("MPI_Query_Thread returned multithread support less than MPI_THREAD_MULTIPLE, your application may hang when offloading, check your MPI "
+             message("MPI_Query_Thread returned multithread support less than MPI_THREAD_MULTIPLE, your application may hang when offloading, check your MPI "
                 "implementation and try to configure it so it can support this multithread level. Configure your PATH so the mpi compiler"
                 " points to a multithread implementation of MPI");
-             //Some implementations seem to catch fatal0 and continue... make sure we die
+             //Some implementations seem to catch fatal and continue... make sure we die
              exit(-1);
         }
     }
@@ -488,7 +488,7 @@ void MPIRemoteNode::DEEPBoosterAlloc(MPI_Comm comm, int number_of_hosts, int pro
     
     //If im the root do all the automatic control file work
     if ( rank == 0 && !nanos::ext::MPIProcessor::getMpiControlFile().empty() ) {
-        if (offset != 0 || pph_list != NULL ) fatal0("NX_OFFL_CONTROLFILE environment variable has been defined, deep_booster_alloc_list is not supported"
+        if (offset != 0 || pph_list != NULL ) fatal("NX_OFFL_CONTROLFILE environment variable has been defined, deep_booster_alloc_list is not supported"
                 "/needed with automatic control of hosts");
         //Maximum length of pph_list alloc
         pph_list=new int[availableHosts+1];
@@ -496,7 +496,7 @@ void MPIRemoteNode::DEEPBoosterAlloc(MPI_Comm comm, int number_of_hosts, int pro
         int currStatus=0;
         std::string controlName=nanos::ext::MPIProcessor::getMpiControlFile();
         fdAux=tryGetLock(const_cast<char*> (controlName.c_str()));
-        if ( fdAux == -1 ) fatal0(controlName << " could not be opened/created, check your NX_OFFL_CONTROLFILE environment variable");
+        if ( fdAux == -1 ) fatal(controlName, " could not be opened/created, check your NX_OFFL_CONTROLFILE environment variable");
         FILE* fd=fdopen(fdAux,"r+");
         int reserved=0;
         //Reserve as many hosts as needed
@@ -626,7 +626,7 @@ void MPIRemoteNode::buildHostLists(
         hostInstances.push_back(1);              
     }    
     if (emptyHosts) {
-        warning0("No hostfile or list was providen using NX_OFFL_HOSTFILE or NX_OFFL_HOSTS environment variables."
+        warning("No hostfile or list was providen using NX_OFFL_HOSTFILE or NX_OFFL_HOSTS environment variables."
         " Deep_booster_alloc allocation will be performed in localhost (not recommended except for debugging)");
     }
 }
@@ -921,9 +921,9 @@ int MPIRemoteNode::nanosMPITypeCreateStruct( int count, int array_of_blocklength
     *newtype= NEW MPI_Datatype;
     _taskStructsCache[taskId]=*newtype;
     err=MPI_Type_create_struct(count,array_of_blocklengths,array_of_displacements, array_of_types, *newtype );
-    ensure0( err == MPI_SUCCESS, "MPI Create struct failed when preparing the task. Please submit a ticket" );
+    ensure( err == MPI_SUCCESS, "MPI Create struct failed when preparing the task. Please submit a ticket" );
     err=MPI_Type_commit(*newtype);
-    ensure0( err == MPI_SUCCESS, "MPI Create struct failed when preparing the task. Please submit a ticket" );
+    ensure( err == MPI_SUCCESS, "MPI Create struct failed when preparing the task. Please submit a ticket" );
     return err;
 }
 
@@ -937,7 +937,7 @@ void MPIRemoteNode::nanosMPITypeCacheGet( int taskId, MPI_Datatype **newtype ) {
         for ( int k=0;k<arr_size;k++ ) total_size+=ompss_mpi_file_ntasks[k];
         _taskStructsCache.assign(total_size, NULL);
     }
-    ensure0 ( static_cast<int>(_taskStructsCache.size()) > taskId, "Tasks struct cache is failing, trying to access a taskId biggeer than the total number of tasks");
+    ensure ( static_cast<int>(_taskStructsCache.size()) > taskId, "Tasks struct cache is failing, trying to access a taskId biggeer than the total number of tasks");
     *newtype=_taskStructsCache[taskId];
 }
 

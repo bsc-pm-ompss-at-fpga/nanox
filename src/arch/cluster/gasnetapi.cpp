@@ -397,7 +397,7 @@ void GASNetAPI::amWork(gasnet_token_t token, void *arg, std::size_t argSize,
    // }
    // else
    // {
-   //    fatal0("Unsupported: work_data bigger than a max gasnet request.");
+   //    fatal("Unsupported: work_data bigger than a max gasnet request.");
    //    memcpy( &work_data[ work_data_len ], arg, argSize );
    // }
 
@@ -563,7 +563,7 @@ void GASNetAPI::amMalloc( gasnet_token_t token, gasnet_handlerarg_t sizeLo, gasn
    if ( addr == NULL )
    {
       message0 ( "I could not allocate " << (std::size_t) size << " (sizeof std::size_t is " << sizeof(std::size_t) << " ) " << (void *) size << " bytes of memory on node " << gasnet_mynode() << ". Try setting NX_CLUSTER_NODE_MEMORY to a lower value." );
-      fatal0 ("I can not continue." );
+      fatal("I can not continue." );
    }
    if ( gasnet_AMReplyShort4( token, 208, ( gasnet_handlerarg_t ) ARG_LO( addr ),
             ( gasnet_handlerarg_t ) ARG_HI( addr ),
@@ -1399,7 +1399,7 @@ void GASNetAPI::_putStrided1D ( unsigned int issueNode, unsigned int remoteNode,
 }
 
 void GASNetAPI::putStrided1D ( unsigned int remoteNode, uint64_t remoteAddr, void *localAddr, void *localPack, std::size_t size, std::size_t count, std::size_t ld, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId, unsigned int metaSeq ) {
-   //if ( gasnet_mynode() != 0 ) fatal0("Error, cant use ::put from node != than 0"); 
+   //if ( gasnet_mynode() != 0 ) fatal("Error, cant use ::put from node != than 0");
    void *tmp = NULL;
    while( tmp == NULL ) {
       _pinnedAllocatorsLocks[ remoteNode ]->acquire();
@@ -1413,7 +1413,7 @@ void GASNetAPI::putStrided1D ( unsigned int remoteNode, uint64_t remoteAddr, voi
 
 void GASNetAPI::put ( unsigned int remoteNode, uint64_t remoteAddr, void *localAddr, std::size_t size, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId, unsigned int metaSeq )
 {
-   //if ( gasnet_mynode() != 0 ) fatal0("Error, cant use ::put from node != than 0"); 
+   //if ( gasnet_mynode() != 0 ) fatal("Error, cant use ::put from node != than 0");
    void *tmp = NULL;
    while( tmp == NULL ) {
       _pinnedAllocatorsLocks[ remoteNode ]->acquire();

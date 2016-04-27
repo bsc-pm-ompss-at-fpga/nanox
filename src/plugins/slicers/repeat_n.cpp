@@ -40,7 +40,7 @@ class SlicerRepeatN: public Slicer
 
 void SlicerRepeatN::submit ( WorkDescriptor &work )
 {
-   debug0 ( "Using sliced work descriptor: RepeatN" );
+   debug( "Using sliced work descriptor: RepeatN" );
    Scheduler::submit ( work );
 }
 
@@ -59,13 +59,13 @@ void SlicerRepeatN::submit ( WorkDescriptor &work )
 bool SlicerRepeatN::dequeue ( WorkDescriptor *wd, WorkDescriptor **slice)
 {
 
-   debug0 ( "Dequeueing sliced work: RepeatN start" );
+   debug( "Dequeueing sliced work: RepeatN start" );
 
    int n = --((( nanos_repeat_n_info_t * )wd->getData())->n);
 
    if ( n > 0 )
    {
-      debug0 ( "Dequeueing sliced work: keeping former wd" );
+      debug( "Dequeueing sliced work: keeping former wd" );
       *slice = NULL;
       sys.duplicateWD( slice, wd );
       sys.setupWD(**slice, wd);
@@ -74,7 +74,7 @@ bool SlicerRepeatN::dequeue ( WorkDescriptor *wd, WorkDescriptor **slice)
    }
    else
    {
-      debug0 ( "Dequeueing sliced work: using former wd (final)" );
+      debug( "Dequeueing sliced work: using former wd (final)" );
       *slice = wd;
       return true;
    }

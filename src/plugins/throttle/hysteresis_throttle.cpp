@@ -55,12 +55,12 @@ namespace nanos {
                } else if ( _type == "ready" ) {
                   _syncCond = (MultipleSyncCond< LessOrEqualConditionChecker<int> >*) new MultipleSyncCond< LessOrEqualConditionChecker<int> >(LessOrEqualConditionChecker<int>(sys.getSchedulerStats().getReadyTasksAddr(), lower * sys.getNumThreads())) ;
                   _get_num_tasks = &get_ready_tasks;
-               } else fatal0("Unknow throttle type");
+               } else fatal("Unknow throttle type");
 
-               verbose0( "Throttle hysteresis created");
-               verbose0( "   type of tasks: " << _type );
-               verbose0( "   lower bound: " << lower * sys.getNumThreads() );
-               verbose0( "   upper bound: " << upper * sys.getNumThreads() );
+               verbose( "Throttle hysteresis created");
+               verbose( "   type of tasks: ", _type );
+               verbose( "   lower bound: ", lower * sys.getNumThreads() );
+               verbose( "   upper bound: ", upper * sys.getNumThreads() );
             }
 
             void setUpper( int upper ) { _upper = upper; };

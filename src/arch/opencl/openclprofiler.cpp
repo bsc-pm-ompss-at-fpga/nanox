@@ -31,14 +31,14 @@ OpenCLProfilerException::OpenCLProfilerException(OCLP_Exception exception, cl_in
    std::stringstream errorBuffer;
    switch ( exception ) {
       case CLP_WRONG_NUMBER_OF_DIMENSIONS:
-         fatal0( baseMsg + "Wrong number of dimensions");
+         fatal( baseMsg, "Wrong number of dimensions");
          break;
       case CLP_OPENCL_STANDARD_ERROR:
          errorBuffer << clError;
-         fatal0( baseMsg + errorBuffer.str() + ", " + errorString);
+         fatal( baseMsg, errorBuffer, ", ", errorString);
          break;
       default:
-         fatal0( baseMsg + "Generic" );
+         fatal( baseMsg, "Generic" );
          break;
    }
 }

@@ -134,15 +134,15 @@ ThreadManager* ThreadManagerConf::create()
 
    // Some safety cheks
    if ( _useBlock && _useSleep ) {
-      warning0( "Thread Manager: Flags --enable-block and --enable-sleep are mutually exclusive. Block takes precedence." );
+      warning( "Thread Manager: Flags --enable-block and --enable-sleep are mutually exclusive. Block takes precedence." );
       _useSleep = false;
    }
    if ( _tm == TM_NONE && (_useYield || _useBlock || _useSleep || _useDLB) ) {
-      warning0( "Thread Manager: Block, sleep, yield or dlb options are ignored when you explicitly choose --thread-manager=none" );
+      warning( "Thread Manager: Block, sleep, yield or dlb options are ignored when you explicitly choose --thread-manager=none" );
    }
 #ifndef DLB
    if ( _useDLB  || _tm == TM_DLB ) {
-      fatal_cond0( !DLB_SYMBOLS_DEFINED,
+      fatal_cond( !DLB_SYMBOLS_DEFINED,
             "Thread Manager: Some DLB option was enabled but DLB symbols were not found. "
             "Either add DLB support at configure time or link your application against DLB libraries." );
    }
@@ -160,7 +160,7 @@ ThreadManager* ThreadManagerConf::create()
       return NEW DlbThreadManager( _numYields, _warmupThreads );
    }
 
-   fatal0( "Unknown Thread Manager" );
+   fatal( "Unknown Thread Manager" );
    return NULL;
 }
 

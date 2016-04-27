@@ -203,7 +203,6 @@
 #include <utility>
 #include <string>
 #include "compatibility.hpp"
-#include "debug.hpp"
 #include "nanos-int.h"
 #include "atomic_decl.hpp"
 #include "lock_decl.hpp"

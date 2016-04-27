@@ -41,7 +41,7 @@ extern "C" {
 
    int ompt_initialize( ompt_function_lookup_t lookup, const char *runtime_version, unsigned int ompt_version )
    {
-      fatal0( "There is no OMPT compliant tool loaded\n" );
+      fatal( "There is no OMPT compliant tool loaded\n" );
       return 0;
    } 
 
@@ -178,7 +178,7 @@ extern "C" {
          case ompt_event_task_dependences:
             return 1;
          default:
-            warning0("Callback registration error: incorrect event id");
+            warning("Callback registration error: incorrect event id");
             return 0;
       }
 

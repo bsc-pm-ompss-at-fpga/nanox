@@ -31,7 +31,6 @@
 #include "networkapi.hpp"
 #include "packer_decl.hpp"
 #include "deviceops_decl.hpp"
-#include "debug_decl.hpp"
 
 namespace nanos {
 

@@ -42,7 +42,7 @@ class SlicerDynamicFor: public Slicer
 
 void SlicerDynamicFor::submit ( WorkDescriptor &work )
 {
-   debug0 ( "Using sliced work descriptor: Dynamic For" );
+   debug( "Using sliced work descriptor: Dynamic For" );
 
    nanos_loop_info_t *nli = (nanos_loop_info_t *) work.getData();
 

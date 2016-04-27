@@ -77,10 +77,10 @@ void ClusterMPIPlugin::init()
       if ( _allowSharedThd ) {
          _cpu = sys.getSMPPlugin()->getLastSMPProcessor();
          if ( !_cpu ) {
-            fatal0("Unable to get a cpu to run the cluster thread.");
+            fatal("Unable to get a cpu to run the cluster thread.");
          }
       } else {
-         fatal0("Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread");
+         fatal("Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread");
       }
    }
 }

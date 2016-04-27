@@ -119,7 +119,7 @@ const std::string Config::getNanosHelp()
 
 std::vector<std::string> Config::getOrphanOptionsList()
 {
-   ensure0( _orphanOptionsMap != NULL, "Config::_orphanOptionsMap was not initialised" );
+   ensure( _orphanOptionsMap != NULL, "Config::_orphanOptionsMap was not initialised" );
    
    std::vector<std::string> arguments;
    for ( ConfigOrphansMap::const_iterator it = _orphanOptionsMap->begin();
@@ -143,7 +143,7 @@ void Config::parseFiles ()
 void Config::registerEnvOption ( const std::string &option, const std::string &envVar )
 {
 	if ( _configOptions[option]->getEnvVar() != "" ) {
-           warning0( "EnvOption '", envVar,
+           warning( "EnvOption '", envVar,
                      "' overwrites '", _configOptions[option]->getEnvVar(),
                      "' previously defined for the config option '", option, "'\n",
                      "Try using 'Config::registerAlias() instead."
@@ -155,7 +155,7 @@ void Config::registerEnvOption ( const std::string &option, const std::string &e
 void Config::registerArgOption ( const std::string &option, const std::string &arg )
 {
 	if ( _configOptions[option]->getArg() != "" ) {
-           warning0( "ArgOption '", arg,
+           warning( "ArgOption '", arg,
                      "' overwrites '", _configOptions[option]->getArg(),
                      "' previously defined for the config option '", option, "'\n",
                      "Try using 'Config::registerAlias() instead."

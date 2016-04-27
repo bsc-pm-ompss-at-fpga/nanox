@@ -408,7 +408,7 @@ inline const std::string & System::getNetworkConduit( void ) const { return _con
 
 inline void System::setPMInterface(PMInterface *pm)
 {
-   ensure0(!_pmInterface,"PM interface already in place!");
+   ensure(!_pmInterface,"PM interface already in place!");
    _pmInterface = pm;
 }
 

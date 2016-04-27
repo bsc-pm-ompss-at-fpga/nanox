@@ -85,8 +85,8 @@ bool MPIThread::switchToNextFreePE(int uuid){
 bool MPIThread::switchToPE(int rank, int uuid){
     bool ret=false;
     if (rank>=(int)_runningPEs.size()){
-        fatal0("You have assigned a rank (" << rank << ") in onto clause to a node which was not allocated before"
-                ", your communicator has " << _runningPEs.size() << " processes, possible ranks are [," << (_runningPEs.size()-1) << "], check your code"
+        fatal("You have assigned a rank (" << rank << ") in onto clause to a node which was not allocated before"
+                ", your communicator has ", _runningPEs.size(), " processes, possible ranks are [,", (_runningPEs.size()-1), "], check your code"
                 " and make sure that your request finished correctly");
     }
     //In multithread this "test&SetBusy" bust be safe

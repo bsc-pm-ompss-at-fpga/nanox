@@ -63,7 +63,7 @@ namespace ext {
 
          ext::SMPProcessor *core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
          if ( core == NULL ) {
-            fatal0("Unable to get a core to run the GPU thread.");
+            fatal("Unable to get a core to run the GPU thread.");
          }
          core->setNumFutureThreads( 1 );
 

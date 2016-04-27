@@ -211,22 +211,22 @@ class SMPPlugin : public SMPBasePlugin
 
       if ( _availableCPUs == 0 ) {
          if ( available_cpus_by_mask > 0 ) {
-            warning0("SMPPlugin: Unable to detect the number of processors in the system.");
-            warning0("SMPPlugin: Using the value provided by the process cpu mask (" << available_cpus_by_mask << ").");
+            warning("SMPPlugin: Unable to detect the number of processors in the system.");
+            warning("SMPPlugin: Using the value provided by the process cpu mask (", available_cpus_by_mask, ").");
             _availableCPUs = available_cpus_by_mask;
          } else if ( _requestedCPUs > 0 ) {
-            warning0("SMPPlugin: Unable to detect the number of processors in the system and cpu mask not set");
-            warning0("Using the number of requested cpus (" << _requestedCPUs << ").");
+            warning("SMPPlugin: Unable to detect the number of processors in the system and cpu mask not set");
+            warning("Using the number of requested cpus (", _requestedCPUs, ").");
             _availableCPUs = _requestedCPUs;
          } else {
-            fatal0("SMPPlugin: Unable to detect the number of cpus of the system and --smp-cpus was unset or with a value less than 1.");
+            fatal("SMPPlugin: Unable to detect the number of cpus of the system and --smp-cpus was unset or with a value less than 1.");
          }
       }
 
       if ( _requestedCPUs > 0 ) { //--smp-cpus flag was set
          if ( _requestedCPUs > available_cpus_by_mask ) {
-            warning0("SMPPlugin: Requested number of cpus is greater than the cpu mask provided.");
-            warning0("Using the value specified by the mask (" << available_cpus_by_mask << ").");
+            warning("SMPPlugin: Requested number of cpus is greater than the cpu mask provided.");
+            warning("Using the value specified by the mask (", available_cpus_by_mask, ").");
             _currentCPUs = available_cpus_by_mask;
          } else {
             _currentCPUs = _requestedCPUs;
@@ -234,9 +234,9 @@ class SMPPlugin : public SMPBasePlugin
       } else if ( _requestedCPUs == 0 ) { //no cpus requested through --smp-cpus
          _currentCPUs = available_cpus_by_mask;
       } else {
-         fatal0("Invalid number of requested cpus (--smp-cpus)");
+         fatal("Invalid number of requested cpus (--smp-cpus)");
       }
-      verbose0("requested cpus: " << _requestedCPUs << " available: " << _availableCPUs << " to be used: " << _currentCPUs);
+      verbose("requested cpus: ", _requestedCPUs, " available: ", _availableCPUs, " to be used: ", _currentCPUs);
 
       //! \note Fill _bindings vector with the active CPUs first, then the not active
       _bindings.reserve( _availableCPUs );
@@ -265,13 +265,13 @@ class SMPPlugin : public SMPBasePlugin
          void *addr = memkind_malloc(MEMKIND_HBW, _memkindMemorySize);
          if ( addr == NULL ) {
             OSAllocator a;
-            warning0("Could not allocate memory with memkind_malloc(), requested " << _memkindMemorySize << " bytes. Continuing with a regular allocator.");
+            warning("Could not allocate memory with memkind_malloc(), requested ", _memkindMemorySize, " bytes. Continuing with a regular allocator.");
             addr = a.allocate(_memkindMemorySize);
             if ( addr == NULL ) {
-               fatal0("Could not allocate memory with a regullar allocator.");
+               fatal("Could not allocate memory with a regullar allocator.");
             }
          }
-         message0("Memkind address range: " << addr << " - " << (void *) ((uintptr_t)addr + _memkindMemorySize ));
+         message("Memkind address range: ", addr << " - ", (void *) ((uintptr_t)addr + _memkindMemorySize ));
          memkindMem.setSpecificData( NEW SimpleAllocator( ( uintptr_t ) addr, _memkindMemorySize ) );
          memkindMem.setAcceleratorNumber( sys.getNewAcceleratorId() );
       }
@@ -361,7 +361,7 @@ class SMPPlugin : public SMPBasePlugin
       } else {
          count = active_cpus - reserved_cpus;
       }
-      debug0( __FUNCTION__ << " called before creating the SMP workers, the estimated number of workers is: " << count);
+      debug( __FUNCTION__, " called before creating the SMP workers, the estimated number of workers is: ", count);
       return count + future_threads;
 
    }
@@ -451,7 +451,7 @@ class SMPPlugin : public SMPBasePlugin
          /* more workers than cpus available have been requested */
          max_workers = _requestedWorkers;
          ignore_reserved_cpus = true;
-         warning0( "You have explicitly requested more SMP workers than available CPUs" );
+         warning( "You have explicitly requested more SMP workers than available CPUs" );
       }
 
       //! These variables are used to support oversubscription of threads
@@ -652,12 +652,12 @@ class SMPPlugin : public SMPBasePlugin
             _numSockets = 1;
          }
       }
-      ensure0(_numSockets > 0, "Invalid number of sockets!");
+      ensure(_numSockets > 0, "Invalid number of sockets!");
       if ( _CPUsPerSocket == 0 )
          _CPUsPerSocket = std::ceil( _cpus->size() / static_cast<float>( _numSockets ) );
-      ensure0(_CPUsPerSocket > 0, "Invalid number of CPUs per socket!");
-      verbose0( toString( "[NUMA] " ) + toString( _numSockets ) + toString( " NUMA nodes, " ) +
-            toString( _CPUsPerSocket ) + toString( " HW threads each." ) );
+      ensure(_CPUsPerSocket > 0, "Invalid number of CPUs per socket!");
+      verbose( "[NUMA] ", _numSockets, " NUMA nodes, ",
+               _CPUsPerSocket, " HW threads each." );
    }
 
    unsigned getNodeOfPE ( unsigned pe )
@@ -882,7 +882,7 @@ class SMPPlugin : public SMPBasePlugin
       } else {
          count = active_cpus - reserved_cpus;
       }
-      debug0( __FUNCTION__ << " called before creating the SMP workers, the estimated number of workers is: " << count);
+      debug( __FUNCTION__, " called before creating the SMP workers, the estimated number of workers is: ", count);
       return count;
    }
 

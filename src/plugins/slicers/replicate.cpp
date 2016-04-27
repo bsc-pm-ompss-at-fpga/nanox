@@ -41,7 +41,7 @@ class SlicerReplicate: public Slicer
 
 void SlicerReplicate::submit ( WorkDescriptor &work )
 {
-   debug0 ( "Using sliced work descriptor: Replicate" );
+   debug( "Using sliced work descriptor: Replicate" );
 
    nanos_ws_desc_t *wsd_current = *(( nanos_ws_desc_t ** )work.getData());
 
@@ -85,7 +85,7 @@ void SlicerReplicate::submit ( WorkDescriptor &work )
  */
 bool SlicerReplicate::dequeue ( WorkDescriptor *wd, WorkDescriptor **slice)
 {
-   debug0 ( "Dequeueing sliced work: Replicate start" );
+   debug( "Dequeueing sliced work: Replicate start" );
    *slice = wd;
    return true;
 }
