@@ -34,6 +34,8 @@
 #include "version_decl.hpp"
 #include "workdescriptor_fwd.hpp"
 
+#include "mutex.hpp"
+
 #define MAX_REG_ID (1024*1024)
 
 namespace nanos {
@@ -89,9 +91,7 @@ typedef unsigned int reg_t;
       Atomic<reg_t>              _idSeed;
       std::vector< std::size_t > _dimensionSizes;
       RegionNode                 _root;
-      pthread_rwlock_t           _containerLock;
-
-
+      ReadWriteLock              _containerLock;
       Lock                       _invalidationsLock;
       std::map< reg_t, reg_t >   _masterIdToLocalId;
       Lock                       _containerMi2LiLock;

@@ -27,6 +27,8 @@
 #include "system_decl.hpp"
 #include "os.hpp"
 
+#include "mutex.hpp"
+
 namespace nanos {
 
 
@@ -124,6 +126,7 @@ ContainerDense< T >::ContainerDense( CopyData const &cd ) : _container(64, T())
 	, _idSeed( 1 )
 	, _dimensionSizes( cd.getNumDimensions(), 0 )
 	, _root( NULL, 0, 0 )
+   , _containerLock()
 	, _invalidationsLock()
 	, _masterIdToLocalId()
 	, _containerMi2LiLock()
@@ -134,10 +137,6 @@ ContainerDense< T >::ContainerDense( CopyData const &cd ) : _container(64, T())
    for ( unsigned int idx = 0; idx < cd.getNumDimensions(); idx += 1 ) {
       _dimensionSizes[ idx ] = cd.getDimensions()[ idx ].size;
    }
-   if ( pthread_rwlock_init( &_containerLock, NULL ) ) {
-      message0("error initializing containerlock ");
-      fatal("can not continue")
-   }
 }
 
 template <class T>
@@ -146,17 +145,8 @@ ContainerDense< T >::~ContainerDense() {
 
 template <class T>
 RegionNode * ContainerDense< T >::getRegionNode( reg_t id ) {
-   RegionNode *n = NULL;
-   if ( pthread_rwlock_rdlock(&_containerLock) ) {
-      message0("lock error " );
-      fatal("can not continue");
-   }
-   n = _container[ id ].getLeaf();
-   if ( pthread_rwlock_unlock(&_containerLock) ) {
-      message0("lock error " );
-      fatal("can not continue");
-   }
-   return n;
+   LockGuard<ReadWriteLock> lg( _containerLock, read_access );
+   return _container[ id ].getLeaf();
 }
 
 template <class T>
@@ -169,44 +159,14 @@ void ContainerDense< T >::addRegionNode( RegionNode *leaf ) {
 
 template <class T>
 Version *ContainerDense< T >::getRegionData( reg_t id ) {
-   Version *v = NULL;
-   //_containerLock.acquire();
-   //while ( !_containerLock.tryAcquire() ) {
-   //   myThread->idle();
-   //}
-   //std::cerr << "acquired @ " << __func__ << std::endl;
-   if ( pthread_rwlock_rdlock(&_containerLock) ) {
-      message0("lock error ");
-      fatal("can not continue");
-   }
-   v = _container[ id ].getData();
-   //std::cerr << "released @ " << __func__ << std::endl;
-   //_containerLock.release();
-   if ( pthread_rwlock_unlock(&_containerLock) ) {
-      message0("lock error ");
-      fatal("can not continue");
-   }
-   return v;
+   LockGuard<ReadWriteLock> lg( _containerLock, read_access );
+   return _container[ id ].getData();
 }
 
 template <class T>
 void ContainerDense< T >::setRegionData( reg_t id, Version *data ) {
-   //_containerLock.acquire();
-   //while ( !_containerLock.tryAcquire() ) {
-   //   myThread->idle();
-   //}
-   //std::cerr << "acquired @ " << __func__ << std::endl;
-   if ( pthread_rwlock_rdlock(&_containerLock) ) {
-      message0("lock error ");
-      fatal("can not continue");
-   }
+   LockGuard<ReadWriteLock> lg( _containerLock, read_access );
    _container[ id ].setData( data );
-   //std::cerr << "released @ " << __func__ << std::endl;
-   if ( pthread_rwlock_unlock(&_containerLock) ) {
-      message0("lock error ");
-      fatal("can not continue");
-   }
-   //_containerLock.release();
 }
 
 template <class T>
@@ -221,18 +181,9 @@ unsigned int ContainerDense< T >::getNumDimensions() const {
 
 template <class T>
 reg_t ContainerDense< T >::addRegion( nanos_region_dimension_internal_t const region[] ) {
-   if ( pthread_rwlock_wrlock(&_containerLock) ) {
-      message0("lock error " );
-      fatal("can not continue");
-   }
+   LockGuard<ReadWriteLock> lg( _containerLock, write_access );
 
    reg_t id = _root.addNode( region, _dimensionSizes.size(), 0, *this );
-
-   if ( pthread_rwlock_unlock(&_containerLock) ) {
-      message0("lock error " );
-      fatal("can not continue");
-   }
-
    return id;
 }
 
@@ -248,17 +199,8 @@ reg_t ContainerDense< T >::getNewRegionId() {
 
 template <class T>
 reg_t ContainerDense< T >::checkIfRegionExists( nanos_region_dimension_internal_t const region[] ) {
-   bool result;
-   if ( pthread_rwlock_rdlock(&_containerLock) ) {
-      message0("lock error ");
-      fatal("can not continue");
-   }
-   result = _root.checkNode( region, _dimensionSizes.size(), 0 );
-   if ( pthread_rwlock_unlock(&_containerLock) ) {
-      message0("lock error " );
-      fatal("can not continue");
-   }
-   return result;
+   LockGuard<ReadWriteLock> lg( _containerLock, read_access );
+   return _root.checkNode( region, _dimensionSizes.size(), 0 );
 }
 
 template <class T>
