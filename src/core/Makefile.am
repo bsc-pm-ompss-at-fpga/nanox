@@ -130,8 +130,6 @@ devinclude_HEADERS = \
 	basedependency_fwd.hpp \
 	basedependency_decl.hpp \
 	graphentry_decl.hpp \
-	taskexecutionexception_decl.hpp \
-	taskexecutionexception.hpp \
 	trackableobject_fwd.hpp \
 	trackableobject_decl.hpp \
 	trackableobject.hpp \
@@ -295,6 +293,10 @@ instr_sources = \
 	instrumentationcontext.cpp \
 	$(END)
 
+resiliency_aux_sources = \
+	backupmanager.hpp \
+	backupmanager.cpp \
+	backupmanager_aux.cpp
 
 noinst_LTLIBRARIES=
 debug_LTLIBRARIES=

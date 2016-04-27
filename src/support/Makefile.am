@@ -214,6 +214,7 @@ support_sources = \
 	exception/failurestats.hpp \
 	exception/failurestats.cpp \
 	exception/genericexception.hpp \
+	exception/genericexception.cpp \
 	exception/operationfailure.hpp \
 	exception/signalexception.hpp \
 	exception/signalexception.cpp \

@@ -53,9 +53,14 @@ AC_ARG_WITH(memkind,
 [with_memkind=no])
 
 AS_IF([test "$with_memkind" != no],[
-
-  memkindinc=-I$with_memkind/include
-  memkindlib="-L$with_jemalloc/lib -Wl,-rpath,$with_jemalloc/lib -L$with_memkind/lib -Wl,-rpath,$with_memkind/lib"
+  memkindlib=""
+  AS_IF([test "$with_jemalloc" != yes],[
+    memkindlib+="-L$with_jemalloc/lib -Wl,-rpath,$with_jemalloc/lib"
+  ])
+  AS_IF([test "$with_memkind" != yes],[
+    memkindinc=-I$with_memkind/include
+    memkindlib+=" -L$with_memkind/lib -Wl,-rpath,$with_memkind/lib"
+  ])
   
   AC_LANG_PUSH([C++])
 
