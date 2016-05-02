@@ -151,4 +151,5 @@ void FPGAWorker::postOutlineWork( WD *wd ) {
 
    wd->done();
    wd->clear();
+   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, NULL, true) );
 }
