@@ -212,8 +212,13 @@ extern "C" {
    ompt_thread_id_t ompt_nanos_get_thread_id( void );
    ompt_thread_id_t ompt_nanos_get_thread_id( void )
    {
-      return (ompt_thread_id_t) nanos::myThread->getId();
-      
+      //If instrumentation calls this before anything is initialized,
+      //return 0 as the master is doing everything
+      if ( nanos::myThread != NULL ) {
+         return (ompt_thread_id_t) nanos::myThread->getId();
+      } else {
+         return 0;
+      }
    }
 
    ompt_state_t ompt_nanos_get_state( ompt_wait_id_t *wait_id );
