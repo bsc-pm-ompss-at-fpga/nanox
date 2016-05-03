@@ -29,7 +29,7 @@
 #include <string.h>
 #include <vector>
 
-using namespace nanos;
+namespace nanos {
 
 template<typename T>
 inline bool Config::CheckValue<T>::operator() ( T &value, char suffix ) const
@@ -416,5 +416,7 @@ inline Config::BaseConfigOption* Config::ConfigAliasOption::clone()
    // We cannot use Memtracker NEW's macro
    return new ConfigAliasOption( _optionName, _envOption, _argOption, *(_option.clone()), _message, _section); 
 }
+
+} // namespace nanos
 
 #endif

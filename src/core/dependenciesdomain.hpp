@@ -78,6 +78,7 @@ inline void DependenciesDomain::finalizeAllReductions ( void )
 }
 
 inline void DependenciesDomain::clearDependenciesDomain ( void ) { }
-}
+
+} // namespace nanos
 
 #endif

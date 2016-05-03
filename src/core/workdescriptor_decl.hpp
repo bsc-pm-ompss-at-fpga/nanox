@@ -55,8 +55,6 @@
 namespace nanos
 {
 
-typedef std::set<const Device *>  DeviceList;
-
    /*! \brief This class represents a device object
     */
    class Device
@@ -797,7 +795,8 @@ typedef std::set<const Device *>  DeviceList;
       NANOS_FT_RESTART, /* 1 */
       NANOS_FT_DISCARD /* 2 */
    } task_operations_event_value_t;
-};
+
+}
 
 #endif
 

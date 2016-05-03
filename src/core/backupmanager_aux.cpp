@@ -21,6 +21,8 @@
 #include "backupmanager.hpp"
 #include <algorithm>
 
+using namespace nanos;
+
 void BackupManager::rawCopy( char *begin, char *end, char *dest )
 {
    // We cannot use memcpy (C). It has an empty exception specifier (noexcept).

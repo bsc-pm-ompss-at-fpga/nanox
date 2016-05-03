@@ -17,29 +17,14 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef _NANOS_CACHED_ACCELERATOR
-#define _NANOS_CACHED_ACCELERATOR
-
-#include "cachedaccelerator_decl.hpp"
-#include "accelerator_decl.hpp"
-#include "regioncache.hpp"
-#include "system.hpp"
+#ifndef _NANOS_DEPENDABLE_OBJECT_FWD
+#define _NANOS_DEPENDABLE_OBJECT_FWD
 
 namespace nanos {
 
-//inline CachedAccelerator::CachedAccelerator( const Device *arch,
-//   const Device *subArch, memory_space_id_t addressSpace ) :
-//   Accelerator( arch, subArch ), _addressSpaceId( addressSpace ) {
-//}
-//
-//inline CachedAccelerator::~CachedAccelerator() {
-//}
-//
-//inline void CachedAccelerator::waitInputsDependent( WorkDescriptor &wd )
-//{
-//   while ( !wd._mcontrol.isDataReady( wd ) ) { myThread->idle(); } 
-//}
+class CommutationDO;
 
-} // namespace nanos
+}
 
 #endif
+

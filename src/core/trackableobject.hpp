@@ -22,12 +22,14 @@
 #include <stdlib.h>
 #include <list>
 #include <algorithm>
+
+#include "dependenciesdomain_decl.hpp"
 #include "trackableobject_decl.hpp"
 #include "dependableobject.hpp"
 #include "atomic.hpp"
 #include "lock.hpp"
 
-using namespace nanos;
+namespace nanos {
 
 inline const TrackableObject & TrackableObject::operator= ( const TrackableObject &obj )
 {
@@ -136,6 +138,8 @@ inline void TrackableObject::unhold ()
 {
    _hold = false;
 }
+
+} // namespace nanos
 
 inline std::ostream & nanos::operator<<( std::ostream &o, nanos::TrackableObject const &status)
 {

@@ -23,6 +23,8 @@
 #include <sys/mman.h>
 #include <iostream>
 
+using namespace nanos;
+
 BackupManager::BackupManager ( ) :
       Device("BackupMgr"), _memsize(0), _pool_addr(), _managed_pool() {}
 

@@ -20,6 +20,8 @@
 #ifndef _NANOS_WORK_DESCRIPTOR_FWD_H
 #define _NANOS_WORK_DESCRIPTOR_FWD_H
 
+#include <set>
+
 namespace nanos
 {
    class Device;
@@ -28,6 +30,7 @@ namespace nanos
 
    typedef WorkDescriptor WD;
    typedef DeviceData DD;
+   typedef std::set<const Device *>  DeviceList;
 };
 
 #endif

@@ -25,8 +25,7 @@
 #include "gpuutils.hpp"
 
 
-using namespace nanos;
-
+namespace nanos {
 
 inline void GPUEvent::updateState()
 {
@@ -285,6 +284,8 @@ inline void GPUEvent::waitForEvent()
    //fatal_cond( err != cudaSuccess, "Error synchronizing with a CUDA event: " +  cudaGetErrorString( err ) );
 
    _state = RAISED;
+}
+
 }
 
 #endif //_GPU_EVENT

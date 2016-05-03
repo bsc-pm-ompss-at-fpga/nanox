@@ -28,6 +28,8 @@
 
 #include <stdio.h>
 
+namespace nanos {
+
 inline RemoteChunk::RemoteChunk( uint64_t hostAddr, uint64_t deviceAddr, std::size_t size ) :
    _hostAddress(hostAddr), _deviceAddress(deviceAddr), _size(size)
 {
@@ -170,6 +172,6 @@ inline std::size_t RegionCache::getUnallocatedBytes() const {
    return _device.getMemCapacity( sys.getSeparateMemory( _memorySpaceId ) ) - _allocatedBytes;
 }
 
-
+} // namespace nanos
 
 #endif /* REGIONCACHE_HPP */

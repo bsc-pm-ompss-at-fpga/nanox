@@ -21,7 +21,8 @@
 #define CACHEDREGIONSTATUS_HPP
 #include "cachedregionstatus_decl.hpp"
 #include "version.hpp"
-using namespace nanos; 
+
+namespace nanos {
 
 inline CachedRegionStatus::CachedRegionStatus() : Version(), _ops(), _dirty( false ), _valid(true) {
 }
@@ -69,5 +70,7 @@ inline void CachedRegionStatus::setValid( bool flag ) {
 inline void CachedRegionStatus::resetVersion() {
    Version::resetVersion();
 }
+
+} // namespace nanos
 
 #endif /* CACHEDREGIONSTATUS_HPP */

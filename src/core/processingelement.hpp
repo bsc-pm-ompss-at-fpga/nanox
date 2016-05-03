@@ -26,7 +26,7 @@
 #include "workdescriptor_decl.hpp"
 #include "location.hpp"
 
-using namespace nanos;
+namespace nanos {
 
 inline ProcessingElement::~ProcessingElement()
 {
@@ -53,6 +53,8 @@ inline const Device * ProcessingElement::getDeviceType () const
 //}
  
 inline std::size_t ProcessingElement::getNumThreads() const { return _threads.size(); }
+
+} // namespace nanos
 
 #endif
 

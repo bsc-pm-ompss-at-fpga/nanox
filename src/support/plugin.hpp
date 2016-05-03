@@ -25,7 +25,7 @@
 #include "config.hpp"
 #include "plugin_decl.hpp"
 
-using namespace nanos;
+namespace nanos {
 
 inline const char * Plugin::getName() const
 {

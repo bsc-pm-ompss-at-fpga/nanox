@@ -23,7 +23,7 @@
 #include "plugin_decl.hpp"
 #include "processingelement_fwd.hpp"
 #include "basethread_fwd.hpp"
-#include "workdescriptor_decl.hpp"
+#include "workdescriptor_fwd.hpp"
 #include <vector>
 #include <map>
 #include <iostream>

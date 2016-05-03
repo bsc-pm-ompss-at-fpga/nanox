@@ -23,7 +23,7 @@
 #include "dataaccess_decl.hpp"
 #include <iostream>
 
-using namespace nanos;
+namespace nanos {
 
 inline DataAccess::DataAccess ( void * addr, bool input, bool output,
              bool canRenameFlag, bool concurrent,bool commutative,
@@ -178,5 +178,7 @@ namespace nanos {
       }
    }
 }
+
+} // namespace nanos
 
 #endif

@@ -35,7 +35,7 @@
 #include "dataaccess.hpp"
 #include "functors.hpp"
 
-using namespace nanos;
+namespace nanos {
 
 inline DependableObject::~DependableObject ( )
 {
@@ -306,4 +306,7 @@ inline void DependableObject::setSchedulerData ( DOSchedulerData* scData)
 {
         _schedulerData = scData;
 }
+
+} // namespace nanos
+
 #endif

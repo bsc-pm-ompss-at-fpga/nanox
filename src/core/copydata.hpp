@@ -23,7 +23,7 @@
 #include "copydata_decl.hpp"
 //#include "system_decl.hpp"
 
-using namespace nanos;
+namespace nanos {
 
 inline CopyData::CopyData ( uint64_t addr, nanos_sharing_t nxSharing, bool input, bool output, std::size_t numDimensions, nanos_region_dimension_internal_t *dims, ptrdiff_t off, uint64_t hostBaseAddress, memory_space_id_t hostRegionId )
 {
@@ -195,5 +195,7 @@ inline bool CopyData::isRemoteHost() const {
 inline void CopyData::setRemoteHost( bool value ) {
    remote_host = value;
 }
+
+} // namespace nanos
 
 #endif
