@@ -119,6 +119,19 @@ exception_HEADERS= \
 	exception/mpierrortranslator.hpp \
 	$(END)
 
+error_injectiondir = $(devincludedir)/error-injection
+error_injection_HEADERS= \
+	error-injection/errorinjectionconfiguration.hpp \
+	error-injection/errorinjectioninterface.hpp \
+	error-injection/errorinjectionplugin.hpp \
+	error-injection/errorinjectionpolicy.hpp \
+	error-injection/errorinjectionthread.hpp \
+	error-injection/errorinjectionthread_decl.hpp \
+	error-injection/periodicinjectionpolicy.hpp \
+	error-injection/periodicinjectionpolicy_decl.hpp \
+	error-injection/periodicinjectionpolicy_fwd.hpp \
+	$(END)
+
 support_sources = \
 	new_decl.hpp\
 	new.cpp\
@@ -221,6 +234,7 @@ support_sources = \
 	exception/signalinfo.hpp \
 	exception/signaltranslator.hpp \
 	memory/memoryaddress.cpp \
+	error-injection/errorinjectioninterface.cpp \
 	$(END)
 
 mpi_exception_sources = \
