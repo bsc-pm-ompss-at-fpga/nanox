@@ -162,5 +162,7 @@ namespace nanos {
          void close() { _closed=true; _inst.raiseCloseBurstEvent(_key, _val);  }
    };
 #endif
-}
+
+} // namespace nanos
+
 #endif

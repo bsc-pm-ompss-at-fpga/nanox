@@ -139,9 +139,7 @@ inline void TrackableObject::unhold ()
    _hold = false;
 }
 
-} // namespace nanos
-
-inline std::ostream & nanos::operator<<( std::ostream &o, nanos::TrackableObject const &status)
+inline std::ostream& operator<<( std::ostream &o, TrackableObject const &status)
 {
    //status._writerLock.lock();
    //status._readersLock.lock();
@@ -191,5 +189,7 @@ inline std::ostream & nanos::operator<<( std::ostream &o, nanos::TrackableObject
    
    return o;
 }
+
+} // namespace nanos
 
 #endif

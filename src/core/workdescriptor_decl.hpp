@@ -52,8 +52,7 @@
 #   include "exception/operationfailure.hpp"
 #endif
 
-namespace nanos
-{
+namespace nanos {
 
    /*! \brief This class represents a device object
     */
@@ -125,7 +124,7 @@ namespace nanos
           *  \param[pe] pe is the ProcessingElement which we have to compare to.
           *  \return a boolean indicating if both elements (DeviceData and PE) are compatible.
           */
-         virtual bool isCompatibleWithPE ( const ProcessingElement *pe ) ;
+         virtual bool isCompatibleWithPE ( const ProcessingElement *pe );
 
       public:
 
@@ -298,7 +297,9 @@ namespace nanos
          //bool _listed;
          void                        (*_notifyCopy)( WD &wd, BaseThread const &thread);
          BaseThread const             *_notifyThread;
-         void                         *_remoteAddr;
+         void const                   *_remoteAddr;
+         void                         *_callback;
+         void                         *_arguments;
       public:
          MemController                 _mcontrol;
       private: /* private methods */
@@ -750,8 +751,8 @@ namespace nanos
 
          void setId( unsigned int id );
 
-         void setRemoteAddr( void *addr );
-         void *getRemoteAddr() const;
+         void setRemoteAddr( void const *addr );
+         void const *getRemoteAddr() const;
          
          /*! \brief Sets a WorkDescriptor to an invalid state or not depending on the flag value.
              If invalid (flag = true) it propagates upwards to the ancestors until
@@ -785,6 +786,8 @@ namespace nanos
          void setCriticality ( int cr );
          int getCriticality ( void ) const;
 
+         void setCallback ( void *cb );
+         void setArguments ( void *a );
    };
 
    typedef class WorkDescriptor WD;
@@ -796,7 +799,7 @@ namespace nanos
       NANOS_FT_DISCARD /* 2 */
    } task_operations_event_value_t;
 
-}
+} // namespace nanos
 
 #endif
 

@@ -29,8 +29,7 @@
 #include <sstream>
 #include <string.h>
 
-namespace nanos
-{
+namespace nanos {
 
 #if 0
    class StringList {
@@ -829,6 +828,6 @@ namespace nanos
 
    };
 
-};
+} // namespace nanos
 
 #endif

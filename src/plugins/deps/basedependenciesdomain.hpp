@@ -355,7 +355,7 @@ inline void BaseDependenciesDomain::submitDependableObjectInputNoReadDataAccess 
 }
 
 
-}
+} // namespace nanos
 
 #endif
 

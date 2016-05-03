@@ -22,8 +22,8 @@
 
 #include <set>
 
-namespace nanos
-{
+namespace nanos {
+
    class Device;
    class DeviceData;
    class WorkDescriptor;
@@ -31,6 +31,7 @@ namespace nanos
    typedef WorkDescriptor WD;
    typedef DeviceData DD;
    typedef std::set<const Device *>  DeviceList;
-};
+
+} // namespace nanos
 
 #endif

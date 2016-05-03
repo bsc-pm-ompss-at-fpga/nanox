@@ -215,6 +215,7 @@
 #define NANOX_INSTRUMENTATION_PARTNER_MYSELF 0xFFFFFFFF
 
 namespace nanos {
+
    // This is an ordered list. The idea is to emit all events below or equal the event category
    // predetermined.
    typedef enum { EVENT_ENABLED = 0, EVENT_NONE, EVENT_USER, EVENT_DEVELOPER,
@@ -1199,5 +1200,7 @@ namespace nanos {
          void raiseCloseStateAndBurst ( nanos_event_key_t key, nanos_event_value_t value );
 #endif
    };
-}
+
+} // namespace nanos
+
 #endif

@@ -31,7 +31,7 @@
 #include "cachedaccelerator_decl.hpp"
 
 namespace nanos {
-   namespace ext {
+namespace ext {
 
       class ClusterNode : public ProcessingElement
       {
@@ -76,7 +76,8 @@ namespace nanos {
 
             static void clusterWorker();
       };
-   }
-}
+} // namespace ext
+} // namespace nanos
+
 
 #endif /* _CLUSTERNODE_DECL */

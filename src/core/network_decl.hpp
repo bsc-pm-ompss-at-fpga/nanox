@@ -331,6 +331,7 @@ namespace nanos {
          void processSyncRequests();
          void setParentWD(WD *wd);
    };
-}
+
+} // namespace nanos
 
 #endif

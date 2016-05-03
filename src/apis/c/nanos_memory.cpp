@@ -36,6 +36,8 @@
  *  \{
  */
 
+using namespace nanos;
+
 NANOS_API_DEF(nanos_err_t, nanos_malloc, ( void **p, size_t size, const char *file, int line ))
 {
    NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","malloc",NANOS_RUNTIME ) );

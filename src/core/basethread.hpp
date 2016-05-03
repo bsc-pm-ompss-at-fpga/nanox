@@ -24,6 +24,7 @@
 
 #include "atomic.hpp"
 #include "debug.hpp"
+#include "error.hpp"
 
 #include "schedule_fwd.hpp"
 #include "threadteam_fwd.hpp"
@@ -37,10 +38,8 @@
 
 #include "system.hpp"
 
-#include <stdio.h>
+namespace nanos {
 
-namespace nanos
-{
    inline TeamData::~TeamData ()
    {
       delete _schedData;

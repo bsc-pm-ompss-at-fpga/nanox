@@ -155,27 +155,25 @@ inline short DataAccess::getNumDimensions() const {
 }
 
 
-namespace nanos {
-   namespace dependencies_domain_internal {
-      inline std::ostream & operator<<( std::ostream &o, AccessType const &accessType)
-      {
-         if ( accessType.input && accessType.output ) {
-            if ( accessType.concurrent ) {
-               o << "CON";
-            } else if ( accessType.commutative ) {
-               o << "COM";
-            } else {
-               o << "INOUT";
-            }
-         } else if ( accessType.input && !accessType.commutative ) {
-            o << "IN";
-         } else if ( accessType.output && !accessType.commutative ) {
-            o << "OUT";
+namespace dependencies_domain_internal {
+   inline std::ostream & operator<<( std::ostream &o, AccessType const &accessType)
+   {
+      if ( accessType.input && accessType.output ) {
+         if ( accessType.concurrent ) {
+            o << "CON";
+         } else if ( accessType.commutative ) {
+            o << "COM";
          } else {
-            o << "ERR";
+            o << "INOUT";
          }
-         return o;
+      } else if ( accessType.input && !accessType.commutative ) {
+         o << "IN";
+      } else if ( accessType.output && !accessType.commutative ) {
+         o << "OUT";
+      } else {
+         o << "ERR";
       }
+      return o;
    }
 }
 

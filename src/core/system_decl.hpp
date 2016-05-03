@@ -57,20 +57,7 @@
 #include "openclprocessor_fwd.hpp"
 #endif
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#if 0 //NANOS_RESILIENCY_ENABLED
-#include "taskexception.hpp"
-#endif
-
-#ifdef NANOS_FAULT_INJECTION
-#include <unistd.h>
-#endif
-
-namespace nanos
-{
+namespace nanos {
 
 // This class initializes/finalizes the library
 // All global variables MUST be declared inside
@@ -96,19 +83,19 @@ namespace nanos
          typedef std::map<std::string, WorkSharing *> WorkSharings;
          typedef std::multimap<std::string, std::string> ModulesPlugins;
          typedef std::vector<ArchPlugin*> ArchitecturePlugins;
-         
+
          //! \brief Compiler supplied flags in symbols
          struct SuppliedFlags
          {
             //! If the program is using priorities
             bool prioritiesNeeded : 1;
          };
-         
+
          SuppliedFlags        _compilerSuppliedFlags; //!< \brief Compiler supplied flags
-         
+
          // global seeds
-         Atomic<int> _atomicWDSeed;                   //!< \brief ID seed for new WD's 
-         Atomic<int> _threadIdSeed;                   //!< \brief ID seed for new threads 
+         Atomic<int> _atomicWDSeed;                   //!< \brief ID seed for new WD's
+         Atomic<int> _threadIdSeed;                   //!< \brief ID seed for new threads
          Atomic<unsigned int> _peIdSeed;              //!< \brief ID seed for new PE's
 
          // Devices
@@ -119,8 +106,8 @@ namespace nanos
          bool                 _profile;
          bool                 _instrument;
          bool                 _verboseMode;
-         bool                 _summary;               //!< \brief Flag to enable the summary 
-         time_t               _summaryStartTime;      //!< \brief Track time to show duration in summary 
+         bool                 _summary;               //!< \brief Flag to enable the summary
+         time_t               _summaryStartTime;      //!< \brief Track time to show duration in summary
          ExecutionMode        _executionMode;
          InitialMode          _initialMode;
          bool                 _untieMaster;
@@ -146,21 +133,21 @@ namespace nanos
          /*! factories for scheduling, pes and barriers objects */
          peFactory            _hostFactory;
          barrFactory          _defBarrFactory;
-         
+
          /*! Valid plugin map (module)->(list of plugins) */
          ModulesPlugins       _validPlugins;
-         
+
          /*! Architecture plugins */
          SMPBasePlugin       *_smpPlugin;
          ArchitecturePlugins  _archs;
-         
+
 
          PEList               _pes;
          ThreadList           _workers;
 
          //! List of all supported architectures by _pes
          DeviceList           _devices;
-        
+
          /*! It counts how many threads have finalized their initialization */
          Atomic<unsigned int> _initializedThreads;
          /*! This counts how many threads we're waiting to be initialized */
@@ -188,7 +175,7 @@ namespace nanos
 
          Instrumentation     *_instrumentation; /**< Instrumentation object used in current execution */
          SchedulePolicy      *_defSchedulePolicy;
-         
+
          /*! Dependencies domain manager */
          DependenciesManager *_dependenciesManager;
 
@@ -287,6 +274,7 @@ namespace nanos
          bool _cgAlloc;
          bool _inIdle;
          bool _lazyPrivatizationEnabled;
+         void *_watchAddr;
 
       private:
          PE * createPE ( std::string pe_type, int pid, int uid );
@@ -493,7 +481,7 @@ namespace nanos
          BaseThread * getUnassignedWorker ( void );
 
          /*!
-          * \brief Returns a new team of threads 
+          * \brief Returns a new team of threads
           * \param[in] nthreads Number of threads in the team.
           * \param[in] constraints This parameter is not used.
           * \param[in] reuse Reuse current thread as part of the team.
@@ -571,7 +559,7 @@ namespace nanos
          const std::string & getDefaultInstrumentation() const;
 
          const std::string & getDefaultArch() const;
-         
+
          void setDefaultArch( const std::string &arch );
 
          void setHostFactory ( peFactory factory );
@@ -595,12 +583,12 @@ namespace nanos
          void registerWorkSharing ( const std::string &label, WorkSharing *ws);
 
          void setDefaultSchedulePolicy ( SchedulePolicy *policy );
-         
+
          SchedulePolicy * getDefaultSchedulePolicy ( ) const;
 
          SchedulerStats & getSchedulerStats ();
          SchedulerConf  & getSchedulerConf();
-         
+
          /*! \brief Disables the execution of pending WDs in the scheduler's
           queue.
          */
@@ -609,17 +597,17 @@ namespace nanos
           queue.
          */
          void startScheduler ();
-         
+
          //! \brief Checks if the scheduler is stopped or not.
          bool isSchedulerStopped () const;
-         
+
          /*! \brief Waits until all threads are paused. This is useful if you
           * want that no task is executed after the scheduler is disabled.
           * \note The scheduler must be stopped first.
           * \sa stopScheduler(), waitUntilThreadsUnpaused
           */
          void waitUntilThreadsPaused();
-         
+
          /*! \brief Waits until all threads are unpaused. Use this
           * when you require that no task is running in a certain section.
           * In that case, you'll probably disable the scheduler, wait for
@@ -631,20 +619,20 @@ namespace nanos
           * \sa stopScheduler(), waitUntilThreadsUnpaused
           */
          void waitUntilThreadsUnpaused();
-         
+
          void pausedThread();
-         
+
          void unpausedThread();
-         
+
          /*! \brief Returns the name of the default dependencies manager.
           */
          const std::string & getDefaultDependenciesManager() const;
-         
+
          /*! \brief Specifies the dependencies manager to be used.
           *  \param manager DependenciesManager.
           */
          void setDependenciesManager ( DependenciesManager *manager );
-         
+
          /*! \brief Returns the dependencies manager in use.
           */
          DependenciesManager * getDependenciesManager ( ) const;
@@ -662,7 +650,7 @@ namespace nanos
          void setPMInterface (PMInterface *_pm);
          PMInterface & getPMInterface ( void ) const;
          bool isCacheEnabled();
-         
+
          /**! \brief Register an architecture plugin.
           *   \param plugin A pointer to the plugin.
           *   \return The index of the plugin in the vector.
@@ -674,7 +662,7 @@ namespace nanos
 #endif
 
          void threadReady ();
-         
+
          void setSlaveParentWD( WD * wd ){ slaveParentWD = wd ; };
          WD* getSlaveParentWD( ){ return slaveParentWD ; };
 
@@ -692,14 +680,14 @@ namespace nanos
           
          SeparateMemoryAddressSpace &getSeparateMemory( memory_space_id_t id ) { 
             //std::cerr << "Requested object " << _separateAddressSpaces[ id ] <<std::endl;
-            return *(_separateAddressSpaces[ id ]); 
+            return *(_separateAddressSpaces[ id ]);
          }
-         
-         void addSeparateMemory( memory_space_id_t id, SeparateMemoryAddressSpace* memory) { 
+
+         void addSeparateMemory( memory_space_id_t id, SeparateMemoryAddressSpace* memory) {
             //std::cerr << "Requested object " << _separateAddressSpaces[ id ] <<std::endl;
-            _separateAddressSpaces[ id ]=memory; 
+            _separateAddressSpaces[ id ]=memory;
          }
-         
+
          unsigned int getNewSeparateMemoryAddressSpaceId() { return _separateMemorySpacesCount++; }
          unsigned int getSeparateMemoryAddressSpacesCount() { return _separateMemorySpacesCount - 1; }
 
@@ -711,9 +699,9 @@ namespace nanos
          
          NewNewRegionDirectory const &getMasterRegionDirectory() { return _hostMemory.getDirectory(); }
          ProcessingElement &getPEWithMemorySpaceId( memory_space_id_t id );;
-         
+
          void setValidPlugin ( const std::string &module,  const std::string &plugin );
-         
+
          /*! \brief Registers a plugin option. Depending on whether nanox --help
           * is running or not, it will use a list of valid plugins or not.
           *  \param option Name of the option in NX_ARGS.
@@ -734,18 +722,18 @@ namespace nanos
           *  \return {True/False} depending if there are pendant writes
           */
          bool haveDependencePendantWrites ( void *addr ) const;
-         
-                  
+
+
         /**
          * \brief Registers PEs to current nanox workers/team
          * Function created to serve MPI device
-         * Whoever creates the threads is reponsible 
+         * Whoever creates the threads is reponsible
          * of increasing extrae max threads
          * \param num_pes number of process spawned
          * \param pes pointer to a list of Processing Elements
          */
          void addPEsAndThreadsToTeam(PE **pes, int num_pes, BaseThread** threads, int num_threads);
-         
+
          void increaseAffinityFailureCount() { _affinityFailureCount++; }
          unsigned int getAffinityFailureCount() { return _affinityFailureCount.value(); }
 
@@ -753,7 +741,7 @@ namespace nanos
           */
          void admitCurrentThread ( bool isWorker );
          void expelCurrentThread ( bool isWorker );
-         
+
          /*! \brief Setup of the runtime at the beginning of the top level function of the program
           *
           * Some devices (like MPI and cluster) may require extra
@@ -784,8 +772,11 @@ namespace nanos
          bool isSimulator() const;
          ThreadTeam *getMainTeam();
          bool getVerboseDevOps() const;
+         void setVerboseDevOps(bool value);
          bool getVerboseCopies() const;
          bool getSplitOutputForThreads() const;
+         std::string getRegionCachePolicyStr() const;
+         void setRegionCachePolicyStr( std::string policy );
          RegionCache::CachePolicy getRegionCachePolicy() const;
          std::size_t getRegionCacheSlabSize() const;
          void createDependence( WD* pred, WD* succ);
@@ -809,7 +800,7 @@ namespace nanos
 
          const ThreadManagerConf& getThreadManagerConf() const;
          ThreadManager* getThreadManager() const;
-         
+
          //! \brief Returns true if the compiler says priorities are required
          bool getPrioritiesNeeded() const;
          Router& getRouter();
@@ -836,7 +827,7 @@ global_reg_t _registerMemoryChunk_2dim(void *addr, std::size_t rows, std::size_t
 
    extern System sys;
 
-};
+} // namespace nanos
 
 #endif
 

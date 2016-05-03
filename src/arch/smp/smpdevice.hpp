@@ -29,8 +29,7 @@
 #include "system_decl.hpp"
 #include "smptransferqueue.hpp"
 
-namespace nanos
-{
+namespace nanos {
 
 SMPDevice::SMPDevice ( const char *n ) : Device ( n ), _transferQueue() {}
 SMPDevice::SMPDevice ( const SMPDevice &arch ) : Device ( arch ), _transferQueue() {}
@@ -168,7 +167,8 @@ void SMPDevice::_getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem, Simpl
 void SMPDevice::tryExecuteTransfer() {
    _transferQueue.tryExecuteOne();
 }
-}
+
+} // namespace nanos
 
 #endif
 

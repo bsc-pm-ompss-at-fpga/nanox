@@ -24,8 +24,7 @@
 #include "atomic_decl.hpp"
 #include "lock_decl.hpp"
 
-namespace nanos
-{
+namespace nanos {
 
 // FIX: implement own queue without coherence problems? lock-free?
 
@@ -53,7 +52,7 @@ namespace nanos
          bool try_pop ( T& result );
    };
 
-};
+} // namespace nanos
 
 #endif
 

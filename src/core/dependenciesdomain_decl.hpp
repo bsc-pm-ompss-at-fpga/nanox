@@ -66,6 +66,7 @@
 #include <string>
 
 namespace nanos {
+
 using namespace dependencies_domain_internal;
    
   /*! \class DependenciesDomain

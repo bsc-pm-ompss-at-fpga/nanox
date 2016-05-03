@@ -76,6 +76,6 @@ struct global_reg_t {
    bool isLocatedInSeparateMemorySpaces() const;
 };
 
-}
+} // namespace nanos
 
 #endif /* GLOBALREGT_DECL */

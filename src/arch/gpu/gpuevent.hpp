@@ -286,6 +286,6 @@ inline void GPUEvent::waitForEvent()
    _state = RAISED;
 }
 
-}
+} // namespace nanos
 
 #endif //_GPU_EVENT

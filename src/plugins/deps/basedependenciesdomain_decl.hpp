@@ -178,7 +178,7 @@ namespace nanos {
          }
    };
 
-}
+} // namespace nanos
 
 #endif
 

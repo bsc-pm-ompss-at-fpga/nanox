@@ -134,7 +134,7 @@ namespace nanos {
             : BaseDependenciesDomain( depDomain ) {}
    };
 
-};
+} // namespace nanos
 
 #endif
 

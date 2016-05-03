@@ -1031,5 +1031,6 @@ void RegionDictionary< Sparsity >::addFixedRegion( reg_t id ) {
    _fixedRegions.insert( id );
 }
 
-}
+} // namespace nanos
+
 #endif /* REGIONDICT_H */

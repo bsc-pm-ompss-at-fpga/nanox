@@ -140,6 +140,6 @@ void GPUDevice::syncTransfer( uint64_t hostAddress, SeparateMemoryAddressSpace &
    gpu->getOutTransferList()->requestTransfer( ( void * ) hostAddress );
 }
 
-}
+} // namespace nanos
 
 #endif

@@ -86,7 +86,7 @@ void messageMaster( T msg )
    } while (0);
 }
 
-}
+} // namespace nanos
 
 #endif // DEBUG_HPP
 

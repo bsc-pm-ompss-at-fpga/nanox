@@ -30,8 +30,7 @@
 
 
 namespace nanos {
-namespace ext
-{
+namespace ext {
 
    class GPUThread : public nanos::AsyncThread
    {
@@ -133,7 +132,7 @@ namespace ext
 
    };
 
-}
-}
+} // namespace ext
+} // namespace nanos
 
 #endif

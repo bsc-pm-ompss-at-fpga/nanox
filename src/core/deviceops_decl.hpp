@@ -53,5 +53,7 @@ namespace nanos {
          bool allCacheOpsCompleted();
          friend std::ostream & operator<< (std::ostream &o, DeviceOps const &ops);
    };
-}
+
+} // namespace nanos
+
 #endif /* DEVICEOPS_DECL_HPP */

@@ -28,8 +28,7 @@
 #include <map>
 #include <iostream>
 
-namespace nanos
-{
+namespace nanos {
 
    /** \brief Base class for specific architecture plugins
     */
@@ -88,6 +87,7 @@ namespace nanos
          virtual int initNetwork(int *argc, char ***argv) { return 0; }
          virtual BaseThread *getClusterThread() const { return NULL; }
    };
-}
+
+} // namespace nanos
 
 #endif

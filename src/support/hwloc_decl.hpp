@@ -66,6 +66,6 @@ class Hwloc {
 
 };
 
-}
+} // namespace nanos
 
 #endif /* HWLOC_DECL */

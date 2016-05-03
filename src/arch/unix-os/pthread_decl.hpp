@@ -74,7 +74,7 @@ namespace nanos {
          virtual void condSignal();
    };
 
-}
+} // namespace nanos
 
 void * os_bootthread ( void *arg );
 

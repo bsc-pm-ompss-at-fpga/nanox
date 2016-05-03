@@ -48,6 +48,6 @@ namespace nanos {
 
          void resetVersion();
    };
-}
+} // namespace nanos
 
 #endif /* CACHEDREGIONSTATUS_DECL_HPP */

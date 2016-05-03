@@ -29,10 +29,8 @@
 #include "fpgaconfig.hpp"
 #include "cachedaccelerator.hpp"
 
-namespace nanos
-{
-   namespace ext
-   {
+namespace nanos {
+namespace ext {
 
 //As in gpu, we could keep track of copied data
 
@@ -127,7 +125,7 @@ namespace nanos
 
             BaseThread &startFPGAThread();
       };
-   }
-}
+} // namespace ext
+} // namespace nanos
 
 #endif

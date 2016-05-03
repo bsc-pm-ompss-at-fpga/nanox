@@ -22,7 +22,9 @@
 
 #include "addressspace_decl.hpp"
 #include "memcachecopy_fwd.hpp"
+
 namespace nanos {
+
 class BaseOps {
    public:
    // define la transferencia de la version _version de una region _reg 
@@ -165,6 +167,6 @@ class SeparateAddressSpaceOutOps : public BaseOps {
    void cancel( WD const &wd );
 };
 
-}
+} // namespace nanos
 
 #endif /* MEMORYOPS_DECL */

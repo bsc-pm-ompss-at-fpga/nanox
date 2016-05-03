@@ -63,7 +63,7 @@ namespace nanos {
          uint64_t getTag() const;
          unsigned int getDirectoryVersion() const;
    };
-}
+} // namespace nanos
 
 #endif
 

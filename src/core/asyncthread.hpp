@@ -24,8 +24,7 @@
 #include "system.hpp"
 #include "debug.hpp"
 
-namespace nanos
-{
+namespace nanos {
 
 AsyncThread::~AsyncThread()
 {
@@ -121,6 +120,6 @@ inline bool AsyncThread::canGetWork()
    return BaseThread::canGetWork() && ( int ) _runningWDsCounter < getMaxPrefetch();
 }
 
-}
+} // namespace nanos
 
 #endif //_ASYNC_THREAD_ELEMENT
