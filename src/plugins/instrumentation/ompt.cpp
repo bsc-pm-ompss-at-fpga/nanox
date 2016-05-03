@@ -405,11 +405,7 @@ extern "C" {
       return 0;
    }
 
-   static int ompt_nanos_target_stop_trace ( ompt_target_device_t *device )
-   {
-      ( ( DeviceInstrumentation * )device )->stopDeviceTrace( );
-      return 0;
-   }
+   int ompt_nanos_target_stop_trace ( ompt_target_device_t *device );
 
 
   static ompt_record_type_t ompt_nanos_target_buffer_get_record_type( ompt_target_buffer_t *buffer, ompt_target_buffer_cursor_t current)
@@ -873,6 +869,15 @@ namespace nanos
          void createEventBuffer() {
              _devEventBuffers.push_back( BufferInfo() );
          }
+
+         void completeDeviceBuffer( int deviceId ) {
+            BufferInfo &eventBuffer = _devEventBuffers[ deviceId ];
+            if (eventBuffer.current != eventBuffer.begin) {
+               _completeBufferCallback( deviceId, ( ompt_target_buffer_t *) eventBuffer.buffer,
+                     eventBuffer.size, eventBuffer.begin, eventBuffer.current );
+               eventBuffer.current = eventBuffer.begin;
+            }
+         }
    };
 
 extern "C" {
@@ -936,6 +941,18 @@ extern "C" {
       //(length) in order to know if cursor goes out of bounds
       InstrumentationOMPT *instr = ( InstrumentationOMPT * ) sys.getInstrumentation();
       return instr->advanceBuffer(buffer, current, next);
+   }
+
+   int ompt_nanos_target_stop_trace ( ompt_target_device_t *device );
+   int ompt_nanos_target_stop_trace ( ompt_target_device_t *device )
+   {
+      DeviceInstrumentation * devInst = ( DeviceInstrumentation * )device;
+      InstrumentationOMPT *instr = ( InstrumentationOMPT * ) sys.getInstrumentation();
+      //notify the device to stop instrumentation
+      devInst->stopDeviceTrace();
+      //Complete event buffer for this device
+      instr->completeDeviceBuffer( devInst->getId() );
+      return 0;
    }
 }
    namespace ext
