@@ -19,14 +19,17 @@
 
 #ifndef MEMCONTROLLER_DECL
 #define MEMCONTROLLER_DECL
-#include <map>
+
 #include "workdescriptor_fwd.hpp"
-#include "atomic_decl.hpp"
-#include "lock_decl.hpp"
-#include "newregiondirectory_decl.hpp"
+
 #include "addressspace_decl.hpp"
+#include "atomic_decl.hpp"
+#include "backupcachecopy_decl.hpp"
+#include "backupprivatecopy_decl.hpp"
+#include "lock_decl.hpp"
 #include "memoryops_decl.hpp"
 #include "memcachecopy_decl.hpp"
+#include "newregiondirectory_decl.hpp"
 #include "regionset_decl.hpp"
 
 #include <vector>
@@ -108,6 +111,7 @@ public:
    bool ownsRegion( global_reg_t const &reg );
    bool hasObjectOfRegion( global_reg_t const &reg );
    bool containsAllCopies( MemController const &target ) const;
+   const WorkDescriptor& getWorkDescriptor() const { return _wd; }
 };
 
 } // namespace nanos
