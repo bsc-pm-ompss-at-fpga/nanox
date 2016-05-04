@@ -57,7 +57,7 @@ namespace ext {
          virtual void _copyInStrided1D( memory::Address devAddr, memory::Address hostAddr, std::size_t len, std::size_t count, std::size_t ld, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId );
          virtual void _copyOutStrided1D( memory::Address hostAddr, memory::Address devAddr, std::size_t len, std::size_t count, std::size_t ld, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId );
          virtual bool _copyDevToDevStrided1D( memory::Address devDestAddr, memory::Address devOrigAddr, std::size_t len, std::size_t count, std::size_t ld, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memOrig, DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId );
-         virtual void _canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *sizes, unsigned int numChunks, std::size_t *remainingSizes );
+         virtual void _canAllocate( SeparateMemoryAddressSpace &mem, const std::vector<size_t>& sizes, std::vector<size_t>& remainingSizes );
          virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem, SimpleAllocator::ChunkList &list );
    };
 

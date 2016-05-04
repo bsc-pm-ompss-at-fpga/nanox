@@ -184,7 +184,7 @@ namespace nanos {
 
          virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace &mem );
 
-         virtual void _canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *sizes, unsigned int numChunks, std::size_t *remainingSizes );
+         virtual void _canAllocate( SeparateMemoryAddressSpace &mem, const std::vector<size_t>& sizes, std::vector<size_t>& remainingSizes );
 
          virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem, SimpleAllocator::ChunkList &list );
 

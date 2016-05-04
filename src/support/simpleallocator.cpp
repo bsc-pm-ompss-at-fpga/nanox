@@ -264,15 +264,16 @@ uint64_t SimpleAllocator::getBasePointer( uint64_t address, size_t size )
    return 0;
 }
 
-void SimpleAllocator::canAllocate( std::size_t *sizes, unsigned int numChunks, std::size_t *remainingSizes ) const {
-   bool *allocated = (bool *) alloca( numChunks * sizeof(bool) );
+void SimpleAllocator::canAllocate( const std::vector<size_t>& sizes, std::vector<size_t>& remainingSizes ) const {
+   std::vector<bool> allocated( sizes.size(), false );
+
    unsigned int allocated_chunks = 0;
-   for ( unsigned int idx = 0; idx < numChunks; idx += 1 ) {
+   for ( unsigned int idx = 0; idx < sizes.size(); idx += 1 ) {
       allocated[ idx ] = false;
    }
    for ( SegmentMap::const_iterator mapIter = _freeChunks.begin(); mapIter != _freeChunks.end(); mapIter++ ) {
       std::size_t thisSize = mapIter->second;
-      for ( unsigned int idx = 0; idx < numChunks; idx += 1 ) {
+      for ( unsigned int idx = 0; idx < sizes.size(); idx += 1 ) {
          if ( allocated[ idx ] == false && sizes[ idx ] <= thisSize ) {
             allocated[ idx ] = true;
             thisSize -= sizes[ idx ];
@@ -280,15 +281,15 @@ void SimpleAllocator::canAllocate( std::size_t *sizes, unsigned int numChunks, s
          }
       }
    }
-   if ( allocated_chunks < numChunks ) {
+   if ( allocated_chunks < sizes.size() ) {
       unsigned int remaining_count = 0;
-      for ( unsigned int idx = 0; idx < numChunks; idx += 1 ) {
+      for ( unsigned int idx = 0; idx < sizes.size(); idx += 1 ) {
          if ( allocated[ idx ] == false ) {
             remainingSizes[ remaining_count ] = sizes[ idx ];
             remaining_count += 1;
          }
       }
-      if ( remaining_count < numChunks ) {
+      if ( remaining_count < sizes.size() ) {
          remainingSizes[ remaining_count ] = 0;
       }
    } else {

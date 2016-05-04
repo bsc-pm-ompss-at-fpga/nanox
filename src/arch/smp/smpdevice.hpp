@@ -57,14 +57,12 @@ void SMPDevice::memFree( memory::Address addr, SeparateMemoryAddressSpace &mem )
    sallocator->unlock();
 }
 
-void SMPDevice::_canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *sizes, unsigned int numChunks, std::size_t *remainingSizes ) {
-   SimpleAllocator *sallocator = (SimpleAllocator *) mem.getSpecificData();
-   sallocator->canAllocate( sizes, numChunks, remainingSizes );
+void SMPDevice::_canAllocate( SeparateMemoryAddressSpace &mem, const std::vector<size_t>& sizes, std::vector<size_t>& remainingSizes ) {
+   static_cast<SimpleAllocator*>(mem.getSpecificData())->canAllocate( sizes, remainingSizes );
 }
 
 std::size_t SMPDevice::getMemCapacity( SeparateMemoryAddressSpace &mem ) {
-   SimpleAllocator *sallocator = (SimpleAllocator *) mem.getSpecificData();
-   return sallocator->getCapacity();
+   return static_cast<SimpleAllocator*>(mem.getSpecificData())->getCapacity();
 }
 
 void SMPDevice::_copyIn( memory::Address devAddr, memory::Address hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId ) {

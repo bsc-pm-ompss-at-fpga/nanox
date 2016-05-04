@@ -1857,7 +1857,7 @@ bool RegionCache::canAllocateMemory( const std::vector<MemCacheCopy>& memCopies,
    if ( needed_chunks != 0 ) {
       std::vector<std::size_t> remaining_sizes( needed_chunks );
       /* compute if missing chunks can be allocated in the device memory */
-      _device._canAllocate( sys.getSeparateMemory( _memorySpaceId ), sizes, needed_chunks, remaining_sizes );
+      _device._canAllocate( sys.getSeparateMemory( _memorySpaceId ), sizes, remaining_sizes );
 
       unsigned int remaining_count = 0;
       while ( remaining_count < remaining_sizes.size() && remaining_sizes[ remaining_count ] != 0 ) {

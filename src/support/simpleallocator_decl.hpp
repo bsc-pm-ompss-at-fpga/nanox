@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <map>
 #include <list>
+#include <vector>
 #include <ostream>
 
 #include "atomic_decl.hpp"
@@ -63,7 +64,7 @@ namespace nanos {
          void * allocateSizeAligned( std::size_t len );
          std::size_t free( void *address );
 
-         void canAllocate( std::size_t *sizes, unsigned int numChunks, std::size_t *remainingSizes ) const;
+         void canAllocate( const std::vector<size_t>& sizes, std::vector<size_t>& remainingSizes ) const;
          void getFreeChunksList( ChunkList &list ) const;
 
          void printMap( std::ostream &o );

@@ -64,8 +64,8 @@ void BackupManager::memFree ( memory::Address addr, SeparateMemoryAddressSpace &
 }
 
 void BackupManager::_canAllocate ( SeparateMemoryAddressSpace& mem,
-                                   size_t *sizes, uint numChunks,
-                                   size_t *remainingSizes )
+                                   const std::vector<size_t>& sizes,
+                                   std::vector<size_t>& remainingSizes )
 {
 }
 
