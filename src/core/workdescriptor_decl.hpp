@@ -91,7 +91,7 @@ namespace nanos {
          const char * getName ( void ) const { return _name; }
          unsigned int increaseNumOps() { return _numOps++; }
 
-         virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WorkDescriptor const *wd, unsigned int copyIdx) = 0;
+         virtual memory::Address memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WorkDescriptor const *wd, unsigned int copyIdx) = 0;
          virtual void memFree( memory::Address addr, SeparateMemoryAddressSpace &mem ) = 0;
          virtual void _canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *sizes, unsigned int numChunks, std::size_t *remainingSizes ) = 0;
          virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace &mem ) = 0;

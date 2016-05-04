@@ -24,7 +24,7 @@ namespace nanos {
 
 class CommutationDO;
 
-}
+} // namespace nanos
 
 #endif
 

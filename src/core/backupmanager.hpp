@@ -56,7 +56,7 @@ namespace nanos {
          // Warning: cannot reuse the source object because its _managed_pool object is invalidated
          BackupManager & operator= ( BackupManager& arch );
 
-         virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WorkDescriptor const* wd, unsigned int copyIdx);
+         virtual memory::Address memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WorkDescriptor const* wd, unsigned int copyIdx);
 
          virtual void memFree (memory::Address addr, SeparateMemoryAddressSpace &mem);
 

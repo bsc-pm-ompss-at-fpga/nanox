@@ -48,7 +48,7 @@ namespace ext {
           */
          ~ClusterDevice();
 
-         virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WorkDescriptor const *wd, unsigned int copyIdx );
+         virtual memory::Address memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WorkDescriptor const *wd, unsigned int copyIdx );
          virtual void memFree( memory::Address addr, SeparateMemoryAddressSpace &mem);
          virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace &mem );
          virtual void _copyIn( memory::Address devAddr, memory::Address hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId );

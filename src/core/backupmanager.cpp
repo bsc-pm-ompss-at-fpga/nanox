@@ -50,7 +50,7 @@ BackupManager & BackupManager::operator= ( BackupManager & arch )
    return *this;
 }
 
-void * BackupManager::memAllocate ( size_t size,
+memory::Address BackupManager::memAllocate ( size_t size,
                                     SeparateMemoryAddressSpace &mem,
                                     WorkDescriptor const* wd,
                                     uint copyIdx )
@@ -60,7 +60,7 @@ void * BackupManager::memAllocate ( size_t size,
 
 void BackupManager::memFree ( memory::Address addr, SeparateMemoryAddressSpace &mem )
 {
-   _managed_pool.deallocate((void*) addr);
+   _managed_pool.deallocate(addr);
 }
 
 void BackupManager::_canAllocate ( SeparateMemoryAddressSpace& mem,

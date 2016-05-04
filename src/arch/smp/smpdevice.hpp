@@ -40,7 +40,7 @@ SMPDevice::~SMPDevice()
 {
 };
 
-void *SMPDevice::memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WD const *wd, unsigned int copyIdx ) {
+memory::Address SMPDevice::memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WD const *wd, unsigned int copyIdx ) {
    void *retAddr = NULL;
 
    SimpleAllocator *sallocator = (SimpleAllocator *) mem.getSpecificData();

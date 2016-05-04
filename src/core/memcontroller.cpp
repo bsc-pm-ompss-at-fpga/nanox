@@ -409,15 +409,14 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
              NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 0 );)
 }
 
-uint64_t MemController::getAddress( unsigned int index ) const {
+memory::Address MemController::getAddress( unsigned int index ) const {
    ensure( _preinitialized == true, "MemController not preinitialized!");
    ensure( _initialized == true, "MemController not initialized!");
-   uint64_t addr = 0;
-   //std::cerr << " _getAddress, reg: " << index << " key: " << (void *)_memCacheCopies[ index ]._reg.key << " id: " << _memCacheCopies[ index ]._reg.id << std::endl;
+   memory::Address addr = nullptr;
    if ( _pe->getMemorySpaceId() == 0 ) {
-      addr = ((uint64_t) _wd.getCopies()[ index ].getBaseAddress());
+      addr = _wd.getCopies()[ index ].getBaseAddress();
    } else {
-      addr = sys.getSeparateMemory( _pe->getMemorySpaceId() ).getDeviceAddress( _memCacheCopies[ index ]._reg, _wd.getCopies()[ index ].getBaseAddress(), _memCacheCopies[ index ]._chunk );
+      addr = sys.getSeparateMemory( _pe->getMemorySpaceId() ).getDeviceAddress( _memCacheCopies[ index ]._reg, (memory::Address) _wd.getCopies()[ index ].getBaseAddress(), _memCacheCopies[ index ]._chunk );
    }
    return addr;
 }

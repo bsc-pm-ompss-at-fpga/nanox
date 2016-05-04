@@ -233,7 +233,6 @@ support_sources = \
 	exception/signalexception.cpp \
 	exception/signalinfo.hpp \
 	exception/signaltranslator.hpp \
-	memory/memoryaddress.cpp \
 	error-injection/errorinjectioninterface.cpp \
 	$(END)
 

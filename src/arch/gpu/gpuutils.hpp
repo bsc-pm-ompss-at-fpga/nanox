@@ -81,6 +81,11 @@ namespace ext {
 
    };
 
+inline void checkCudaError( const char* function_name, cudaError_t error )
+{
+   fatal_cond( err != cudaSuccess,
+         "CUDA reported an error in ", function_name, ": ", cudaGetErrorString( err ) );
+}
 
 } // namespace ext
 } // namespace nanos
