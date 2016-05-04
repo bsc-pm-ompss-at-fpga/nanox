@@ -263,6 +263,10 @@ common_sources=\
 	memcachecopy_fwd.hpp \
 	memcachecopy.hpp \
 	memcachecopy.cpp \
+	backupcachecopy_decl.hpp \
+	backupmanager_fwd.hpp \
+	backupprivatecopy.hpp \
+	backupprivatecopy_decl.hpp \
 	memoryops_decl.hpp \
 	memoryops_fwd.hpp \
 	memoryops.cpp \

@@ -29,23 +29,41 @@
 #include "memcachecopy_decl.hpp"
 #include "regionset_decl.hpp"
 
+#include <vector>
+
 namespace nanos {
+
+   typedef enum {
+      NANOS_FT_CP_IN = 1,
+      NANOS_FT_CP_OUT,  // 2
+      NANOS_FT_CP_INOUT,// 3
+      NANOS_FT_RT_IN,   // 4
+      NANOS_FT_RT_INOUT // 5
+   } checkpoint_event_value_t;
 
 class MemController {
    bool                        _initialized;
    bool                        _preinitialized;
    bool                        _inputDataReady;
    bool                        _outputDataReady;
+   bool                        _dataRestored;
    bool                        _memoryAllocated;
    bool                        _invalidating;
    bool                        _mainWd;
-   WD                         &_wd;
+   bool                        _is_private_backup_aborted;
+   WorkDescriptor             &_wd;
    ProcessingElement          *_pe;
    Lock                        _provideLock;
-   //std::map< NewNewRegionDirectory::RegionDirectoryKey, std::map< reg_t, unsigned int > > _providedRegions;
    RegionSet _providedRegions;
    BaseAddressSpaceInOps      *_inOps;
    SeparateAddressSpaceOutOps *_outOps;
+#ifdef NANOS_RESILIENCY_ENABLED   // compile time disable
+   SeparateAddressSpaceInOps     *_backupOpsIn;
+   SeparateAddressSpaceInOps     *_backupOpsOut;
+   SeparateAddressSpaceOutOps    *_restoreOps;
+   std::vector<BackupCacheCopy>   _backupCacheCopies;
+   std::vector<BackupPrivateCopy> _backupInOutCopies;
+#endif
    std::size_t                 _affinityScore;
    std::size_t                 _maxAffinityScore;
    RegionSet _ownedRegions;
@@ -67,6 +85,10 @@ public:
    bool allocateTaskMemory();
    void copyDataIn();
    void copyDataOut( MemControllerPolicy policy );
+#ifdef NANOS_RESILIENCY_ENABLED
+   void restoreBackupData(); /* Restores a previously backed up input data */
+   bool isDataRestored( WD const &wd );
+#endif
    bool isDataReady( WD const &wd );
    bool isOutputDataReady( WD const &wd );
    memory::Address getAddress( unsigned int index ) const;
