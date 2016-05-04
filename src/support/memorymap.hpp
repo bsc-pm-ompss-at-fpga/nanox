@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "memorymap_decl.hpp"
+#include "memory/memoryaddress.hpp"
 #include "basethread_decl.hpp"
 #include "debug.hpp"
 
@@ -39,7 +40,7 @@ inline bool MemoryChunk::operator<( MemoryChunk const &chunk ) const {
    return _addr < chunk._addr;
 } 
 
-inline uint64_t MemoryChunk::getAddress() const {
+inline memory::Address MemoryChunk::getAddress() const {
    return _addr;
 }
 inline std::size_t MemoryChunk::getLength() const {
@@ -1111,7 +1112,7 @@ void MemoryMap< _Type >::getWithOverlapNoExactKey( const MemoryChunk &key, const
 }
 
 template < typename _Type >
-void MemoryMap< _Type >::getOrAddChunkDoNotFragment( uint64_t addr, std::size_t len, MemChunkList &resultEntries )
+void MemoryMap< _Type >::getOrAddChunkDoNotFragment( memory::Address addr, std::size_t len, MemChunkList &resultEntries )
 {
    MemoryChunk key( addr, len );
 
@@ -1130,7 +1131,7 @@ void MemoryMap< _Type >::getOrAddChunkDoNotFragment( uint64_t addr, std::size_t 
 }
 
 template < typename _Type >
-void MemoryMap< _Type >::getOrAddChunk( uint64_t addr, std::size_t len, MemChunkList &resultEntries )
+void MemoryMap< _Type >::getOrAddChunk( memory::Address addr, std::size_t len, MemChunkList &resultEntries )
 {
    MemoryChunk key( addr, len );
 
@@ -1149,7 +1150,7 @@ void MemoryMap< _Type >::getOrAddChunk( uint64_t addr, std::size_t len, MemChunk
 }
 
 template < typename _Type >
-void MemoryMap< _Type >::getChunk( uint64_t addr, std::size_t len, ConstMemChunkList &resultEntries ) const
+void MemoryMap< _Type >::getChunk( memory::Address addr, std::size_t len, ConstMemChunkList &resultEntries ) const
 {
    MemoryChunk key( addr, len );
 
@@ -1187,10 +1188,16 @@ void MemoryMap< _Type >::print(std::ostream &o) const
    o << "printing memory chunks" << std::endl;
    for (; it != this->end(); it++)
    {
-      o << "\tchunk: " << i++ << " addr=" << (void *) it->first.getAddress() <<"(" << (uint64_t)it->first.getAddress()<< ")" << " len=" << it->first.getLength() << " ptr val is " << it->second << " addr of ptr val is " << (void *) &(it->second) << " ";
+      o << "\tchunk: " << i++
+        << " addr=" << static_cast<uintptr_t>(it->first.getAddress())
+        << "("      << static_cast<uintptr_t>(it->first.getAddress()) << ")"
+        << " len=" << it->first.getLength()
+        << " ptr val is " << it->second
+        << " addr of ptr val is "
+        << memory::Address( &(it->second) ) << " ";
       o << std::endl;
       //it->second->print();
-   } 
+   }
    o << "end of memory chunks" << std::endl;
 }
 
@@ -1217,7 +1224,7 @@ bool MemoryMap< _Type >::canPack() const
 
    //   MemoryChunk *mc = &(it->first);
    //   std::size_t iterSize, currSize, count = 1;
-   //   uint64_t iterAddr, currAddr;
+   //   memory::Address iterAddr, currAddr;
    //      currSize = it->first.getLength();
    //      currAddr = it->first.getAddress();
    //      it++;
@@ -1232,18 +1239,18 @@ bool MemoryMap< _Type >::canPack() const
 
 #if 0
    const_iterator it = this->begin();
-   uint64_t firstAddr = it->first.getAddress();
+   memory::Address firstAddr = it->first.getAddress();
    std::size_t firstSize = it->first.getLength();
 
    it++;
    
-   uint64_t diffAddr = it->first.getAddress() - firstAddr;
+   memory::Address diffAddr = it->first.getAddress() - firstAddr;
    std::size_t diffSize = it->first.getLength() - firstSize;
 
    std::cerr << "First diff addr is "<< diffAddr << std::endl;
    if ( diffSize != 0 ) result = false;
 
-   uint64_t iterAddr = it->first.getAddress();
+   memory::Address iterAddr = it->first.getAddress();
    std::size_t iterSize = it->first.getLength();
    it++;
 
@@ -1268,7 +1275,7 @@ bool MemoryMap< _Type >::canPack() const
 
 
 template < typename _Type >
-void MemoryMap< _Type >::removeChunks( uint64_t addr, std::size_t len ) {
+void MemoryMap< _Type >::removeChunks( memory::Address addr, std::size_t len ) {
    MemoryChunk key( addr, len );
    typename BaseMap::iterator it_begin, it_end;
    it_begin = it_end = this->lower_bound( key );
@@ -1279,7 +1286,7 @@ void MemoryMap< _Type >::removeChunks( uint64_t addr, std::size_t len ) {
 }
 
 template < typename _Type >
-_Type **MemoryMap< _Type >::getExactOrFullyOverlappingInsertIfNotFound( uint64_t addr, std::size_t len, bool &exact ) {
+_Type **MemoryMap< _Type >::getExactOrFullyOverlappingInsertIfNotFound( memory::Address addr, std::size_t len, bool &exact ) {
    _Type **ptr = (_Type **) NULL;
    MemoryChunk key( addr, len );
    iterator it = this->lower_bound( key );
@@ -1353,7 +1360,7 @@ _Type **MemoryMap< _Type >::getExactOrFullyOverlappingInsertIfNotFound( uint64_t
 }
 
 template < typename _Type >
-_Type **MemoryMap< _Type >::getExactInsertIfNotFound( uint64_t addr, std::size_t len ) {
+_Type **MemoryMap< _Type >::getExactInsertIfNotFound( memory::Address addr, std::size_t len ) {
    _Type **ptr = (_Type **) NULL;
    MemoryChunk key( addr, len );
    iterator it = this->lower_bound( key );
@@ -1391,7 +1398,7 @@ _Type **MemoryMap< _Type >::getExactInsertIfNotFound( uint64_t addr, std::size_t
 }
 
 template < typename _Type >
-_Type *MemoryMap< _Type >::getExactByAddress( uint64_t addr ) const {
+_Type *MemoryMap< _Type >::getExactByAddress( memory::Address addr ) const {
    _Type *ptr = (_Type *) NULL;
    MemoryChunk key( addr, 0 );
    const_iterator it = this->lower_bound( key );
@@ -1407,7 +1414,7 @@ _Type *MemoryMap< _Type >::getExactByAddress( uint64_t addr ) const {
 }
 
 template < typename _Type >
-void MemoryMap< _Type >::eraseByAddress( uint64_t addr ) {
+void MemoryMap< _Type >::eraseByAddress( memory::Address addr ) {
    MemoryChunk key( addr, 0 );
    iterator it = this->lower_bound( key );
    if ( it == this->end() || this->key_comp()( key, it->first ) )

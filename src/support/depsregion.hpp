@@ -58,12 +58,12 @@ inline BaseDependency* DepsRegion::clone() const
    return new DepsRegion( _address, _endAddress, _trackable );
 }
 
-inline void * DepsRegion::getAddress () const
+inline DepsRegion::TargetType DepsRegion::getAddress () const
 {
    return _address;
 }
 
-inline void * DepsRegion::getEndAddress () const
+inline DepsRegion::TargetType DepsRegion::getEndAddress () const
 {
    return _endAddress;
 }

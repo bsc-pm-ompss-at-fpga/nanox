@@ -271,10 +271,10 @@ namespace nanos {
          void sendWorkMsg( unsigned int dest, void ( *work ) ( void * ), unsigned int arg0, unsigned int arg1, unsigned int numPe, std::size_t argSize, char * arg, void ( *xlate ) ( void *, void * ), int arch, void *remoteWdAddr );
          bool isWorking( unsigned int dest, unsigned int numPe ) const;
          void sendWorkDoneMsg( unsigned int nodeNum, void *remoteWdaddr );
-         void put ( unsigned int remoteNode, uint64_t remoteAddr, void *localAddr, std::size_t size, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId );
-         void putStrided1D ( unsigned int remoteNode, uint64_t remoteAddr, void *localAddr, void *localPack, std::size_t size, std::size_t count, std::size_t ld, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId );
-         void get ( void *localAddr, unsigned int remoteNode, uint64_t remoteAddr, std::size_t size, GetRequest *req, void *hostObject, reg_t hostRegId );
-         void getStrided1D ( void *packedAddr, unsigned int remoteNode, uint64_t remoteTag, uint64_t remoteAddr, std::size_t size, std::size_t count, std::size_t ld, GetRequestStrided *req, void *hostObject, reg_t hostRegId );
+         void put ( unsigned int remoteNode, memory::Address remoteAddr, void *localAddr, std::size_t size, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId );
+         void putStrided1D ( unsigned int remoteNode, memory::Address remoteAddr, void *localAddr, void *localPack, std::size_t size, std::size_t count, std::size_t ld, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId );
+         void get ( void *localAddr, unsigned int remoteNode, memory::Address remoteAddr, std::size_t size, GetRequest *req, void *hostObject, reg_t hostRegId );
+         void getStrided1D ( void *packedAddr, unsigned int remoteNode, memory::Address remoteTag, memory::Address remoteAddr, std::size_t size, std::size_t count, std::size_t ld, GetRequestStrided *req, void *hostObject, reg_t hostRegId );
          void *malloc ( unsigned int remoteNode, std::size_t size );
          void memFree ( unsigned int remoteNode, void *addr );
          void memRealloc ( unsigned int remoteNode, void *oldAddr, std::size_t oldSize, void *newAddr, std::size_t newSize );
@@ -284,14 +284,14 @@ namespace nanos {
          void setMasterHostname( char *name );
          //const std::string & getMasterHostname( void ) const;
          const char * getMasterHostname( void ) const;
-         void sendRequestPut( unsigned int dest, uint64_t origAddr, unsigned int dataDest, uint64_t dstAddr, std::size_t len, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId );
-         void sendRequestPutStrided1D( unsigned int dest, uint64_t origAddr, unsigned int dataDest, uint64_t dstAddr, std::size_t len, std::size_t count, std::size_t ld, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId );
+         void sendRequestPut( unsigned int dest, memory::Address origAddr, unsigned int dataDest, memory::Address dstAddr, std::size_t len, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId );
+         void sendRequestPutStrided1D( unsigned int dest, memory::Address origAddr, unsigned int dataDest, memory::Address dstAddr, std::size_t len, std::size_t count, std::size_t ld, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId );
          std::size_t getTotalBytes();
          void mallocSlaves ( void **addresses, std::size_t size );
 
          static Lock _nodeLock;
-         static Atomic<uint64_t> _nodeRCAaddr;
-         static Atomic<uint64_t> _nodeRCAaddrOther;
+         static Atomic<memory::Address> _nodeRCAaddr;
+         static Atomic<memory::Address> _nodeRCAaddrOther;
 
          void enableCheckingForDataInOtherAddressSpaces();
          bool doIHaveToCheckForDataInOtherAddressSpaces() const;
@@ -303,15 +303,15 @@ namespace nanos {
          void freeReceiveMemory( void * addr );
 
          void notifyWork( std::size_t expectedData, WD *delayedWD, unsigned int delayedSeq);
-         void notifyPut( unsigned int from, unsigned int wdId, std::size_t len, std::size_t count, std::size_t ld, uint64_t realTag, void *hostObject, reg_t hostRegId, unsigned int metaSeq );
+         void notifyPut( unsigned int from, unsigned int wdId, std::size_t len, std::size_t count, std::size_t ld, memory::Address realTag, void *hostObject, reg_t hostRegId, unsigned int metaSeq );
          void notifyWaitRequestPut( void *addr, unsigned int wdId, unsigned int seqNumber );
          void notifyRequestPut( SendDataRequest *req );
          void notifyGet( SendDataRequest *req );
          void notifyRegionMetaData( CopyData *cd, unsigned int seq );
          void notifySynchronizeDirectory( unsigned int numWDs, WorkDescriptor **wds );
          void notifyIdle( unsigned int node );
-         void invalidateDataFromDevice( uint64_t addr, std::size_t len, std::size_t count, std::size_t ld, void *hostObject, reg_t hostRegId );
-         void getDataFromDevice( uint64_t addr, std::size_t len, std::size_t count, std::size_t ld, void *hostObject, reg_t hostRegId );
+         void invalidateDataFromDevice( memory::Address addr, std::size_t len, std::size_t count, std::size_t ld, void *hostObject, reg_t hostRegId );
+         void getDataFromDevice( memory::Address addr, std::size_t len, std::size_t count, std::size_t ld, void *hostObject, reg_t hostRegId );
          unsigned int getPutRequestSequenceNumber( unsigned int dest );
          unsigned int checkPutRequestSequenceNumber( unsigned int dest ) const;
          bool updatePutRequestSequenceNumber( unsigned int dest, unsigned int value );

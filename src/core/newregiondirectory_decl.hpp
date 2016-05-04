@@ -39,7 +39,7 @@ namespace nanos {
          memory_space_id_t _home;
          Lock _setLock;
          ProcessingElement * _firstWriterPE;
-         uint64_t _baseAddress;
+         memory::Address _baseAddress;
       public:
          NewNewDirectoryEntryData();
          NewNewDirectoryEntryData( memory_space_id_t home );
@@ -64,8 +64,8 @@ namespace nanos {
          void setOps( DeviceOps *ops );
          std::set< memory_space_id_t > const &getLocations() const;
          DeviceOps *getOps() ;
-         void setBaseAddress(uint64_t addr);
-         uint64_t getBaseAddress() const;
+         void setBaseAddress(memory::Address addr);
+         memory::Address getBaseAddress() const;
          memory_space_id_t getHome() const;
          void lock();
          void unlock();
@@ -136,10 +136,10 @@ namespace nanos {
             ~HashBucket();
          };
 
-         MemoryMap<uint64_t> _keys;
-         uint64_t            _keysSeed;
-         Lock                _keysLock;
-         std::vector< HashBucket > _objects;
+         MemoryMap<memory::Address>          _keys;
+         size_t                     _keysSeed;
+         Lock                       _keysLock;
+         std::vector< HashBucket >  _objects;
 
       private:
 
@@ -153,18 +153,18 @@ namespace nanos {
 
          GlobalRegionDictionary *getRegionDictionaryRegisterIfNeeded( CopyData const &cd, WD const *wd );
          GlobalRegionDictionary *getRegionDictionary( CopyData const &cd );
-         GlobalRegionDictionary *getRegionDictionary( uint64_t addr );
+         GlobalRegionDictionary *getRegionDictionary( memory::Address addr );
          static void addSubRegion( GlobalRegionDictionary &dict, std::list< std::pair< reg_t, reg_t > > &partsList, reg_t regionToInsert );
-         uint64_t _getKey( uint64_t addr, std::size_t len, WD const *wd );
-         uint64_t _getKey( uint64_t addr ) const;
-         void _unregisterObjects( std::map< uint64_t, MemoryMap< Object > * > &objects );
-         void _invalidateObjectsFromDevices( std::map< uint64_t, MemoryMap< Object > * > &objects );
+         memory::Address _getKey( memory::Address addr, std::size_t len, WD const *wd );
+         memory::Address _getKey( memory::Address addr ) const;
+         void _unregisterObjects( std::map< memory::Address, MemoryMap< Object > * > &objects );
+         void _invalidateObjectsFromDevices( std::map< memory::Address, MemoryMap< Object > * > &objects );
 
       public:
          typedef GlobalRegionDictionary *RegionDirectoryKey;
          //typedef std::pair< Region, NewNewDirectoryEntryData const *> LocationInfo;
          RegionDirectoryKey getRegionDirectoryKey( CopyData const &cd );
-         RegionDirectoryKey getRegionDirectoryKey( uint64_t addr );
+         RegionDirectoryKey getRegionDirectoryKey( memory::Address addr );
          RegionDirectoryKey getRegionDirectoryKeyRegisterIfNeeded( CopyData const &cd, WD const *wd );
          void synchronize( WD &wd );
 

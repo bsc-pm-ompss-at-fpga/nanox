@@ -1,10 +1,10 @@
 
 #include "memory/memoryaddress.hpp"
+#include <ostream>
 
-using namespace nanos::memory;
-
-std::ostream& operator<<(std::ostream& out, Address const &entry)
+std::ostream& operator<<( std::ostream& out, const nanos::memory::Address& address )
 {
-	return out << std::hex << static_cast<uintptr_t>( entry );
+	out << "0x" << std::hex << address.value();
+	return out;
 }
 

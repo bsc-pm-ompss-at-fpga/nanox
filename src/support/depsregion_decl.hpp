@@ -31,7 +31,7 @@ namespace nanos {
    class DepsRegion : public BaseDependency
    {
       public:
-         typedef void*           TargetType;
+         typedef memory::Address TargetType;
       private:
          TargetType              _address; /**< Pointer to the dependency address */
          TargetType _endAddress;
@@ -43,7 +43,7 @@ namespace nanos {
         /*! \brief DepsRegion default constructor
          *  Creates an DepsRegion with the given address associated.
          */
-         DepsRegion ( TargetType address = NULL, TargetType endAddress = NULL, TrackableObject* trackable = NULL, short dimensionCount=0, const nanos_region_dimension_internal_t *dimensions = NULL )
+         DepsRegion ( TargetType address = nullptr, TargetType endAddress = nullptr, TrackableObject* trackable = nullptr, short dimensionCount=0, const nanos_region_dimension_internal_t *dimensions = nullptr )
             : _address( address ) , _endAddress( endAddress ), _trackable(trackable), _dimensionCount(dimensionCount), _dimensions() {
             if (_dimensionCount>0) {
                 _dimensions.reserve(_dimensionCount);
@@ -88,10 +88,10 @@ namespace nanos {
          bool operator< ( const DepsRegion &obj ) const;
 
          //! \brief Returns dependence base address
-         virtual void * getAddress () const;
+         virtual DepsRegion::TargetType getAddress () const;
          
          //! \brief Returns size
-         virtual void * getEndAddress() const;         
+         virtual DepsRegion::TargetType getEndAddress() const;
          
          //! \brief Returns size
          virtual size_t getSize() const;

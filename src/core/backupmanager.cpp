@@ -58,7 +58,7 @@ void * BackupManager::memAllocate ( size_t size,
    return _managed_pool.allocate(size);
 }
 
-void BackupManager::memFree ( uint64_t addr, SeparateMemoryAddressSpace &mem )
+void BackupManager::memFree ( memory::Address addr, SeparateMemoryAddressSpace &mem )
 {
    _managed_pool.deallocate((void*) addr);
 }
@@ -75,7 +75,7 @@ std::size_t BackupManager::getMemCapacity (
    return _managed_pool.get_size();
 }
 
-bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
+bool BackupManager::checkpointCopy ( memory::Address devAddr, memory::Address hostAddr,
                               std::size_t len, SeparateMemoryAddressSpace &mem,
                               WorkDescriptor const* wd ) noexcept
 {
@@ -86,9 +86,9 @@ bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
     */
    bool success;
    try {
-      char* begin = reinterpret_cast<char*>(hostAddr);
-      char* end = reinterpret_cast<char*>(hostAddr)+len;
-      char* dest = reinterpret_cast<char*>(devAddr);
+      char* begin = static_cast<char*>(hostAddr);
+      char* end = static_cast<char*>(hostAddr)+len;
+      char* dest = static_cast<char*>(devAddr);
       /* We use another function call to perform the copy in order to
        * be able to compile std::copy call in a separate file.
        * This is needed to avoid the GCC bug related to 
@@ -106,7 +106,7 @@ bool BackupManager::checkpointCopy ( uint64_t devAddr, uint64_t hostAddr,
    return success;
 }
 
-bool BackupManager::restoreCopy ( uint64_t hostAddr, uint64_t devAddr,
+bool BackupManager::restoreCopy ( memory::Address hostAddr, memory::Address devAddr,
                                std::size_t len, SeparateMemoryAddressSpace &mem,
                                WorkDescriptor const* wd ) noexcept
 {
@@ -118,9 +118,9 @@ bool BackupManager::restoreCopy ( uint64_t hostAddr, uint64_t devAddr,
     */
    bool success;
    try {
-      char* begin = reinterpret_cast<char*>(devAddr);
-      char* end = reinterpret_cast<char*>(devAddr)+len;
-      char* dest = reinterpret_cast<char*>(hostAddr);
+      char* begin = static_cast<char*>(devAddr);
+      char* end = static_cast<char*>(devAddr)+len;
+      char* dest = static_cast<char*>(hostAddr);
       /* We use another function call to perform the copy in order to
        * be able to compile std::copy call in a separate file.
        * This is needed to avoid the GCC bug related to 
@@ -142,7 +142,7 @@ bool BackupManager::restoreCopy ( uint64_t hostAddr, uint64_t devAddr,
    return success;
 }
 
-void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
+void BackupManager::_copyIn ( memory::Address devAddr, memory::Address hostAddr,
                               std::size_t len, SeparateMemoryAddressSpace &mem,
                               DeviceOps *ops, WorkDescriptor const* wd, void *hostObject,
                               reg_t hostRegionId )
@@ -156,7 +156,7 @@ void BackupManager::_copyIn ( uint64_t devAddr, uint64_t hostAddr,
       ops->abortOp();
 }
 
-void BackupManager::_copyOut ( uint64_t hostAddr, uint64_t devAddr,
+void BackupManager::_copyOut ( memory::Address hostAddr, memory::Address devAddr,
                                std::size_t len, SeparateMemoryAddressSpace &mem,
                                DeviceOps *ops, WorkDescriptor const* wd, void *hostObject,
                                reg_t hostRegionId )
@@ -170,7 +170,7 @@ void BackupManager::_copyOut ( uint64_t hostAddr, uint64_t devAddr,
       ops->abortOp();
 }
 
-bool BackupManager::_copyDevToDev ( uint64_t devDestAddr, uint64_t devOrigAddr,
+bool BackupManager::_copyDevToDev ( memory::Address devDestAddr, memory::Address devOrigAddr,
                                     std::size_t len,
                                     SeparateMemoryAddressSpace &memDest,
                                     SeparateMemoryAddressSpace &memorig,
@@ -183,7 +183,7 @@ bool BackupManager::_copyDevToDev ( uint64_t devDestAddr, uint64_t devOrigAddr,
    return false;
 }
 
-void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
+void BackupManager::_copyInStrided1D ( memory::Address devAddr, memory::Address hostAddr,
                                        std::size_t len, std::size_t numChunks,
                                        std::size_t ld,
                                        SeparateMemoryAddressSpace& mem,
@@ -208,7 +208,7 @@ void BackupManager::_copyInStrided1D ( uint64_t devAddr, uint64_t hostAddr,
    }
 }
 
-void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
+void BackupManager::_copyOutStrided1D ( memory::Address hostAddr, memory::Address devAddr,
                                         std::size_t len, std::size_t numChunks,
                                         std::size_t ld,
                                         SeparateMemoryAddressSpace & mem,
@@ -233,7 +233,7 @@ void BackupManager::_copyOutStrided1D ( uint64_t hostAddr, uint64_t devAddr,
 }
 
 bool BackupManager::_copyDevToDevStrided1D (
-      uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len,
+      memory::Address devDestAddr, memory::Address devOrigAddr, std::size_t len,
       std::size_t numChunks, std::size_t ld,
       SeparateMemoryAddressSpace& memDest,
       SeparateMemoryAddressSpace& memOrig, DeviceOps *ops,

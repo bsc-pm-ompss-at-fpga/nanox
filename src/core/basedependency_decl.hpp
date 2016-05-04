@@ -20,6 +20,8 @@
 #ifndef _NANOS_BASE_DEPENDENCY_DECL_H
 #define _NANOS_BASE_DEPENDENCY_DECL_H
 
+#include "memory/memoryaddress.hpp"
+
 namespace nanos {
 
    //! \class Base dependency class.
@@ -41,7 +43,7 @@ namespace nanos {
          virtual BaseDependency* clone() const = 0;
 
          //! \brief Returns dependency base address
-         virtual void * getAddress () const = 0;
+         virtual memory::Address getAddress () const = 0;
                   
         /*! \brief Check if two dependencies overlap/collide.
          */

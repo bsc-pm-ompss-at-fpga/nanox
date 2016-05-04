@@ -92,16 +92,16 @@ namespace nanos {
          unsigned int increaseNumOps() { return _numOps++; }
 
          virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem, WorkDescriptor const *wd, unsigned int copyIdx) = 0;
-         virtual void memFree( uint64_t addr, SeparateMemoryAddressSpace &mem ) = 0;
+         virtual void memFree( memory::Address addr, SeparateMemoryAddressSpace &mem ) = 0;
          virtual void _canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *sizes, unsigned int numChunks, std::size_t *remainingSizes ) = 0;
          virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace &mem ) = 0;
 
-         virtual void _copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
-         virtual void _copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
-         virtual bool _copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
-         virtual void _copyInStrided1D( uint64_t devAddr, uint64_t hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
-         virtual void _copyOutStrided1D( uint64_t hostAddr, uint64_t devAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
-         virtual bool _copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memOrig, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
+         virtual void _copyIn( memory::Address devAddr, memory::Address hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
+         virtual void _copyOut( memory::Address hostAddr, memory::Address devAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
+         virtual bool _copyDevToDev( memory::Address devDestAddr, memory::Address devOrigAddr, std::size_t len, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
+         virtual void _copyInStrided1D( memory::Address devAddr, memory::Address hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
+         virtual void _copyOutStrided1D( memory::Address hostAddr, memory::Address devAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
+         virtual bool _copyDevToDevStrided1D( memory::Address devDestAddr, memory::Address devOrigAddr, std::size_t len, std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memOrig, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) = 0;
          virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem, SimpleAllocator::ChunkList &list ) = 0;
    };
 
@@ -297,7 +297,7 @@ namespace nanos {
          //bool _listed;
          void                        (*_notifyCopy)( WD &wd, BaseThread const &thread);
          BaseThread const             *_notifyThread;
-         void const                   *_remoteAddr;
+         memory::Address               _remoteAddr;
          void                         *_callback;
          void                         *_arguments;
       public:
@@ -751,8 +751,8 @@ namespace nanos {
 
          void setId( unsigned int id );
 
-         void setRemoteAddr( void const *addr );
-         void const *getRemoteAddr() const;
+         void setRemoteAddr( const memory::Address& addr );
+         memory::Address getRemoteAddr() const;
          
          /*! \brief Sets a WorkDescriptor to an invalid state or not depending on the flag value.
              If invalid (flag = true) it propagates upwards to the ancestors until

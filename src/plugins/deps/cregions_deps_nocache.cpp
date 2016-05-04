@@ -200,8 +200,8 @@ namespace nanos {
                for ( iterator it = begin; it != end; it++ ) {
                   DataAccess& newDep = (*it);
 
-                  // if address == NULL, just ignore it
-                  if ( newDep.getDepAddress() == NULL ) continue;
+                  // if address is null, just ignore it
+                  if ( newDep.getDepAddress() == nullptr ) continue;
                   
                   bool found = false;
                   // For every dependency processed earlier
@@ -220,7 +220,7 @@ namespace nanos {
                }
                
                // This list is needed for waiting
-               std::list<uint64_t> flushDeps;
+               std::list<memory::Address> flushDeps;
                
                TR1::unordered_map<TrackableObject*, bool> statusMap; /**< Tracks dependencies so we 
                                                                                   * do not submit dependencies with our same task */
@@ -228,11 +228,11 @@ namespace nanos {
                for ( std::list<DataAccess *>::iterator it = filteredDeps.begin(); it != filteredDeps.end(); it++ ) {
                   DataAccess &dep = *(*it);
                   
-                  DepsRegion target( dep.getDepAddress(), (void*)((uint64_t)dep.getDepAddress()+dep.getSize()-1));
+                  DepsRegion target( dep.getDepAddress(), dep.getDepAddress()+(dep.getSize()-1));
                   AccessType const &accessType = dep.flags;
                   
                   submitDependableObjectDataAccess( depObj, target, accessType, callback, statusMap );
-                  flushDeps.push_back( (uint64_t) target() );
+                  flushDeps.push_back( target() );
                }
                sys.getDefaultSchedulePolicy()->atCreate( depObj ); 
                // To keep the count consistent we have to increase the number of tasks in the graph before releasing the fake dependency
@@ -241,7 +241,7 @@ namespace nanos {
                depObj.submitted();
             
                // now everything is ready
-               depObj.decreasePredecessors( &flushDeps, NULL, false, true );
+               depObj.decreasePredecessors( &flushDeps, nullptr, false, true );
             }
             /*! \brief Adds a region access of a DependableObject to the domains dependency system.
              *  \param depObj target DependableObject
@@ -304,7 +304,7 @@ namespace nanos {
                             stat.getReadersLock().acquire();
                             stat.deleteReader(depObj);
                             stat.getReadersLock().release();
-                            //depObj.decreasePredecessors(NULL, true);
+                            //depObj.decreasePredecessors(nullptr, true);
                             submitDependableObjectOutputNoWriteDataAccess( depObj, target, accessType, stat, callback ); 
                             submitDependableObjectInputDataAccess( depObj, target, accessType, stat, callback );  
                             //Now we wait for all the possible restrictions on this Trackable, set it as true
@@ -402,7 +402,7 @@ namespace nanos {
                } else {
                   TrackableObject* status = it->second;
                   DependableObject *lastWriter = status->getLastWriter();
-                  return (lastWriter != NULL);
+                  return (lastWriter != nullptr);
                }
             }
             

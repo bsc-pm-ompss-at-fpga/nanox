@@ -378,8 +378,8 @@ template < template <class> class Sparsity>
 RegionDictionary< Sparsity >::RegionDictionary( CopyData const &cd ) : 
       Sparsity< RegionVectorEntry >( cd ), Version( 1 ),
       _intersects( cd.getNumDimensions(), MemoryMap< std::set< reg_t > >() ),
-      _keyBaseAddress( cd.getHostBaseAddress() == 0 ? ( (uint64_t) cd.getBaseAddress() ) : cd.getHostBaseAddress() ),
-      _realBaseAddress( (uint64_t) cd.getBaseAddress() ), _lock() {
+      _keyBaseAddress( cd.getHostBaseAddress() == nullptr ? cd.getBaseAddress() : cd.getHostBaseAddress() ),
+      _realBaseAddress( cd.getBaseAddress() ), _lock() {
    //std::cerr << "CREATING MASTER DICT: tree: " << (void *) &_tree << std::endl;
    nanos_region_dimension_internal_t dims[ cd.getNumDimensions() ];
    for ( unsigned int idx = 0; idx < cd.getNumDimensions(); idx++ ) {
@@ -926,12 +926,12 @@ void RegionDictionary< Sparsity >::_combine ( nanos_region_dimension_internal_t 
 }  
 
 template < template <class> class Sparsity>
-uint64_t RegionDictionary< Sparsity >::getKeyBaseAddress() const {
+memory::Address RegionDictionary< Sparsity >::getKeyBaseAddress() const {
    return _keyBaseAddress;
 }
 
 template < template <class> class Sparsity>
-uint64_t RegionDictionary< Sparsity >::getRealBaseAddress() const {
+memory::Address RegionDictionary< Sparsity >::getRealBaseAddress() const {
    return _realBaseAddress;
 }
 

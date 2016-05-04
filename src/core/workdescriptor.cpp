@@ -361,8 +361,8 @@ void WorkDescriptor::prepareCopies()
       _paramsSize += _copies[i].getSize();
 
       if ( _copies[i].isPrivate() )
-         //jbueno new API _copies[i].setAddress( ( (uint64_t)_copies[i].getAddress() - (unsigned long)_data ) );
-         _copies[i].setBaseAddress( (void *) ( (uint64_t )_copies[i].getBaseAddress() - (unsigned long)_data ) );
+         //jbueno new API _copies[i].setAddress( _copies[i].getAddress() - (unsigned long)_data ) );
+         _copies[i].setBaseAddress( _copies[i].getBaseAddress() - _data );
    }
 }
 
@@ -510,7 +510,7 @@ void WorkDescriptor::setCopies(size_t numCopies, CopyData * copies)
         } else {
             _copies[i].dimensions = NULL;
         }
-        _copies[i].setHostBaseAddress( 0 );
+        _copies[i].setHostBaseAddress( nullptr );
         _copies[i].setRemoteHost( false );
     }
 

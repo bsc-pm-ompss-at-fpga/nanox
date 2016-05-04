@@ -73,7 +73,7 @@ void LockedObjects::releaseLockedObjects() {
    _lockedObjects.clear();
 }
 
-AllocatedChunk::AllocatedChunk( RegionCache &owner, uint64_t addr, uint64_t hostAddress, std::size_t size, global_reg_t const &allocatedRegion, bool rooted ) :
+AllocatedChunk::AllocatedChunk( RegionCache &owner, memory::Address addr, memory::Address hostAddress, std::size_t size, global_reg_t const &allocatedRegion, bool rooted ) :
    RemoteChunk( hostAddress, addr, size ),
    _owner( owner ),
    _lock(),
@@ -851,7 +851,7 @@ void RegionCache::selectChunksToInvalidate( std::size_t allocSize, std::set< std
    if ( /*_device.supportsFreeSpaceInfo() */ true ) {
       MemoryMap<AllocatedChunk>::iterator it;
       bool done = false;
-      MemoryMap< uint64_t > device_mem;
+      MemoryMap< memory::Address > device_mem;
 
       for ( it = _chunks.begin(); it != _chunks.end() && !done; it++ ) {
          // if ( it->second != NULL ) {
@@ -864,7 +864,7 @@ void RegionCache::selectChunksToInvalidate( std::size_t allocSize, std::set< std
             AllocatedChunk &c = *(it->second);
             AllocatedChunk **chunk_at_map_ptr = &(it->second);
             if ( it->second->getReferenceCount() == 0 && !(it->second->isRooted()) ) {
-               device_mem.addChunk( c.getDeviceAddress(), c.getSize(), (uint64_t) chunk_at_map_ptr );
+               device_mem.addChunk( c.getDeviceAddress(), c.getSize(), chunk_at_map_ptr );
             } else {
                bool mine = false;
                for (unsigned int idx = 0; idx < wd.getNumCopies() && !mine ; idx += 1) {
@@ -881,28 +881,28 @@ void RegionCache::selectChunksToInvalidate( std::size_t allocSize, std::set< std
       SimpleAllocator::ChunkList free_device_chunks;
       _device._getFreeMemoryChunksList( sys.getSeparateMemory( _memorySpaceId ), free_device_chunks );
       for ( SimpleAllocator::ChunkList::iterator lit = free_device_chunks.begin(); lit != free_device_chunks.end(); lit++ ) {
-         device_mem.addChunk( lit->first, lit->second, (uint64_t) 0 );
+         device_mem.addChunk( lit->first, lit->second, nullptr );
       }
 
-      MemoryMap< uint64_t >::iterator devIt, devItAhead;
+      MemoryMap< memory::Address >::iterator devIt, devItAhead;
       if ( VERBOSE_INVAL ) {
          *myThread->_file << "I can invalidate a set of these:" << std::endl;
          for ( devIt = device_mem.begin(); devIt != device_mem.end(); devIt++ ) {
             *myThread->_file << "Addr: " << (void *) devIt->first.getAddress() << " size: " << devIt->first.getLength() ;
-            if ( devIt->second == 0 ) {
+            if ( devIt->second == nullptr ) {
                *myThread->_file << " [free chunk] "<< std::endl;
             } else {
                *myThread->_file << " " << (void *) *((AllocatedChunk **) devIt->second) << std::endl;
             }
          }
       }
-      std::map< std::size_t, std::list< MemoryMap< uint64_t >::iterator > > candidates;
+      std::map< std::size_t, std::list< MemoryMap< memory::Address >::iterator > > candidates;
 
       for ( devIt = device_mem.begin(); devIt != device_mem.end(); devIt++ ) {
          std::size_t len = devIt->first.getLength();
-         uint64_t addr = devIt->first.getAddress();
+         memory::Address addr = devIt->first.getAddress();
          std::size_t num_chunks = 0;
-         if ( devIt->second != 0 ) {
+         if ( devIt->second != nullptr ) {
             num_chunks += (*((AllocatedChunk **)(devIt->second)))->isDirty() ? devIt->first.getLength() : 0;
          }
          devItAhead = devIt;
@@ -911,7 +911,7 @@ void RegionCache::selectChunksToInvalidate( std::size_t allocSize, std::set< std
          while ( len < allocSize && !fail && devItAhead != device_mem.end() ) {
             if ( addr + len == devItAhead->first.getAddress() ) {
                len += devItAhead->first.getLength();
-               if ( devItAhead->second != 0 ) {
+               if ( devItAhead->second != nullptr ) {
                   num_chunks += (*((AllocatedChunk **)(devItAhead->second)))->isDirty() ? devItAhead->first.getLength() : 0;
                }
                devItAhead++;
@@ -924,13 +924,13 @@ void RegionCache::selectChunksToInvalidate( std::size_t allocSize, std::set< std
          } 
       } 
       if ( !candidates.empty() ) {
-         MemoryMap< uint64_t >::iterator selectedIt = candidates.begin()->second.front();
+         MemoryMap< memory::Address >::iterator selectedIt = candidates.begin()->second.front();
          if ( VERBOSE_INVAL ) {
             *myThread->_file << "Im going to invalidaet from " << (void *) selectedIt->first.getAddress() << std::endl;
          }
          
          for ( std::size_t len = selectedIt->first.getLength(); len < allocSize; selectedIt++ ) {
-            if ( selectedIt->second != 0 ) {
+            if ( selectedIt->second != nullptr ) {
                AllocatedChunk **this_chunk = (AllocatedChunk **) selectedIt->second;
                chunksToInvalidate.insert( std::make_pair( this_chunk, *this_chunk ) );
             }
@@ -967,7 +967,6 @@ DeviceOps *AllocatedChunk::getDeviceOps( global_reg_t const &reg, WD const *wd, 
 }
 
 void AllocatedChunk::printReferencingWDs() const {
-   *(myThread->_file) << "Addr: " << (void*)_hostAddress << " Size: " << _size << " Referencing WDs: [";
    for ( std::map<WD const *, unsigned int>::const_iterator it = _refWdId.begin(); it != _refWdId.end(); it++ ) {
       if ( it->second != 0 ) {
          WD const &wd = *it->first;
@@ -988,7 +987,7 @@ AllocatedChunk *RegionCache::tryGetAddress( global_reg_t const &reg, WD const &w
    global_reg_t allocatedRegion;
 
    std::size_t allocSize = 0;
-   uint64_t targetHostAddr = 0;
+   memory::Address targetHostAddr = nullptr;
 
    getAllocatableRegion( reg, allocatedRegion );
 
@@ -1018,7 +1017,7 @@ AllocatedChunk *RegionCache::tryGetAddress( global_reg_t const &reg, WD const &w
          }
          if ( deviceMem != NULL ) {
             _allocatedBytes += allocSize;
-            *(results.front().second) = NEW AllocatedChunk( *this, (uint64_t) deviceMem, results.front().first->getAddress(), results.front().first->getLength(), allocatedRegion, reg.getRootedLocation() == this->getMemorySpaceId() );
+            *(results.front().second) = NEW AllocatedChunk( *this, deviceMem, results.front().first->getAddress(), results.front().first->getLength(), allocatedRegion, reg.getRootedLocation() == this->getMemorySpaceId() );
             allocChunkPtr = *(results.front().second);
             this->addToAllocatedRegionMap( allocatedRegion );
             //*(results.front().second) = allocChunkPtr;
@@ -1143,11 +1142,11 @@ AllocatedChunk *RegionCache::invalidate( LockedObjects &srcRegions, Invalidation
 
 AllocatedChunk *RegionCache::getOrCreateChunk( LockedObjects &srcRegions, global_reg_t const &reg, WD const &wd, unsigned int copyIdx ) {
    ChunkList results;
-   AllocatedChunk *allocChunkPtr = NULL;
+   AllocatedChunk *allocChunkPtr = nullptr;
    global_reg_t allocatedRegion;
 
    std::size_t allocSize = 0;
-   uint64_t targetHostAddr = 0;
+   memory::Address targetHostAddr = nullptr;
 
    getAllocatableRegion( reg, allocatedRegion );
 
@@ -1196,7 +1195,7 @@ AllocatedChunk *RegionCache::getOrCreateChunk( LockedObjects &srcRegions, global
             }
          } else {
             _allocatedBytes += allocSize;
-            *(results.front().second) = NEW AllocatedChunk( *this, (uint64_t) deviceMem, results.front().first->getAddress(), results.front().first->getLength(), allocatedRegion, reg.getRootedLocation() == this->getMemorySpaceId() );
+            *(results.front().second) = NEW AllocatedChunk( *this, deviceMem, results.front().first->getAddress(), results.front().first->getLength(), allocatedRegion, reg.getRootedLocation() == this->getMemorySpaceId() );
             allocChunkPtr = *(results.front().second);
             this->addToAllocatedRegionMap( allocatedRegion );
             allocChunkPtr->addReference( wd, 4 ); //getOrCreateChunk, invalidated
@@ -1220,7 +1219,7 @@ AllocatedChunk *RegionCache::getOrCreateChunk( LockedObjects &srcRegions, global
    return allocChunkPtr;
 }
 
-AllocatedChunk *RegionCache::getAddress( uint64_t hostAddr, std::size_t len ) {
+AllocatedChunk *RegionCache::getAddress( memory::Address hostAddr, std::size_t len ) {
    ConstChunkList results;
    AllocatedChunk *allocChunkPtr = NULL;
    _chunks.getChunk( hostAddr, len, results );
@@ -1291,7 +1290,7 @@ AllocatedChunk *RegionCache::_getAllocatedChunk( global_reg_t const &reg, bool c
 
 void RegionCache::NEWcopyIn( unsigned int srcLocation, global_reg_t const &reg, unsigned int version, WD const *wd, unsigned int copyIdx, DeviceOps *givenOps, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk ) {
    //AllocatedChunk *chunk = getAllocatedChunk( reg );
-   uint64_t origDevAddr = destinationChunk->getDeviceAddress() + ( reg.getRealFirstAddress() - destinationChunk->getHostAddress() );
+   memory::Address origDevAddr = destinationChunk->getDeviceAddress() + ( reg.getRealFirstAddress() - destinationChunk->getHostAddress() );
    DeviceOps *ops = ( givenOps != NULL ) ? givenOps : destinationChunk->getDeviceOps( reg, wd, copyIdx );
    //chunk->unlock();
    //*myThread->_file << " COPY REGION ID " << reg.id << " OPS " << (void*)ops << std::endl;
@@ -1320,7 +1319,7 @@ void RegionCache::NEWcopyOut( global_reg_t const &reg, unsigned int version, WD 
    //   origChunk->lock();
    //}
 
-   uint64_t origDevAddr = origChunk->getDeviceAddress() + ( reg.getRealFirstAddress() - origChunk->getHostAddress() );
+   memory::Address origDevAddr = origChunk->getDeviceAddress() + ( reg.getRealFirstAddress() - origChunk->getHostAddress() );
    DeviceOps *ops = ( givenOps != NULL ) ? givenOps : reg.getDeviceOps();
    //origChunk->clearDirty( reg );
    increaseTransferredOutData(reg.getDataSize());
@@ -1368,7 +1367,7 @@ unsigned int RegionCache::getMemorySpaceId() const {
    return _memorySpaceId;
 }
 
-void RegionCache::_copyIn( global_reg_t const &reg, uint64_t devAddr, uint64_t hostAddr, std::size_t len, DeviceOps *ops, WD const *wd, bool fake ) {
+void RegionCache::_copyIn( global_reg_t const &reg, memory::Address devAddr, memory::Address hostAddr, std::size_t len, DeviceOps *ops, WD const *wd, bool fake ) {
    //NANOS_INSTRUMENT( InstrumentState inst(NANOS_CC_COPY_IN); );
    if ( VERBOSE_DEV_OPS ) {
       *(myThread->_file) << "[" << myThread->getId() << "] _device(" << _device.getName() << ", #" << _device.increaseNumOps() << ")._copyIn( reg=["; reg.key->printRegionGeom( *myThread->_file, reg.id ); *myThread->_file << "] copyTo=" << _memorySpaceId <<", hostAddr="<< (void*)hostAddr <<" ["<< *((double*) hostAddr) <<"]"<<", devAddr="<< (void*)devAddr <<", len=" << len << ", _pe, ops, wd="<< wd->getId() << " ["<< (wd->getDescription() != NULL ? wd->getDescription() : "no description") << "] );" <<std::endl;
@@ -1377,7 +1376,7 @@ void RegionCache::_copyIn( global_reg_t const &reg, uint64_t devAddr, uint64_t h
    //NANOS_INSTRUMENT( inst.close(); );
 }
 
-void RegionCache::_copyInStrided1D( global_reg_t const &reg, uint64_t devAddr, uint64_t hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, DeviceOps *ops, WD const *wd, bool fake ) {
+void RegionCache::_copyInStrided1D( global_reg_t const &reg, memory::Address devAddr, memory::Address hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, DeviceOps *ops, WD const *wd, bool fake ) {
    //NANOS_INSTRUMENT( InstrumentState inst(NANOS_CC_COPY_IN); );
    if ( VERBOSE_DEV_OPS ) {
       *(myThread->_file) << "[" << myThread->getId() << "] _device(" << _device.getName() << ", #" << _device.increaseNumOps() <<")._copyInStrided1D( reg=["; reg.key->printRegionGeom( *myThread->_file, reg.id ); *myThread->_file << "] copyTo=" << _memorySpaceId <<", hostAddr="<< (void*)hostAddr <<" ["<< *((double*) hostAddr) <<"]"<<", devAddr="<< (void*)devAddr <<", len="<< len << ", numChunks=" << numChunks <<", ld=" << ld << ", _pe, ops="<< (void*)ops<<", wd="<< wd->getId() << " ["<< (wd->getDescription() != NULL ? wd->getDescription() : "no description") <<"] );" <<std::endl;
@@ -1386,7 +1385,7 @@ void RegionCache::_copyInStrided1D( global_reg_t const &reg, uint64_t devAddr, u
    //NANOS_INSTRUMENT( inst.close(); );
 }
 
-void RegionCache::_copyOut( global_reg_t const &reg, uint64_t hostAddr, uint64_t devAddr, std::size_t len, DeviceOps *ops, WD const *wd, bool fake ) {
+void RegionCache::_copyOut( global_reg_t const &reg, memory::Address hostAddr, memory::Address devAddr, std::size_t len, DeviceOps *ops, WD const *wd, bool fake ) {
    //NANOS_INSTRUMENT( InstrumentState inst(NANOS_CC_COPY_OUT); );
    if ( VERBOSE_DEV_OPS ) {
       *(myThread->_file) << "[" << myThread->getId() << "] _device(" << _device.getName() << ", #" << _device.increaseNumOps() <<")._copyOut( reg=["; reg.key->printRegionGeom( *myThread->_file, reg.id ); *myThread->_file << "] copyFrom=" << _memorySpaceId <<", hostAddr="<< (void*)hostAddr <<", devAddr="<< (void*)devAddr <<", len=" << len << ", _pe, ops, wd="<< (&wd != NULL ? wd->getId() : -1 ) << " ["<< ( &wd != NULL && wd->getDescription() != NULL ? wd->getDescription() : "no description") <<"] );" <<std::endl;
@@ -1395,7 +1394,7 @@ void RegionCache::_copyOut( global_reg_t const &reg, uint64_t hostAddr, uint64_t
    //NANOS_INSTRUMENT( inst.close(); );
 }
 
-void RegionCache::_copyOutStrided1D( global_reg_t const &reg, uint64_t hostAddr, uint64_t devAddr, std::size_t len, std::size_t numChunks, std::size_t ld,  DeviceOps *ops, WD const *wd, bool fake ) {
+void RegionCache::_copyOutStrided1D( global_reg_t const &reg, memory::Address hostAddr, memory::Address devAddr, std::size_t len, std::size_t numChunks, std::size_t ld,  DeviceOps *ops, WD const *wd, bool fake ) {
    //NANOS_INSTRUMENT( InstrumentState inst(NANOS_CC_COPY_OUT); );
    if ( VERBOSE_DEV_OPS ) {
       *(myThread->_file) << "[" << myThread->getId() << "] _device(" << _device.getName() << ", #" << _device.increaseNumOps() <<")._copyOutStrided1D( reg=["; reg.key->printRegionGeom( *myThread->_file, reg.id ); *myThread->_file << "] copyFrom=" << _memorySpaceId <<", hostAddr="<< (void*)hostAddr <<", devAddr="<< (void*)devAddr <<", len="<< len <<", numChunks="<< numChunks <<", ld=" << ld << ", _pe, ops="<< (void*)ops <<", wd="<< (&wd != NULL ? wd->getId() : -1 )  << " ["<< (&wd != NULL && wd->getDescription() != NULL ? wd->getDescription() : "no description") << "] );" <<std::endl;
@@ -1404,27 +1403,27 @@ void RegionCache::_copyOutStrided1D( global_reg_t const &reg, uint64_t hostAddr,
    //NANOS_INSTRUMENT( inst.close(); );
 }
 
-void RegionCache::_syncAndCopyIn( global_reg_t const &reg, unsigned int syncFrom, uint64_t devAddr, uint64_t hostAddr, std::size_t len, DeviceOps *ops, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
+void RegionCache::_syncAndCopyIn( global_reg_t const &reg, unsigned int syncFrom, memory::Address devAddr, memory::Address hostAddr, std::size_t len, DeviceOps *ops, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
    DeviceOps *cout = NEW DeviceOps();
-   uint64_t origDevAddr = sourceChunk->getDeviceAddress() + ( hostAddr - sourceChunk->getHostAddress() );
+   memory::Address origDevAddr = sourceChunk->getDeviceAddress() + ( hostAddr - sourceChunk->getHostAddress() );
    sys.getSeparateMemory( syncFrom ).getCache()._copyOut( reg, hostAddr, origDevAddr, len, cout, wd, fake );
    while ( !cout->allCompleted() ){ myThread->processTransfers(); }
    delete cout;
    this->_copyIn( reg, devAddr, hostAddr, len, ops, wd, fake );
 }
 
-void RegionCache::_syncAndCopyInStrided1D( global_reg_t const &reg, unsigned int syncFrom, uint64_t devAddr, uint64_t hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, DeviceOps *ops, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
+void RegionCache::_syncAndCopyInStrided1D( global_reg_t const &reg, unsigned int syncFrom, memory::Address devAddr, memory::Address hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, DeviceOps *ops, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
    DeviceOps *cout = NEW DeviceOps();
-   uint64_t origDevAddr = sourceChunk->getDeviceAddress() + ( hostAddr - sourceChunk->getHostAddress() );
+   memory::Address origDevAddr = sourceChunk->getDeviceAddress() + ( hostAddr - sourceChunk->getHostAddress() );
    sys.getSeparateMemory( syncFrom ).getCache()._copyOutStrided1D( reg, hostAddr, origDevAddr, len, numChunks, ld, cout, wd, fake );
    while ( !cout->allCompleted() ){ myThread->processTransfers(); }
    delete cout;
    this->_copyInStrided1D( reg, devAddr, hostAddr, len, numChunks, ld, ops, wd, fake );
 }
 
-bool RegionCache::_copyDevToDev( global_reg_t const &reg, memory_space_id_t copyFrom, uint64_t devAddr, uint64_t hostAddr, std::size_t len, DeviceOps *ops, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
+bool RegionCache::_copyDevToDev( global_reg_t const &reg, memory_space_id_t copyFrom, memory::Address devAddr, memory::Address hostAddr, std::size_t len, DeviceOps *ops, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
    bool result = true;
-   uint64_t origDevAddr = sourceChunk->getDeviceAddress() + ( hostAddr - sourceChunk->getHostAddress() );
+   memory::Address origDevAddr = sourceChunk->getDeviceAddress() + ( hostAddr - sourceChunk->getHostAddress() );
    //NANOS_INSTRUMENT( InstrumentState inst(NANOS_CC_COPY_DEV_TO_DEV); );
    if ( VERBOSE_DEV_OPS ) {
       *(myThread->_file) << "[" << myThread->getId() << "] _device(" << _device.getName() << ", #" << _device.increaseNumOps() <<")._copyDevToDev( reg=["; reg.key->printRegionGeom( *myThread->_file, reg.id ); *myThread->_file << "] copyFrom=" << copyFrom << ", copyTo=" << _memorySpaceId <<", hostAddr="<< (void*)hostAddr <<", devAddr="<< (void*)devAddr <<", origDevAddr="<< (void*)origDevAddr <<", len=" << len << ", _pe, sys.getSeparateMemory( copyFrom="<< copyFrom<<" ), ops, wd="<< wd->getId() << " ["<< (wd->getDescription() != NULL ? wd->getDescription() : "no description") << "] );" <<std::endl;
@@ -1436,9 +1435,9 @@ bool RegionCache::_copyDevToDev( global_reg_t const &reg, memory_space_id_t copy
    return result;
 }
 
-bool RegionCache::_copyDevToDevStrided1D( global_reg_t const &reg, memory_space_id_t copyFrom, uint64_t devAddr, uint64_t hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, DeviceOps *ops, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
+bool RegionCache::_copyDevToDevStrided1D( global_reg_t const &reg, memory_space_id_t copyFrom, memory::Address devAddr, memory::Address hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, DeviceOps *ops, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
    bool result = true;
-   uint64_t origDevAddr = sourceChunk->getDeviceAddress() + ( hostAddr - sourceChunk->getHostAddress() );
+   memory::Address origDevAddr = sourceChunk->getDeviceAddress() + ( hostAddr - sourceChunk->getHostAddress() );
    if ( VERBOSE_DEV_OPS ) {
       *(myThread->_file) << "[" << myThread->getId() << "] _device(" << _device.getName() << ", #" << _device.increaseNumOps() <<")._copyDevToDevStrided1D( reg=["; reg.key->printRegionGeom( *myThread->_file, reg.id ); *myThread->_file << "] copyFrom=" << copyFrom << ", copyTo=" << _memorySpaceId <<", hostAddr="<< (void*)hostAddr <<", devAddr="<< (void*)devAddr <<", origDevAddr="<< (void*)origDevAddr <<", len, _pe, sys.getCaches()[ copyFrom="<< copyFrom<<" ]->_pe, ops, wd="<< wd->getId() << " ["<< (wd->getDescription() != NULL ? wd->getDescription() : "no description") << "] );"<<std::endl;
    }
@@ -1450,7 +1449,7 @@ bool RegionCache::_copyDevToDevStrided1D( global_reg_t const &reg, memory_space_
    return result;
 }
 
-void RegionCache::CopyIn::doNoStrided( global_reg_t const &reg, int dataLocation, uint64_t devAddr, uint64_t hostAddr, std::size_t size, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
+void RegionCache::CopyIn::doNoStrided( global_reg_t const &reg, int dataLocation, memory::Address devAddr, memory::Address hostAddr, std::size_t size, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
    if  ( dataLocation == 0 ) {
       getParent()._copyIn( reg, devAddr, hostAddr, size, ops, wd, fake );
    } else {
@@ -1463,7 +1462,7 @@ void RegionCache::CopyIn::doNoStrided( global_reg_t const &reg, int dataLocation
    }
 }
 
-void RegionCache::CopyIn::doStrided( global_reg_t const &reg, int dataLocation, uint64_t devAddr, uint64_t hostAddr, std::size_t size, std::size_t count, std::size_t ld, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
+void RegionCache::CopyIn::doStrided( global_reg_t const &reg, int dataLocation, memory::Address devAddr, memory::Address hostAddr, std::size_t size, std::size_t count, std::size_t ld, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
    if  ( dataLocation == 0 ) {
       getParent()._copyInStrided1D( reg, devAddr, hostAddr, size, count, ld, ops, wd, fake );
    } else {
@@ -1476,16 +1475,16 @@ void RegionCache::CopyIn::doStrided( global_reg_t const &reg, int dataLocation, 
    }
 }
 
-void RegionCache::CopyOut::doNoStrided( global_reg_t const &reg, int dataLocation, uint64_t devAddr, uint64_t hostAddr, std::size_t size, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
+void RegionCache::CopyOut::doNoStrided( global_reg_t const &reg, int dataLocation, memory::Address devAddr, memory::Address hostAddr, std::size_t size, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
    ensure( destinationChunk == NULL, "Invalid argument");
    getParent()._copyOut( reg, hostAddr, devAddr, size, ops, wd, fake );
 }
-void RegionCache::CopyOut::doStrided( global_reg_t const &reg, int dataLocation, uint64_t devAddr, uint64_t hostAddr, std::size_t size, std::size_t count, std::size_t ld, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
+void RegionCache::CopyOut::doStrided( global_reg_t const &reg, int dataLocation, memory::Address devAddr, memory::Address hostAddr, std::size_t size, std::size_t count, std::size_t ld, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) {
    ensure( destinationChunk == NULL, "Invalid argument");
    getParent()._copyOutStrided1D( reg, hostAddr, devAddr, size, count, ld, ops, wd, fake );
 }
 
-void RegionCache::doOp( Op *opObj, global_reg_t const &hostMem, uint64_t devBaseAddr, unsigned int location, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd ) {
+void RegionCache::doOp( Op *opObj, global_reg_t const &hostMem, memory::Address devBaseAddr, unsigned int location, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd ) {
 
    class LocalFunction {
       Op *_opObj;
@@ -1496,14 +1495,14 @@ void RegionCache::doOp( Op *opObj, global_reg_t const &hostMem, uint64_t devBase
       unsigned int _location;
       DeviceOps *_ops;
       WD const *_wd;
-      uint64_t _devBaseAddr;
-      uint64_t _hostBaseAddr;
+      memory::Address _devBaseAddr;
+      memory::Address _hostBaseAddr;
       AllocatedChunk *_destinationChunk;
       AllocatedChunk *_sourceChunk;
       public:
          LocalFunction( Op *op,  const global_reg_t &reg, nanos_region_dimension_internal_t *r,
                unsigned int cutoff, std::size_t ccs, unsigned int loc, DeviceOps *devops,
-               WD const *w, uint64_t devAddr, uint64_t hostAddr,
+               WD const *w, memory::Address devAddr, memory::Address hostAddr,
                AllocatedChunk *destChunk, AllocatedChunk *srcChunk ) :
             _opObj( op ), _hostMem( reg ), _region( r ), _cutoff( cutoff ),
             _contiguousChunkSize( ccs ), _location( loc ), _ops( devops ), _wd( w ),
@@ -1516,15 +1515,15 @@ void RegionCache::doOp( Op *opObj, global_reg_t const &hostMem, uint64_t devBase
             std::size_t this_offset = offset + _region[current_dim].lower_bound * current_ld;
             if ( current_dim == _cutoff + 1 && _region[current_dim].accessed_length > 1 && sys.usePacking() ) {
                std::size_t extra_offset = _region[current_dim-1].lower_bound * ( current_ld / _region[current_dim-1].size );
-               uint64_t dev_addr = _devBaseAddr + this_offset + extra_offset;
-               uint64_t host_addr = _hostBaseAddr + this_offset + extra_offset;
+               memory::Address dev_addr = _devBaseAddr + this_offset + extra_offset;
+               memory::Address host_addr = _hostBaseAddr + this_offset + extra_offset;
                std::size_t len = _contiguousChunkSize * _region[current_dim-1].accessed_length;
                std::size_t count = _region[current_dim].accessed_length;
                //printf("[op: % 4d] memcpy2D( dst=%p, orig=%p, size=%zu, count=%zu, ld=%zu )\n", (*total_ops)++, _dst, _orig , _len, _count, current_ld );
                _opObj->doStrided( _hostMem, _location, dev_addr, host_addr, len, count, current_ld, _ops, _destinationChunk, _sourceChunk, _wd, false );
             } else if ( current_dim <= _cutoff ) {
-               uint64_t dev_addr = _devBaseAddr + this_offset;
-               uint64_t host_addr = _hostBaseAddr + this_offset;
+               memory::Address dev_addr = _devBaseAddr + this_offset;
+               memory::Address host_addr = _hostBaseAddr + this_offset;
                size_t len = current_dim < _cutoff ? _contiguousChunkSize : 
                   _contiguousChunkSize * _region[current_dim].accessed_length;
                _opObj->doNoStrided( _hostMem, _location, dev_addr, host_addr, len, _ops, _destinationChunk, _sourceChunk, _wd, false );
@@ -1554,9 +1553,9 @@ void RegionCache::doOp( Op *opObj, global_reg_t const &hostMem, uint64_t devBase
 
    /* this function expects the base address of the region, not the address
       of the first element of the region, we have to substract the offset */
-   uint64_t offset = hostMem.getFirstAddress( 0 );
-   uint64_t dev_base_addr = devBaseAddr - offset;
-   uint64_t host_base_addr = hostMem.getRealFirstAddress() - offset;
+   size_t offset = hostMem.getFirstAddress( nullptr );
+   memory::Address dev_base_addr = devBaseAddr - offset;
+   memory::Address host_base_addr = hostMem.getRealFirstAddress() - offset;
 
    LocalFunction local( opObj, hostMem, region, dim_idx, contiguous_chunk_size,
          location, ops, wd, dev_base_addr, host_base_addr,
@@ -1566,11 +1565,11 @@ void RegionCache::doOp( Op *opObj, global_reg_t const &hostMem, uint64_t devBase
 
 }
 
-void RegionCache::copyIn( global_reg_t const &hostMem, uint64_t devBaseAddr, unsigned int location, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd ) {
+void RegionCache::copyIn( global_reg_t const &hostMem, memory::Address devBaseAddr, unsigned int location, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd ) {
    doOp( &_copyInObj, hostMem, devBaseAddr, location, ops, destinationChunk, sourceChunk, wd );
 }
 
-void RegionCache::copyOut( global_reg_t const &hostMem, uint64_t devBaseAddr, DeviceOps *ops, WD const *wd ) {
+void RegionCache::copyOut( global_reg_t const &hostMem, memory::Address devBaseAddr, DeviceOps *ops, WD const *wd ) {
    doOp( &_copyOutObj, hostMem, devBaseAddr, /* locations unused, copyOut is always to 0 */ 0, ops, NULL, NULL, wd );
 }
 
@@ -1627,7 +1626,7 @@ void RegionCache::releaseRegions( MemCacheCopy *memCopies, unsigned int numCopie
    _lock.release();
 }
 
-uint64_t RegionCache::getDeviceAddress( global_reg_t const &reg, uint64_t baseAddress, AllocatedChunk *chunk ) const {
+memory::Address RegionCache::getDeviceAddress( global_reg_t const &reg, memory::Address baseAddress, AllocatedChunk *chunk ) const {
    return ( chunk->getDeviceAddress() - ( chunk->getHostAddress() - baseAddress ) );
 }
 

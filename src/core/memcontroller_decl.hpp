@@ -69,7 +69,7 @@ public:
    void copyDataOut( MemControllerPolicy policy );
    bool isDataReady( WD const &wd );
    bool isOutputDataReady( WD const &wd );
-   uint64_t getAddress( unsigned int index ) const;
+   memory::Address getAddress( unsigned int index ) const;
    bool canAllocateMemory( memory_space_id_t memId, bool considerInvalidations ) const;
    void setAffinityScore( std::size_t score );
    std::size_t getAffinityScore() const;

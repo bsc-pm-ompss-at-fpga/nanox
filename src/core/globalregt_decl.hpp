@@ -43,8 +43,8 @@ struct global_reg_t {
    global_reg_t();
    global_reg_t( reg_t r, reg_key_t k );
    global_reg_t( reg_t r, const_reg_key_t k );
-   uint64_t getKeyFirstAddress() const;
-   uint64_t getRealFirstAddress() const;
+   memory::Address getKeyFirstAddress() const;
+   memory::Address getRealFirstAddress() const;
    std::size_t getBreadth() const;
    std::size_t getDataSize() const;
    unsigned int getNumDimensions() const;
@@ -57,13 +57,13 @@ struct global_reg_t {
    unsigned int getHostVersion( bool increaseVersion ) const;
    reg_t getFitRegionId() const;
    reg_t getSlabRegionId( std::size_t slabSize ) const;
-   uint64_t getRealBaseAddress() const;
+   memory::Address getRealBaseAddress() const;
    DeviceOps *getDeviceOps() const;
    DeviceOps *getHomeDeviceOps( WD const &wd, unsigned int copyIdx );
    void setLocationAndVersion( ProcessingElement *pe, memory_space_id_t loc, unsigned int version ) const;
    bool contains( global_reg_t const &reg ) const;
    bool isLocatedIn( memory_space_id_t loc ) const;
-   void fillCopyData( CopyData &cd, uint64_t baseAddress ) const;
+   void fillCopyData( CopyData &cd, memory::Address baseAddress ) const;
    bool isRegistered() const;
    std::set< memory_space_id_t > const &getLocations() const;
    //void setRooted() const;
@@ -72,7 +72,7 @@ struct global_reg_t {
    void setOwnedMemory( memory_space_id_t loc ) const;
    unsigned int getNumLocations() const;
    ProcessingElement *getFirstWriterPE() const;
-   uint64_t getFirstAddress(uint64_t baseAddress) const;
+   memory::Address getFirstAddress(memory::Address baseAddress) const;
    bool isLocatedInSeparateMemorySpaces() const;
 };
 

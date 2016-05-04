@@ -105,7 +105,7 @@ class HostAddressSpace {
    void synchronize( WD &wd );
    memory_space_id_t getMemorySpaceId() const;
    reg_t getLocalRegionId( void *hostObject, reg_t hostRegionId );
-   NewNewRegionDirectory::RegionDirectoryKey getRegionDirectoryKey( uint64_t addr );
+   NewNewRegionDirectory::RegionDirectoryKey getRegionDirectoryKey( memory::Address addr );
    void registerObject( nanos_copy_data_internal_t *obj );
    void unregisterObject( void *baseAddr );
    NewNewRegionDirectory const &getDirectory() const;
@@ -131,7 +131,7 @@ class SeparateAddressSpace {
 
    void releaseRegions( MemCacheCopy *memCopies, unsigned int numCopies, WD const &wd );
    //void releaseRegion( global_reg_t const &reg, WD const &wd, unsigned int copyIdx, enum RegionCache::CachePolicy policy );
-   uint64_t getDeviceAddress( global_reg_t const &reg, uint64_t baseAddress, AllocatedChunk *chunk ) const;
+   memory::Address getDeviceAddress( global_reg_t const &reg, memory::Address baseAddress, AllocatedChunk *chunk ) const;
    
    bool prepareRegions( MemCacheCopy *memCopies, unsigned int numCopies, WD const &wd );
    void setRegionVersion( global_reg_t const &reg, AllocatedChunk *chunk, unsigned int version, WD const &wd, unsigned int copyIdx );

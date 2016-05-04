@@ -43,9 +43,9 @@ std::size_t CopyData::getFitSizeRecursive( int i ) const
       return dimensions[ i ].accessed_length * getWideSizeRecursive( i - 1 );
 }
 
-uint64_t CopyData::getFitOffsetRecursive( int i ) const
+memory::Address CopyData::getFitOffsetRecursive( int i ) const
 {
-   uint64_t off = dimensions[ i ].lower_bound * ( i == 0 ? 1 : getWideSizeRecursive( i - 1 ) );
+   memory::Address off = dimensions[ i ].lower_bound * ( i == 0 ? 1 : getWideSizeRecursive( i - 1 ) );
    if ( dimensions[ i ].accessed_length == 1 )
       off += getFitOffsetRecursive( i - 1 );
    return off;
@@ -82,7 +82,7 @@ void CopyData::deductCd( CopyData const &ref, CopyData *out ) const {
       unsigned int dimIdx;
       std::size_t current_elem_size = 1;
       std::size_t current_offset = 0;
-      uint64_t off = (uint64_t)this->getBaseAddress() - (uint64_t)ref.getBaseAddress();
+      memory::Address off = (memory::Address)this->getBaseAddress() - (memory::Address)ref.getBaseAddress();
       for ( dimIdx = 0; dimIdx < this->getNumDimensions(); dimIdx += 1) {
          if ( refDims[ dimIdx ].size == thisDims[ dimIdx ].size ) {
             matching += 1;
@@ -118,9 +118,9 @@ void CopyData::deductCd( CopyData const &ref, CopyData *out ) const {
       }
 
       for ( unsigned int idx = this->getNumDimensions(); idx < ref.getNumDimensions(); idx += 1 ) {
-         //uint64_t toff = ((off - current_offset) % elemSize[idx]) % elemSize[ idx-1 ];
+         //memory::Address toff = ((off - current_offset) % elemSize[idx]) % elemSize[ idx-1 ];
          //std::cerr << " offset: " << current_offset << " off: " << off << " elemSize(" << idx << "): " << elemSize[idx] << " elemSize(" << idx-1 << ") " << elemSize[idx-1]<< std::endl;
-         uint64_t lower_bound = (off % elemSize[idx]) / elemSize[ idx-1 ];
+         memory::Address lower_bound = (off % elemSize[idx]) / elemSize[ idx-1 ];
          outDims[ idx ].size = refDims[ idx ].size;
          outDims[ idx ].lower_bound = lower_bound;
          outDims[ idx ].accessed_length = 1;
@@ -128,7 +128,7 @@ void CopyData::deductCd( CopyData const &ref, CopyData *out ) const {
       }
    } else {
       if ( this->getNumDimensions() == 1 ) {
-         uint64_t off = (uint64_t)this->getBaseAddress() - (uint64_t)ref.getBaseAddress();
+         memory::Address off = (memory::Address)this->getBaseAddress() - (memory::Address)ref.getBaseAddress();
          nanos_region_dimension_internal_t *outDims = out->getDimensions();
          nanos_region_dimension_internal_t const *refDims = ref.getDimensions();
          nanos_region_dimension_internal_t const *thisDims = this->getDimensions();

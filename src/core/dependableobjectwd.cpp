@@ -84,7 +84,7 @@ void DOWait::init()
    _depsSatisfied = false;
 }
 
-int DOWait::decreasePredecessors ( std::list<uint64_t>const * flushDeps,  DependableObject * finishedPred,
+int DOWait::decreasePredecessors ( std::list<memory::Address>const * flushDeps,  DependableObject * finishedPred,
       bool batchRelease, bool blocking )
 {
    int retval = DependableObject::decreasePredecessors ( flushDeps, finishedPred, batchRelease, blocking );

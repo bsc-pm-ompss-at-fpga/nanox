@@ -90,7 +90,7 @@ namespace nanos {
                depObj.increasePredecessors();
             
                // flushDeps will be needed for waiting (see decreasePredecessors)
-               std::list<uint64_t> flushDeps;
+               std::list<memory::Address> flushDeps;
 
                // Iterate from begin to end, just to handle each data access
                for ( iterator it = begin; it != end; it++ ) {
@@ -98,11 +98,11 @@ namespace nanos {
                   Address target = dep.getDepAddress();
 
                   // if address == NULL, just ignore it
-                  if ( target() == NULL ) continue;
+                  if ( target() == nullptr ) continue;
                   AccessType const &accessType = dep.flags;
 
                   submitDependableObjectDataAccess( depObj, target, accessType, callback );
-                  flushDeps.push_back( (uint64_t) target() );
+                  flushDeps.push_back( target() );
                }
                
                // Calling scheduler policy "atCreate"
@@ -114,7 +114,7 @@ namespace nanos {
                depObj.submitted();
             
                // Now everything is ready, release fake dependency
-               depObj.decreasePredecessors( &flushDeps, NULL, false, true );
+               depObj.decreasePredecessors( &flushDeps, nullptr, false, true );
             }
 
             //! \brief Adds a region access of a DependableObject to the domains dependency system.
@@ -259,7 +259,7 @@ namespace nanos {
                      commDO->resetReferences();
 
                      //! Finally decrease dummy dependence added in createCommutationDO
-                     std::list<uint64_t> flushDeps;
+                     std::list<memory::Address> flushDeps;
                      commDO->decreasePredecessors( &flushDeps, NULL, false, false ); 
                   }
                }

@@ -65,8 +65,8 @@ namespace nanos {
                for ( const_iterator it = begin; it != end; it++ ) {
                   DataAccess const &dataAccess = *it;
 
-                  // if address == NULL, just ignore it
-                  if (dataAccess.getDepAddress() == NULL ) {
+                  // if address is null, just ignore it
+                  if (dataAccess.getDepAddress() == nullptr ) {
                           continue;
                   }
                   
@@ -108,7 +108,7 @@ namespace nanos {
                }
                
                // This list is needed for waiting
-               std::list<uint64_t> flushDeps;
+               std::list<memory::Address> flushDeps;
                
                {
                   typename access_type_region_tree_t::iterator_list_t accessors;
@@ -119,7 +119,7 @@ namespace nanos {
                      AccessType const &accessType = *accessor;
                      
                      submitDependableObjectDataAccess( depObj, region, accessType, callback );
-                     flushDeps.push_back( (uint64_t) region.getFirstValue() );
+                     flushDeps.push_back( region.getFirstValue() );
                   }
                }
                sys.getDefaultSchedulePolicy()->atCreate( depObj );                 

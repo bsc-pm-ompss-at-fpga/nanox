@@ -31,7 +31,7 @@ namespace nanos {
    class Address : public BaseDependency
    {
       public:
-         typedef void*           TargetType;
+         typedef memory::Address TargetType;
       private:
          TargetType              _address; /**< Pointer to the dependency address */
       public:
@@ -39,7 +39,7 @@ namespace nanos {
         /*! \brief Address default constructor
          *  Creates an Address with the given address associated.
          */
-         Address ( TargetType address = NULL )
+         Address ( TargetType address = nullptr )
             : _address( address ) {}
 
         /*! \brief Address copy constructor
@@ -72,7 +72,7 @@ namespace nanos {
          bool operator< ( const Address &obj ) const;
 
          //! \brief Returns dependence base address
-         virtual void * getAddress () const;
+         virtual memory::Address getAddress () const;
          
         /*! \brief Overlap operator.
          */

@@ -25,10 +25,10 @@
 
 namespace nanos {
 
-inline DataAccess::DataAccess ( void * addr, bool input, bool output,
+inline DataAccess::DataAccess ( memory::Address addr, bool input, bool output,
              bool canRenameFlag, bool concurrent,bool commutative,
              short dimensionCount, nanos_region_dimension_internal_t const *dims,
-             ptrdiff_t someOffset )
+             size_t someOffset )
 {
    address = addr;
    flags.input = input;
@@ -69,17 +69,17 @@ inline const DataAccess & DataAccess::operator= ( const DataAccess &dataAccess )
    return *this;
 }
 
-inline void * DataAccess::getAddress() const
+inline memory::Address DataAccess::getAddress() const
 {
    return address;
 }
 
-inline void * DataAccess::getDepAddress() const
+inline memory::Address DataAccess::getDepAddress() const
 {
-   return (void*)((uintptr_t)address + offset );
+   return memory::Address(address) + offset;
 }
 
-inline ptrdiff_t DataAccess::getOffset() const
+inline size_t DataAccess::getOffset() const
 {
    return offset;
 }

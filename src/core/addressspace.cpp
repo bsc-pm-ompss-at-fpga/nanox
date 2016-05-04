@@ -52,7 +52,7 @@ memory_space_id_t HostAddressSpace::getMemorySpaceId() const {
    return 0;
 }
 
-NewNewRegionDirectory::RegionDirectoryKey HostAddressSpace::getRegionDirectoryKey( uint64_t addr ) {
+NewNewRegionDirectory::RegionDirectoryKey HostAddressSpace::getRegionDirectoryKey( memory::Address addr ) {
    return _directory.getRegionDirectoryKey( addr );
 }
 
@@ -122,7 +122,7 @@ void SeparateAddressSpace::copyFromHost( TransferList &list, WD const *wd ) {
    }
 }
 
-uint64_t SeparateAddressSpace::getDeviceAddress( global_reg_t const &reg, uint64_t baseAddress, AllocatedChunk *chunk ) const {
+memory::Address SeparateAddressSpace::getDeviceAddress( global_reg_t const &reg, memory::Address baseAddress, AllocatedChunk *chunk ) const {
    return _cache.getDeviceAddress( reg, baseAddress, chunk );
 }
 

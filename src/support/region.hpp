@@ -69,9 +69,9 @@ inline BaseDependency* Region::clone() const
    return NEW Region( *this );
 }
 
-inline void * Region::getAddress () const
+inline memory::Address Region::getAddress () const
 {
-   return (void*) m_value;
+   return m_value;
 }
 
 inline bool Region::overlap ( const BaseDependency &obj ) const

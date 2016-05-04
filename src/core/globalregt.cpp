@@ -27,31 +27,31 @@
 
 using namespace nanos;
 
-uint64_t global_reg_t::getKeyFirstAddress() const {
+memory::Address global_reg_t::getKeyFirstAddress() const {
    return getFirstAddress( key->getKeyBaseAddress() );
 }
 
-uint64_t global_reg_t::getRealFirstAddress() const {
-   uint64_t addr = 0;
+memory::Address global_reg_t::getRealFirstAddress() const {
+   memory::Address addr(nullptr);
    NewNewDirectoryEntryData *entry = NewNewRegionDirectory::getDirectoryEntry( *key, id );
    //ensure(entry != NULL, "invalid entry.");
    if ( entry == NULL ) {
       //std::cerr << "Warning, getRealFirstAddress() w/NULL entry!" << std::endl;
       addr = getFirstAddress( key->getRealBaseAddress() );
    } else {
-      addr = entry->getBaseAddress() == 0 ? key->getRealBaseAddress() : entry->getBaseAddress();
-      if ( addr != 0 ) {
+      addr = entry->getBaseAddress() == nullptr ? key->getRealBaseAddress() : entry->getBaseAddress();
+      if ( addr != nullptr ) {
          addr = getFirstAddress( addr );
       }
    }
    return addr;
 }
 
-uint64_t global_reg_t::getFirstAddress( uint64_t baseAddress ) const {
+memory::Address global_reg_t::getFirstAddress( memory::Address baseAddress ) const {
    RegionNode *n = key->getRegionNode( id );
-   uint64_t offset = 0;
+   size_t offset = 0;
    std::vector< std::size_t > const &sizes = key->getDimensionSizes();
-   uint64_t acumSizes = 1;
+   size_t acumSizes = 1;
 
    for ( unsigned int dimIdx = 0; dimIdx < key->getNumDimensions() - 1; dimIdx += 1 ) {
       acumSizes *= sizes[ dimIdx ];
@@ -68,12 +68,12 @@ uint64_t global_reg_t::getFirstAddress( uint64_t baseAddress ) const {
    return baseAddress + offset; 
 }
 
-std::size_t global_reg_t::getBreadth() const {
+size_t global_reg_t::getBreadth() const {
    RegionNode *n = key->getRegionNode( id );
-   std::size_t offset = 0;
-   std::size_t lastOffset = 0;
-   std::vector< std::size_t > const &sizes = key->getDimensionSizes();
-   uint64_t acumSizes = 1;
+   size_t offset = 0;
+   size_t lastOffset = 0;
+   std::vector< size_t > const &sizes = key->getDimensionSizes();
+   size_t acumSizes = 1;
 
    for ( unsigned int dimIdx = 0; dimIdx < key->getNumDimensions() - 1; dimIdx += 1 ) {
       acumSizes *= sizes[ dimIdx ];
@@ -147,7 +147,7 @@ unsigned int global_reg_t::getHostVersion( bool increaseVersion ) const {
    return version;
 }
 
-uint64_t global_reg_t::getRealBaseAddress() const {
+memory::Address global_reg_t::getRealBaseAddress() const {
    return key->getRealBaseAddress();
 }
 
@@ -265,7 +265,7 @@ unsigned int global_reg_t::getVersion() const {
    return NewNewRegionDirectory::getVersion( key, id, false );
 }
 
-void global_reg_t::fillCopyData( CopyData &cd, uint64_t baseAddress ) const {
+void global_reg_t::fillCopyData( CopyData &cd, memory::Address baseAddress ) const {
    cd.setBaseAddress( (void *) baseAddress );
    cd.setRemoteHost( true );
    cd.setHostBaseAddress( key->getKeyBaseAddress() );

@@ -86,7 +86,7 @@ void InvalidationController::preIssueActions( memory_space_id_t id, WD const &wd
 
 void InvalidationController::postCompleteActions( memory_space_id_t id, WD const &wd ) {
    if ( _invalChunk ) {
-      uint64_t targetHostAddr = _allocatedRegion.getRealFirstAddress();
+      memory::Address targetHostAddr = _allocatedRegion.getRealFirstAddress();
       _invalChunk->increaseLruStamp();
       _invalChunk->clearNewRegions( _allocatedRegion );
       _invalChunk->setHostAddress( targetHostAddr );

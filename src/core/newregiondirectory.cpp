@@ -81,17 +81,17 @@ NewNewRegionDirectory::HashBucket::~HashBucket() { }
 NewNewRegionDirectory::NewNewRegionDirectory() : _keys(), _keysSeed( 1 ),
    _keysLock(), _objects( HASH_BUCKETS, HashBucket() ) {}
 
-uint64_t NewNewRegionDirectory::_getKey( uint64_t addr, std::size_t len, WD const *wd ) {
+memory::Address NewNewRegionDirectory::_getKey( memory::Address addr, std::size_t len, WD const *wd ) {
    bool exact;
    while ( !_keysLock.tryAcquire() ) {
       myThread->idle();
    }
-   uint64_t keyIfNotFound = ( _keysSeed + 1 == 0 ) ? 1 : _keysSeed + 1;
+   memory::Address keyIfNotFound = ( _keysSeed + 1 == 0 ) ? 1 : _keysSeed + 1;
    //*myThread->_file << __func__ << " with addr " << (void *) addr << " and size " << len << " wd " << ( wd != NULL ? wd->getId() : -1 ) << " [ " << ( wd != NULL ? ( ( wd->getDescription() != NULL) ? wd->getDescription() : "wd desc. not available" ) : "null WD, comming from nanos_register probably" ) << " ] " << std::endl;
-   uint64_t conflict_addr = 0;
+   memory::Address conflict_addr(nullptr);
    std::size_t conflict_size = 0;
-   uint64_t key = _keys.getExactOrFullyOverlappingInsertIfNotFound( addr, len, exact, keyIfNotFound, 0, conflict_addr, conflict_size );
-   if ( key == 0 ) {
+   memory::Address key = _keys.getExactOrFullyOverlappingInsertIfNotFound( addr, len, exact, keyIfNotFound, nullptr, conflict_addr, conflict_size );
+   if ( key == nullptr ) {
       fatal("invalid key, can not continue. "
             "Address ", (void *) addr, " w/len ", len,
             " [", ( wd != NULL ? ( ( wd->getDescription() != NULL) ? wd->getDescription() : "wd desc. not available" ) : "null WD, comming from nanos_register probably" ), "] "
@@ -103,18 +103,18 @@ uint64_t NewNewRegionDirectory::_getKey( uint64_t addr, std::size_t len, WD cons
    return key;
 }
 
-uint64_t NewNewRegionDirectory::_getKey( uint64_t addr ) const {
-   uint64_t key = _keys.getExactByAddress( addr, 0 );
+memory::Address NewNewRegionDirectory::_getKey( memory::Address addr ) const {
+   memory::Address key = _keys.getExactByAddress( addr, nullptr );
    return key;
 }
 
 GlobalRegionDictionary *NewNewRegionDirectory::getRegionDictionaryRegisterIfNeeded( CopyData const &cd, WD const *wd ) {
-   uint64_t objectAddr = ( cd.getHostBaseAddress() == 0 ? ( uint64_t ) cd.getBaseAddress() : cd.getHostBaseAddress() );
+   memory::Address objectAddr = ( cd.getHostBaseAddress() == nullptr ? cd.getBaseAddress() : cd.getHostBaseAddress() );
    std::size_t objectSize = cd.getMaxSize();
 #if 0
    unsigned int key = ( jen_hash( objectAddr ) & (HASH_BUCKETS-1) );
 #else
-   uint64_t key = jen_hash( this->_getKey( objectAddr, objectSize, wd ) ) & (HASH_BUCKETS-1);
+   memory::Address key = jen_hash( this->_getKey( objectAddr, objectSize, wd ) ) & (HASH_BUCKETS-1);
 #endif
    HashBucket &hb = _objects[ key ];
    GlobalRegionDictionary *dict = NULL;
@@ -164,21 +164,21 @@ GlobalRegionDictionary *NewNewRegionDirectory::getRegionDictionaryRegisterIfNeed
 }
 
 GlobalRegionDictionary *NewNewRegionDirectory::getRegionDictionary( CopyData const &cd ) {
-   uint64_t objectAddr = ( cd.getHostBaseAddress() == 0 ? ( uint64_t ) cd.getBaseAddress() : cd.getHostBaseAddress() );
+   memory::Address objectAddr = ( cd.getHostBaseAddress() == nullptr ? cd.getBaseAddress() : cd.getHostBaseAddress() );
    return getRegionDictionary( objectAddr );
 }
 
-GlobalRegionDictionary *NewNewRegionDirectory::getRegionDictionary( uint64_t objectAddr ) {
+GlobalRegionDictionary *NewNewRegionDirectory::getRegionDictionary( memory::Address objectAddr ) {
 #if 0
    unsigned int key = ( jen_hash( objectAddr ) & (HASH_BUCKETS-1) );
 #else
-   uint64_t key = jen_hash( this->_getKey( objectAddr ) ) & (HASH_BUCKETS-1);
+   memory::Address key = jen_hash( this->_getKey( objectAddr ) ) & (HASH_BUCKETS-1);
 #endif
    HashBucket &hb = _objects[ key ];
    GlobalRegionDictionary *dict = NULL;
 
 #if 0
-   std::map< uint64_t, Object >::const_iterator it = hb._bobjects.lower_bound( objectAddr );
+   std::map< memory::Address, Object >::const_iterator it = hb._bobjects.lower_bound( objectAddr );
    if ( it == hb._bobjects.end() || hb._bobjects.key_comp()( objectAddr, it->first) ) {
      *(myThread->_file) << "Error, CopyData object not registered in the RegionDictionary " << (void *) objectAddr << std::endl;
      printBt( *(myThread->_file) );
@@ -300,8 +300,8 @@ GlobalRegionDictionary &NewNewRegionDirectory::getDictionary( CopyData const &cd
    return *getRegionDictionary( cd );
 }
 
-void NewNewRegionDirectory::_invalidateObjectsFromDevices( std::map< uint64_t, MemoryMap< Object > * > &objects ) {
-   for ( std::map< uint64_t, MemoryMap< Object > * >::iterator it = objects.begin(); it != objects.end(); it++ ) {
+void NewNewRegionDirectory::_invalidateObjectsFromDevices( std::map< memory::Address, MemoryMap< Object > * > &objects ) {
+   for ( std::map< memory::Address, MemoryMap< Object > * >::iterator it = objects.begin(); it != objects.end(); it++ ) {
       for ( memory_space_id_t id = 1; id <= sys.getSeparateMemoryAddressSpacesCount(); id++ ) {
          Object *o = it->second->getExactByAddress(it->first);
          sys.getSeparateMemory( id ).invalidate( global_reg_t( 1, o->getGlobalRegionDictionary() ) );
@@ -316,15 +316,15 @@ NewNewRegionDirectory::~NewNewRegionDirectory() {
    }
 }
 
-void NewNewRegionDirectory::_unregisterObjects( std::map< uint64_t, MemoryMap< Object > * > &objects ) {
-   for ( std::map< uint64_t, MemoryMap< Object > * >::iterator it = objects.begin(); it != objects.end(); it++ ) {
+void NewNewRegionDirectory::_unregisterObjects( std::map< memory::Address, MemoryMap< Object > * > &objects ) {
+   for ( std::map< memory::Address, MemoryMap< Object > * >::iterator it = objects.begin(); it != objects.end(); it++ ) {
       Object *o = it->second->getExactByAddress(it->first);
       sys.getNetwork()->deleteDirectoryObject( o->getGlobalRegionDictionary() );
       it->second->eraseByAddress( it->first );
       if ( o->getRegisteredObject() != NULL ) {
          o->resetGlobalRegionDictionary();
          CopyData *cd = o->getRegisteredObject();
-         Object **dict_o = it->second->getExactInsertIfNotFound( (uint64_t) cd->getBaseAddress(), cd->getMaxSize() );
+         Object **dict_o = it->second->getExactInsertIfNotFound( cd->getBaseAddress(), cd->getMaxSize() );
          if ( dict_o != NULL ) {
             if ( *dict_o == NULL ) {
                *dict_o = o;
@@ -355,7 +355,7 @@ void NewNewRegionDirectory::synchronize( WD &wd ) {
              NANOS_INSTRUMENT(static nanos_event_key_t ikey = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("debug");)
    if ( sys.getSeparateMemoryAddressSpacesCount() == 0 ) {
 
-      std::map< uint64_t, MemoryMap< Object > * > objects_to_clear;
+      std::map< memory::Address, MemoryMap< Object > * > objects_to_clear;
 
       for ( std::vector< HashBucket >::iterator bit = _objects.begin(); bit != _objects.end(); bit++ ) {
          HashBucket &hb = *bit;
@@ -366,7 +366,7 @@ void NewNewRegionDirectory::synchronize( WD &wd ) {
             for ( MemoryMap<Object>::iterator it = hb._bobjects->begin(); it != hb._bobjects->end(); it++ ) {
                GlobalRegionDictionary *dict = it->second->getGlobalRegionDictionary();
                if ( dict == NULL ) continue;
-               uint64_t objectAddr = it->first.getAddress();
+               memory::Address objectAddr = it->first.getAddress();
                if ( !wd._mcontrol.hasObjectOfRegion( global_reg_t( 1, dict ) ) ) {
                   if ( sys.getVerboseCopies() ) {
                      std::ostream &o = (*myThread->_file);
@@ -413,8 +413,8 @@ void NewNewRegionDirectory::synchronize( WD &wd ) {
 
    SeparateAddressSpaceOutOps outOps( myThread->runningOn(), true, false );
    std::map< GlobalRegionDictionary *, std::set< memory_space_id_t > > locations;
-   //std::map< uint64_t, std::map< uint64_t, Object > * > objects_to_clear;
-   std::map< uint64_t, MemoryMap< Object > * > objects_to_clear;
+   //std::map< memory::Address, std::map< memory::Address, Object > * > objects_to_clear;
+   std::map< memory::Address, MemoryMap< Object > * > objects_to_clear;
 
    for ( std::vector< HashBucket >::iterator bit = _objects.begin(); bit != _objects.end(); bit++ ) {
       HashBucket &hb = *bit;
@@ -429,7 +429,7 @@ void NewNewRegionDirectory::synchronize( WD &wd ) {
             //}
             GlobalRegionDictionary *dict = it->second->getGlobalRegionDictionary();
             if ( dict == NULL ) continue;
-            uint64_t objectAddr = it->first.getAddress();
+            memory::Address objectAddr = it->first.getAddress();
             if ( !wd._mcontrol.hasObjectOfRegion( global_reg_t( 1, dict ) ) ) {
                if ( sys.getVerboseCopies() ) {
                   std::ostream &o = (*myThread->_file);
@@ -552,7 +552,7 @@ DeviceOps *NewNewRegionDirectory::getOps( RegionDirectoryKey dict, reg_t id ) {
 }
 
 reg_t NewNewRegionDirectory::getLocalRegionId(void * hostObject, reg_t hostRegionId ) {
-   GlobalRegionDictionary *dict = getRegionDictionary( (uint64_t) hostObject );
+   GlobalRegionDictionary *dict = getRegionDictionary( hostObject );
    return dict->getLocalRegionIdFromMasterRegionId( hostRegionId );
 }
 
@@ -568,16 +568,16 @@ void NewNewRegionDirectory::registerObject(nanos_copy_data_internal_t *obj) {
    ::memcpy(dimensions, obj->dimensions,
          sizeof(nanos_region_dimension_internal_t) * obj->dimension_count);
 
-   CopyData *cd = NEW CopyData( (uint64_t)obj->address, obj->sharing,
+   CopyData *cd = NEW CopyData( obj->address, obj->sharing,
       obj->flags.input, obj->flags.output, obj->dimension_count, dimensions,
-      obj->offset, 0, 0 );
+      obj->offset, nullptr, 0 );
 
-   uint64_t objectAddr = (uint64_t)cd->getBaseAddress();
-   std::size_t objectSize = cd->getMaxSize();
+   memory::Address objectAddr = cd->getBaseAddress();
+   size_t objectSize = cd->getMaxSize();
 #if 0
    unsigned int key = ( jen_hash( objectAddr ) & (HASH_BUCKETS-1) );
 #else
-   uint64_t key = jen_hash( this->_getKey( objectAddr, objectSize, NULL ) ) & (HASH_BUCKETS-1);
+   memory::Address key = jen_hash( this->_getKey( objectAddr, objectSize, NULL ) ) & (HASH_BUCKETS-1);
 #endif
    HashBucket &hb = _objects[ key ];
 
@@ -585,9 +585,9 @@ void NewNewRegionDirectory::registerObject(nanos_copy_data_internal_t *obj) {
       myThread->idle();
    }
 #if 0
-   std::map< uint64_t, Object >::iterator it = hb._bobjects.lower_bound( objectAddr );
+   std::map< memory::Address, Object >::iterator it = hb._bobjects.lower_bound( objectAddr );
    if ( it == hb._bobjects.end() || hb._bobjects.key_comp()( objectAddr, it->first) ) {
-      it = hb._bobjects.insert( it, std::map< uint64_t, Object >::value_type( objectAddr, Object( cd ) ) );
+      it = hb._bobjects.insert( it, std::map< memory::Address, Object >::value_type( objectAddr, Object( cd ) ) );
       message("Registered object " << *cd );
    } else {
       fatal("Object already registered (same base addr).");
@@ -619,7 +619,7 @@ void NewNewRegionDirectory::registerObject(nanos_copy_data_internal_t *obj) {
 
 
 void NewNewRegionDirectory::unregisterObject(void *baseAddr) {
-   uint64_t key = jen_hash( this->_getKey( (uint64_t)baseAddr ) ) & (HASH_BUCKETS-1);
+   memory::Address key = jen_hash( this->_getKey( (memory::Address)baseAddr ) ) & (HASH_BUCKETS-1);
    HashBucket &hb = _objects[ key ];
    while ( !hb._lock.tryAcquire() ) {
       myThread->idle();
@@ -627,7 +627,7 @@ void NewNewRegionDirectory::unregisterObject(void *baseAddr) {
    if ( hb._bobjects == NULL ) {
       fatal( "Error, unregister object: object not registered ", baseAddr );
    } else {
-      Object *o = hb._bobjects->getExactByAddress( (uint64_t) baseAddr );
+      Object *o = hb._bobjects->getExactByAddress( baseAddr );
       if ( o == NULL ) {
          fatal( "Error, unregister object: object not registered ", baseAddr );
       } else {
@@ -636,8 +636,8 @@ void NewNewRegionDirectory::unregisterObject(void *baseAddr) {
          delete dict;
          delete rcd;
          delete o;
-         hb._bobjects->eraseByAddress( (uint64_t) baseAddr );
-         _keys.eraseByAddress( (uint64_t) baseAddr );
+         hb._bobjects->eraseByAddress( baseAddr );
+         _keys.eraseByAddress( baseAddr );
       }
    }
    hb._lock.release();

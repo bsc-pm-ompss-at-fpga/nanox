@@ -20,6 +20,8 @@
 #ifndef _NANOS_DATA_ACCESS_DECL
 #define _NANOS_DATA_ACCESS_DECL
 
+#include "memory/memoryaddress.hpp"
+
 #include "nanos-int.h"
 #include <cstddef>
 #include <iosfwd>
@@ -53,10 +55,10 @@ namespace nanos {
           *  \param dimensions Array of dimension descriptors from least significant to most significant
           *  \param offset Offset of the first element
           */
-         DataAccess ( void * addr, bool input, bool output,
+         DataAccess ( memory::Address addr, bool input, bool output,
                       bool canRename, bool concurrent, bool commutative,
                       short dimensionCount, nanos_region_dimension_internal_t const *dimensions,
-                      ptrdiff_t offset );
+                      size_t offset );
 
          /*! \brief DataAccess copy constructor
           *
@@ -76,16 +78,16 @@ namespace nanos {
          
         /*! \brief Obtain the base address of the access
          */
-         void * getAddress() const;
+         memory::Address getAddress() const;
          
         /*! \brief Obtain the dependency's address address
-    */
-    ptrdiff_t getOffset() const;
+         */
+         size_t getOffset() const;
          
         /*! \brief Compute the address of the first element
          * (address + offset)
          */
-         void * getDepAddress() const;
+         memory::Address getDepAddress() const;
          
         /*! \brief returns true if it is an input access
          */

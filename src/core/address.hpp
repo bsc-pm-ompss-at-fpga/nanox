@@ -56,7 +56,7 @@ inline BaseDependency* Address::clone() const
    return new Address( _address );
 }
 
-inline void * Address::getAddress () const
+inline memory::Address Address::getAddress () const
 {
    return _address;
 }

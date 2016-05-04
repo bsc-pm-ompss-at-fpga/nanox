@@ -53,7 +53,7 @@ const char* MemoryChunk::strOverlap[] = {
 };
 
 #if 1
-void MemoryMap< uint64_t >::insertWithOverlapButNotGenerateIntersects( const MemoryChunk &key, iterator &hint, uint64_t data )
+void MemoryMap< memory::Address >::insertWithOverlapButNotGenerateIntersects( const MemoryChunk &key, iterator &hint, memory::Address data )
 {
    bool lastChunk = false;
    MemoryChunk iterKey = key;
@@ -183,7 +183,7 @@ void MemoryMap< uint64_t >::insertWithOverlapButNotGenerateIntersects( const Mem
    }
 }
 
-void MemoryMap< uint64_t >::addChunk( uint64_t addr, std::size_t len, uint64_t data )
+void MemoryMap< memory::Address >::addChunk( memory::Address addr, std::size_t len, memory::Address data )
 {
    MemoryChunk key( addr, len );
 
@@ -196,8 +196,8 @@ void MemoryMap< uint64_t >::addChunk( uint64_t addr, std::size_t len, uint64_t d
 }
 
 
-uint64_t MemoryMap< uint64_t >::getExactInsertIfNotFound( uint64_t addr, std::size_t len, uint64_t valIfNotFound, uint64_t valIfNotValid ) {
-   uint64_t val;
+memory::Address MemoryMap< memory::Address >::getExactInsertIfNotFound( memory::Address addr, std::size_t len, memory::Address valIfNotFound, memory::Address valIfNotValid ) {
+   memory::Address val(nullptr);
    MemoryChunk key( addr, len );
    iterator it = this->lower_bound( key );
    if ( it == this->end() )
@@ -233,8 +233,8 @@ uint64_t MemoryMap< uint64_t >::getExactInsertIfNotFound( uint64_t addr, std::si
    return val;
 }
 
-uint64_t MemoryMap< uint64_t >::getExactByAddress( uint64_t addr, uint64_t valIfNotFound ) const {
-   uint64_t val = valIfNotFound;
+memory::Address MemoryMap< memory::Address >::getExactByAddress( memory::Address addr, memory::Address valIfNotFound ) const {
+   memory::Address val = valIfNotFound;
    MemoryChunk key( addr, 0 );
    const_iterator it = this->lower_bound( key );
    if ( it != this->end() && !this->key_comp()( key, it->first ) )
@@ -246,8 +246,8 @@ uint64_t MemoryMap< uint64_t >::getExactByAddress( uint64_t addr, uint64_t valIf
 }
 
 
-uint64_t MemoryMap< uint64_t >::getExactOrFullyOverlappingInsertIfNotFound( uint64_t addr, std::size_t len, bool &exact, uint64_t valIfNotFound, uint64_t valIfNotValid, uint64_t &conflictAddr, std::size_t &conflictSize ) {
-   uint64_t val = valIfNotValid;
+memory::Address MemoryMap< memory::Address >::getExactOrFullyOverlappingInsertIfNotFound( memory::Address addr, std::size_t len, bool &exact, memory::Address valIfNotFound, memory::Address valIfNotValid, memory::Address &conflictAddr, std::size_t &conflictSize ) {
+   memory::Address val = valIfNotValid;
    MemoryChunk key( addr, len );
    iterator it = this->lower_bound( key );
    if ( it == this->end() )
@@ -324,7 +324,7 @@ uint64_t MemoryMap< uint64_t >::getExactOrFullyOverlappingInsertIfNotFound( uint
    return val;
 }
 
-void MemoryMap< uint64_t >::eraseByAddress( uint64_t addr ) {
+void MemoryMap< memory::Address >::eraseByAddress( memory::Address addr ) {
    MemoryChunk key( addr, 0 );
    iterator it = this->lower_bound( key );
    if ( it == this->end() || this->key_comp()( key, it->first ) )

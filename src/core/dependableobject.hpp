@@ -101,7 +101,7 @@ inline int DependableObject::increasePredecessors ( )
    return _numPredecessors++;
 }
 
-inline int DependableObject::decreasePredecessors ( std::list<uint64_t> const * flushDeps, DependableObject * finishedPred,
+inline int DependableObject::decreasePredecessors ( std::list<memory::Address> const * flushDeps, DependableObject * finishedPred,
       bool batchRelease, bool blocking )
 {
    int  numPred = --_numPredecessors;

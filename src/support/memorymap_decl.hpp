@@ -20,6 +20,8 @@
 #ifndef _NANOS_MEMORYMAP_DECL_H
 #define _NANOS_MEMORYMAP_DECL_H
 
+#include "memory/memoryaddress.hpp"
+
 #include <map>
 #include <list>
 #include <stdint.h>
@@ -28,7 +30,7 @@ namespace nanos {
 
 class MemoryChunk {
    private:
-      uint64_t _addr;
+      memory::Address _addr;
       std::size_t _len;
    public:
       typedef enum {
@@ -72,14 +74,14 @@ class MemoryChunk {
       
       static char const * strOverlap[];
 
-      MemoryChunk( uint64_t addr, std::size_t len ) : _addr( addr ), _len( len ) { }
+      MemoryChunk( memory::Address addr, std::size_t len ) : _addr( addr ), _len( len ) { }
       MemoryChunk( MemoryChunk const &mc ) : _addr( mc._addr ), _len( mc._len ) { }
-      MemoryChunk( ) : _addr( 0 ), _len( 0 ) { }
+      MemoryChunk( ) : _addr( nullptr ), _len( 0 ) { }
 
       MemoryChunk& operator=( MemoryChunk const &mc );
       bool operator<( MemoryChunk const &chunk ) const;
 
-      uint64_t getAddress() const;
+      memory::Address getAddress() const;
       std::size_t getLength() const;
       OverlapType checkOverlap( MemoryChunk const &target ) const;
       bool equal( MemoryChunk const &target ) const;
@@ -123,25 +125,25 @@ class MemoryMap : public std::map< MemoryChunk, _Type * > {
       void insertWithOverlapButNotGenerateIntersects( const MemoryChunk &key, iterator &hint, MemChunkList &ptrList );
       void getWithOverlapNoExactKey( const MemoryChunk &key, const_iterator &hint, ConstMemChunkList &ptrList ) const;
    public:
-      void getOrAddChunk( uint64_t addr, std::size_t len, MemChunkList &resultEntries );
-      void getOrAddChunkDoNotFragment( uint64_t addr, std::size_t len, MemChunkList &resultEntries );
-      void getChunk( uint64_t addr, std::size_t len, ConstMemChunkList &resultEntries ) const;
+      void getOrAddChunk( memory::Address addr, std::size_t len, MemChunkList &resultEntries );
+      void getOrAddChunkDoNotFragment( memory::Address addr, std::size_t len, MemChunkList &resultEntries );
+      void getChunk( memory::Address addr, std::size_t len, ConstMemChunkList &resultEntries ) const;
       void print(std::ostream &o) const;
       bool canPack() const;
-      void removeChunks( uint64_t addr, std::size_t len );
-      _Type **getExactInsertIfNotFound( uint64_t addr, std::size_t len );
-      _Type *getExactByAddress( uint64_t addr ) const;
-      void eraseByAddress( uint64_t addr );
-      _Type **getExactOrFullyOverlappingInsertIfNotFound( uint64_t addr, std::size_t len, bool &exact );
+      void removeChunks( memory::Address addr, std::size_t len );
+      _Type **getExactInsertIfNotFound( memory::Address addr, std::size_t len );
+      _Type *getExactByAddress( memory::Address addr ) const;
+      void eraseByAddress( memory::Address addr );
+      _Type **getExactOrFullyOverlappingInsertIfNotFound( memory::Address addr, std::size_t len, bool &exact );
 };
 
 #if 1
 template <> 
-class MemoryMap<uint64_t> : public std::map< MemoryChunk, uint64_t > {
+class MemoryMap<memory::Address> : public std::map< MemoryChunk, memory::Address > {
    public:
-      MemoryMap( const MemoryMap &mm ) : std::map< MemoryChunk, uint64_t> () { }
+      MemoryMap( const MemoryMap &mm ) : std::map< MemoryChunk, memory::Address> () { }
       const MemoryMap & operator=( const MemoryMap &mm );// { return *this; }
-      typedef std::map< MemoryChunk, uint64_t > BaseMap;
+      typedef std::map< MemoryChunk, memory::Address > BaseMap;
       typedef BaseMap::iterator iterator;
       typedef BaseMap::const_iterator const_iterator;
 
@@ -149,14 +151,14 @@ class MemoryMap<uint64_t> : public std::map< MemoryChunk, uint64_t > {
       ~MemoryMap() { }
 
    private:
-      void insertWithOverlapButNotGenerateIntersects( const MemoryChunk &key, iterator &hint, uint64_t data );
+      void insertWithOverlapButNotGenerateIntersects( const MemoryChunk &key, iterator &hint, memory::Address data );
    public:
-      void addChunk( uint64_t addr, std::size_t len, uint64_t value );
+      void addChunk( memory::Address addr, std::size_t len, memory::Address value );
       //void print() const;
-      uint64_t getExactOrFullyOverlappingInsertIfNotFound( uint64_t addr, std::size_t len, bool &exact, uint64_t valIfNotFound, uint64_t valIfNotValid, uint64_t &conflictAddr, std::size_t &conflictSize );
-      uint64_t getExactInsertIfNotFound( uint64_t addr, std::size_t len, uint64_t valIfNotFound, uint64_t valIfNotValid );
-      uint64_t getExactByAddress( uint64_t addr, uint64_t valIfNotFound ) const;
-      void eraseByAddress( uint64_t addr );
+      memory::Address getExactOrFullyOverlappingInsertIfNotFound( memory::Address addr, std::size_t len, bool &exact, memory::Address valIfNotFound, memory::Address valIfNotValid, memory::Address &conflictAddr, std::size_t &conflictSize );
+      memory::Address getExactInsertIfNotFound( memory::Address addr, std::size_t len, memory::Address valIfNotFound, memory::Address valIfNotValid );
+      memory::Address getExactByAddress( memory::Address addr, memory::Address valIfNotFound ) const;
+      void eraseByAddress( memory::Address addr );
 };
 #endif
 

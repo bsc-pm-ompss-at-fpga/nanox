@@ -166,8 +166,8 @@ typedef unsigned int reg_t;
    template< template <class> class Sparsity >
    class RegionDictionary : public Sparsity< RegionVectorEntry >, public Version {
       std::vector< MemoryMap< std::set< reg_t > > > _intersects;
-      uint64_t _keyBaseAddress;
-      uint64_t _realBaseAddress;
+      memory::Address _keyBaseAddress;
+      memory::Address _realBaseAddress;
       RecursiveLock _lock;
 
       /* this should be on a different class, for global objects */
@@ -190,8 +190,8 @@ typedef unsigned int reg_t;
       //reg_t tryObtainRegionId( CopyData const &cd );
       void addLeaf( RegionNode *leaf );
 
-      uint64_t getKeyBaseAddress() const;
-      uint64_t getRealBaseAddress() const;
+      memory::Address getKeyBaseAddress() const;
+      memory::Address getRealBaseAddress() const;
 
       void printRegion( std::ostream &o, reg_t );
       void printRegionGeom( std::ostream &o, reg_t );

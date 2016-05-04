@@ -21,6 +21,7 @@
 #define ADDRESS_HPP
 
 #include <algorithm>
+#include <cstddef>
 #include <ostream>
 
 namespace nanos {
@@ -34,7 +35,7 @@ namespace memory {
  */
 class Address {
 	private:
-		uintptr_t value; //!< Memory address
+		uintptr_t _value; //!< Memory address
 	public:
 		//! \brief Default constructor: uninitialized address does not make sense
 		Address() = delete;
@@ -44,7 +45,14 @@ class Address {
 		 *  using an unsigned integer.
 		 */
 		constexpr
-		Address( uintptr_t v ) : value( v ) {}
+		Address( uintptr_t v ) : _value( v ) {}
+
+		/*! \brief Constructor by initialization.
+		 *  \details Creates a new Address instance
+		 *  that points to 0x0
+		 */
+		constexpr
+		Address( std::nullptr_t ) : _value( 0 ) {}
 
 		/*! \brief Constructor by initialization.
 		 *  \details Creates a new Address instance
@@ -52,22 +60,24 @@ class Address {
 		 */
 		template< typename T >
 		constexpr
-		Address( T* v ) : value( reinterpret_cast<uintptr_t>(v) ) {}
+		Address( T* v ) : _value( reinterpret_cast<uintptr_t>(v) ) {}
 
 		//! \brief Copy constructor
 		constexpr
-		Address( Address const& o ) : value(o.value) {}
+		Address( Address const& o ) : _value(o._value) {}
+
+		uintptr_t value() const { return _value; }
 
 		//! \brief Checks if two addresses are equal
 		constexpr
 		bool operator==( Address const& o ) {
-			return value == o.value;
+			return _value == o._value;
 		}
 
 		//! \brief Checks if two addresses differ
 		constexpr
 		bool operator!=( Address const& o ) {
-			return value != o.value;
+			return _value != o._value;
 		}
 
 		/*! \brief Calculate an address using
@@ -78,7 +88,29 @@ class Address {
 		 */
 		constexpr
 		Address operator+( size_t size ) {
-			return Address( value + size );
+			return Address( _value + size );
+		}
+
+		/*! \brief Calculate an address using
+		 *  a base minus an offset.
+		 *  @param[in] size Offset to be applied
+		 *  @returns A new address object displaced size bytes
+		 *  with respect to the value of this object.
+		 */
+		constexpr
+		Address operator-( size_t size ) {
+			return Address( _value + size );
+		}
+
+		/*! \brief Calculate an address using
+		 *  a base plus an offset.
+		 *  @param[in] size Offset to be applied
+		 *  @returns A new address object displaced size bytes
+		 *  with respect to the value of this object.
+		 */
+		constexpr
+		Address operator+( ptrdiff_t displacement ) {
+			return Address( _value + displacement );
 		}
 
 		/*! \brief Calculate an address using
@@ -89,35 +121,40 @@ class Address {
 		 */
 		constexpr
 		size_t operator-( Address const& base ) {
-			return base.value-value;
+			return base._value-_value;
 		}
 
 		Address operator+=( size_t size ) {
-			value += size;
+			_value += size;
 			return *this;
 		}
 
 		Address operator-=( size_t size ) {
-			value += size;
+			_value += size;
 			return *this;
+		}
+
+		constexpr
+		bool operator==( nullptr_t ) const {
+			return _value == 0;
 		}
 
 		//! \returns if this address is smaller than the reference
 		constexpr
 		bool operator<( Address const& reference ) {
-			return value < reference.value;
+			return _value < reference._value;
 		}
 
 		//! \returns if this address is greater than the reference
 		constexpr
 		bool operator>( Address const& reference ) {
-			return value > reference.value;
+			return _value > reference._value;
 		}
 
 		//! @returns the integer representation of the address
 		constexpr
 		operator uintptr_t() {
-			return value;
+			return _value;
 		}
 
 		/*! @returns the pointer representation of the address
@@ -126,7 +163,7 @@ class Address {
 		 */
 		template< typename T = void >
 		operator T*() {
-			return reinterpret_cast<T*>(value);
+			return reinterpret_cast<T*>(_value);
 		}
 
 		/*! @returns whether this address fulfills an
@@ -136,7 +173,7 @@ class Address {
 		 */
 		constexpr
 		bool isAligned( size_t alignment_constraint ) {
-			return ( value & (alignment_constraint-1)) == 0;
+			return ( _value & (alignment_constraint-1)) == 0;
 		}
 
 		/*! @returns whether this address fulfills an
@@ -147,7 +184,7 @@ class Address {
 		template< size_t alignment_constraint >
 		constexpr
 		bool isAligned() {
-			return ( value & (alignment_constraint-1)) == 0;
+			return ( _value & (alignment_constraint-1)) == 0;
 		}
 
 		/*! @returns returns an aligned address
@@ -156,7 +193,7 @@ class Address {
 		constexpr
 		Address align( size_t alignment_constraint ) {
 			return Address(
-						value &
+						_value &
 						~( alignment_constraint-1 )
 						);
 		}
@@ -168,7 +205,7 @@ class Address {
 		constexpr
 		Address align() {
 			return Address(
-						value &
+						_value &
 						~( alignment_constraint-1 )
 						);
 		}
@@ -194,7 +231,7 @@ class Address {
 		constexpr
 		Address alignToLSB( short lsb ) {
 			return Address(
-						value &
+						_value &
 						~( (1<<lsb)-1 )
 						);
 		}
@@ -207,7 +244,7 @@ class Address {
 		constexpr
 		Address alignToLSB() {
 			return Address(
-						value &
+						_value &
 						~( (1<<lsb)-1 )
 						);
 		}
@@ -216,10 +253,28 @@ class Address {
 } // namespace nanos 
 } // namespace memory
 
+namespace std {
+/** Hash function for memory addresses
+ * TODO this should be polished to improve
+ * the quality of the results.
+ */
+template<>
+struct hash<nanos::memory::Address> {
+	typedef nanos::memory::Address argument_type;
+	typedef uintptr_t result_type;
+
+	result_type operator()(argument_type const& arg) const
+	{
+		return static_cast<result_type>(arg);
+	}
+};
+
+} // namespace std
+
 /*! \brief Prints an address object to an output stream.
  *  \details String representation of an address in hexadecimal.
  */
-std::ostream& operator<<(std::ostream& out, nanos::memory::Address const &entry);
+std::ostream& operator<<( std::ostream& out, const nanos::memory::Address& address );
 
 #endif // ADDRESS_HPP
 

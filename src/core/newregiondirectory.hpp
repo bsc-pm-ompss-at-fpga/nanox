@@ -34,7 +34,7 @@ inline NewNewDirectoryEntryData::NewNewDirectoryEntryData() : Version( 1 )
    , _home( -1 )
    , _setLock() 
    , _firstWriterPE( NULL )
-   , _baseAddress( 0 )
+   , _baseAddress( nullptr )
 {
    _location.insert(0);
 }
@@ -48,7 +48,7 @@ inline NewNewDirectoryEntryData::NewNewDirectoryEntryData( memory_space_id_t hom
    , _home( home )
    , _setLock() 
    , _firstWriterPE( NULL )
-   , _baseAddress( 0 )
+   , _baseAddress( nullptr )
 {
    _location.insert( home );
 }
@@ -251,11 +251,11 @@ inline ProcessingElement *NewNewDirectoryEntryData::getFirstWriterPE() const {
    return _firstWriterPE;
 }
 
-inline void NewNewDirectoryEntryData::setBaseAddress(uint64_t addr) {
+inline void NewNewDirectoryEntryData::setBaseAddress(memory::Address addr) {
    _baseAddress = addr;
 }
 
-inline uint64_t NewNewDirectoryEntryData::getBaseAddress() const {
+inline memory::Address NewNewDirectoryEntryData::getBaseAddress() const {
    return _baseAddress;
 }
 
@@ -281,7 +281,7 @@ inline NewNewRegionDirectory::RegionDirectoryKey NewNewRegionDirectory::getRegio
    return getRegionDictionary( cd );
 }
 
-inline NewNewRegionDirectory::RegionDirectoryKey NewNewRegionDirectory::getRegionDirectoryKey( uint64_t addr ) {
+inline NewNewRegionDirectory::RegionDirectoryKey NewNewRegionDirectory::getRegionDirectoryKey( memory::Address addr ) {
    return getRegionDictionary( addr );
 }
 

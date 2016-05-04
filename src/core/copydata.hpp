@@ -24,7 +24,7 @@
 
 namespace nanos {
 
-inline CopyData::CopyData ( uint64_t addr, nanos_sharing_t nxSharing, bool input, bool output, std::size_t numDimensions, nanos_region_dimension_internal_t *dims, ptrdiff_t off, uint64_t hostBaseAddress, memory_space_id_t hostRegionId )
+inline CopyData::CopyData ( memory::Address addr, nanos_sharing_t nxSharing, bool input, bool output, std::size_t numDimensions, nanos_region_dimension_internal_t *dims, ptrdiff_t off, memory::Address hostBaseAddress, memory_space_id_t hostRegionId )
 {
    address = (void *) addr;
    sharing = nxSharing;
@@ -68,12 +68,12 @@ inline const CopyData & CopyData::operator= ( const CopyData &cd )
    return *this;
 }
 
-inline void *CopyData::getBaseAddress() const
+inline memory::Address CopyData::getBaseAddress() const
 {
    return address;
 }
 
-inline void CopyData::setBaseAddress( void *addr )
+inline void CopyData::setBaseAddress( memory::Address addr )
 {
    address = addr;
 }
@@ -151,14 +151,14 @@ inline void CopyData::setDimensions(nanos_region_dimension_internal_t *dims)
    dimensions = dims;
 }
 
-inline uint64_t CopyData::getAddress() const
+inline memory::Address CopyData::getAddress() const
 {
-   return ( (uint64_t) address ); 
+   return ( (memory::Address) address );
 }
 
-inline uint64_t CopyData::getOffset() const
+inline ptrdiff_t CopyData::getOffset() const
 {
-   return (uint64_t) offset; 
+   return offset;
 }
 
 inline std::size_t CopyData::getFitSize() const
@@ -166,16 +166,16 @@ inline std::size_t CopyData::getFitSize() const
    return getFitSizeRecursive( dimension_count - 1 );
 }
 
-inline uint64_t CopyData::getFitAddress() const
+inline memory::Address CopyData::getFitAddress() const
 {
-   return ( (uint64_t) getBaseAddress() ) + getFitOffsetRecursive( dimension_count - 1 );
+   return ( (memory::Address) getBaseAddress() ) + getFitOffsetRecursive( dimension_count - 1 );
 }
 
-inline uint64_t CopyData::getHostBaseAddress() const {
+inline memory::Address CopyData::getHostBaseAddress() const {
    return host_base_address;
 }
 
-inline void CopyData::setHostBaseAddress( uint64_t addr ) {
+inline void CopyData::setHostBaseAddress( memory::Address addr ) {
    host_base_address = addr;
 }
 

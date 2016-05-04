@@ -26,6 +26,7 @@
 
 #include "region_fwd.hpp"
 #include "basedependency_decl.hpp"
+#include "memory/memoryaddress.hpp"
 
 namespace nanos
 {
@@ -724,7 +725,7 @@ namespace nanos
       friend std::ostream& operator<< (std::ostream& o, Region const &region);
 
       //! \brief Returns dependency base address
-      virtual void * getAddress () const;
+      virtual memory::Address getAddress () const;
    };
 
 

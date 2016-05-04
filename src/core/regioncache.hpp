@@ -30,24 +30,24 @@
 
 namespace nanos {
 
-inline RemoteChunk::RemoteChunk( uint64_t hostAddr, uint64_t deviceAddr, std::size_t size ) :
+inline RemoteChunk::RemoteChunk( memory::Address hostAddr, memory::Address deviceAddr, std::size_t size ) :
    _hostAddress(hostAddr), _deviceAddress(deviceAddr), _size(size)
 {
 }
 
-inline uint64_t RemoteChunk::getDeviceAddress() const {
-   return static_cast<uint64_t>(_deviceAddress);
+inline memory::Address RemoteChunk::getDeviceAddress() const {
+   return _deviceAddress;
 }
 
-inline uint64_t RemoteChunk::getHostAddress() const {
-   return static_cast<uint64_t>(_hostAddress);
+inline memory::Address RemoteChunk::getHostAddress() const {
+   return _hostAddress;
 }
 
-inline void RemoteChunk::setHostAddress( uint64_t addr ) {
+inline void RemoteChunk::setHostAddress( memory::Address addr ) {
    _hostAddress = addr;
 }
 
-inline void RemoteChunk::setDeviceAddress( uint64_t addr ) {
+inline void RemoteChunk::setDeviceAddress( memory::Address addr ) {
    _deviceAddress = addr;
 }
 

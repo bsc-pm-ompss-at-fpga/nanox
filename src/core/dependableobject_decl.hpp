@@ -26,6 +26,7 @@
 #include <stdint.h>
 
 #include "atomic_decl.hpp"
+#include "memory/memoryaddress.hpp"
 #include "lock_decl.hpp"
 
 #include "dependenciesdomain_fwd.hpp"
@@ -196,7 +197,7 @@ namespace nanos {
          *         method dependenciesSatisfied is invoked. It can be also a blocking
          *         call in some cases, if blocking is set to true.
          */
-         virtual int decreasePredecessors ( std::list<uint64_t> const * flushDeps, DependableObject * finishedPred,
+         virtual int decreasePredecessors ( std::list<memory::Address> const * flushDeps, DependableObject * finishedPred,
                bool batchRelease, bool blocking = false );
 
          /*! \brief Auxiliar function of decreasePredecessors() that encapsulates the
