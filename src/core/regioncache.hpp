@@ -108,6 +108,10 @@ inline Device const &RegionCache::getDevice() const {
    return _device;
 }
 
+inline Device& RegionCache::getDevice() {
+   return _device;
+}
+
 inline bool RegionCache::canCopyFrom( RegionCache const &from ) const {
    return _device == from._device;
 }

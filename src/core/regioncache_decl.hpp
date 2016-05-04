@@ -186,7 +186,7 @@ namespace nanos {
       public:
          RegionCache( memory_space_id_t memorySpaceId, Device &cacheArch, enum CacheOptions flags, std::size_t slabSize );
          AllocatedChunk *tryGetAddress( global_reg_t const &reg, WD const &wd, unsigned int copyIdx );
-         AllocatedChunk *getOrCreateChunk( LockedObjects &srcRegions, global_reg_t const &reg, WD const &wd, unsigned int copyIdx );
+         AllocatedChunk *getOrCreateChunk( LockedObjects &srcRegions, global_reg_t const &reg, WD &wd, unsigned int copyIdx );
          AllocatedChunk *getAllocatedChunk( global_reg_t const &reg, WD const &wd, unsigned int copyIdx ) const;
          AllocatedChunk *_getAllocatedChunk( global_reg_t const &reg, bool complain, bool lock, WD const &wd, unsigned int copyIdx ) const;
          AllocatedChunk *getAddress( memory::Address hostAddr, std::size_t len );
@@ -219,6 +219,7 @@ namespace nanos {
          void MAPunlock();
          bool canCopyFrom( RegionCache const &from ) const;
          Device const &getDevice() const;
+         Device& getDevice();
          unsigned int getNodeNumber() const;
          unsigned int getLruTime() const;
          void increaseLruTime();
