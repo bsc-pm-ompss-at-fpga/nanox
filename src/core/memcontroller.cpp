@@ -83,10 +83,12 @@ MemController::MemController( WD &wd ) :
 MemController::~MemController() {
    delete _inOps;
    delete _outOps;
+#ifdef NANOS_RESILENCY_ENABLED
    if( _backupOpsIn )
       delete _backupOpsIn;
    if( _backupOpsOut )
       delete _backupOpsOut;
+#endif
 }
 
 bool MemController::ownsRegion( global_reg_t const &reg ) {

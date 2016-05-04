@@ -746,6 +746,7 @@ void Scheduler::finishWork( WD * wd, bool schedule )
 
 bool Scheduler::inlineWork ( WD *wd, bool schedule )
 {
+#ifdef NANOS_RESILIENCY_ENABLED
    if ( wd->isInvalid() 
         || ( wd->getParent() && wd->getParent()->isInvalid() ))
    {
@@ -762,6 +763,7 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
 
       return true;
    }
+#endif
    // else (if task is valid)
 
    // Getting current thread and WD

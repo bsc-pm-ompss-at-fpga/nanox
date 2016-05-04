@@ -528,6 +528,7 @@ inline void WorkDescriptor::setRecoverable( bool flag ) { _flags.is_recoverable 
 
 inline bool WorkDescriptor::isRecoverable() const { return _flags.is_recoverable; }
 
+#ifdef NANOS_RESILIENCY_ENABLED
 inline WorkDescriptor *WorkDescriptor::propagateInvalidationAndGetRecoverableAncestor ()
 {
    WorkDescriptor *current;
@@ -545,6 +546,7 @@ inline WorkDescriptor *WorkDescriptor::propagateInvalidationAndGetRecoverableAnc
 inline bool WorkDescriptor::isAbleToExecute() const { return !isInvalid() && (getParent() == NULL || !getParent()->isInvalid()); }
 
 inline bool WorkDescriptor::isExecutionRepeatable() const { return isInvalid() && isRecoverable() && ( !getParent() || !getParent()->isInvalid() ); }
+#endif
 
 inline void WorkDescriptor::setCriticality ( int cr ) { _criticality = cr; }
 

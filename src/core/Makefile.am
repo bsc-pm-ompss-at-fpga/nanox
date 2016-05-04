@@ -298,10 +298,12 @@ instr_sources = \
 	instrumentationcontext.cpp \
 	$(END)
 
+if is_resiliency_enabled
 resiliency_aux_sources = \
 	backupmanager.hpp \
 	backupmanager.cpp \
 	backupmanager_aux.cpp
+endif
 
 noinst_LTLIBRARIES=
 debug_LTLIBRARIES=

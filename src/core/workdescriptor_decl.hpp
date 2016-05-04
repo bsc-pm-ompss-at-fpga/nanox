@@ -193,8 +193,8 @@ namespace nanos {
                       getName()
                     );
             }
-    };
 #endif
+    };
 
 /*! \brief This class identifies a single unit of work
  *
@@ -771,6 +771,7 @@ namespace nanos {
          //! \brief Returns whether a WorkDescriptor is able to re-execute from the beginning if an error is detected.
          bool isRecoverable ( void ) const;
 
+#ifdef NANOS_RESILIENCY_ENABLED
 			/*! \brief Propagate invalid flag through ancestors up to a recoverable one is found
 			 * \return The closest recoverable ancestor or the last one if none exist
 			 */
@@ -782,6 +783,7 @@ namespace nanos {
 			// FIXME: should isExecutionRepeatable be moved to DeviceData?
 			//! \brief Returns whether a WorkDescriptor should re-execute or not
 			bool isExecutionRepeatable ( void ) const;
+#endif
 
          void setCriticality ( int cr );
          int getCriticality ( void ) const;
