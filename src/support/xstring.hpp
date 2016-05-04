@@ -35,14 +35,14 @@ inline std::string toString ( const T& t )
 }
 
 template <typename OStreamType>
-static inline OStreamType &join( OStreamType &&os )
+inline OStreamType &join( OStreamType &&os )
 {
    os << std::endl;
    return os;
 }
 
 template <typename OStreamType, typename T, typename...Ts>
-static inline OStreamType &join( OStreamType &&os, const T &first, const Ts&... rest)
+inline OStreamType &join( OStreamType &&os, const T &first, const Ts&... rest)
 {
    os << first;
    return join( os, rest... );
