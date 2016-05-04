@@ -23,6 +23,10 @@
 #include "config.hpp"
 #include "depsregion.hpp"
 #include "compatibility.hpp"
+
+#include "trackableobject.hpp"
+#include "commutationdepobj.hpp"
+
 #include <vector>
 #include <map>
 

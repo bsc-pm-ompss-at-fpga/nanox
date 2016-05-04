@@ -23,6 +23,8 @@
 #include "config.hpp"
 #include "address.hpp"
 #include "compatibility.hpp"
+#include "trackableobject.hpp"
+#include "commutationdepobj.hpp"
 
 namespace nanos {
    namespace ext {
