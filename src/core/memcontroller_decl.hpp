@@ -73,12 +73,14 @@ class MemController {
    RegionSet _parentRegions;
 
 public:
+   std::vector<MemCacheCopy> _memCacheCopies;
+
    enum MemControllerPolicy {
       WRITE_BACK,
       WRITE_THROUGH,
       NO_CACHE
    };
-   MemCacheCopy *_memCacheCopies;
+
    MemController( WD &wd );
    ~MemController();
    bool hasVersionInfoForRegion( global_reg_t reg, unsigned int &version, NewLocationInfoList &locations );

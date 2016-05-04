@@ -26,6 +26,8 @@
 #include "addressspace_fwd.hpp"
 #include "memoryops_fwd.hpp"
 
+#include <vector>
+
 namespace nanos {
 
 class TransferListEntry {
@@ -129,11 +131,11 @@ class SeparateAddressSpace {
    void failToLock( MemSpace< HostAddressSpace > &from, global_reg_t const &reg, unsigned int version );
    void copyFromHost( TransferList &list, WD const *wd );
 
-   void releaseRegions( MemCacheCopy *memCopies, unsigned int numCopies, WD const &wd );
+   void releaseRegions( std::vector<MemCacheCopy>& memCopies, WD const &wd );
    //void releaseRegion( global_reg_t const &reg, WD const &wd, unsigned int copyIdx, enum RegionCache::CachePolicy policy );
    memory::Address getDeviceAddress( global_reg_t const &reg, memory::Address baseAddress, AllocatedChunk *chunk ) const;
    
-   bool prepareRegions( MemCacheCopy *memCopies, unsigned int numCopies, WD const &wd );
+   bool prepareRegions( std::vector<MemCacheCopy>& memCopies, WD &wd );
    void setRegionVersion( global_reg_t const &reg, AllocatedChunk *chunk, unsigned int version, WD const &wd, unsigned int copyIdx );
    unsigned int getCurrentVersion( global_reg_t const &reg, WD const &wd, unsigned int copyIdx );
 
@@ -154,7 +156,7 @@ class SeparateAddressSpace {
 
    unsigned int getSoftInvalidationCount() const;
    unsigned int getHardInvalidationCount() const;
-   bool canAllocateMemory( MemCacheCopy *memCopies, unsigned int numCopies, bool considerInvalidations, WD const &wd );
+   bool canAllocateMemory( const std::vector<MemCacheCopy>& memCopies, bool considerInvalidations, WD const &wd );
    void registerOwnedMemory(global_reg_t reg);
    Device const &getDevice() const;
 };

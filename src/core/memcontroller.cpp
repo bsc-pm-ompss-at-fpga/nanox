@@ -70,7 +70,7 @@ MemController::MemController( WD &wd ) :
    , _memCacheCopies()
 {
    if ( _wd.getNumCopies() > 0 ) {
-      _memCacheCopies = NEW MemCacheCopy[ wd.getNumCopies() ];
+      _memCacheCopies.reserve( wd.getNumCopies() );
 #ifdef NANOS_RESILIENCY_ENABLED
       if( sys.isResiliencyEnabled() && wd.isRecoverable() ) {
 			_backupCacheCopies.reserve( wd.getNumCopies() );
@@ -83,7 +83,6 @@ MemController::MemController( WD &wd ) :
 MemController::~MemController() {
    delete _inOps;
    delete _outOps;
-   delete[] _memCacheCopies;
    if( _backupOpsIn )
       delete _backupOpsIn;
    if( _backupOpsOut )
@@ -112,13 +111,17 @@ void MemController::preInit( ) {
    }
 
    for ( index = 0; index < _wd.getNumCopies(); index += 1 ) {
+      _memCacheCopies.emplace_back(  _wd, index );
+   }
 
+   for ( index = 0; index < _wd.getNumCopies(); index += 1 ) {
       if ( sys.usePredecessorCopyInfo() ) {
          unsigned int predecessorsVersion;
          if ( _providedRegions.hasVersionInfoForRegion( _memCacheCopies[ index ]._reg, predecessorsVersion, _memCacheCopies[ index ]._locations ) ) {
             _memCacheCopies[ index ].setVersion( predecessorsVersion );
          }
       }
+
       if ( _memCacheCopies[ index ].getVersion() != 0 ) {
          _memCacheCopies[ index ]._locationDataReady = true;
       } else {
@@ -220,7 +223,7 @@ bool MemController::allocateTaskMemory() {
       }
       
       if ( !_memoryAllocated && !_invalidating ) {
-         bool tmp_result = sys.getSeparateMemory( _pe->getMemorySpaceId() ).prepareRegions( _memCacheCopies, _wd.getNumCopies(), _wd );
+         bool tmp_result = sys.getSeparateMemory( _pe->getMemorySpaceId() ).prepareRegions( _memCacheCopies, _wd );
          if ( tmp_result ) {
             for ( unsigned int idx = 0; idx < _wd.getNumCopies() && !pending_invalidation; idx += 1 ) {
                pending_invalidation = (_memCacheCopies[idx]._invalControl._invalOps != NULL);
@@ -251,7 +254,7 @@ bool MemController::allocateTaskMemory() {
          }
          _invalidating = false;
 
-         bool tmp_result = sys.getSeparateMemory( _pe->getMemorySpaceId() ).prepareRegions( _memCacheCopies, _wd.getNumCopies(), _wd );
+         bool tmp_result = sys.getSeparateMemory( _pe->getMemorySpaceId() ).prepareRegions( _memCacheCopies, _wd );
          if ( tmp_result ) {
             pending_invalidation = false;
             for ( unsigned int idx = 0; idx < _wd.getNumCopies() && !pending_invalidation; idx += 1 ) {
@@ -562,7 +565,7 @@ bool MemController::isOutputDataReady( WD const &wd )
          if ( _outputDataReady ) {
             if ( _VERBOSE_CACHE ) { *(myThread->_file) << "Output data is ready for wd " << _wd.getId() << " obj " << (void *)_outOps << std::endl; }
 
-            sys.getSeparateMemory( _pe->getMemorySpaceId() ).releaseRegions( _memCacheCopies, _wd.getNumCopies(), _wd ) ;
+            sys.getSeparateMemory( _pe->getMemorySpaceId() ).releaseRegions( _memCacheCopies, _wd ) ;
          }
       }
 #ifdef NANOS_RESILIENCY_ENABLED
@@ -616,12 +619,11 @@ bool MemController::isDataRestored( WD const &wd )
 
 bool MemController::canAllocateMemory( memory_space_id_t memId, bool considerInvalidations ) const {
    if ( memId > 0 ) {
-      return sys.getSeparateMemory( memId ).canAllocateMemory( _memCacheCopies, _wd.getNumCopies(), considerInvalidations, _wd );
+      return sys.getSeparateMemory( memId ).canAllocateMemory( _memCacheCopies, considerInvalidations, _wd );
    } else {
       return true;
    }
 }
-
 
 void MemController::setAffinityScore( std::size_t score ) {
    _affinityScore = score;

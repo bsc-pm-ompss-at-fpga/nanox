@@ -1602,17 +1602,16 @@ unsigned int RegionCache::getVersion( global_reg_t const &reg, WD const &wd, uns
    return version;
 }
 
-void RegionCache::releaseRegions( MemCacheCopy *memCopies, unsigned int numCopies, WD const &wd ) {
+void RegionCache::releaseRegions( std::vector<MemCacheCopy>& memCopies, WD const &wd ) {
    while ( !_lock.tryAcquire() ) {
       //myThread->idle();
    }
 
-   for ( unsigned int idx = 0; idx < numCopies; idx += 1 ) {
+   for ( unsigned int idx = 0; idx < memCopies.size(); idx ++ ) {
       AllocatedChunk *chunk = _getAllocatedChunk( memCopies[ idx ]._reg, true, false, wd, idx );
       chunk->removeReference( wd ); //RegionCache::releaseRegions
       if ( chunk->getReferenceCount() == 0 && ( memCopies[ idx ]._policy == NO_CACHE || memCopies[ idx ]._policy == FPGA ) ) {
          _chunks.removeChunks( chunk->getHostAddress(), chunk->getSize() );
-         //*myThread->_file << "Delete chunk for idx " << idx << std::endl;
          if ( VERBOSE_DEV_OPS ) {
             *(myThread->_file) << "[" << myThread->getId() << "] _device(" << _device.getName() << ").memFree(  memspace=" << _memorySpaceId <<", devAddr="<< (void *)chunk->getDeviceAddress() << ", wd="<< wd.getId() << " ["<< (wd.getDescription() != NULL ? wd.getDescription() : "no description") << "], copyIdx="<< idx << " );" << std::endl;
          }
@@ -1630,13 +1629,13 @@ memory::Address RegionCache::getDeviceAddress( global_reg_t const &reg, memory::
    return ( chunk->getDeviceAddress() - ( chunk->getHostAddress() - baseAddress ) );
 }
 
-bool RegionCache::prepareRegions( MemCacheCopy *memCopies, unsigned int numCopies, WD const &wd ) {
+bool RegionCache::prepareRegions( std::vector<MemCacheCopy>& memCopies, WD &wd ) {
    _currentAllocations++;
    bool result = true;
    std::size_t total_allocatable_size = 0;
    std::set< global_reg_t > regions_to_allocate;
-   std::pair<unsigned int, global_reg_t> regions_to_allocate_w_idx[numCopies];
-   for ( unsigned int idx = 0; idx < numCopies; idx += 1 ) {
+   std::pair<unsigned int, global_reg_t> regions_to_allocate_w_idx[memCopies.size()];
+   for ( unsigned int idx = 0; idx < memCopies.size(); idx += 1 ) {
       MemCacheCopy &mcopy = memCopies[ idx ];
       global_reg_t allocatable_region;
       getAllocatableRegion( mcopy._reg, allocatable_region );
@@ -1716,7 +1715,6 @@ bool RegionCache::prepareRegions( MemCacheCopy *memCopies, unsigned int numCopie
          //release the allocated chunks if the allocation fails, this avoids
          //deadlocks if other threads are trying to allocate in the same cache.
          if ( !result ) {
-            //for ( unsigned int idx = 0; idx < numCopies; idx += 1 )
             for ( unsigned int allocIdx = 0; allocIdx < regions_to_allocate.size(); allocIdx += 1 ) {
                unsigned int idx = regions_to_allocate_w_idx[allocIdx].first;
                MemCacheCopy &mcopy = memCopies[ idx ];
@@ -1733,7 +1731,7 @@ bool RegionCache::prepareRegions( MemCacheCopy *memCopies, unsigned int numCopie
             }
          } else {
             if ( result ) {
-               for ( unsigned int idx = 0; idx < numCopies; idx += 1 ) {
+               for ( unsigned int idx = 0; idx < memCopies.size(); idx ++ ) {
                   if ( memCopies[idx]._invalControl._invalOps != NULL ) {
                      memCopies[idx]._invalControl.preIssueActions( this->getMemorySpaceId(), wd );
                   }
@@ -1745,12 +1743,12 @@ bool RegionCache::prepareRegions( MemCacheCopy *memCopies, unsigned int numCopie
          // are done with the operations, otherwise another operations,
          // that would expect this invalidation to be completed, could be issued
          if ( result ) {
-            for ( unsigned int idx = 0; idx < numCopies; idx += 1 ) {
+            for ( unsigned int idx = 0; idx < memCopies.size(); idx ++ ) {
                if ( memCopies[idx]._invalControl._invalOps != NULL ) {
                   memCopies[idx]._invalControl._invalOps->issue( &wd );
                }
             }
-            for ( unsigned int idx = 0; idx < numCopies; idx += 1 ) {
+            for ( unsigned int idx = 0; idx < memCopies.size(); idx ++ ) {
                if ( memCopies[idx]._invalControl._invalOps != NULL ) {
                   memCopies[idx]._invalControl.postIssueActions( this->getMemorySpaceId() );
                }
@@ -1835,21 +1833,18 @@ void RegionCache::getAllocatableRegion( global_reg_t const &reg, global_reg_t &a
    }
 }
 
-bool RegionCache::canAllocateMemory( MemCacheCopy *memCopies, unsigned int numCopies, bool considerInvalidations, WD const &wd ) {
+bool RegionCache::canAllocateMemory( const std::vector<MemCacheCopy>& memCopies, bool considerInvalidations, WD const &wd ) {
    bool result = true;
-   bool *present_regions = (bool *) alloca( numCopies * sizeof(bool) );
-   std::size_t *sizes = (std::size_t *) alloca( numCopies * sizeof(std::size_t) );
+   std::vector<bool> present_regions( memCopies.size(), true );
+   std::vector<std::size_t> sizes( memCopies.size(), 0 );
+
    unsigned int needed_chunks = 0;
    if ( _lock.tryAcquire() ) {
    
    /* check if the desired region is already allocated */
-   for ( unsigned int idx = 0; idx < numCopies; idx += 1 ) {
+   for ( unsigned int idx = 0; idx < memCopies.size(); idx ++ ) {
       AllocatedChunk *chunk = _getAllocatedChunk( memCopies[ idx ]._reg , false, false, wd, idx );
-      if ( chunk != NULL ) {
-         present_regions[ idx ] = true;
-         sizes[ idx ] = 0;
-         //chunk->unlock();
-      } else {
+      if ( chunk == NULL ) {
          present_regions[ idx ] = false;
          sizes[ needed_chunks ] = getAllocatableSize( memCopies[ idx ]._reg );
          needed_chunks += 1;
@@ -1860,12 +1855,12 @@ bool RegionCache::canAllocateMemory( MemCacheCopy *memCopies, unsigned int numCo
    //*myThread->_file << __FUNCTION__ << " needed chunks is " << needed_chunks << std::endl;
 
    if ( needed_chunks != 0 ) {
-      std::size_t *remaining_sizes = (std::size_t *) alloca( needed_chunks * sizeof(std::size_t) );
+      std::vector<std::size_t> remaining_sizes( needed_chunks );
       /* compute if missing chunks can be allocated in the device memory */
       _device._canAllocate( sys.getSeparateMemory( _memorySpaceId ), sizes, needed_chunks, remaining_sizes );
 
       unsigned int remaining_count = 0;
-      while ( remaining_count < needed_chunks && remaining_sizes[ remaining_count ] != 0 ) {
+      while ( remaining_count < remaining_sizes.size() && remaining_sizes[ remaining_count ] != 0 ) {
          remaining_count +=1;
       }
 
@@ -1885,12 +1880,9 @@ bool RegionCache::canAllocateMemory( MemCacheCopy *memCopies, unsigned int numCo
    }
 }
 
-bool RegionCache::canInvalidateToFit( std::size_t *sizes, unsigned int numChunks ) const {
+bool RegionCache::canInvalidateToFit( const std::vector<std::size_t>& sizes, unsigned int numChunks ) const {
    unsigned int allocated_count = 0;
-   bool *allocated = (bool *) alloca( numChunks * sizeof(bool) );
-   for (unsigned int idx = 0; idx < numChunks; idx += 1) {
-      allocated[ idx ] = false;
-   }
+   std::vector<bool> allocated( numChunks, false );
 
    MemoryMap<AllocatedChunk>::const_iterator it;
    //int count =0;

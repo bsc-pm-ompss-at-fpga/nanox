@@ -226,16 +226,17 @@ namespace nanos {
          unsigned int getVersion( global_reg_t const &hostMem, WD const &wd, unsigned int copyIdx );
          //void releaseRegion( global_reg_t const &hostMem, WD const &wd, unsigned int copyIdx, enum CachePolicy policy );
 
-         void releaseRegions( MemCacheCopy *memCopies, unsigned int numCopies, WD const &wd );
-         bool prepareRegions( MemCacheCopy *memCopies, unsigned int numCopies, WD const &wd );
+         void releaseRegions( std::vector<MemCacheCopy>& memCopies, WD const &wd );
+         bool prepareRegions( std::vector<MemCacheCopy>& memCopies, WD &wd );
+
          void setRegionVersion( global_reg_t const &hostMem, AllocatedChunk *chunk, unsigned int version, WD const &wd, unsigned int copyIdx );
 
          unsigned int getSoftInvalidationCount() const;
          void increaseSoftInvalidationCount(unsigned int v);
          unsigned int getHardInvalidationCount() const;
          void increaseHardInvalidationCount(unsigned int v);
-         bool canAllocateMemory( MemCacheCopy *memCopies, unsigned int numCopies, bool considerInvalidations, WD const &wd );
-         bool canInvalidateToFit( std::size_t *sizes, unsigned int numChunks ) const;
+         bool canAllocateMemory( const std::vector<MemCacheCopy>& memCopies, bool considerInvalidations, WD const &wd );
+         bool canInvalidateToFit( const std::vector<std::size_t>& sizes, unsigned int numChunks ) const;
          std::size_t getAllocatableSize( global_reg_t const &reg ) const;
          void getAllocatableRegion( global_reg_t const &reg, global_reg_t &allocRegion ) const;
          void prepareRegionsToBeCopied( std::set< global_reg_t > const &regs, unsigned int version, std::set< AllocatedChunk * > &chunks, WD const &wd, unsigned int copyIdx ) ;
