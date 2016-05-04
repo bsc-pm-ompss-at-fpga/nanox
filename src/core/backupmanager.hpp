@@ -20,12 +20,14 @@
 #ifndef BACKUPMANAGER_HPP_
 #define BACKUPMANAGER_HPP_
 
-#include <cstddef>
+#include "backupmanager_fwd.hpp"
+
+#include "workdescriptor_decl.hpp"
 
 #include <boost/interprocess/managed_external_buffer.hpp>
 #include <boost/interprocess/indexes/null_index.hpp>
 
-#include "workdescriptor_decl.hpp"
+#include <cstddef>
 
 namespace boost {
    namespace interprocess {

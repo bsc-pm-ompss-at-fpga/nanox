@@ -19,16 +19,10 @@
 
 #ifndef _NANOS_DEPENDENCIES_DOMAIN
 #define _NANOS_DEPENDENCIES_DOMAIN
-#include "dataaccess_decl.hpp"
-#include "dependenciesdomain_decl.hpp"
-#include "recursivelock_decl.hpp"
 
-#include "atomic.hpp"
-#include "commutationdepobj.hpp"
-#include "dependableobject.hpp"
+#include "dependenciesdomain_decl.hpp"
+
 #include "error.hpp"
-#include "lock.hpp"
-#include "trackableobject.hpp"
 
 #include <stdlib.h>
 #include <map>
