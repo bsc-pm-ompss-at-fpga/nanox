@@ -75,7 +75,7 @@ inline bool DeviceOps::addCacheOp( /* debug: */ WorkDescriptor const *wd, int lo
    return success;
 }
 
-inline bool DeviceOps::allCacheOpsCompleted() {
+inline bool DeviceOps::allCacheOpsCompleted() const {
    return _pendingCacheOp.getState() == NANOS_LOCK_FREE;
 }
 
@@ -100,8 +100,16 @@ inline void DeviceOps::completeCacheOp( /* debug: */ WorkDescriptor const *wd ) 
    _pendingCacheOp.release();
 }
 
+inline int DeviceOps::getPendingDeviceOpNumber() const {
+   return _pendingDeviceOps.value();
+}
+
 inline std::ostream & operator<< ( std::ostream &o, nanos::DeviceOps const &ops ) {
-   o << "{_pDeviceOps: " << ops._pendingDeviceOps.value() << " _pCacheOp: " << ops._pendingCacheOp.getState() << " _owner " << ops._owner <<"}";
+   o << "{ pending device ops: " << ops.getPendingDeviceOpNumber();
+   if( !ops.allCacheOpsCompleted() ) {
+      o << "(ops pending) ";
+   }
+   o << " owner: " << ops._owner << "}";
    return o;
 }
 

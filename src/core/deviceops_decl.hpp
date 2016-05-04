@@ -33,10 +33,12 @@ namespace nanos {
          Atomic<unsigned int> _pendingDeviceOps;
          Atomic<bool> _aborted;
          Lock _pendingCacheOp;
+
+      public:
          /*debug:*/ int _owner;
          /*debug:*/ WorkDescriptor const *_wd;
          /*debug:*/ int _loc;
-      public:
+
          DeviceOps();
          ~DeviceOps();
 
@@ -50,8 +52,8 @@ namespace nanos {
 
          bool addCacheOp( /* debug: */ WorkDescriptor const *wd, int loc = -1 );
          void completeCacheOp( /* debug: */WorkDescriptor const *wd );
-         bool allCacheOpsCompleted();
-         friend std::ostream & operator<< (std::ostream &o, DeviceOps const &ops);
+         bool allCacheOpsCompleted() const;
+         int getPendingDeviceOpNumber() const;
    };
 
 } // namespace nanos
