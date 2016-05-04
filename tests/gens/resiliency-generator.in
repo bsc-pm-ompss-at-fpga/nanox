@@ -1,9 +1,9 @@
 #!/bin/bash
 path=$(dirname $0)
 
-if [ x@enable_resiliency@ = xyes ]; then
+if [ "@enable_resiliency@" = "yes" ]; then
 
-$( ${path}/core-generator )
+source ${path}/core-generator
 
 else #no resiliency
 

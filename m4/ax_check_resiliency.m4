@@ -91,7 +91,8 @@ AS_IF([test "$enable_fault_injection" = "yes"],[
     AC_DEFINE([NANOS_FAULT_INJECTION],[1],[Defined when page corruption injection module is enabled by the user.])
 ])
 
-AC_SUBST([resiliency_flags])
+AC_SUBST([resiliency_flags])  # Extra build flags
+AC_SUBST([enable_resiliency]) # Test generator
 AM_CONDITIONAL([is_resiliency_enabled],[test "$enable_resiliency" = "yes"])
 AM_CONDITIONAL([is_fault_injection_enabled],[test "$enable_fault_injection" = "yes"])
 
