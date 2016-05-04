@@ -1140,7 +1140,7 @@ AllocatedChunk *RegionCache::invalidate( LockedObjects &srcRegions, Invalidation
    return allocChunkPtr;
 }
 
-AllocatedChunk *RegionCache::getOrCreateChunk( LockedObjects &srcRegions, global_reg_t const &reg, WD const &wd, unsigned int copyIdx ) {
+AllocatedChunk *RegionCache::getOrCreateChunk( LockedObjects &srcRegions, global_reg_t const &reg, WD &wd, unsigned int copyIdx ) {
    ChunkList results;
    AllocatedChunk *allocChunkPtr = nullptr;
    global_reg_t allocatedRegion;

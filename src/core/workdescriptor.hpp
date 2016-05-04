@@ -102,14 +102,14 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                     _flags.is_invalid = false;
                                     if ( copies != NULL ) {
                                        for ( unsigned int i = 0; i < numCopies; i += 1 ) {
-                                          copies[i].setHostBaseAddress( 0 );
+                                          copies[i].setHostBaseAddress( nullptr );
                                           copies[i].setRemoteHost( false );
                                        }
                                     }
                                  }
 
 inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **devs, CopyData * copies, void *data, const char *description )
-                               : _id( sys.getWorkDescriptorId() ), _hostId( 0 ), _components( 0 ), 
+                               : _id( sys.getWorkDescriptorId() ), _components( 0 ),
                                  _componentsSyncCond( EqualConditionChecker<int>(&_components.override(), 0 ) ), _parent(NULL), _forcedParent(wd._forcedParent),
                                  _data_size( wd._data_size ), _data_align( wd._data_align ), _data ( data ), _totalSize(0),
                                  _wdData ( NULL ), _scheduleData( NULL ),
@@ -549,10 +549,6 @@ inline bool WorkDescriptor::isExecutionRepeatable() const { return isInvalid() &
 inline void WorkDescriptor::setCriticality ( int cr ) { _criticality = cr; }
 
 inline int  WorkDescriptor::getCriticality () const { return _criticality; }
-
-inline void WorkDescriptor::setCallback ( void *cb ) { _callback = cb; }
-
-inline void WorkDescriptor::setArguments ( void *a ) { _arguments = a; }
 
 inline std::ostream& operator<<( std::ostream& os, const nanos::WorkDescriptor &wd )
 {
