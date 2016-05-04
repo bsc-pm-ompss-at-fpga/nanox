@@ -554,6 +554,16 @@ inline void WorkDescriptor::setCallback ( void *cb ) { _callback = cb; }
 
 inline void WorkDescriptor::setArguments ( void *a ) { _arguments = a; }
 
+inline std::ostream& operator<<( std::ostream& os, const nanos::WorkDescriptor &wd )
+{
+   os << "WorkDescriptor id:" << wd.getId();
+   if( wd.getDescription() == nullptr )
+      os << " ([no desc]) ";
+   else
+      os << " (" << wd.getDescription() << ") ";
+   return os;
+}
+
 } // namespace nanos
 
 #endif
