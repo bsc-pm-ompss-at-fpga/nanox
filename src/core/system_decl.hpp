@@ -693,6 +693,7 @@ namespace nanos
          void unregisterObject( int numObjects, void *base_addresses );
 
          unsigned int getNumAccelerators() const;
+         unsigned int getNumInstrumentAccelerators() const;
          unsigned int getNewAcceleratorId();
          memory_space_id_t getMemorySpaceIdOfAccelerator( unsigned int acceleratorId ) const;
 

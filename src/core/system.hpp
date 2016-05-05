@@ -327,6 +327,10 @@ inline DeviceInstrumentation * System::getDeviceInstrumentation( int accId ) {
 inline void System::addDeviceInstrumentation( DeviceInstrumentation * dev ) {
     _deviceInstrumentation.push_back( dev );
 }
+
+inline unsigned int System::getNumInstrumentAccelerators() const {
+    return _deviceInstrumentation.size();
+}
 #endif
 
 inline void System::registerSlicer ( const std::string &label, Slicer *slicer) { _slicers[label] = slicer; }

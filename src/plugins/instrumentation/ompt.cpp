@@ -316,7 +316,7 @@ extern "C" {
 
    static int ompt_nanos_get_num_devices( void )
    {
-      return sys.getNumAccelerators();
+      return sys.getNumInstrumentAccelerators();
    }
 
    //! Return the ID of the active device
