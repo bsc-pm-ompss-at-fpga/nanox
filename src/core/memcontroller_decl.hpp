@@ -19,7 +19,7 @@
 
 #ifndef MEMCONTROLLER_DECL
 #define MEMCONTROLLER_DECL
-
+#include <map>
 #include "workdescriptor_fwd.hpp"
 
 #include "addressspace_decl.hpp"
@@ -27,6 +27,8 @@
 #include "backupcachecopy_decl.hpp"
 #include "backupprivatecopy_decl.hpp"
 #include "lock_decl.hpp"
+#include "newregiondirectory_decl.hpp"
+#include "addressspace_decl.hpp"
 #include "memoryops_decl.hpp"
 #include "memcachecopy_decl.hpp"
 #include "newregiondirectory_decl.hpp"
@@ -35,14 +37,6 @@
 #include <vector>
 
 namespace nanos {
-
-   typedef enum {
-      NANOS_FT_CP_IN = 1,
-      NANOS_FT_CP_OUT,  // 2
-      NANOS_FT_CP_INOUT,// 3
-      NANOS_FT_RT_IN,   // 4
-      NANOS_FT_RT_INOUT // 5
-   } checkpoint_event_value_t;
 
 class MemController {
    bool                        _initialized;
@@ -53,8 +47,7 @@ class MemController {
    bool                        _memoryAllocated;
    bool                        _invalidating;
    bool                        _mainWd;
-   bool                        _is_private_backup_aborted;
-   WorkDescriptor             &_wd;
+   WD                         *_wd;
    ProcessingElement          *_pe;
    Lock                        _provideLock;
    RegionSet _providedRegions;
@@ -73,15 +66,13 @@ class MemController {
    RegionSet _parentRegions;
 
 public:
-   std::vector<MemCacheCopy> _memCacheCopies;
-
    enum MemControllerPolicy {
       WRITE_BACK,
       WRITE_THROUGH,
       NO_CACHE
    };
-
-   MemController( WD &wd );
+   MemCacheCopy *_memCacheCopies;
+   MemController( WD *wd, unsigned int numCopies );
    ~MemController();
    bool hasVersionInfoForRegion( global_reg_t reg, unsigned int &version, NewLocationInfoList &locations );
    void getInfoFromPredecessor( MemController const &predecessorController );
@@ -108,12 +99,13 @@ public:
    bool isMultipleRooted( std::list<memory_space_id_t> &locs ) const ;
    void setMainWD();
    void synchronize();
+   void synchronize( std::size_t numDataAccesses, DataAccess *data);
    bool isMemoryAllocated() const;
    void setCacheMetaData();
    bool ownsRegion( global_reg_t const &reg );
    bool hasObjectOfRegion( global_reg_t const &reg );
    bool containsAllCopies( MemController const &target ) const;
-   const WorkDescriptor& getWorkDescriptor() const { return _wd; }
+   const WorkDescriptor* getWorkDescriptor() const { return _wd; }
 };
 
 } // namespace nanos

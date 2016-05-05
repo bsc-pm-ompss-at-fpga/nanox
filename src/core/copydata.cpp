@@ -43,9 +43,9 @@ std::size_t CopyData::getFitSizeRecursive( int i ) const
       return dimensions[ i ].accessed_length * getWideSizeRecursive( i - 1 );
 }
 
-memory::Address CopyData::getFitOffsetRecursive( int i ) const
+ptrdiff_t CopyData::getFitOffsetRecursive( int i ) const
 {
-   memory::Address off = dimensions[ i ].lower_bound * ( i == 0 ? 1 : getWideSizeRecursive( i - 1 ) );
+   ptrdiff_t off = dimensions[ i ].lower_bound * ( i == 0 ? 1 : getWideSizeRecursive( i - 1 ) );
    if ( dimensions[ i ].accessed_length == 1 )
       off += getFitOffsetRecursive( i - 1 );
    return off;
@@ -68,7 +68,7 @@ void CopyData::getFitDimensions( nanos_region_dimension_internal_t *outDimension
 }
 
 
-void CopyData::deductCd( CopyData const &ref, CopyData *out ) const {
+void CopyData::deductCd( CopyData const &ref, nanos_region_dimension_internal_t *newDims ) const {
    if ( ref.getNumDimensions() < this->getNumDimensions() ) {
       fatal("Can not deduct the region, provided reference has more ",
             "dimensions (", this->getNumDimensions(), ") than registered ",
@@ -78,17 +78,16 @@ void CopyData::deductCd( CopyData const &ref, CopyData *out ) const {
       std::size_t elemSize[ ref.getNumDimensions() ];
       nanos_region_dimension_internal_t const *refDims = ref.getDimensions();
       nanos_region_dimension_internal_t const *thisDims = this->getDimensions();
-      nanos_region_dimension_internal_t *outDims = out->getDimensions();
       unsigned int dimIdx;
       std::size_t current_elem_size = 1;
       std::size_t current_offset = 0;
-      memory::Address off = (memory::Address)this->getBaseAddress() - (memory::Address)ref.getBaseAddress();
+      ptrdiff_t off = this->getBaseAddress() - ref.getBaseAddress();
       for ( dimIdx = 0; dimIdx < this->getNumDimensions(); dimIdx += 1) {
          if ( refDims[ dimIdx ].size == thisDims[ dimIdx ].size ) {
             matching += 1;
-            outDims[ dimIdx ].size = thisDims[ dimIdx ].size;
-            outDims[ dimIdx ].accessed_length = thisDims[ dimIdx ].accessed_length;
-            outDims[ dimIdx ].lower_bound = thisDims[ dimIdx ].lower_bound;
+            newDims[ dimIdx ].size = thisDims[ dimIdx ].size;
+            newDims[ dimIdx ].accessed_length = thisDims[ dimIdx ].accessed_length;
+            newDims[ dimIdx ].lower_bound = thisDims[ dimIdx ].lower_bound;
             current_offset += thisDims[ dimIdx ].lower_bound * current_elem_size;
             current_elem_size *= refDims[ dimIdx ].size;
             elemSize[ dimIdx ] = current_elem_size;
@@ -118,26 +117,25 @@ void CopyData::deductCd( CopyData const &ref, CopyData *out ) const {
       }
 
       for ( unsigned int idx = this->getNumDimensions(); idx < ref.getNumDimensions(); idx += 1 ) {
-         //memory::Address toff = ((off - current_offset) % elemSize[idx]) % elemSize[ idx-1 ];
+         //uint64_t toff = ((off - current_offset) % elemSize[idx]) % elemSize[ idx-1 ];
          //std::cerr << " offset: " << current_offset << " off: " << off << " elemSize(" << idx << "): " << elemSize[idx] << " elemSize(" << idx-1 << ") " << elemSize[idx-1]<< std::endl;
-         memory::Address lower_bound = (off % elemSize[idx]) / elemSize[ idx-1 ];
-         outDims[ idx ].size = refDims[ idx ].size;
-         outDims[ idx ].lower_bound = lower_bound;
-         outDims[ idx ].accessed_length = 1;
+         size_t lower_bound = (off % elemSize[idx]) / elemSize[ idx-1 ];
+         newDims[ idx ].size = refDims[ idx ].size;
+         newDims[ idx ].lower_bound = lower_bound;
+         newDims[ idx ].accessed_length = 1;
          //std::cerr << idx << " this dim lower bound: " << lower_bound << " size: " << refDims[ idx ].size << " off: "<< current_offset << std::endl;
       }
    } else {
       if ( this->getNumDimensions() == 1 ) {
-         memory::Address off = (memory::Address)this->getBaseAddress() - (memory::Address)ref.getBaseAddress();
-         nanos_region_dimension_internal_t *outDims = out->getDimensions();
+         ptrdiff_t off = this->getBaseAddress() - ref.getBaseAddress();
          nanos_region_dimension_internal_t const *refDims = ref.getDimensions();
          nanos_region_dimension_internal_t const *thisDims = this->getDimensions();
-         outDims[0].size = refDims[0].size;
-         outDims[0].lower_bound = off;
-         outDims[0].accessed_length = thisDims[0].accessed_length;
+         newDims[0].size = refDims[0].size;
+         newDims[0].lower_bound = off;
+         newDims[0].accessed_length = thisDims[0].accessed_length;
       } else {
          message("Warning: deductCd not properly implemented when there are the same number of dimensions and more than 1 dimension.");
-         ::memcpy(out->getDimensions(), this->getDimensions(), sizeof(nanos_region_dimension_internal_t) * this->getNumDimensions());
+         ::memcpy(newDims, this->getDimensions(), sizeof(nanos_region_dimension_internal_t) * this->getNumDimensions());
       }
    }
 }

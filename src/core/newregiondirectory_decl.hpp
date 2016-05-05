@@ -136,7 +136,7 @@ namespace nanos {
             ~HashBucket();
          };
 
-         MemoryMap<memory::Address>          _keys;
+         MemoryMap<memory::Address> _keys;
          size_t                     _keysSeed;
          Lock                       _keysLock;
          std::vector< HashBucket >  _objects;
@@ -153,7 +153,7 @@ namespace nanos {
 
          GlobalRegionDictionary *getRegionDictionaryRegisterIfNeeded( CopyData const &cd, WD const *wd );
          GlobalRegionDictionary *getRegionDictionary( CopyData const &cd );
-         GlobalRegionDictionary *getRegionDictionary( memory::Address addr );
+         GlobalRegionDictionary *getRegionDictionary( memory::Address addr, bool canFail );
          static void addSubRegion( GlobalRegionDictionary &dict, std::list< std::pair< reg_t, reg_t > > &partsList, reg_t regionToInsert );
          memory::Address _getKey( memory::Address addr, std::size_t len, WD const *wd );
          memory::Address _getKey( memory::Address addr ) const;
@@ -167,6 +167,8 @@ namespace nanos {
          RegionDirectoryKey getRegionDirectoryKey( memory::Address addr );
          RegionDirectoryKey getRegionDirectoryKeyRegisterIfNeeded( CopyData const &cd, WD const *wd );
          void synchronize( WD &wd );
+         void synchronize( WD &wd, memory::Address addr );
+         void synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data );
 
          /*! \brief NewDirectory default constructor
           */
@@ -210,7 +212,7 @@ namespace nanos {
          reg_t getLocalRegionId( void *hostObject, reg_t hostRegionId );
 
          void registerObject(nanos_copy_data_internal_t *obj);
-         void unregisterObject(void *baseAddr);
+         void unregisterObject( memory::Address baseAddr );
    };
 
 } // namespace nanos

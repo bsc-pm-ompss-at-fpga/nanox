@@ -33,7 +33,7 @@ namespace nanos {
       public:
          typedef memory::Address TargetType;
       private:
-         TargetType              _address; /**< Pointer to the dependency address */
+         TargetType _address; /**< Pointer to the dependency address */
          TargetType _endAddress;
          TrackableObject* _trackable; /** Trackable which represents this region */
          short _dimensionCount;

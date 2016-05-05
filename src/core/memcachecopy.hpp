@@ -39,12 +39,14 @@ inline MemCacheCopy::MemCacheCopy( WD const &wd, unsigned int index/*, MemContro
    sys.getHostMemory().getRegionId( wd.getCopies()[ index ], _reg, wd, index );
 
    // PreInit _reg
+/*
    _reg.id = _reg.key->obtainRegionId( wd.getCopies()[index], wd, index );
 
    NewNewDirectoryEntryData *entry = ( NewNewDirectoryEntryData * ) _reg.key->getRegionData( _reg.id );
    if ( entry == NULL ) {
       _reg.key->setRegionData( _reg.id, NEW NewNewDirectoryEntryData() );
    }
+*/
 }
 
 

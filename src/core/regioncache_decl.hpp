@@ -227,8 +227,8 @@ namespace nanos {
          unsigned int getVersion( global_reg_t const &hostMem, WD const &wd, unsigned int copyIdx );
          //void releaseRegion( global_reg_t const &hostMem, WD const &wd, unsigned int copyIdx, enum CachePolicy policy );
 
-         void releaseRegions( std::vector<MemCacheCopy>& memCopies, WD const &wd );
-         bool prepareRegions( std::vector<MemCacheCopy>& memCopies, WD &wd );
+         void releaseRegions( MemCacheCopy* memCopies, size_t numCopies, WD const &wd );
+         bool prepareRegions( MemCacheCopy* memCopies, size_t numCopies, WD &wd );
 
          void setRegionVersion( global_reg_t const &hostMem, AllocatedChunk *chunk, unsigned int version, WD const &wd, unsigned int copyIdx );
 
@@ -236,7 +236,7 @@ namespace nanos {
          void increaseSoftInvalidationCount(unsigned int v);
          unsigned int getHardInvalidationCount() const;
          void increaseHardInvalidationCount(unsigned int v);
-         bool canAllocateMemory( const std::vector<MemCacheCopy>& memCopies, bool considerInvalidations, WD const &wd );
+         bool canAllocateMemory( MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd );
          bool canInvalidateToFit( const std::vector<std::size_t>& sizes, unsigned int numChunks ) const;
          std::size_t getAllocatableSize( global_reg_t const &reg ) const;
          void getAllocatableRegion( global_reg_t const &reg, global_reg_t &allocRegion ) const;

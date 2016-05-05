@@ -28,10 +28,10 @@ namespace nanos {
 
 inline std::ostream& operator<<( std::ostream& os, const MemController& mcontrol )
 {
-   const WorkDescriptor& wd = mcontrol.getWorkDescriptor();
-   os << "Number of copies " << wd.getNumCopies() << std::endl;
-   for( unsigned index = 0; index < wd.getNumCopies(); index++ ) {
-      const CopyData& copy = wd.getCopies()[index];
+   const WorkDescriptor* wd = mcontrol.getWorkDescriptor();
+   os << "Number of copies " << wd->getNumCopies() << std::endl;
+   for( unsigned index = 0; index < wd->getNumCopies(); index++ ) {
+      const CopyData& copy = wd->getCopies()[index];
       const MemCacheCopy& mCacheCopy = mcontrol._memCacheCopies[index];
 
       NewNewDirectoryEntryData *entry = NewNewRegionDirectory::getDirectoryEntry(

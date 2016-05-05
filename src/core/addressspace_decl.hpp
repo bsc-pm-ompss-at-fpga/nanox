@@ -105,6 +105,8 @@ class HostAddressSpace {
    void failToLock( MemSpace< SeparateAddressSpace > &from, global_reg_t const &reg, unsigned int version );
 
    void synchronize( WD &wd );
+   void synchronize( WD &wd, void *addr );
+   void synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data );
    memory_space_id_t getMemorySpaceId() const;
    reg_t getLocalRegionId( void *hostObject, reg_t hostRegionId );
    NewNewRegionDirectory::RegionDirectoryKey getRegionDirectoryKey( memory::Address addr );
@@ -131,11 +133,11 @@ class SeparateAddressSpace {
    void failToLock( MemSpace< HostAddressSpace > &from, global_reg_t const &reg, unsigned int version );
    void copyFromHost( TransferList &list, WD const *wd );
 
-   void releaseRegions( std::vector<MemCacheCopy>& memCopies, WD const &wd );
+   void releaseRegions( MemCacheCopy* memCopies, size_t numCopies, WD const &wd );
    //void releaseRegion( global_reg_t const &reg, WD const &wd, unsigned int copyIdx, enum RegionCache::CachePolicy policy );
    memory::Address getDeviceAddress( global_reg_t const &reg, memory::Address baseAddress, AllocatedChunk *chunk ) const;
    
-   bool prepareRegions( std::vector<MemCacheCopy>& memCopies, WD &wd );
+   bool prepareRegions( MemCacheCopy* memCopies, size_t numCopies, WD &wd );
    void setRegionVersion( global_reg_t const &reg, AllocatedChunk *chunk, unsigned int version, WD const &wd, unsigned int copyIdx );
    unsigned int getCurrentVersion( global_reg_t const &reg, WD const &wd, unsigned int copyIdx );
 
@@ -156,7 +158,7 @@ class SeparateAddressSpace {
 
    unsigned int getSoftInvalidationCount() const;
    unsigned int getHardInvalidationCount() const;
-   bool canAllocateMemory( const std::vector<MemCacheCopy>& memCopies, bool considerInvalidations, WD const &wd );
+   bool canAllocateMemory(  MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd );
    void registerOwnedMemory(global_reg_t reg);
    Device const &getDevice() const;
 };

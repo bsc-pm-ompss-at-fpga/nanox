@@ -24,7 +24,7 @@
 
 namespace nanos {
 
-inline CopyData::CopyData ( memory::Address addr, nanos_sharing_t nxSharing, bool input, bool output, std::size_t numDimensions, nanos_region_dimension_internal_t *dims, ptrdiff_t off, memory::Address hostBaseAddress, memory_space_id_t hostRegionId )
+inline CopyData::CopyData ( memory::Address addr, nanos_sharing_t nxSharing, bool input, bool output, std::size_t numDimensions, nanos_region_dimension_internal_t const *dims, ptrdiff_t off, memory::Address hostBaseAddress, reg_t hostRegionId )
 {
    address = (void *) addr;
    sharing = nxSharing;
@@ -33,9 +33,10 @@ inline CopyData::CopyData ( memory::Address addr, nanos_sharing_t nxSharing, boo
    dimension_count = numDimensions;
    dimensions = dims;
    offset = off;
-   host_base_address = hostBaseAddress;
+   host_base_address = hostBaseAddress.value();
    host_region_id = hostRegionId;
    remote_host = false;
+   deducted_cd = NULL;
 }
 
 inline CopyData::CopyData ( const CopyData &cd )
@@ -50,6 +51,7 @@ inline CopyData::CopyData ( const CopyData &cd )
    host_base_address = cd.host_base_address;
    host_region_id = cd.host_region_id;
    remote_host = cd.remote_host;
+   deducted_cd = cd.deducted_cd;
 }
 
 inline const CopyData & CopyData::operator= ( const CopyData &cd )
@@ -65,6 +67,7 @@ inline const CopyData & CopyData::operator= ( const CopyData &cd )
    host_base_address = cd.host_base_address;
    host_region_id = cd.host_region_id;
    remote_host = cd.remote_host;
+   deducted_cd = cd.deducted_cd;
    return *this;
 }
 
@@ -141,7 +144,7 @@ inline void CopyData::setNumDimensions(std::size_t ndims) {
    dimension_count = ndims;
 }
 
-inline nanos_region_dimension_internal_t *CopyData::getDimensions() const
+inline nanos_region_dimension_internal_t const *CopyData::getDimensions() const
 {
    return dimensions;
 }
@@ -153,7 +156,7 @@ inline void CopyData::setDimensions(nanos_region_dimension_internal_t *dims)
 
 inline memory::Address CopyData::getAddress() const
 {
-   return ( (memory::Address) address );
+   return address;
 }
 
 inline ptrdiff_t CopyData::getOffset() const
@@ -168,7 +171,7 @@ inline std::size_t CopyData::getFitSize() const
 
 inline memory::Address CopyData::getFitAddress() const
 {
-   return ( (memory::Address) getBaseAddress() ) + getFitOffsetRecursive( dimension_count - 1 );
+   return getBaseAddress() + getFitOffsetRecursive( dimension_count - 1 );
 }
 
 inline memory::Address CopyData::getHostBaseAddress() const {
@@ -176,14 +179,14 @@ inline memory::Address CopyData::getHostBaseAddress() const {
 }
 
 inline void CopyData::setHostBaseAddress( memory::Address addr ) {
-   host_base_address = addr;
+   host_base_address = addr.value();
 }
 
-inline memory_space_id_t CopyData::getHostRegionId() const {
+inline reg_t CopyData::getHostRegionId() const {
    return host_region_id;
 }
 
-inline void CopyData::setHostRegionId( memory_space_id_t id ) {
+inline void CopyData::setHostRegionId( reg_t id ) {
    host_region_id = id;
 }
 
@@ -193,6 +196,14 @@ inline bool CopyData::isRemoteHost() const {
 
 inline void CopyData::setRemoteHost( bool value ) {
    remote_host = value;
+}
+
+inline void CopyData::setDeductedCD( CopyData *cd ) {
+   deducted_cd = (void *) cd;
+}
+
+inline CopyData *CopyData::getDeductedCD() {
+   return (CopyData *) deducted_cd;
 }
 
 } // namespace nanos

@@ -9,15 +9,15 @@ namespace nanos {
 
 class SMPTransfer {
    DeviceOps   *_ops;
-   char        *_dst;
-   char        *_src;
-   std::size_t  _len;
-   std::size_t  _count;
-   std::size_t  _ld;
-   bool         _in;
+   memory::Address _dst;
+   memory::Address _src;
+   size_t          _len;
+   size_t          _count;
+   size_t          _ld;
+   bool            _in;
    public:
    SMPTransfer();
-   SMPTransfer( DeviceOps *ops, char *dst, char *src, std::size_t len, std::size_t count, std::size_t ld, bool in );
+   SMPTransfer( DeviceOps *ops, memory::Address dst, memory::Address src, size_t len, size_t count, size_t ld, bool in );
    SMPTransfer( SMPTransfer const &s );
    SMPTransfer &operator=( SMPTransfer const &s );
    ~SMPTransfer();
@@ -29,7 +29,7 @@ class SMPTransferQueue {
    std::list< SMPTransfer > _transfers;
    public:
    SMPTransferQueue();
-   void addTransfer( DeviceOps *ops, char *dst, char *src, std::size_t len, std::size_t count, std::size_t ld, bool in );
+   void addTransfer( DeviceOps *ops, memory::Address dst, memory::Address src, size_t len, size_t count, size_t ld, bool in );
    void tryExecuteOne();
 };
 

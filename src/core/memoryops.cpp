@@ -96,6 +96,7 @@ void BaseOps::print( std::ostream &out ) const {
    }
 }
 
+#if 0
 bool BaseOps::isDataReady( WD const &wd, bool inval ) {
    if ( _dataReady ) return true;
 
@@ -149,6 +150,53 @@ bool BaseOps::isDataReady( WD const &wd, bool inval ) {
    _dataReady = allReady;
    return _dataReady;
 }
+#endif
+
+bool BaseOps::isDataReady( WD const &wd, bool inval ) {
+   if ( !_dataReady ) {
+      bool allReady = true;
+
+      std::set< OwnOp >::iterator it = _ownDeviceOps.begin();
+      while ( it != _ownDeviceOps.end() && allReady ) {
+         if ( it->_ops->allCompleted() ) {
+            it++;
+         } else {
+            allReady = false;
+         }
+      }
+      // do it this way because there may be dependencies between operations,
+      // by clearing all when all are completed any dependence will be satisfied.
+      if ( allReady ) {
+         //if (!inval) {
+         //   *(myThread->_file) << "######################## COMPLETED OPS FOR WD " << wd.getId() << " ownOps is "<< _ownDeviceOps.size() << std::endl;
+         //}
+         for ( it = _ownDeviceOps.begin(); it != _ownDeviceOps.end(); it++ ) {
+            it->_ops->completeCacheOp( /* debug: */ &wd );
+            if ( _delayedCommit ) { 
+               it->commitMetadata( _pe );
+            }
+         }
+         _ownDeviceOps.clear();
+      }
+      if ( allReady ) {
+         std::set< DeviceOps * >::iterator otherIt = _otherDeviceOps.begin();
+         while ( otherIt != _otherDeviceOps.end() && allReady ) {
+            if ( (*otherIt)->allCacheOpsCompleted() ) {
+               std::set< DeviceOps * >::iterator toBeRemovedIt = otherIt;
+               otherIt++;
+               _otherDeviceOps.erase( toBeRemovedIt );
+            } else {
+               allReady = false;
+            }
+         }
+      }
+      if ( allReady ) {
+         releaseLockedSourceChunks( wd );
+      }
+      _dataReady = allReady;
+   }
+   return _dataReady;
+}
 
 std::set< DeviceOps * > &BaseOps::getOtherOps() {
    return _otherDeviceOps;
@@ -165,8 +213,8 @@ void BaseOps::insertOwnOp( DeviceOps *ops, global_reg_t reg, unsigned int versio
    // hay una diferencia: en algunos casos interesa hacerlo al principio.
    // Candidato a politica de commit: commitOnDeclare, commitOnIssue, noCommit...
    if ( !_delayedCommit ) {
-      //op.commitMetadata( _pe );
-      op._reg.setLocationAndVersion( _pe, op._location, op._version );
+      op.commitMetadata( _pe );
+      //op._reg.setLocationAndVersion( _pe, op._location, op._version );
    }
 }
 

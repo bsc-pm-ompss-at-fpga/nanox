@@ -31,7 +31,7 @@ namespace nanos {
 class MemoryChunk {
    private:
       memory::Address _addr;
-      std::size_t _len;
+      size_t _len;
    public:
       typedef enum {
          NO_OVERLAP,
@@ -74,7 +74,7 @@ class MemoryChunk {
       
       static char const * strOverlap[];
 
-      MemoryChunk( memory::Address addr, std::size_t len ) : _addr( addr ), _len( len ) { }
+      MemoryChunk( memory::Address addr, size_t len ) : _addr( addr ), _len( len ) { }
       MemoryChunk( MemoryChunk const &mc ) : _addr( mc._addr ), _len( mc._len ) { }
       MemoryChunk( ) : _addr( nullptr ), _len( 0 ) { }
 
@@ -82,7 +82,7 @@ class MemoryChunk {
       bool operator<( MemoryChunk const &chunk ) const;
 
       memory::Address getAddress() const;
-      std::size_t getLength() const;
+      size_t getLength() const;
       OverlapType checkOverlap( MemoryChunk const &target ) const;
       bool equal( MemoryChunk const &target ) const;
       bool contains( MemoryChunk const &target ) const;
@@ -125,16 +125,16 @@ class MemoryMap : public std::map< MemoryChunk, _Type * > {
       void insertWithOverlapButNotGenerateIntersects( const MemoryChunk &key, iterator &hint, MemChunkList &ptrList );
       void getWithOverlapNoExactKey( const MemoryChunk &key, const_iterator &hint, ConstMemChunkList &ptrList ) const;
    public:
-      void getOrAddChunk( memory::Address addr, std::size_t len, MemChunkList &resultEntries );
-      void getOrAddChunkDoNotFragment( memory::Address addr, std::size_t len, MemChunkList &resultEntries );
-      void getChunk( memory::Address addr, std::size_t len, ConstMemChunkList &resultEntries ) const;
+      void getOrAddChunk( memory::Address addr, size_t len, MemChunkList &resultEntries );
+      void getOrAddChunkDoNotFragment( memory::Address addr, size_t len, MemChunkList &resultEntries );
+      void getChunk( memory::Address addr, size_t len, ConstMemChunkList &resultEntries ) const;
       void print(std::ostream &o) const;
       bool canPack() const;
-      void removeChunks( memory::Address addr, std::size_t len );
-      _Type **getExactInsertIfNotFound( memory::Address addr, std::size_t len );
+      void removeChunks( memory::Address addr, size_t len );
+      _Type **getExactInsertIfNotFound( memory::Address addr, size_t len );
       _Type *getExactByAddress( memory::Address addr ) const;
       void eraseByAddress( memory::Address addr );
-      _Type **getExactOrFullyOverlappingInsertIfNotFound( memory::Address addr, std::size_t len, bool &exact );
+      _Type **getExactOrFullyOverlappingInsertIfNotFound( memory::Address addr, size_t len, bool &exact );
 };
 
 #if 1
@@ -153,10 +153,10 @@ class MemoryMap<memory::Address> : public std::map< MemoryChunk, memory::Address
    private:
       void insertWithOverlapButNotGenerateIntersects( const MemoryChunk &key, iterator &hint, memory::Address data );
    public:
-      void addChunk( memory::Address addr, std::size_t len, memory::Address value );
+      void addChunk( memory::Address addr, size_t len, memory::Address value );
       //void print() const;
-      memory::Address getExactOrFullyOverlappingInsertIfNotFound( memory::Address addr, std::size_t len, bool &exact, memory::Address valIfNotFound, memory::Address valIfNotValid, memory::Address &conflictAddr, std::size_t &conflictSize );
-      memory::Address getExactInsertIfNotFound( memory::Address addr, std::size_t len, memory::Address valIfNotFound, memory::Address valIfNotValid );
+      memory::Address getExactOrFullyOverlappingInsertIfNotFound( memory::Address addr, size_t len, bool &exact, memory::Address valIfNotFound, memory::Address valIfNotValid, memory::Address &conflictAddr, size_t &conflictSize );
+      memory::Address getExactInsertIfNotFound( memory::Address addr, size_t len, memory::Address valIfNotFound, memory::Address valIfNotValid );
       memory::Address getExactByAddress( memory::Address addr, memory::Address valIfNotFound ) const;
       void eraseByAddress( memory::Address addr );
 };

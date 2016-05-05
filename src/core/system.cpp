@@ -51,11 +51,6 @@
 #include "spuprocessor.hpp"
 #endif
 
-
-#ifdef FPGA_DEV
-#include "fpgaprocessor.hpp"
-#endif
-
 #ifdef CLUSTER_DEV
 #include "clusternode_decl.hpp"
 #include "clusterthread_decl.hpp"
@@ -161,6 +156,7 @@ System::System () :
       , _cgAlloc( false )
       , _inIdle( false )
 	  , _lazyPrivatizationEnabled (false)
+	  , _watchAddr(nullptr)
 {
    verbose( "NANOS++ initializing... start" );
 
@@ -340,13 +336,6 @@ void System::config ()
    const OS::InitList & externalInits = OS::getInitializationFunctions();
    std::for_each(externalInits.begin(),externalInits.end(), ExecInit());
    
-#if 0
-   if ( !_pmInterface ) {
-      // bare bone run
-      _pmInterface = NEW PMInterface();
-   }
-#endif
-
    //! Declare all configuration core's flags
    verbose( "Preparing library configuration" );
 
@@ -442,9 +431,11 @@ void System::config ()
    cfg.registerArgOption ( "conduit", "cluster-network" );
    cfg.registerEnvOption ( "conduit", "NX_CLUSTER_NETWORK" );
 
+#if 0 /* _defDeviceName and _defDevice seem unused */
    cfg.registerConfigOption ( "device-priority", NEW Config::StringVar ( _defDeviceName ), "Defines the default device to use");
    cfg.registerArgOption ( "device-priority", "--use-device");
    cfg.registerEnvOption ( "device-priority", "NX_USE_DEVICE");
+#endif
    cfg.registerConfigOption( "simulator", NEW Config::FlagOption ( _simulator ),
                              "Nanos++ will be executed by a simulator (disabled as default)" );
    cfg.registerArgOption( "simulator", "simulator" );
@@ -693,6 +684,7 @@ void System::start ()
 
    }
 
+#if 0 /* _defDeviceName and _defDevice seem unused */
    if ( !_defDeviceName.empty() ) 
    {
        PEList::iterator it;
@@ -704,6 +696,7 @@ void System::start ()
                  _defDevice = pe->getDeviceType();
        }
    }
+#endif
 
 #ifdef NANOS_RESILIENCY_ENABLED
    error::SignalTranslator<error::OperationFailure> signalToExceptionTranslator;
@@ -1145,6 +1138,9 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
       wd->setFinal ( dyn_props->flags.is_final );
       wd->setRecoverable ( dyn_props->flags.is_recover);
       if ( dyn_props->flags.is_implicit ) wd->setImplicit();
+      wd->setCallback(dyn_props->callback);
+      wd->setArguments(dyn_props->arguments);
+
    }
 
    if ( dyn_props && dyn_props->tie_to ) wd->tieTo( *( BaseThread * )dyn_props->tie_to );
@@ -1492,7 +1488,9 @@ int System::getNumWorkers( DeviceData *arch )
    int n = 0;
 
    for ( ThreadList::iterator it = _workers.begin(); it != _workers.end(); it++ ) {
-      if ( arch->isCompatible( *(it->second->runningOn()->getDeviceType() ) ), it->second->runningOn() ) n++;
+      if ( it->second->runningOn()->supports( *arch->getDevice() ) ) {
+         n++;
+      }
    }
    return n;
 }

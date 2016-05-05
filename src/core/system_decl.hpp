@@ -126,9 +126,10 @@ namespace nanos {
          std::string          _defInstr;              //!< \brief Name of default instrumentation
          std::string          _defDepsManager;        //!< \brief Name of default dependences manager
          std::string          _defArch;               //!< \brief Name of default architercture
+#if 0 /* _defDeviceName and _defDevice seem unused */
          std::string          _defDeviceName;         //!< \brief Name of default device
-
          const Device         *_defDevice;
+#endif
 
          /*! factories for scheduling, pes and barriers objects */
          peFactory            _hostFactory;
@@ -191,7 +192,9 @@ namespace nanos {
          unsigned int                                  _separateMemorySpacesCount;
          std::vector< SeparateMemoryAddressSpace * >   _separateAddressSpaces;
          HostMemoryAddressSpace                        _hostMemory;
+#ifdef NANOS_RESILIENCY_ENABLED
          SeparateMemoryAddressSpace                   *_backupMemory;
+#endif
          RegionCache::CachePolicy                      _regionCachePolicy;
          std::string                                   _regionCachePolicyStr;
          std::size_t                                   _regionCacheSlabSize;
@@ -274,7 +277,7 @@ namespace nanos {
          bool _cgAlloc;
          bool _inIdle;
          bool _lazyPrivatizationEnabled;
-         void *_watchAddr;
+         memory::Address _watchAddr;
 
       private:
          PE * createPE ( std::string pe_type, int pid, int uid );
@@ -676,7 +679,9 @@ namespace nanos {
 
          HostMemoryAddressSpace &getHostMemory() { return _hostMemory; }
 
+#ifdef NANOS_RESILIENCY_ENABLED
          SeparateMemoryAddressSpace &getBackupMemory() { return *_backupMemory; }
+#endif
           
          SeparateMemoryAddressSpace &getSeparateMemory( memory_space_id_t id ) { 
             //std::cerr << "Requested object " << _separateAddressSpaces[ id ] <<std::endl;

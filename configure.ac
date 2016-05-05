@@ -9,7 +9,7 @@ AC_CANONICAL_SYSTEM
 AC_CANONICAL_TARGET
 
 # Automake initialization
-AM_INIT_AUTOMAKE([-Wall dist-bzip2 -Wno-portability subdir-objects])
+AM_INIT_AUTOMAKE([-Wall dist-bzip2 -Wno-portability subdir-objects foreign])
 AC_CONFIG_MACRO_DIR([m4])
 
 # Enable silent rules if available
@@ -161,6 +161,9 @@ AX_CHECK_DLB
 # Check for Zynq Xilinx DMA driver library (fpga)
 AX_CHECK_XDMA
 
+# Enable Task callback feature
+AX_ENABLE_TASK_CALLBACK
+
 # Check resiliency support
 AX_CHECK_RESILIENCY
 
@@ -286,34 +289,35 @@ AC_SUBST([PLUGINS])
 # Output files
 AC_CONFIG_HEADERS([config.h])
 
-AC_CONFIG_FILES([Makefile
+AC_CONFIG_FILES([
+                 Makefile
+                 doc/Makefile
+                 doc/doxy-nanox
+                 scripts/Makefile
                  src/Makefile
                  src/core/Makefile
                  src/support/Makefile
-                 src/plugins/Makefile
                  src/apis/Makefile
                  src/pms/Makefile
+                 src/plugins/Makefile
                  src/arch/Makefile
                  src/arch/unix-os/Makefile
                  src/arch/smp/Makefile
+                 src/arch/cluster/Makefile
                  src/arch/fpga/Makefile
                  src/arch/spu/Makefile
                  src/arch/gpu/Makefile
-                 src/arch/cluster/Makefile
                  src/arch/opencl/Makefile
                  src/arch/mpi/Makefile
                  src/utils/Makefile
-                 scripts/Makefile
                  tests/Makefile
                  tests/gens/Makefile
-                 doc/Makefile
-                 doc/doxy-nanox
                  tests/gens/api-generator
                  tests/gens/api-omp-generator
                  tests/gens/core-generator
                  tests/gens/gpu-generator
-                 tests/gens/mcc-ompss-generator
                  tests/gens/mcc-openmp-generator
+                 tests/gens/mcc-ompss-generator
                  tests/gens/opencl-generator
                  tests/gens/resiliency-generator
        ])

@@ -144,25 +144,21 @@ void Network::sendExitMsg( unsigned int nodeNum )
    }
 }
 
-void Network::sendWorkMsg( unsigned int dest, void ( *work ) ( void * ), unsigned int dataSize, unsigned int wdId, unsigned int numPe, std::size_t argSize, char * arg, void ( *xlate ) ( void *, void * ), int arch, void *remoteWd )
+void Network::sendWorkMsg( unsigned int dest, WorkDescriptor const &wd )
 {
    //  ensure ( _api != NULL, "No network api loaded." );
    if ( _api != NULL )
    {
-      if (work == NULL)
-      {
-         std::cerr << "ERROR: no work to send (work=NULL)" << std::endl;
-      }
       NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); )
-      NANOS_INSTRUMENT ( nanos_event_id_t id = ( ((nanos_event_id_t) wdId) ) ; )
+      NANOS_INSTRUMENT ( nanos_event_id_t id = ( ((nanos_event_id_t) wd.getId()) ) ; )
       NANOS_INSTRUMENT ( instr->raiseOpenPtPEvent( NANOS_WD_REMOTE, id, 0, 0, dest ); )
 
-      std::size_t expectedData = _sentWdData.getSentData( wdId );
-      _api->sendWorkMsg( dest, work, dataSize, wdId, numPe, argSize, arg, xlate, arch, remoteWd, expectedData );
+      std::size_t expectedData = _sentWdData.getSentData( wd.getId() );
+      _api->sendWorkMsg( dest, wd, expectedData );
    }
 }
 
-void Network::sendWorkDoneMsg( unsigned int nodeNum, void *remoteWdAddr )
+void Network::sendWorkDoneMsg( unsigned int nodeNum, void const *remoteWdAddr )
 {
    //  ensure ( _api != NULL, "No network api loaded." );
    if ( _api != NULL )
@@ -941,7 +937,7 @@ void Network::notifyRegionMetaData( CopyData *cd, unsigned int seq ) {
       }
       //std::cerr << " processing " << __FUNCTION__ << " " << seq << std::endl;
    }
-   sys.getHostMemory().getRegionId( *cd, reg, *((WD *)0), 0 );
+   sys.getHostMemory().getRegionId( *cd, reg, *(myThread->getCurrentWD()), 0 );
 
    reg_t master_id = cd->getHostRegionId();
 
@@ -975,11 +971,11 @@ void Network::deleteDirectoryObject( GlobalRegionDictionary const *obj ) {
    }
 }
 
-void Network::synchronizeDirectory() {
+void Network::synchronizeDirectory( memory::Address addr ) {
    if ( this->getNodeNum() == 0 ) { //this is called by the slaves by the handler of this message, avoid the recursive call
       if ( _api != NULL ) {
          for (unsigned int idx = 1; idx < getNumNodes(); idx += 1) {
-            _api->synchronizeDirectory( idx );
+            _api->synchronizeDirectory( idx, addr );
          }
       }
       this->nodeBarrier(); //slave node barrier is in notifySynchronizeDirectory
@@ -992,9 +988,9 @@ void Network::broadcastIdle() {
    }
 }
 
-void Network::notifySynchronizeDirectory( unsigned int numWDs, WorkDescriptor **wds ) {
+void Network::notifySynchronizeDirectory( unsigned int numWDs, WorkDescriptor **wds, memory::Address addr ) {
    _syncReqsLock.acquire();
-   _syncReqs.push_back( SyncWDs( numWDs, wds ) );
+   _syncReqs.push_back( SyncWDs( numWDs, wds, addr ) );
    _syncReqsLock.release();
 }
 
@@ -1008,7 +1004,11 @@ void Network::processSyncRequests() {
                _syncReqsLock.release();
 
                for ( unsigned int idx = 0; idx < s.getNumWDs(); idx += 1 ) {
-                  sys.getHostMemory().synchronize( *(s.getWDs()[idx]) );
+                  if ( s.getAddr() != nullptr ) {
+                     sys.getHostMemory().synchronize( *(s.getWDs()[idx]), s.getAddr() );
+                  } else {
+                     sys.getHostMemory().synchronize( *(s.getWDs()[idx]) );
+                  }
                }
                this->nodeBarrier(); //matches the call in synchronizeDirectory
             } else {

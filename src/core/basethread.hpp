@@ -309,6 +309,7 @@ namespace nanos {
    inline ThreadTeam* BaseThread::getNextTeam() const { return _nextTeam; }
 
    inline void BaseThread::setNextTeam( ThreadTeam *team ) { _nextTeam = team; }
-}
+
+} // namespace nanos
 
 #endif

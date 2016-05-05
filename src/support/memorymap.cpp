@@ -183,7 +183,7 @@ void MemoryMap< memory::Address >::insertWithOverlapButNotGenerateIntersects( co
    }
 }
 
-void MemoryMap< memory::Address >::addChunk( memory::Address addr, std::size_t len, memory::Address data )
+void MemoryMap< memory::Address >::addChunk( memory::Address addr, size_t len, memory::Address data )
 {
    MemoryChunk key( addr, len );
 
@@ -196,7 +196,7 @@ void MemoryMap< memory::Address >::addChunk( memory::Address addr, std::size_t l
 }
 
 
-memory::Address MemoryMap< memory::Address >::getExactInsertIfNotFound( memory::Address addr, std::size_t len, memory::Address valIfNotFound, memory::Address valIfNotValid ) {
+memory::Address MemoryMap< memory::Address >::getExactInsertIfNotFound( memory::Address addr, size_t len, memory::Address valIfNotFound, memory::Address valIfNotValid ) {
    memory::Address val(nullptr);
    MemoryChunk key( addr, len );
    iterator it = this->lower_bound( key );
@@ -246,7 +246,7 @@ memory::Address MemoryMap< memory::Address >::getExactByAddress( memory::Address
 }
 
 
-memory::Address MemoryMap< memory::Address >::getExactOrFullyOverlappingInsertIfNotFound( memory::Address addr, std::size_t len, bool &exact, memory::Address valIfNotFound, memory::Address valIfNotValid, memory::Address &conflictAddr, std::size_t &conflictSize ) {
+memory::Address MemoryMap< memory::Address >::getExactOrFullyOverlappingInsertIfNotFound( memory::Address addr, size_t len, bool &exact, memory::Address valIfNotFound, memory::Address valIfNotValid, memory::Address &conflictAddr, size_t &conflictSize ) {
    memory::Address val = valIfNotValid;
    MemoryChunk key( addr, len );
    iterator it = this->lower_bound( key );

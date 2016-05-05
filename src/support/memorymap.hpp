@@ -159,6 +159,7 @@ void MemoryMap< _Type >::insertWithOverlap( const MemoryChunk &key, typename Bas
       void insertNoOverlap()
       {
          _Type *ptr = (_Type *) NULL;
+         ensure( _key.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( _key, ptr ) );
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) );
       }
@@ -190,11 +191,13 @@ void MemoryMap< _Type >::insertWithOverlap( const MemoryChunk &key, typename Bas
 
          MemoryChunk::intersect( leftChunk, rightChunk, rightLeftOver );
 
+         ensure( leftChunk.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( leftChunk, ptr ) ); //add the left chunk, 
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) );
          _hint++; //advance the iterator (it should reach "rightChunk"!)
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) );
 
+         ensure( rightLeftOver.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( rightLeftOver, NEW _Type( *_hint->second ) ) );
       }
 
@@ -225,6 +228,7 @@ void MemoryMap< _Type >::insertWithOverlap( const MemoryChunk &key, typename Bas
          MemoryChunk::intersect( leftChunk, rightChunk, rightLeftOver );
 
          //add the right chunk 
+         ensure( rightChunk.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( rightChunk, NEW _Type( *_hint->second ) ) );
          //result: right chunk
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second) ) );
@@ -260,6 +264,7 @@ void MemoryMap< _Type >::insertWithOverlap( const MemoryChunk &key, typename Bas
 
          MemoryChunk::partition( leftChunk, rightChunk, leftLeftOver );
 
+         ensure( leftChunk.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( leftChunk, ptr ) ); //add the left chunk, 
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) ); //return: leftChunk
          _ptrList.push_back( MemChunkPair ( &rightChunk, rightChunkDataPtr ) ); //return: rightChunk
@@ -292,8 +297,10 @@ void MemoryMap< _Type >::insertWithOverlap( const MemoryChunk &key, typename Bas
 
          MemoryChunk::partition( leftChunk, rightChunk, leftLeftOver );
 
+         ensure( rightChunk.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( rightChunk, NEW _Type( *_hint->second ) ) ); //add the right chunk, 
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) ); //return: rightChunk
+         ensure( leftLeftOver.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( leftLeftOver, NEW _Type( *_hint->second ) ) ); //add the leftover
       }
 
@@ -348,6 +355,7 @@ void MemoryMap< _Type >::insertWithOverlap( const MemoryChunk &key, typename Bas
           */
          MemoryChunk::partitionBeginAgtB( leftChunk, rightChunk );
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) ); //return: leftChunk
+         ensure( rightChunk.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( rightChunk, NEW _Type( *_hint->second ) ) ); //add the rightChunk
       }
 
@@ -377,6 +385,7 @@ void MemoryMap< _Type >::insertWithOverlap( const MemoryChunk &key, typename Bas
           *         ^------  added to result ----+
           */
          MemoryChunk::partitionEnd( leftChunk, rightChunk );
+         ensure( leftChunk.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( leftChunk, ptr ) ); //add the leftChunk
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) ); //return: leftChunk
          _ptrList.push_back( MemChunkPair ( rightChunkPtr, rightChunkDataPtr ) ); //return: rightChunk
@@ -405,6 +414,7 @@ void MemoryMap< _Type >::insertWithOverlap( const MemoryChunk &key, typename Bas
           *                                added to result
           */
          MemoryChunk::partitionEnd( leftChunk, rightChunk );
+         ensure( rightChunk.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( rightChunk, NEW _Type( *_hint->second ) ) ); //add the rightChunk
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) ); //return: rightChunk
       }
@@ -418,57 +428,65 @@ void MemoryMap< _Type >::insertWithOverlap( const MemoryChunk &key, typename Bas
       if ( hint != this->begin() )
          hint--;
       do {
-         switch ( hint->first.checkOverlap( iterKey ) )
-         {
-            case MemoryChunk::NO_OVERLAP:
-               if ( iterKey.getAddress() < hint->first.getAddress() )
-               {
-                  local.insertNoOverlap();
+         if ( hint->first.equal( iterKey ) ) {
+            lastChunk = true;
+            ptrList.push_back( MemChunkPair ( &(hint->first), &(hint->second) ) );
+         } else {
+            switch ( hint->first.checkOverlap( iterKey ) )
+            {
+               case MemoryChunk::NO_OVERLAP:
+                  if ( iterKey.getAddress() < hint->first.getAddress() )
+                  {
+                     local.insertNoOverlap();
+                     lastChunk = true;
+                  }
+                  break;
+               case MemoryChunk::BEGIN_OVERLAP:
+                  local.insertBeginOverlap();
+                  lastChunk = true; //this is a final situation since the to-be-inserted chunk ends.
+                  break;
+               case MemoryChunk::END_OVERLAP:
+                  local.insertEndOverlap();
+                  break;
+               case MemoryChunk::TOTAL_OVERLAP:
+                  local.insertTotalOverlap();
+                  break;
+               case MemoryChunk::SUBCHUNK_OVERLAP:
+                  local.insertSubchunkOverlap();
                   lastChunk = true;
-               }
-               break;
-            case MemoryChunk::BEGIN_OVERLAP:
-               local.insertBeginOverlap();
-               lastChunk = true; //this is a final situation since the to-be-inserted chunk ends.
-               break;
-            case MemoryChunk::END_OVERLAP:
-               local.insertEndOverlap();
-               break;
-            case MemoryChunk::TOTAL_OVERLAP:
-               local.insertTotalOverlap();
-               break;
-            case MemoryChunk::SUBCHUNK_OVERLAP:
-               local.insertSubchunkOverlap();
-               lastChunk = true;
-               break;
-            case MemoryChunk::TOTAL_BEGIN_OVERLAP:
-               local.insertTotalBeginOverlap();
-               break;
-            case MemoryChunk::SUBCHUNK_BEGIN_OVERLAP:
-               local.insertSubchunkBeginOverlap();
-               lastChunk = true;
-               break;
-            case MemoryChunk::TOTAL_END_OVERLAP:
-               local.insertTotalEndOverlap();
-               lastChunk = true;
-               break;
-            case MemoryChunk::SUBCHUNK_END_OVERLAP:
-               local.insertSubchunkEndOverlap();
-               lastChunk = true;
-               break;
+                  break;
+               case MemoryChunk::TOTAL_BEGIN_OVERLAP:
+                  local.insertTotalBeginOverlap();
+                  break;
+               case MemoryChunk::SUBCHUNK_BEGIN_OVERLAP:
+                  local.insertSubchunkBeginOverlap();
+                  lastChunk = true;
+                  break;
+               case MemoryChunk::TOTAL_END_OVERLAP:
+                  local.insertTotalEndOverlap();
+                  lastChunk = true;
+                  break;
+               case MemoryChunk::SUBCHUNK_END_OVERLAP:
+                  local.insertSubchunkEndOverlap();
+                  lastChunk = true;
+                  break;
+            }
+            hint++;
          }
-         hint++;
       } while ( hint != this->end() && !lastChunk );
       if ( hint == this->end() && !lastChunk )
       {
          // no more chunks in the map but there is still "key" to insert
+         ensure( iterKey.getLength() > 0, "Invalid lengtgh." );
          std::pair<typename BaseMap::iterator, bool> result = this->insert( typename BaseMap::value_type( iterKey, ( _Type * ) NULL ) );
          if ( result.second == false ) {
-            *myThread->_file << "ERROR inserting in MemoryMap" << std::endl;
+            *myThread->_file << "ERROR inserting in MemoryMap, key is: " << (void*) iterKey.getAddress() << " : " << iterKey.getLength() << std::endl;
+            this->print(*myThread->_file);
          }
          ptrList.push_back( MemChunkPair ( &(result.first->first), &(result.first->second) ) );
       }
    } else {
+      ensure( key.getLength() > 0, "Invalid lengtgh." );
       hint = this->insert( hint, typename BaseMap::value_type( key, ( _Type * ) NULL ) );
       ptrList.push_back( MemChunkPair ( &(hint->first), &(hint->second) ) );
    }
@@ -491,6 +509,7 @@ void MemoryMap< _Type >::insertWithOverlapButNotGenerateIntersects( const Memory
       void insertNoOverlap()
       {
          _Type *ptr = (_Type *) NULL;
+         ensure( _key.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( _key, ptr ) );
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) );
       }
@@ -522,6 +541,7 @@ void MemoryMap< _Type >::insertWithOverlapButNotGenerateIntersects( const Memory
 
          MemoryChunk::intersect( leftChunk, rightChunk, rightLeftOver );
 
+         ensure( leftChunk.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( leftChunk, ptr ) ); //add the left chunk, 
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) );
          _hint++; //advance the iterator (it should reach "rightChunk"!)
@@ -592,6 +612,7 @@ void MemoryMap< _Type >::insertWithOverlapButNotGenerateIntersects( const Memory
 
          MemoryChunk::partition( leftChunk, rightChunk, leftLeftOver );
 
+         ensure( leftChunk.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( leftChunk, ptr ) ); //add the left chunk, 
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) ); //return: leftChunk
          _ptrList.push_back( MemChunkPair ( &rightChunk, rightChunkDataPtr ) ); //return: rightChunk
@@ -709,6 +730,7 @@ void MemoryMap< _Type >::insertWithOverlapButNotGenerateIntersects( const Memory
           *         ^------  added to result ----+
           */
          MemoryChunk::partitionEnd( leftChunk, rightChunk );
+         ensure( leftChunk.getLength() > 0, "Invalid lengtgh." );
          _hint = _thisMap.insert( _hint, typename BaseMap::value_type( leftChunk, ptr ) ); //add the leftChunk
          _ptrList.push_back( MemChunkPair ( &( _hint->first ), &( _hint->second ) ) ); //return: leftChunk
          _ptrList.push_back( MemChunkPair ( rightChunkPtr, rightChunkDataPtr ) ); //return: rightChunk
@@ -750,54 +772,61 @@ void MemoryMap< _Type >::insertWithOverlapButNotGenerateIntersects( const Memory
       if ( hint != this->begin() )
          hint--;
       do {
-         switch ( hint->first.checkOverlap( iterKey ) )
-         {
-            case MemoryChunk::NO_OVERLAP:
-               if ( iterKey.getAddress() < hint->first.getAddress() )
-               {
-                  local.insertNoOverlap();
+         if ( hint->first.equal( iterKey ) ) {
+            lastChunk = true;
+            ptrList.push_back( MemChunkPair ( &(hint->first), &(hint->second) ) );
+         } else {
+            switch ( hint->first.checkOverlap( iterKey ) )
+            {
+               case MemoryChunk::NO_OVERLAP:
+                  if ( iterKey.getAddress() < hint->first.getAddress() )
+                  {
+                     local.insertNoOverlap();
+                     lastChunk = true;
+                  }
+                  break;
+               case MemoryChunk::BEGIN_OVERLAP:
+                  local.insertBeginOverlap();
+                  lastChunk = true; //this is a final situation since the to-be-inserted chunk ends.
+                  break;
+               case MemoryChunk::END_OVERLAP:
+                  local.insertEndOverlap();
+                  break;
+               case MemoryChunk::TOTAL_OVERLAP:
+                  local.insertTotalOverlap();
+                  break;
+               case MemoryChunk::SUBCHUNK_OVERLAP:
+                  local.insertSubchunkOverlap();
                   lastChunk = true;
-               }
-               break;
-            case MemoryChunk::BEGIN_OVERLAP:
-               local.insertBeginOverlap();
-               lastChunk = true; //this is a final situation since the to-be-inserted chunk ends.
-               break;
-            case MemoryChunk::END_OVERLAP:
-               local.insertEndOverlap();
-               break;
-            case MemoryChunk::TOTAL_OVERLAP:
-               local.insertTotalOverlap();
-               break;
-            case MemoryChunk::SUBCHUNK_OVERLAP:
-               local.insertSubchunkOverlap();
-               lastChunk = true;
-               break;
-            case MemoryChunk::TOTAL_BEGIN_OVERLAP:
-               local.insertTotalBeginOverlap();
-               break;
-            case MemoryChunk::SUBCHUNK_BEGIN_OVERLAP:
-               local.insertSubchunkBeginOverlap();
-               lastChunk = true;
-               break;
-            case MemoryChunk::TOTAL_END_OVERLAP:
-               local.insertTotalEndOverlap();
-               lastChunk = true;
-               break;
-            case MemoryChunk::SUBCHUNK_END_OVERLAP:
-               local.insertSubchunkEndOverlap();
-               lastChunk = true;
-               break;
+                  break;
+               case MemoryChunk::TOTAL_BEGIN_OVERLAP:
+                  local.insertTotalBeginOverlap();
+                  break;
+               case MemoryChunk::SUBCHUNK_BEGIN_OVERLAP:
+                  local.insertSubchunkBeginOverlap();
+                  lastChunk = true;
+                  break;
+               case MemoryChunk::TOTAL_END_OVERLAP:
+                  local.insertTotalEndOverlap();
+                  lastChunk = true;
+                  break;
+               case MemoryChunk::SUBCHUNK_END_OVERLAP:
+                  local.insertSubchunkEndOverlap();
+                  lastChunk = true;
+                  break;
+            }
+            hint++;
          }
-         hint++;
       } while ( hint != this->end() && !lastChunk );
       if ( hint == this->end() && !lastChunk )
       {
          // no more chunks in the map but there is still "key" to insert
+         ensure( iterKey.getLength() > 0, "Invalid lengtgh." );
          hint = this->insert( hint, typename BaseMap::value_type( iterKey, ( _Type * ) NULL ) );
          ptrList.push_back( MemChunkPair ( &(hint->first), &(hint->second) ) );
       }
    } else {
+      ensure( key.getLength() > 0, "Invalid lengtgh." );
       hint = this->insert( hint, typename BaseMap::value_type( key, ( _Type * ) NULL ) );
       ptrList.push_back( MemChunkPair ( &(hint->first), &(hint->second) ) );
    }
@@ -1065,46 +1094,51 @@ void MemoryMap< _Type >::getWithOverlapNoExactKey( const MemoryChunk &key, const
       }
       do {
          //*myThread->_file << "iterKey " << iterKey.getAddress() << " " << iterKey.getLength() << ", hint " << hint->first.getAddress() << " " << hint->first.getLength() << " " << MemoryChunk::strOverlap[ hint->first.checkOverlap( iterKey ) ] << std::endl;
-         switch ( hint->first.checkOverlap( iterKey ) )
-         {
-            case MemoryChunk::NO_OVERLAP:
-               if ( iterKey.getAddress() < hint->first.getAddress() )
-               {
-                  local.getNoOverlap();
+         if ( hint->first.equal( iterKey ) ) {
+            lastChunk = true;
+            ptrList.push_back( ConstMemChunkPair ( MemoryChunk( hint->first ), hint->second ) );
+         } else {
+            switch ( hint->first.checkOverlap( iterKey ) )
+            {
+               case MemoryChunk::NO_OVERLAP:
+                  if ( iterKey.getAddress() < hint->first.getAddress() )
+                  {
+                     local.getNoOverlap();
+                     lastChunk = true;
+                  }
+                  break;
+               case MemoryChunk::BEGIN_OVERLAP:
+                  local.getBeginOverlap();
+                  lastChunk = true; //this is a final situation since the to-be-inserted chunk ends.
+                  break;
+               case MemoryChunk::END_OVERLAP:
+                  local.getEndOverlap();
+                  break;
+               case MemoryChunk::TOTAL_OVERLAP:
+                  local.getTotalOverlap();
+                  break;
+               case MemoryChunk::SUBCHUNK_OVERLAP:
+                  local.getSubchunkOverlap();
                   lastChunk = true;
-               }
-               break;
-            case MemoryChunk::BEGIN_OVERLAP:
-               local.getBeginOverlap();
-               lastChunk = true; //this is a final situation since the to-be-inserted chunk ends.
-               break;
-            case MemoryChunk::END_OVERLAP:
-               local.getEndOverlap();
-               break;
-            case MemoryChunk::TOTAL_OVERLAP:
-               local.getTotalOverlap();
-               break;
-            case MemoryChunk::SUBCHUNK_OVERLAP:
-               local.getSubchunkOverlap();
-               lastChunk = true;
-               break;
-            case MemoryChunk::TOTAL_BEGIN_OVERLAP:
-               local.getTotalBeginOverlap();
-               break;
-            case MemoryChunk::SUBCHUNK_BEGIN_OVERLAP:
-               local.getSubchunkBeginOverlap();
-               lastChunk = true;
-               break;
-            case MemoryChunk::TOTAL_END_OVERLAP:
-               local.getTotalEndOverlap();
-               lastChunk = true;
-               break;
-            case MemoryChunk::SUBCHUNK_END_OVERLAP:
-               local.getSubchunkEndOverlap();
-               lastChunk = true;
-               break;
+                  break;
+               case MemoryChunk::TOTAL_BEGIN_OVERLAP:
+                  local.getTotalBeginOverlap();
+                  break;
+               case MemoryChunk::SUBCHUNK_BEGIN_OVERLAP:
+                  local.getSubchunkBeginOverlap();
+                  lastChunk = true;
+                  break;
+               case MemoryChunk::TOTAL_END_OVERLAP:
+                  local.getTotalEndOverlap();
+                  lastChunk = true;
+                  break;
+               case MemoryChunk::SUBCHUNK_END_OVERLAP:
+                  local.getSubchunkEndOverlap();
+                  lastChunk = true;
+                  break;
+            }
+            hint++;
          }
-         hint++;
       } while ( hint != this->end() && !lastChunk );
    } else {
       ptrList.push_back( ConstMemChunkPair ( MemoryChunk(key), NULL ) );
@@ -1189,8 +1223,8 @@ void MemoryMap< _Type >::print(std::ostream &o) const
    for (; it != this->end(); it++)
    {
       o << "\tchunk: " << i++
-        << " addr=" << static_cast<uintptr_t>(it->first.getAddress())
-        << "("      << static_cast<uintptr_t>(it->first.getAddress()) << ")"
+        << " addr=" << it->first.getAddress()
+        << "("      << it->first.getAddress() << ")"
         << " len=" << it->first.getLength()
         << " ptr val is " << it->second
         << " addr of ptr val is "
@@ -1294,6 +1328,7 @@ _Type **MemoryMap< _Type >::getExactOrFullyOverlappingInsertIfNotFound( memory::
    {
       /* not exact match found, check it-- */
       if ( this->size() == 0 ) {
+         ensure( key.getLength() > 0, "Invalid lengtgh." );
          it = this->insert( it, typename BaseMap::value_type( key, ( _Type * ) NULL ) );
          ptr = &( it->second );
          exact = true;
@@ -1301,6 +1336,7 @@ _Type **MemoryMap< _Type >::getExactOrFullyOverlappingInsertIfNotFound( memory::
          it--;
          MemoryChunk::OverlapType ov = it->first.checkOverlap( key );
          if ( ov == MemoryChunk::NO_OVERLAP ) {
+            ensure( key.getLength() > 0, "Invalid lengtgh." );
             it = this->insert( it, typename BaseMap::value_type( key, ( _Type * ) NULL ) );
             ptr = &( it->second );
             exact = true;
@@ -1315,6 +1351,7 @@ _Type **MemoryMap< _Type >::getExactOrFullyOverlappingInsertIfNotFound( memory::
       /* key less than it->first, not total overlap guaranteed */
       if ( it->first.checkOverlap( key ) == MemoryChunk::NO_OVERLAP ) {
          if ( it == this->begin() ) {
+            ensure( key.getLength() > 0, "Invalid lengtgh." );
             it = this->insert( it, typename BaseMap::value_type( key, ( _Type * ) NULL ) );
             ptr = &( it->second );
             exact = true;
@@ -1322,6 +1359,7 @@ _Type **MemoryMap< _Type >::getExactOrFullyOverlappingInsertIfNotFound( memory::
             it--;
             MemoryChunk::OverlapType ov = it->first.checkOverlap( key );
             if ( ov == MemoryChunk::NO_OVERLAP ) {
+               ensure( key.getLength() > 0, "Invalid lengtgh." );
                it = this->insert( it, typename BaseMap::value_type( key, ( _Type * ) NULL ) );
                ptr = &( it->second );
                exact = true;
@@ -1368,11 +1406,13 @@ _Type **MemoryMap< _Type >::getExactInsertIfNotFound( memory::Address addr, std:
    {
       /* not exact match found, check it-- */
       if ( this->size() == 0 ) {
+         ensure( key.getLength() > 0, "Invalid lengtgh." );
          it = this->insert( it, typename BaseMap::value_type( key, ( _Type * ) NULL ) );
          ptr = &( it->second );
       } else {
          it--;
          if ( it->first.checkOverlap( key ) == MemoryChunk::NO_OVERLAP ) {
+            ensure( key.getLength() > 0, "Invalid lengtgh." );
             it = this->insert( it, typename BaseMap::value_type( key, ( _Type * ) NULL ) );
             ptr = &( it->second );
          } else {
@@ -1382,6 +1422,7 @@ _Type **MemoryMap< _Type >::getExactInsertIfNotFound( memory::Address addr, std:
    } else if ( this->key_comp()( key, it->first ) ) {
       /* less than addr */
       if ( it->first.checkOverlap( key ) == MemoryChunk::NO_OVERLAP ) {
+         ensure( key.getLength() > 0, "Invalid lengtgh." );
          it = this->insert( it, typename BaseMap::value_type( key, ( _Type * ) NULL ) );
          ptr = &( it->second );
       } else {

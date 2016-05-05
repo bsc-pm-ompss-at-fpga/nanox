@@ -40,8 +40,8 @@ namespace nanos {
          *  \param input Whether the CopyData is input or not 
          *  \param output Whether the CopyData is output or not
          */
-         CopyData ( memory::Address addr = memory::Address(nullptr), nanos_sharing_t nxSharing = NANOS_SHARED, bool input = false,
-                    bool output = false, std::size_t numDimensions = 0, nanos_region_dimension_internal_t *dims = NULL, ptrdiff_t off = 0, memory::Address hostBaseAddress = memory::Address(nullptr), memory_space_id_t hostRegionId = 0 );
+         CopyData ( memory::Address addr = nullptr, nanos_sharing_t nxSharing = NANOS_SHARED, bool input = false,
+                    bool output = false, std::size_t numDimensions = 0, nanos_region_dimension_internal_t const *dims = NULL, ptrdiff_t off = 0, memory::Address hostBaseAddress = nullptr, reg_t hostRegionId = 0 );
 
         /*! \brief CopyData copy constructor
          *  \param obj another CopyData
@@ -100,7 +100,7 @@ namespace nanos {
 
          std::size_t getNumDimensions() const;
          void setNumDimensions( std::size_t ndims );
-         nanos_region_dimension_internal_t *getDimensions() const;
+         nanos_region_dimension_internal_t const *getDimensions() const;
          void setDimensions(nanos_region_dimension_internal_t *);
          
          memory::Address getAddress() const ;
@@ -108,19 +108,21 @@ namespace nanos {
          memory::Address getHostBaseAddress() const ;
          void setHostBaseAddress(memory::Address addr);
          void getFitDimensions( nanos_region_dimension_internal_t *outDimensions ) const;
-         void setHostRegionId( memory_space_id_t id );
-         memory_space_id_t getHostRegionId() const;
+         void setHostRegionId( reg_t id );
+         reg_t getHostRegionId() const;
          bool isRemoteHost() const;
          void setRemoteHost( bool value );
-         void deductCd( CopyData const &ref, CopyData *out ) const;
+         void deductCd( CopyData const &ref, nanos_region_dimension_internal_t *newDims ) const;
          bool equalGeometry( CopyData const &cd ) const;
+         void setDeductedCD( CopyData *cd );
+         CopyData *getDeductedCD();
 
       friend std::ostream& operator<< (std::ostream& o, CopyData const &cd);
 
       private:
          size_t getFitSizeRecursive( int i ) const;
          size_t getWideSizeRecursive( int i ) const;
-         memory::Address getFitOffsetRecursive( int i ) const;
+         ptrdiff_t getFitOffsetRecursive( int i ) const;
 
    };
    std::ostream& operator<< (std::ostream& o, CopyData const &cd);

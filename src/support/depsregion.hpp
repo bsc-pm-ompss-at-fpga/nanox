@@ -68,10 +68,9 @@ inline DepsRegion::TargetType DepsRegion::getEndAddress () const
    return _endAddress;
 }
 
-
 inline size_t DepsRegion::getSize () const
 {
-   return (uint64_t)_endAddress-(uint64_t)_address;
+   return _endAddress-_address;
 }
 
 } // namespace nanos

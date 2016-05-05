@@ -44,6 +44,14 @@ void HostAddressSpace::failToLock( SeparateMemoryAddressSpace &from, global_reg_
    std::cerr << __FUNCTION__ << " @ " << __FILE__ << " : " << __LINE__ << " unimplemented" << std::endl;
 }
 
+void HostAddressSpace::synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data ) {
+   _directory.synchronize( wd, numDataAccesses, data ); //needs wd
+}
+
+void HostAddressSpace::synchronize( WD &wd, void *addr ) {
+   _directory.synchronize( wd, addr ); //needs wd
+}
+
 void HostAddressSpace::synchronize( WD &wd ) {
    _directory.synchronize( wd );
 }
@@ -96,8 +104,8 @@ void SeparateAddressSpace::failToLock( HostMemoryAddressSpace &from, global_reg_
    std::cerr << __FUNCTION__ << " @ " << __FILE__ << " : " << __LINE__ << " unimplemented" << std::endl;
 }
 
-bool SeparateAddressSpace::prepareRegions( std::vector<MemCacheCopy>& memCopies, WD &wd ) {
-   return _cache.prepareRegions( memCopies, wd );
+bool SeparateAddressSpace::prepareRegions(  MemCacheCopy* memCopies, size_t numCopies, WD &wd ) {
+   return _cache.prepareRegions( memCopies, numCopies, wd );
 }
 
 //void SeparateAddressSpace::prepareRegion( global_reg_t const &reg, WD const &wd ) {
@@ -108,8 +116,8 @@ unsigned int SeparateAddressSpace::getCurrentVersion( global_reg_t const &reg, W
    return _cache.getVersion( reg, wd, copyIdx );
 }
 
-void SeparateAddressSpace::releaseRegions( std::vector<MemCacheCopy>& memCopies, WD const &wd ) {
-   _cache.releaseRegions( memCopies, wd );
+void SeparateAddressSpace::releaseRegions(  MemCacheCopy* memCopies, size_t numCopies, WD const &wd ) {
+   _cache.releaseRegions( memCopies, numCopies, wd );
 }
 
 //void SeparateAddressSpace::releaseRegion( global_reg_t const &reg, WD const &wd, unsigned int copyIdx, enum RegionCache::CachePolicy policy ) {
@@ -181,8 +189,8 @@ unsigned int SeparateAddressSpace::getHardInvalidationCount() const {
    return _cache.getHardInvalidationCount();
 }
 
-bool SeparateAddressSpace::canAllocateMemory( std::vector<MemCacheCopy> const& memCopies, bool considerInvalidations, WD const &wd ) {
-   return _cache.canAllocateMemory( memCopies, considerInvalidations, wd );
+bool SeparateAddressSpace::canAllocateMemory(  MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd ) {
+   return _cache.canAllocateMemory( memCopies, numCopies, considerInvalidations, wd );
 }
 
 void SeparateAddressSpace::invalidate( global_reg_t const &reg ) {
