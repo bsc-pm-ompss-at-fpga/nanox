@@ -63,6 +63,8 @@ namespace nanos
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
             DeviceInstrumentation *_devInstr;
+            DeviceInstrumentation *_dmaInInstr;
+            DeviceInstrumentation *_dmaOutInstr;
 #endif
 
          public:
@@ -126,6 +128,7 @@ namespace nanos
                   _update = false;
                }
             }
+
             void setUpdate(bool update) { _update = update; }
 
             /// \brief Override (disable) getAddres as this device does not have a dedicated memory nor separated address space
@@ -139,8 +142,20 @@ namespace nanos
             void setDeviceInstrumentation( DeviceInstrumentation * devInstr ) {
                _devInstr = devInstr;
             }
+            void setDmaInstrumentation( DeviceInstrumentation *dmaIn,
+                    DeviceInstrumentation *dmaOut ) {
+                _dmaInInstr = dmaIn;
+                _dmaOutInstr = dmaOut;
+            }
+
             DeviceInstrumentation *getDeviceInstrumentation() {
                return _devInstr;
+            }
+            DeviceInstrumentation *getDmaInInstrumentation() {
+               return _dmaInInstr;
+            }
+            DeviceInstrumentation *getDmaOutInstrumentation() {
+               return _dmaOutInstr;
             }
 #endif
 

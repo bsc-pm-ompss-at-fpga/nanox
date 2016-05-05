@@ -137,9 +137,15 @@ void FPGAThread::readInstrCounters( WD *wd ) {
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    Instrumentation *instr = sys.getInstrumentation();
+   FPGAProcessor *fpga = ( FPGAProcessor* )runningOn();
    DeviceInstrumentation *devInstr =
-      ( ( FPGAProcessor* )runningOn() )->getDeviceInstrumentation();
+      fpga->getDeviceInstrumentation();
+   DeviceInstrumentation *dmaIn, *dmaOut;
 
+   dmaIn = fpga->getDmaInInstrumentation();
+   dmaOut = fpga->getDmaOutInstrumentation();
+
+   //Task execution
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( counters->start, TaskBegin, devInstr, wd ) );
    //Beginning kernel execution is represented as a task switch from NULL to a WD
@@ -149,6 +155,28 @@ void FPGAThread::readInstrCounters( WD *wd ) {
          Instrumentation::DeviceEvent( counters->computation, TaskSwitch, devInstr, wd, NULL ) );
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, devInstr, wd ) );
+
+  //DMA info
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->start, TaskBegin, dmaIn, wd ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->start, TaskSwitch, dmaIn, NULL, wd ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->inTransfer, TaskSwitch, dmaIn, wd, NULL ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, dmaIn, wd ) );
+
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->start, TaskBegin, dmaOut, wd ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->computation, TaskSwitch, dmaOut, NULL, wd ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->outTransfer, TaskSwitch, dmaOut, wd, NULL ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, dmaOut, wd ) );
+
+
+
 #endif
 
 

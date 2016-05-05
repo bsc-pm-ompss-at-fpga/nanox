@@ -50,11 +50,27 @@ class FPGAPlugin : public ArchPlugin
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
       void registerDeviceInstrumentation( FPGAProcessor *fpga ) {
-          FPGAInstrumentation *instr = new FPGAInstrumentation();
+          unsigned int id;
+          //FIXME: assign proper IDs to deviceinstrumentation
+          id = sys.getNumInstrumentAccelerators();
+          FPGAInstrumentation *instr = new FPGAInstrumentation( "FPGA accelerator" );
+          instr->setId( id );
+          sys.addDeviceInstrumentation( instr );
+
+          id = sys.getNumInstrumentAccelerators();
+          FPGAInstrumentation *dmaInInstr = new FPGAInstrumentation( "DMA in" );
+          dmaInInstr->setId( id );
+          sys.addDeviceInstrumentation( dmaInInstr );
+
+          id = sys.getNumInstrumentAccelerators();
+          FPGAInstrumentation *dmaOutInstr = new FPGAInstrumentation( "DMA out" );
+          dmaOutInstr->setId( id );
+          sys.addDeviceInstrumentation( dmaOutInstr );
+
           instr->init();
           //sys.getInstrumentation()->registerInstrumentDevice( instr );
-          sys.addDeviceInstrumentation( instr );
           fpga->setDeviceInstrumentation( instr );
+          fpga->setDmaInstrumentation( dmaInInstr, dmaOutInstr );
       }
 #endif
 
