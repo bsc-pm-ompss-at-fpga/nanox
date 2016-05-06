@@ -1852,7 +1852,7 @@ void RegionCache::getAllocatableRegion( global_reg_t const &reg, global_reg_t &a
    }
 }
 
-bool RegionCache::canAllocateMemory( MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd ) {
+bool RegionCache::canAllocateMemory( const MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd ) {
    bool result = true;
    std::vector<bool> present_regions( numCopies, true );
    std::vector<std::size_t> sizes( numCopies, 0 );

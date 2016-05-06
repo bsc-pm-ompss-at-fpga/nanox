@@ -158,7 +158,7 @@ class SeparateAddressSpace {
 
    unsigned int getSoftInvalidationCount() const;
    unsigned int getHardInvalidationCount() const;
-   bool canAllocateMemory(  MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd );
+   bool canAllocateMemory( const MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd );
    void registerOwnedMemory(global_reg_t reg);
    Device const &getDevice() const;
 };

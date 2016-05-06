@@ -60,18 +60,20 @@ class MemController {
    std::vector<BackupCacheCopy>   _backupCacheCopies;
    std::vector<BackupPrivateCopy> _backupInOutCopies;
 #endif
-   std::size_t                 _affinityScore;
-   std::size_t                 _maxAffinityScore;
+   size_t    _affinityScore;
+   size_t    _maxAffinityScore;
    RegionSet _ownedRegions;
    RegionSet _parentRegions;
 
 public:
+   std::vector<MemCacheCopy> _memCacheCopies;
+
    enum MemControllerPolicy {
       WRITE_BACK,
       WRITE_THROUGH,
       NO_CACHE
    };
-   MemCacheCopy *_memCacheCopies;
+
    MemController( WD *wd, unsigned int numCopies );
    ~MemController();
    bool hasVersionInfoForRegion( global_reg_t reg, unsigned int &version, NewLocationInfoList &locations );
@@ -89,17 +91,17 @@ public:
    bool isOutputDataReady( WD const &wd );
    memory::Address getAddress( unsigned int index ) const;
    bool canAllocateMemory( memory_space_id_t memId, bool considerInvalidations ) const;
-   void setAffinityScore( std::size_t score );
-   std::size_t getAffinityScore() const;
-   void setMaxAffinityScore( std::size_t score );
-   std::size_t getMaxAffinityScore() const;
-   std::size_t getAmountOfTransferredData() const;
-   std::size_t getTotalAmountOfData() const;
+   void setAffinityScore( size_t score );
+   size_t getAffinityScore() const;
+   void setMaxAffinityScore( size_t score );
+   size_t getMaxAffinityScore() const;
+   size_t getAmountOfTransferredData() const;
+   size_t getTotalAmountOfData() const;
    bool isRooted( memory_space_id_t &loc ) const ;
    bool isMultipleRooted( std::list<memory_space_id_t> &locs ) const ;
    void setMainWD();
    void synchronize();
-   void synchronize( std::size_t numDataAccesses, DataAccess *data);
+   void synchronize( size_t numDataAccesses, DataAccess *data);
    bool isMemoryAllocated() const;
    void setCacheMetaData();
    bool ownsRegion( global_reg_t const &reg );

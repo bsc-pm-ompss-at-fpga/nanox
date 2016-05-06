@@ -189,7 +189,7 @@ unsigned int SeparateAddressSpace::getHardInvalidationCount() const {
    return _cache.getHardInvalidationCount();
 }
 
-bool SeparateAddressSpace::canAllocateMemory(  MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd ) {
+bool SeparateAddressSpace::canAllocateMemory( const MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd ) {
    return _cache.canAllocateMemory( memCopies, numCopies, considerInvalidations, wd );
 }
 

@@ -39,14 +39,12 @@ inline MemCacheCopy::MemCacheCopy( WD const &wd, unsigned int index/*, MemContro
    sys.getHostMemory().getRegionId( wd.getCopies()[ index ], _reg, wd, index );
 
    // PreInit _reg
-/*
    _reg.id = _reg.key->obtainRegionId( wd.getCopies()[index], wd, index );
 
    NewNewDirectoryEntryData *entry = ( NewNewDirectoryEntryData * ) _reg.key->getRegionData( _reg.id );
    if ( entry == NULL ) {
       _reg.key->setRegionData( _reg.id, NEW NewNewDirectoryEntryData() );
    }
-*/
 }
 
 
@@ -119,21 +117,41 @@ inline bool MemCacheCopy::isRooted( memory_space_id_t &loc ) const {
    return result3;
 }
 
-inline void MemCacheCopy::printLocations( std::ostream &o ) const {
-   for ( NewLocationInfoList::const_iterator it = _locations.begin(); it != _locations.end(); it++ ) {
-      NewNewDirectoryEntryData *d = NewNewRegionDirectory::getDirectoryEntry( *(_reg.key), it->second );
-      o << "   [ " << it->first << "," << it->second << " ] "; _reg.key->printRegion( o, it->first ); 
-      if ( d ) o << " " << *d << std::endl; 
-      else o << " dir entry n/a" << std::endl;
-   }
-}
-
 inline void MemCacheCopy::setChildrenProducedVersion( unsigned int version ) {
    _childrenProducedVersion = version;
 }
 
 inline unsigned int MemCacheCopy::getChildrenProducedVersion() const {
    return _childrenProducedVersion;
+}
+
+inline void MemCacheCopy::printLocations( std::ostream& os ) const {
+   typedef NewNewDirectoryEntryData DirData;
+   typedef NewLocationInfoList      LocationList;
+
+   LocationList::const_iterator it;
+   for ( it = _locations.begin(); it != _locations.end(); it++ ) {
+      GlobalRegionDictionary& dict = *_reg.key;
+
+      const DirData* region_src = static_cast<const DirData*>(dict.getRegionData( it->first ));
+      const DirData* data_src   = static_cast<const DirData*>(dict.getRegionData( it->second ));
+
+      os << " [ " << it->first << "," << it->second << " ]";
+      if( region_src )
+         _reg.key->printRegion( os, it->first );
+      else
+         os << "RS dir entry n/a " << std::endl;
+      if( data_src )
+         _reg.key->printRegion( os, it->first );
+      else
+         os << "DS dir entry n/a " << std::endl;
+   }
+}
+
+inline std::ostream& operator<<( std::ostream& os, const MemCacheCopy& cacheCopy )
+{
+   cacheCopy.printLocations(os);
+   return os;
 }
 
 } // namespace nanos

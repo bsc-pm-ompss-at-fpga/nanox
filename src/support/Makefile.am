@@ -110,6 +110,7 @@ exception_HEADERS= \
 	exception/executionfailure.hpp \
    exception/failurestats.hpp \
 	exception/genericexception.hpp \
+	exception/invalidatedregionfound.hpp \
 	exception/operationfailure.hpp \
 	exception/signalexception.hpp \
 	exception/signalinfo.hpp \

@@ -26,6 +26,12 @@
 #include <iostream>
 #include <sstream>
 
+#if VERBOSE_CACHE
+ #define _VERBOSE_CACHE 1
+#else
+ #define _VERBOSE_CACHE 0
+#endif
+
 namespace nanos {
 
 #define _nanos_ostream std::cerr
@@ -43,6 +49,14 @@ inline void verbose( const Ts&... msg )
 {
    if( verboseEnabled() ) {
       join( _nanos_ostream, "[", std::dec, getMyThreadId(), "] ", msg... );
+   }
+}
+
+template <typename...Ts>
+inline void verbose_cache( const Ts&... msg )
+{
+   if( _VERBOSE_CACHE ) {
+      verbose( msg... );
    }
 }
 

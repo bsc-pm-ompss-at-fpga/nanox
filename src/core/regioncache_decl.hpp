@@ -236,7 +236,7 @@ namespace nanos {
          void increaseSoftInvalidationCount(unsigned int v);
          unsigned int getHardInvalidationCount() const;
          void increaseHardInvalidationCount(unsigned int v);
-         bool canAllocateMemory( MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd );
+         bool canAllocateMemory( const MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd );
          bool canInvalidateToFit( const std::vector<std::size_t>& sizes, unsigned int numChunks ) const;
          std::size_t getAllocatableSize( global_reg_t const &reg ) const;
          void getAllocatableRegion( global_reg_t const &reg, global_reg_t &allocRegion ) const;

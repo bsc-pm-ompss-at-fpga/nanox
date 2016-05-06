@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2016 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,48 +17,23 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef _NANOS_XSTRING
-#define _NANOS_XSTRING
+#ifndef INVALIDATED_REGION_FOUND_HPP
+#define  INVALIDATED_REGION_FOUND_HPP
 
-#include <sstream>
-#include <string>
-#include <utility>
-#include <vector>
+#include <stdexcept>
 
 namespace nanos {
+namespace error {
 
-template <class T>
-inline std::string toString ( const T& t )
-{
-   std::stringstream ss;
-   ss << t;
-   return ss.str();
-}
+class InvalidatedRegionFound : public std::runtime_error {
+   public:
+      InvalidatedRegionFound() :
+         std::runtime_error( "Error: trying to restore from a corrupted backup." )
+      {
+      }
+};
 
-template <typename OStreamType>
-inline OStreamType &join( OStreamType &&os )
-{
-   os << std::endl;
-   return os;
-}
-
-template <typename OStreamType, typename T, typename...Ts>
-inline OStreamType &join( OStreamType &&os, const T &first, const Ts&... rest )
-{
-   os << first;
-   return join( os, rest... );
-}
-
-template <typename OStreamType, typename T, typename...Ts>
-inline OStreamType &join( OStreamType &&os, const std::vector<T>& first, const Ts&... rest )
-{
-   for( const T& element : first ) {
-      os << " " << element << std::endl;
-   }
-   return join( os, rest... );
-}
-
+} // namespace error
 } // namespace nanos
 
-#endif // _NANOS_XSTRING
-
+#endif // INVALIDATED_REGION_FOUND_HPP
