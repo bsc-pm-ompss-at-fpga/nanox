@@ -99,7 +99,7 @@ inline void BaseDependenciesDomain::dependOnLastWriter ( DependableObject &depOb
             NANOS_INSTRUMENT ( Values[1] = ((nanos_event_value_t) 0); )
          NANOS_INSTRUMENT ( })
 
-         NANOS_INSTRUMENT ( Values[2] = ((nanos_event_value_t) target.getAddress() ); )
+         NANOS_INSTRUMENT ( Values[2] = ((nanos_event_value_t) target.getAddress().value() ); )
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(3, _insKeyDeps, Values); )
 
          if ( lastWriter->addSuccessor( depObj ) ) {
@@ -159,7 +159,7 @@ inline void BaseDependenciesDomain::dependOnReaders( DependableObject &depObj, T
          NANOS_INSTRUMENT ( Values[1] = ((nanos_event_value_t) 0); )
       NANOS_INSTRUMENT ( } )
 
-      NANOS_INSTRUMENT ( Values[2] = ((nanos_event_value_t) target.getAddress() ); )
+      NANOS_INSTRUMENT ( Values[2] = ((nanos_event_value_t) target.getAddress().value() ); )
       NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(3, _insKeyDeps, Values); )
 
       if ( predecessorReader->addSuccessor( depObj ) ) {
@@ -286,7 +286,7 @@ inline void BaseDependenciesDomain::submitDependableObjectCommutativeDataAccess 
       NANOS_INSTRUMENT ( } else {)
          NANOS_INSTRUMENT ( Values[1] = ((nanos_event_value_t) 8); )
       NANOS_INSTRUMENT ( })
-      NANOS_INSTRUMENT ( Values[2] = ((nanos_event_value_t) target.getAddress() ); )
+      NANOS_INSTRUMENT ( Values[2] = ((nanos_event_value_t) target.getAddress().value() ); )
       NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(3, _insKeyDeps, Values); )
    NANOS_INSTRUMENT ( } )
 
