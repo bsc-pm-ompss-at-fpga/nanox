@@ -59,6 +59,10 @@
 
 #include "addressspace.hpp"
 
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+#   include "mainfunction.hpp"
+#endif
+
 #include <mutex>
 #include <set>
 
@@ -133,6 +137,7 @@ System::System () :
       , _pinnedMemoryCUDA( NEW CUDAPinnedMemoryManager() )
 #endif
 #ifdef NANOS_INSTRUMENTATION_ENABLED
+      , _mainFunctionEvent( NULL )
       , _enableEvents(), _disableEvents(), _instrumentDefault("default"), _enableCpuidEvent( false )
 #endif
       , _lockPoolSize(37), _lockPool( NULL ), _mainTeam (NULL), _simulator(false)
@@ -1694,34 +1699,15 @@ void System::ompss_nanox_main(void *addr, const char* file, int line){
     #endif
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-   Instrumentation* instr = sys.getInstrumentation();
-   InstrumentationDictionary *iD = sys.getInstrumentation()->getInstrumentationDictionary();
-
-   main_addr = addr;
-   main_value << "main@" << file << "@" << line << "@FUNCTION";
-   main_descr << "int main(int, char**)@" << file << "@" << line << "@FUNCTION";
-
-   nanos_event_key_t user_funct_location   = iD->getEventKey("user-funct-location");
-   iD->registerEventValue(
-           /* key */ "user-funct-location",
-           /* value */ main_value.str(),
-           /* val */ (nanos_event_value_t)main_addr,
-           /* description */ main_descr.str(),
-           /* abort_when_registered */ true
-           );
-
-   instr->raiseOpenBurstEvent(user_funct_location, (nanos_event_value_t)main_addr);
+   _mainFunctionEvent = new instrumentation::MainFunctionEvent( addr, file, line );
 #endif
 }
 
 void System::ompss_nanox_main_end()
 {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-   Instrumentation* instr = sys.getInstrumentation();
-   InstrumentationDictionary *iD = sys.getInstrumentation()->getInstrumentationDictionary();
-
-   nanos_event_key_t user_funct_location   = iD->getEventKey("user-funct-location");
-   instr->raiseCloseBurstEvent(user_funct_location, (nanos_event_value_t)main_addr);
+   ensure( _mainFunctionEvent != NULL, "Calling ompss_nanox_main_end() before ompss_nanox_main()" );
+   delete _mainFunctionEvent;
 #endif
 }
 

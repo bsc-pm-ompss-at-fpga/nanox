@@ -57,6 +57,10 @@
 #include "openclprocessor_fwd.hpp"
 #endif
 
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+#include "mainfunction_fwd.hpp"
+#endif
+
 namespace nanos {
 
 // This class initializes/finalizes the library
@@ -216,10 +220,11 @@ namespace nanos {
          PinnedAllocator      _pinnedMemoryCUDA;
 #endif
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-         std::list<std::string>    _enableEvents;
-         std::list<std::string>    _disableEvents;
-         std::string               _instrumentDefault;
-         bool                      _enableCpuidEvent;
+         instrumentation::MainFunctionEvent* _mainFunctionEvent;
+         std::list<std::string>              _enableEvents;
+         std::list<std::string>              _disableEvents;
+         std::string                         _instrumentDefault;
+         bool                                _enableCpuidEvent;
 #endif
 
          const int                 _lockPoolSize;
