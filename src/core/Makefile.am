@@ -341,7 +341,8 @@ if is_instrumentation_enabled
 instrumentation_LTLIBRARIES+=instrumentation/libnanox.la
 
 if is_resiliency_enabled # workaround for gcc bug
-noinst_LTLIBRARIES+=instrumentation/libresiliency.la # Need this to compile some source files with specific optimizations disabled
+instrumentation_resiliencylibs=instrumentation/libresiliency.la
+noinst_LTLIBRARIES+=$(instrumentation_resiliencylibs) # Need this to compile some source files with specific optimizations disabled
 
 instrumentation_libresiliency_la_CPPFLAGS=$(common_includes) $(common_instrumentation_CPPFLAGS) $(BOOST_CPPFLAGS)
 instrumentation_libresiliency_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS) -fno-inline -fno-ipa-pure-const $(common_instr_cxxflags) $(common_includes)
@@ -352,7 +353,7 @@ endif
 instrumentation_libnanox_la_CPPFLAGS=$(common_includes) $(common_instrumentation_CPPFLAGS) @dlbinc@
 instrumentation_libnanox_la_CXXFLAGS=$(common_includes) $(common_instrumentation_CXXFLAGS)
 instrumentation_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation
-instrumentation_libnanox_la_LIBADD=$(common_libadd) @dlb_instr@ @nanos_config_libs_instrumentation@
+instrumentation_libnanox_la_LIBADD=$(common_libadd) @dlb_instr@ @nanos_config_libs_instrumentation@ $(instrumentation_resiliencylibs)
 instrumentation_libnanox_la_SOURCES=$(common_sources) $(instr_sources)
 instrumentation_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_instrumentation@
 endif
@@ -361,7 +362,8 @@ if is_performance_enabled
 performance_LTLIBRARIES+=performance/libnanox.la
 
 if is_resiliency_enabled # workaround for gcc bug
-noinst_LTLIBRARIES+=performance/libresiliency.la # Need this to compile some source files with specific optimizations disabled
+performance_resiliencylibs=performance/libresiliency.la
+noinst_LTLIBRARIES+=$(performance_resiliencylibs) # Need this to compile some source files with specific optimizations disabled
 performance_libresiliency_la_CPPFLAGS=$(common_includes) $(common_performance_CPPFLAGS) $(BOOST_CPPFLAGS)
 performance_libresiliency_la_CXXFLAGS=$(common_performance_CXXFLAGS) -fno-inline -fno-ipa-pure-const $(common_instr_cxxflags) $(common_includes)
 performance_libresiliency_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/performance
@@ -372,7 +374,7 @@ endif
 performance_libnanox_la_CPPFLAGS=$(common_includes) $(common_performance_CPPFLAGS) @dlbinc@
 performance_libnanox_la_CXXFLAGS=$(common_includes) $(common_performance_CXXFLAGS)
 performance_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/performance
-performance_libnanox_la_LIBADD=$(common_libadd) @dlb@ @nanos_config_libs_performance@
+performance_libnanox_la_LIBADD=$(common_libadd) @dlb@ @nanos_config_libs_performance@ $(performance_resiliencylibs)
 performance_libnanox_la_SOURCES=$(common_sources)
 performance_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_performance@
 endif
