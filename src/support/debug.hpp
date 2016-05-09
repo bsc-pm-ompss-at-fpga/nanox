@@ -74,6 +74,9 @@ template <typename...Ts>
 inline void verbose( const Ts&... msg ) {}
 
 template <typename...Ts>
+inline void verbose_cache( const Ts&... msg ) {}
+
+template <typename...Ts>
 inline void debug( const Ts&... msg ) {}
 
 #endif // NANOS_DEBUG_ENABLED
