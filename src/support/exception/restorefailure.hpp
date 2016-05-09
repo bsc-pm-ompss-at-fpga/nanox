@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009 - 2016 Barcelona Supercomputing Center                        */
+/*      Copyright 2009-2016 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,34 +17,33 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef FAILURE_STATS_HPP
-#define FAILURE_STATS_HPP
+#ifndef RESTOREFAILURE_HPP
+#define RESTOREFAILURE_HPP
 
-#include "atomic.hpp"
+#include "operationfailure.hpp"
+#include "failurestats.hpp"
+#include "workdescriptor.hpp"
 
 namespace nanos {
 namespace error {
 
-class CheckpointFailure;
-class RestoreFailure;
-class ExecutionFailure;
-class ErrorInjection;
-class DiscardedTask;
-class TaskRecovery;
-
-template < class Error >
-class FailureStats {
-	private:
-		static Atomic<unsigned> _counter;
-
+class RestoreFailure : public GenericException {
 	public:
-		static void increase() { _counter++; }
+		RestoreFailure() :
+				GenericException( "RestoreFailure: could not restore Workdescriptor's input data." )
+		{
+			debug("Resiliency: restore error detected. ", what() );
+			FailureStats<RestoreFailure>::increase();
 
-		static unsigned get() { return _counter.value(); }
+			WorkDescriptor* recoverableAncestor = getTask().propagateInvalidationAndGetRecoverableAncestor();
+			if( !recoverableAncestor ) {
+				fatal( "Could not find a recoverable task when recovering from ", what() );
+			}
+		}
 };
 
 } // namespace error
 } // namespace nanos
 
-#endif // FAILURE_STATS_HPP
+#endif // RESTORE_FAILURE_HPP
 

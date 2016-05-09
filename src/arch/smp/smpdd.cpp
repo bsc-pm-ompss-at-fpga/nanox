@@ -27,6 +27,7 @@
 #ifdef NANOS_RESILIENCY_ENABLED
 #include "exception/operationfailure.hpp"
 #include "exception/executionfailure.hpp"
+#include "exception/restorefailure.hpp"
 #endif
 
 using namespace nanos;
@@ -173,14 +174,8 @@ void SMPDD::execute ( WD &wd ) throw ()
                // Nothing left to do, either task execution was OK or the recovery has to be done by an ancestor.
                restart = false;
             }
-         } catch ( std::exception &ex ) {
-            WorkDescriptor* recoverableAncestor = wd.propagateInvalidationAndGetRecoverableAncestor();
-            if( !recoverableAncestor )
-            {
-               // Unrecoverable error: terminate execution
-               fatal("An error was found, but there isn't any recoverable ancestor. ");
-            }
-         
+         } catch ( error::RestoreFailure &ex ) {
+            debug( "Recovering from restore error in task ", wd.getId(), "." );
             restart = false;
          }
          if(restart) {

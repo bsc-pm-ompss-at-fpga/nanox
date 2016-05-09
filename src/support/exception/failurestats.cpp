@@ -9,6 +9,9 @@ template<>
 Atomic<unsigned> FailureStats<CheckpointFailure>::_counter = 0;
 
 template<>
+Atomic<unsigned> FailureStats<RestoreFailure>::_counter    = 0;
+
+template<>
 Atomic<unsigned> FailureStats<ExecutionFailure>::_counter  = 0;
 
 template<>

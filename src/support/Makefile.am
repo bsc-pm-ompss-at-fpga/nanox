@@ -112,6 +112,7 @@ exception_HEADERS= \
 	exception/genericexception.hpp \
 	exception/invalidatedregionfound.hpp \
 	exception/operationfailure.hpp \
+	exception/restorefailure.hpp \
 	exception/signalexception.hpp \
 	exception/signalinfo.hpp \
 	exception/signaltranslator.hpp \
@@ -230,6 +231,7 @@ support_sources = \
 	exception/genericexception.hpp \
 	exception/genericexception.cpp \
 	exception/operationfailure.hpp \
+	exception/restorefailure.hpp \
 	exception/signalexception.hpp \
 	exception/signalexception.cpp \
 	exception/signalinfo.hpp \

@@ -38,6 +38,14 @@
 
 namespace nanos {
 
+typedef enum {
+   NANOS_FT_CP_IN = 1,
+   NANOS_FT_CP_OUT,  // 2
+   NANOS_FT_CP_INOUT,// 3
+   NANOS_FT_RT_IN,   // 4
+   NANOS_FT_RT_INOUT // 5
+} checkpoint_event_value_t;
+
 class MemController {
    bool                        _initialized;
    bool                        _preinitialized;

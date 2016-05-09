@@ -33,7 +33,7 @@
 #ifdef NANOS_RESILIENCY_ENABLED
 #   include "backupmanager.hpp"
 #   include "backupprivatecopy.hpp"
-#   include "exception/invalidatedregionfound.hpp"
+#   include "exception/restorefailure.hpp"
 #endif
 
 namespace nanos {
@@ -540,12 +540,7 @@ void MemController::restoreBackupData ( )
 
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
       } else {
-         WorkDescriptor* recoverableAncestor = NULL;
-         if( _wd->getParent() != NULL )
-            recoverableAncestor = _wd->getParent()->propagateInvalidationAndGetRecoverableAncestor();
-         if( !recoverableAncestor )
-            fatal("Resiliency: Unrecoverable error found. "
-                  "Found an invalidated backup and I haven't any ancestor which can recover the execution." );
+         throw error::RestoreFailure();
       }
    }
 }
@@ -630,7 +625,7 @@ bool MemController::isDataRestored( WD const &wd ) {
                CachedRegionStatus* entry = (CachedRegionStatus*)backup->getNewRegions()->getRegionData( backup->getAllocatedRegion().id );
                const bool invalid_entry = entry && !entry->isValid();
                if( invalid_entry ) {
-                  throw error::InvalidatedRegionFound();
+                  throw error::RestoreFailure();
                }
             }
          }
