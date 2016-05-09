@@ -318,7 +318,7 @@ performance_LTLIBRARIES=
 if is_debug_enabled
 debug_LTLIBRARIES+=debug/libnanox.la
 
-debug_libnanox_la_CPPFLAGS=$(common_includes) $(common_debug_CPPFLAGS) @dlbinc@
+debug_libnanox_la_CPPFLAGS=$(common_includes) $(common_debug_CPPFLAGS) @dlbinc@ @BOOST_CPPFLAGS@
 debug_libnanox_la_CXXFLAGS=$(common_includes) $(common_debug_CXXFLAGS)
 debug_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/debug
 debug_libnanox_la_LIBADD=$(common_libadd) @dlb_dbg@ @nanos_config_libs_debug@
@@ -329,7 +329,7 @@ endif
 if is_instrumentation_debug_enabled
 instrumentation_debug_LTLIBRARIES+=instrumentation-debug/libnanox.la
 
-instrumentation_debug_libnanox_la_CPPFLAGS=$(common_includes) $(common_instrumentation_debug_CPPFLAGS) @dlbinc@
+instrumentation_debug_libnanox_la_CPPFLAGS=$(common_includes) $(common_instrumentation_debug_CPPFLAGS) @dlbinc@ @BOOST_CPPFLAGS@
 instrumentation_debug_libnanox_la_CXXFLAGS=$(common_includes) $(common_instrumentation_debug_CXXFLAGS)
 instrumentation_debug_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation-debug
 instrumentation_debug_libnanox_la_LIBADD=$(common_libadd) @dlb_instr_dbg@ @nanos_config_libs_instrumentation_debug@
@@ -344,13 +344,13 @@ if is_resiliency_enabled # workaround for gcc bug
 instrumentation_resiliencylibs=instrumentation/libresiliency.la
 noinst_LTLIBRARIES+=$(instrumentation_resiliencylibs) # Need this to compile some source files with specific optimizations disabled
 
-instrumentation_libresiliency_la_CPPFLAGS=$(common_includes) $(common_instrumentation_CPPFLAGS) $(BOOST_CPPFLAGS)
+instrumentation_libresiliency_la_CPPFLAGS=$(common_includes) $(common_instrumentation_CPPFLAGS) @BOOST_CPPFLAGS@
 instrumentation_libresiliency_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS) -fno-inline -fno-ipa-pure-const $(common_instr_cxxflags) $(common_includes)
 instrumentation_libresiliency_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation
 instrumentation_libresiliency_la_SOURCES=$(resiliency_aux_sources)
 endif
 
-instrumentation_libnanox_la_CPPFLAGS=$(common_includes) $(common_instrumentation_CPPFLAGS) @dlbinc@
+instrumentation_libnanox_la_CPPFLAGS=$(common_includes) $(common_instrumentation_CPPFLAGS) @dlbinc@ @BOOST_CPPFLAGS@
 instrumentation_libnanox_la_CXXFLAGS=$(common_includes) $(common_instrumentation_CXXFLAGS)
 instrumentation_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation
 instrumentation_libnanox_la_LIBADD=$(common_libadd) @dlb_instr@ @nanos_config_libs_instrumentation@ $(instrumentation_resiliencylibs)
@@ -364,14 +364,14 @@ performance_LTLIBRARIES+=performance/libnanox.la
 if is_resiliency_enabled # workaround for gcc bug
 performance_resiliencylibs=performance/libresiliency.la
 noinst_LTLIBRARIES+=$(performance_resiliencylibs) # Need this to compile some source files with specific optimizations disabled
-performance_libresiliency_la_CPPFLAGS=$(common_includes) $(common_performance_CPPFLAGS) $(BOOST_CPPFLAGS)
+performance_libresiliency_la_CPPFLAGS=$(common_includes) $(common_performance_CPPFLAGS) @BOOST_CPPFLAGS@
 performance_libresiliency_la_CXXFLAGS=$(common_performance_CXXFLAGS) -fno-inline -fno-ipa-pure-const $(common_instr_cxxflags) $(common_includes)
 performance_libresiliency_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/performance
 performance_libresiliency_la_SOURCES=$(resiliency_aux_sources)
 endif
 
 
-performance_libnanox_la_CPPFLAGS=$(common_includes) $(common_performance_CPPFLAGS) @dlbinc@
+performance_libnanox_la_CPPFLAGS=$(common_includes) $(common_performance_CPPFLAGS) @dlbinc@ @BOOST_CPPFLAGS@
 performance_libnanox_la_CXXFLAGS=$(common_includes) $(common_performance_CXXFLAGS)
 performance_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/performance
 performance_libnanox_la_LIBADD=$(common_libadd) @dlb@ @nanos_config_libs_performance@ $(performance_resiliencylibs)

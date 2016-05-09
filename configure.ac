@@ -331,30 +331,30 @@ AS_IF([test "$new_gcc_builtins" = yes],[
   gcc_builtins_used="legacy gcc __sync builtins"
 ])
 
-AC_DEFUN([ax_check_enabled],[
-  AS_IF([test -n "$1"],[
-    echo -n "enabled"
-  ],[
-    echo -n "disabled"
-  ])  
-])
-
-AS_ECHO(["
-Configuration summary of Nanos++
-================================
-
-Host arch:                $SMP_ARCH
-User level threading:     $ult_support
-Configured architectures: $ARCHITECTURES
-Configured versions:      $VERSIONS
-Extra options:            $OPTIONS
-GCC atomics:              $gcc_builtins_used
-Memory tracker:           $(ax_check_enabled $enable_memtracker)
-Memory allocator:         $(ax_check_enabled $enable_allocator)
-Task resiliency:          $(ax_check_enabled $enable_resiliency)"])
-
-AS_IF([test "$gasnet_available_conduits" != ""],[
-   AS_ECHO(["\
-Cluster/GASNet conduits:  $gasnet_available_conduits"])
-])
+#AC_DEFUN([ax_check_enabled],[
+#  AS_IF([test -n "$1"],[
+#    echo -n "enabled"
+#  ],[
+#    echo -n "disabled"
+#  ])  
+#])
+#
+#AS_ECHO(["
+#Configuration summary of Nanos++
+#================================
+#
+#Host arch:                $SMP_ARCH
+#User level threading:     $ult_support
+#Configured architectures: $ARCHITECTURES
+#Configured versions:      $VERSIONS
+#Extra options:            $OPTIONS
+#GCC atomics:              $gcc_builtins_used
+#Memory tracker:           $(ax_check_enabled $enable_memtracker)
+#Memory allocator:         $(ax_check_enabled $enable_allocator)
+#Task resiliency:          $(ax_check_enabled $enable_resiliency)"])
+#
+#AS_IF([test "$gasnet_available_conduits" != ""],[
+#   AS_ECHO(["\
+#Cluster/GASNet conduits:  $gasnet_available_conduits"])
+#])
 
