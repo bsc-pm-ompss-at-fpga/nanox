@@ -141,16 +141,16 @@ class InstrumentationExtrae: public Instrumentation
          } else {
             if ( pid < 0 ) {
                 int errsv = errno;
-                message0("Error: Cannot execute mpi2prv due following error:");
+                message("Error: Cannot execute mpi2prv due following error:");
                 switch ( errsv ){
                    case EAGAIN:
-                      message0("fork() cannot allocate sufficient memory to copy the parent's page tables and allocate a task structure for the child.");
+                      message("fork() cannot allocate sufficient memory to copy the parent's page tables and allocate a task structure for the child.");
                       break;
                    case ENOMEM:
-                      message0("fork() failed to allocate the necessary kernel structures because memory is tight.");
+                      message("fork() failed to allocate the necessary kernel structures because memory is tight.");
                       break;
                    default:
-                      message0("fork() unknow error.");
+                      message("fork() unknow error.");
                       break;
                 }
             } else {
@@ -327,16 +327,16 @@ class InstrumentationExtrae: public Instrumentation
          } else {
             if ( pid < 0 ) {
                 int errsv = errno;
-                message0("Error: Cannot execute mpi2prv due following error:");
+                message("Error: Cannot execute mpi2prv due following error:");
                 switch ( errsv ){
                    case EAGAIN:
-                      message0("fork() cannot allocate sufficient memory to copy the parent's page tables and allocate a task structure for the child.");
+                      message("fork() cannot allocate sufficient memory to copy the parent's page tables and allocate a task structure for the child.");
                       break;
                    case ENOMEM:
-                      message0("fork() failed to allocate the necessary kernel structures because memory is tight.");
+                      message("fork() failed to allocate the necessary kernel structures because memory is tight.");
                       break;
                    default:
-                      message0("fork() unknow error.");
+                      message("fork() unknow error.");
                       break;
                 }
             } else {

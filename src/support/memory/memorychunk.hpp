@@ -55,12 +55,12 @@ class MemoryChunk {
       }
 
 		/*! \brief Creates a new representation of an area of memory.
-		 * @param[in] begin lower limit of the region.
-		 * @param[in] end upper limit of the region.
+		 * @param[in] begin lower limit of the region. Inclusive.
+		 * @param[in] end upper limit of the region. Exclusive.
 		 */
       constexpr
-      MemoryChunk( Address const& begin, Address const& end ) :
-            _begin( begin ), _end( end )
+      MemoryChunk( Address const& beginAddress, Address const& endAddress ) :
+            _begin( beginAddress ), _end( endAddress )
       {
       }
 
