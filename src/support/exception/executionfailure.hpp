@@ -22,6 +22,7 @@
 
 #include "operationfailure.hpp"
 #include "failurestats.hpp"
+#include "workdescriptor.hpp"
 
 namespace nanos {
 namespace error {

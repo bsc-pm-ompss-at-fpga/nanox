@@ -45,6 +45,7 @@
 #include "regiondict.hpp"
 #include "os.hpp"
 #include "globalregt.hpp"
+#include "system.hpp"
 
 #if VERBOSE_CACHE
  #define _VERBOSE_CACHE 1

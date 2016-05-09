@@ -22,7 +22,7 @@
 #include "schedule_decl.hpp"
 #include "processingelement.hpp"
 #include "workdescriptor_decl.hpp"
-//#include "system.hpp"
+#include "system.hpp"
 //#include "synchronizedcondition.hpp"
 #include <unistd.h>
 

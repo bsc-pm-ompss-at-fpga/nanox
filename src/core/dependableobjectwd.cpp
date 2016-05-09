@@ -24,8 +24,6 @@
 #include "smpdd.hpp"
 #include "instrumentation.hpp"
 #include "system.hpp"
-#include "instrumentation.hpp"
-#include "system.hpp"
 
 using namespace nanos;
 

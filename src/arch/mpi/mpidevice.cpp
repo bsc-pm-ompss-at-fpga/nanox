@@ -17,19 +17,21 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#include "mpi.h"
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
-#include "mpidd.hpp"
 #include "mpiprocessor_decl.hpp"
 #include "workdescriptor_decl.hpp"
 #include "processingelement_fwd.hpp"
 #include "copydescriptor_decl.hpp"
-#include "mpidevice.hpp"
-#include <unistd.h>
-#include "deviceops.hpp"
 
+#include "mpidevice.hpp"
+#include "mpidd.hpp"
+#include "deviceops.hpp"
+#include "system.hpp"
+
+#include <mpi.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 //TODO: check for errors in communications
 //TODO: Depending on multithread level, wait for answers or not

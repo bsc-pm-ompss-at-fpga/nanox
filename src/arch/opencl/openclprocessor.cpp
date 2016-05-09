@@ -20,6 +20,7 @@
 #include "openclprocessor.hpp"
 #include "openclthread.hpp"
 #include "smpprocessor.hpp"
+#include "system.hpp"
 #include "os.hpp"
 #include "openclevent.hpp"
 #include <iostream>

@@ -21,6 +21,8 @@
 #include "os.hpp"
 #include "basethread_decl.hpp"
 #include "instrumentation.hpp"
+#include "system.hpp"
+
 #include <iostream>
 #include <sched.h>
 #include <unistd.h>

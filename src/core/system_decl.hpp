@@ -22,8 +22,6 @@
 
 #include "processingelement_decl.hpp"
 #include "throttle_decl.hpp"
-#include <vector>
-#include <string>
 #include "schedule_decl.hpp"
 #include "threadteam_decl.hpp"
 #include "slicer_decl.hpp"
@@ -60,6 +58,9 @@
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 #include "mainfunction_fwd.hpp"
 #endif
+
+#include <vector>
+#include <string>
 
 namespace nanos {
 

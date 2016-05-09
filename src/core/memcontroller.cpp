@@ -26,14 +26,15 @@
 #include "globalregt.hpp"
 
 #include "cachedregionstatus.hpp"
+#include "debug.hpp"
+#include "instrumentation.hpp"
+#include "system.hpp"
 
 #ifdef NANOS_RESILIENCY_ENABLED
 #   include "backupmanager.hpp"
 #   include "backupprivatecopy.hpp"
 #   include "exception/invalidatedregionfound.hpp"
 #endif
-
-#include "debug.hpp"
 
 namespace nanos {
 MemController::MemController( WD *wd, unsigned int numCopies ) : 

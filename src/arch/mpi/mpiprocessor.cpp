@@ -23,11 +23,13 @@
 #include "config.hpp"
 #include "mpithread.hpp"
 #include "smpprocessor.hpp"
+#include "system.hpp"
+
 #include <stdlib.h>
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
-#include "mpi.h"
+#include <mpi.h>
 
 using namespace nanos;
 using namespace nanos::ext;

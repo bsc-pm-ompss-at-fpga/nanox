@@ -22,6 +22,8 @@
 #include "debug.hpp"
 #include "config.hpp"
 #include "mpithread.hpp"
+#include "system.hpp"
+
 #include <stdlib.h>
 #include <iostream>
 #include <fstream>

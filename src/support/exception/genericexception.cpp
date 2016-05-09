@@ -18,7 +18,7 @@
 /*************************************************************************************/
 
 #include "genericexception.hpp"
-#include "basethread_decl.hpp"
+#include "basethread.hpp"
 
 namespace nanos {
 namespace error {

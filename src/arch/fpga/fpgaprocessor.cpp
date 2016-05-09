@@ -28,6 +28,7 @@
 #include "instrumentationmodule_decl.hpp"
 #include "smpprocessor.hpp"
 #include "fpgapinnedallocator.hpp"
+#include "system.hpp"
 
 #include "libxdma.h"
 

@@ -22,6 +22,8 @@
 #include "debug.hpp"
 #include "config.hpp"
 #include "basethread.hpp"
+#include "system.hpp"
+
 #include <iostream>
 #ifdef CLUSTER_DEV
 #include "clusterthread_decl.hpp"

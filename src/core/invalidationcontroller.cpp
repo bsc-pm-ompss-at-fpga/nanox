@@ -4,6 +4,8 @@
 #include "system_decl.hpp"
 #include "globalregt.hpp"
 #include "os.hpp"
+#include "system.hpp"
+
 #include <limits>
 #include <iomanip>
 

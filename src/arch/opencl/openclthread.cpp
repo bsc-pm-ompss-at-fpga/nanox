@@ -21,6 +21,7 @@
 #include "basethread.hpp"
 #include "openclthread.hpp"
 #include "pthread.hpp"
+#include "system.hpp"
 #include "openclevent.hpp"
 #include "os.hpp"
 

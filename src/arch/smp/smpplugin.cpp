@@ -28,6 +28,8 @@
 #include "plugin.hpp"
 #include "smpprocessor.hpp"
 
+#include "system.hpp"
+
 #include <limits>
 
 #ifdef HAVE_MEMKIND_H

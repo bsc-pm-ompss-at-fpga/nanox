@@ -18,11 +18,11 @@
 /*************************************************************************************/
 
 #include "smpdd.hpp"
-#include "smpdevice.hpp"
-
-#include "smp_ult.hpp"
 
 #include "instrumentation.hpp"
+#include "smpdevice.hpp"
+#include "smp_ult.hpp"
+#include "system.hpp"
 
 #ifdef NANOS_RESILIENCY_ENABLED
 #include "exception/operationfailure.hpp"

@@ -26,6 +26,7 @@
 #include "schedule.hpp"
 #include "simpleallocator.hpp"
 #include "basethread.hpp"
+#include "system.hpp"
 
 #include "cuda_runtime.h"
 
