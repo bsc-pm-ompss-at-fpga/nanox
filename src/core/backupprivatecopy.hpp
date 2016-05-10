@@ -57,15 +57,27 @@ BackupPrivateCopy::~BackupPrivateCopy()
 
 void BackupPrivateCopy::checkpoint( const WorkDescriptor* wd )
 {
+   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
+   NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_INOUT );
+   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
+
    _aborted = !_device.checkpointCopy( getDeviceAddress(), getHostAddress(), getSize(),
                                      sys.getBackupMemory(), wd );
+
+   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
 }
 
 void BackupPrivateCopy::restore( const WorkDescriptor* wd )
 {
    if( !_aborted ) {
+      NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
+      NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_RT_INOUT );
+      NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
+
       _aborted = !_device.restoreCopy( getHostAddress(), getDeviceAddress(), getSize(),
                                   sys.getBackupMemory(), wd );
+
+      NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
    }
 }
 

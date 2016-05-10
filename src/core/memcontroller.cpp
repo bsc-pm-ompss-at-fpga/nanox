@@ -352,17 +352,7 @@ void MemController::copyDataIn() {
                // For inout parameters, make a temporary independent backup. We have to do this privately, without
                // the cache being noticed, because this backup is for exclusive use of this workdescriptor only.
                _backupInOutCopies.emplace_back( _wd->getCopies()[index], _wd, index );
-
-               // Note: we dont want to make the regular backup for inouts, like children tasks' "in".
-               // Parameters will always do the backup later if they exist no matter whether we perform the copy or not
-               //if(sys.getVerboseCopies()) //message( "Private copyIn (inout) wd:", std::dec, _wd->getId() );
-               NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
-               NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_INOUT );
-               NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
-
                _backupInOutCopies.back().checkpoint( _wd );
-
-               NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
 
             } else {
                _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
@@ -462,7 +452,9 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
                   }
                   if( !entry || valid_entry ) {
                      _backupCacheCopies[index].setVersion( _memCacheCopies[ index ].getChildrenProducedVersion() );
+                     // Delete locations from input copies, we don't want to checkpoint read-only data again
                      _backupCacheCopies[index]._locations.clear();
+                     // Add locations for output copies, they will be checkpointed immediately
                      _backupCacheCopies[index]._locations.push_back( std::pair<reg_t, reg_t>( _backupCacheCopies[index]._reg.id, _backupCacheCopies[index]._reg.id ) );
                      _backupCacheCopies[index]._locationDataReady = true;
 
@@ -508,13 +500,8 @@ void MemController::restoreBackupData ( )
       unsigned int index = 0;
       // Inout args have to be restored even if were not corrupted (they may be dirty).
       while( !failed && index < _backupInOutCopies.size() ) {
-         NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-checkpoint") );
-         NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_RT_INOUT );
-         NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
 
          _backupInOutCopies[index].restore( _wd );
-
-         NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
 
          failed = _backupInOutCopies[index].isAborted();
          index++;
