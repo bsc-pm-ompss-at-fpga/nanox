@@ -34,12 +34,22 @@ class ExecutionFailure {
       ExecutionFailure( OperationFailure& operation ) :
             _failedOperation( operation )
       {
-         debug("Resiliency: execution error detected ", operation.what() );
 			FailureStats<ExecutionFailure>::increase();
 
-         WorkDescriptor* recoverableAncestor = operation.getTask().propagateInvalidationAndGetRecoverableAncestor();
+         WorkDescriptor &task = operation.getTask();
+         task.increaseFailedExecutions();
+
+         WorkDescriptor* recoverableAncestor = nullptr;
+         if( task.isExecutionRepeatable() ) {
+            recoverableAncestor = task.propagateInvalidationAndGetRecoverableAncestor();
+         } else if( task.getParent() != nullptr ) {
+            recoverableAncestor = task.getParent()->propagateInvalidationAndGetRecoverableAncestor();
+         }
+
          if( !recoverableAncestor ) {
             fatal( "Could not find a recoverable task when recovering from ", operation.what() );
+         } else {
+            debug("Resiliency: execution error detected ", operation.what() );
          }
       }
 };

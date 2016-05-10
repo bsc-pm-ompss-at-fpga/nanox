@@ -77,30 +77,12 @@ namespace ext {
 
          virtual SMPDD *clone () const { return NEW SMPDD ( *this); }
 
-            /*! \brief Encapsulates the user function call.
-             * This avoids code duplication for additional
-             * operations that must be done just before/after
-             * this call (e.g. task re-execution on errors).
-             */
-            void execute ( WD &wd ) noexcept;
-
-#ifdef NANOS_RESILIENCY_ENABLED
-            /*! \brief Recovers the system from an error.
-             * When a task fails due to a system problem, recover function tries to
-             * circumvent the cause of the error and to establish a workaround, so the
-             * execution can continue (e.g. use a different memory page if we find one
-             * corrupted/invalid.
-             */
-#if 0 // disabled
-            virtual bool recover ( TaskException const& err );
-#endif
-
-            /*! \brief Restores the workdescriptor to its original state.
-             * Leaving the recovery dependent to the arch allows more
-             * accurate recovery for each kind of device.
-             */
-            virtual void restore ( WD& wd );
-#endif
+         /*! \brief Encapsulates the user function call.
+          * This avoids code duplication for additional
+          * operations that must be done just before/after
+          * this call (e.g. task re-execution on errors).
+          */
+         void execute ( WD &wd ) noexcept;
    };
 
    inline const SMPDD & SMPDD::operator= ( const SMPDD &dd )

@@ -34,12 +34,17 @@ class CheckpointFailure {
 		CheckpointFailure( OperationFailure& operation ) :
 				_failedOperation( operation )
 		{
-			debug("Resiliency: checkpoint error detected ", operation.what() );
 			FailureStats<CheckpointFailure>::increase();
+
+			// This task's backups are not valid, therefore we
+			// can not recover it.
+			operation.getTask().setRecoverable(false);
 
 			WorkDescriptor* recoverableAncestor = operation.getTask().propagateInvalidationAndGetRecoverableAncestor();
 			if( !recoverableAncestor ) {
 				fatal( "Could not find a recoverable task when recovering from ", operation.what() );
+			} else {
+				debug("Resiliency: checkpoint error detected ", operation.what() );
 			}
 		}
 };

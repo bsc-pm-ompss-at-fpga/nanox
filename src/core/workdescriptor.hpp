@@ -59,7 +59,7 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
                                  _translateArgs( translate_args ),
                                  _priority( 0 ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
                                  _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL),
-                                 _taskReductions(),
+                                 _taskReductions(),_numFailedExecutions( 0 ),
                                  _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( nullptr ), _callback(0), _arguments(0),
                                  _mcontrol( this, numCopies )
                                  {
@@ -92,7 +92,7 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                  _doSubmit(NULL), _doWait(), _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ),
                                  _translateArgs( translate_args ),
                                  _priority( 0 ),  _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
-                                 _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL), _taskReductions(),
+                                 _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL), _taskReductions(),_numFailedExecutions( 0 ),
                                  _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( nullptr ), _callback(0), _arguments(0), _mcontrol( this, numCopies )
                                  {
                                      _devices = new DeviceData*[1];
@@ -127,7 +127,7 @@ inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **d
                                  _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ),
                                  _translateArgs( wd._translateArgs ),
                                  _priority( wd._priority ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
-                                 _copiesNotInChunk( wd._copiesNotInChunk), _description(description), _instrumentationContextData(), _slicer(wd._slicer), _taskReductions(),
+                                 _copiesNotInChunk( wd._copiesNotInChunk), _description(description), _instrumentationContextData(), _slicer(wd._slicer), _taskReductions(),_numFailedExecutions( 0 ),
                                  _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( nullptr ), _callback(0), _arguments(0), _mcontrol( this, wd._numCopies )
                                  {
                                     if ( wd._parent != NULL ) wd._parent->addWork(*this);
@@ -553,7 +553,38 @@ inline WorkDescriptor *WorkDescriptor::propagateInvalidationAndGetRecoverableAnc
 
 inline bool WorkDescriptor::isAbleToExecute() const { return !isInvalid() && (getParent() == NULL || !getParent()->isInvalid()); }
 
-inline bool WorkDescriptor::isExecutionRepeatable() const { return isInvalid() && isRecoverable() && ( !getParent() || !getParent()->isInvalid() ); }
+inline bool WorkDescriptor::isExecutionRepeatable() const
+{
+   return isInvalid()
+          && isRecoverable()
+          && ( _numFailedExecutions < sys.getTaskMaxRetrials() )
+          && ( !getParent() || !getParent()->isInvalid() );
+}
+
+inline unsigned WorkDescriptor::getFailedExecutions() const { return _numFailedExecutions; }
+
+inline void WorkDescriptor::increaseFailedExecutions() { _numFailedExecutions++; }
+
+inline void WorkDescriptor::restore()
+{
+   debug ( "Resiliency: Task ", getId(), " is being recovered to be re-executed further on.");
+
+   // Wait for successors to finish.
+   waitCompletion();
+
+   // Restore the data
+   _mcontrol.restoreBackupData();
+
+   while ( !_mcontrol.isDataRestored( *this ) ) {
+      myThread->idle();
+   }
+
+   // Reset invalid state
+   setInvalid(false);
+
+   debug ( "Resiliency: Task ", getId(), " recovery complete.");
+}
+
 #endif
 
 inline void WorkDescriptor::setCriticality ( int cr ) { _criticality = cr; }

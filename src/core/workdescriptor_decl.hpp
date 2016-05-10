@@ -176,19 +176,6 @@ typedef std::set<const Device *>  DeviceList;
 
          virtual DeviceData *clone () const = 0;
 
-#ifdef NANOS_RESILIENCY_ENABLED
-            /*! \brief Recovers the system from an error.
-            * When a task fails due to a system problem, recover function tries to
-            * circumvent the cause of the error and to establish a workaround, so the
-            * execution can continue (e.g. use a different memory page if we find one
-            * corrupted/invalid.
-            */
-            virtual bool recover ( error::OperationFailure const& error ) {
-               fatal( "Recovery error: recover function is not implemented for device ",
-                      getName()
-                    );
-            }
-#endif
     };
 
 /*! \brief This class identifies a single unit of work
@@ -287,7 +274,7 @@ typedef std::set<const Device *>  DeviceList;
          Slicer                       *_slicer;                 //! Related slicer (NULL if does'nt apply)
          task_reduction_vector_t       _taskReductions;         //< Vector of task reductions
          int                           _criticality;
-         unsigned int                  _num_tries;              //!< TODO: explain what is this
+         unsigned int                  _numFailedExecutions;    //!< Number of times this task has been executed (resiliency)
          //Atomic< std::list<GraphEntry *> * > _myGraphRepList;
          //bool _listed;
          void                        (*_notifyCopy)( WD &wd, BaseThread const &thread);
@@ -775,10 +762,22 @@ typedef std::set<const Device *>  DeviceList;
 			//! \brief Returns whether a WorkDescriptor can run or not, due to invalidation.
 			bool isAbleToExecute ( void ) const;
 
-			// FIXME: should isExecutionRepeatable be moved to DeviceData?
-			//! \brief Returns whether a WorkDescriptor should re-execute or not
+         /**
+          * \returns whether a workdescriptor can be executed again.
+          * Basically, it has to fulfills the following constraints:
+          * 1) Its execution was invalid
+          * 2) It is marked as recoverable
+          * 3) Its parent is not invalid (it doesn't make sense to recover ourselves if our parent is going to redo our work)
+          * 4) It has not run out of trials (a limit is set to avoid infinite loop)
+          */
 			bool isExecutionRepeatable ( void ) const;
+
+         //! \brief Restores the workdescriptor to its original state.
+         void restore();
 #endif
+
+         unsigned getFailedExecutions() const;
+         void increaseFailedExecutions();
 
          void setCriticality ( int cr );
          int getCriticality ( void ) const;
