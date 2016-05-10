@@ -20,7 +20,13 @@
 #ifndef OPERATION_FAILURE_HPP
 #define OPERATION_FAILURE_HPP
 
+#include "memory/memorychunk.hpp"
+#include "memory/memorypage.hpp"
+
+#include "signalinfo.hpp"
 #include "signalexception.hpp"
+
+#include <vector>
 
 namespace nanos {
 namespace error {
@@ -37,6 +43,20 @@ class OperationFailure : public SegmentationFaultException {
 		OperationFailure( siginfo_t* signalInfo, ucontext_t* executionContext ) :
 				super( signalInfo, executionContext )
 		{
+         // FIXME: probably this should be placed into the handler and not the
+         // exception constructor.
+         //
+         // Retrieve all the memory pages that are affected by this error
+         // and map them again, so that the kernel allocates a healthy memory
+         // segment on the same address.
+         const memory::MemoryChunk affectedMemory = getSignalInfo().getAffectedMemoryLocation();
+
+         std::vector<memory::MemoryPage> affectedPages =
+            memory::MemoryPage::retrievePagesWrappingChunk( affectedMemory );
+
+         for( memory::MemoryPage& page : affectedPages ) {
+            page.remap();
+         }
 		}
 };
 

@@ -135,12 +135,12 @@ class AlignedMemoryChunk : public MemoryChunk {
             MemoryChunk(
                      chunk.begin().template align<alignment_restriction>(),
                      chunk.end().template align<alignment_restriction>()
-								+ chunk.end().template isAligned<alignment_restriction>()?
+								+ (chunk.end().template isAligned<alignment_restriction>()?
 									0 : 
-									alignment_restriction
+									alignment_restriction)
                   )
       {
-			static_assert( is_contiguous_memory_region<ChunkType>::type,
+			static_assert( is_contiguous_memory_region<ChunkType>::value,
 					"Provided chunk does not represent contiguous memory." );
       }
 };
