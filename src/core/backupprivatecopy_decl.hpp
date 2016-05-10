@@ -35,6 +35,10 @@ class BackupPrivateCopy : public RemoteChunk {
    public:
       BackupPrivateCopy( const CopyData& copy, const WorkDescriptor* wd, unsigned index );
 
+      BackupPrivateCopy( const BackupPrivateCopy& ) = delete;
+
+      BackupPrivateCopy( BackupPrivateCopy&& other );
+
       virtual ~BackupPrivateCopy();
 
       void checkpoint( const WorkDescriptor* wd );

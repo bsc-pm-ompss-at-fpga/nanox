@@ -23,7 +23,9 @@
 #include "backupmanager.hpp"
 #include "memcachecopy_decl.hpp"
 #include "system_decl.hpp"
-#include "regioncache_decl.hpp"
+#include "regioncache.hpp"
+
+#include "debug.hpp"
 
 namespace nanos {
 
@@ -35,9 +37,22 @@ BackupPrivateCopy::BackupPrivateCopy( const CopyData& copy, const WorkDescriptor
    setDeviceAddress( _device.memAllocate( getSize(), sys.getBackupMemory(), wd, index ) );
 }
 
+BackupPrivateCopy::BackupPrivateCopy( BackupPrivateCopy&& other ) :
+   RemoteChunk( std::move(other) ),
+   _device( other._device ),
+   _aborted( other._aborted )
+{
+   // Do not free the device address once the other
+   // object is destroyed
+   other.setDeviceAddress(nullptr);
+}
+
 BackupPrivateCopy::~BackupPrivateCopy()
 {
-   _device.memFree( getDeviceAddress(), sys.getBackupMemory() );
+   // In case this object has been moved away
+   if( getDeviceAddress() != nullptr ) {
+      _device.memFree( getDeviceAddress(), sys.getBackupMemory() );
+   }
 }
 
 void BackupPrivateCopy::checkpoint( const WorkDescriptor* wd )

@@ -65,12 +65,6 @@ MemController::MemController( WD *wd, unsigned int numCopies ) :
    , _memCacheCopies()
 {
    _memCacheCopies.reserve( numCopies );
-#ifdef NANOS_RESILIENCY_ENABLED
-   if( sys.isResiliencyEnabled() && _wd->isRecoverable() ) {
-      _backupCacheCopies.reserve( numCopies );
-      _backupInOutCopies.reserve( numCopies );
-   }
-#endif
 }
 
 MemController::~MemController() {
@@ -151,6 +145,12 @@ void MemController::preInit( ) {
 
 #ifdef NANOS_RESILIENCY_ENABLED
    if( sys.isResiliencyEnabled() && _wd->isRecoverable() ) {
+      // Doing vector::reserve inside the constructor is not
+      // possible, since workdescriptor flags are set after
+      // the workdescriptor is created
+      _backupCacheCopies.reserve( _memCacheCopies.size() );
+      _backupInOutCopies.reserve( _memCacheCopies.size() );
+
       for ( index = 0; index < _memCacheCopies.size(); index ++ ) {
             _backupCacheCopies.emplace_back( _wd->getCopies()[index], _memCacheCopies[index], *_wd, index );
       }
@@ -360,7 +360,7 @@ void MemController::copyDataIn() {
                NANOS_INSTRUMENT ( nanos_event_value_t val = (nanos_event_value_t) NANOS_FT_CP_INOUT );
                NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenBurstEvent ( key, val ) );
 
-               _backupInOutCopies[index].checkpoint( _wd );
+               _backupInOutCopies.back().checkpoint( _wd );
 
                NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
 
