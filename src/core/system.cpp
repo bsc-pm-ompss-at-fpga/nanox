@@ -145,7 +145,7 @@ System::System () :
       , _injectionPolicy( "none" )
       , _resiliency_disabled(false)
       , _task_max_trials(1)
-      , _backup_pool_size(sysconf(_SC_PAGESIZE ) * sysconf(_SC_PHYS_PAGES) / 2)
+      , _backup_pool_size(sysconf(_SC_PAGESIZE ) * sysconf(_SC_PHYS_PAGES) / 20)
 #endif
       , _affinityFailureCount( 0 )
       , _createLocalTasks( false )
