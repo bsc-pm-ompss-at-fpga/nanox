@@ -20,6 +20,8 @@
 #include "backupmanager.hpp"
 #include "deviceops.hpp"
 #include "exception/checkpointfailure.hpp"
+#include "exception/restorefailure.hpp"
+
 #include <sys/mman.h>
 #include <iostream>
 
@@ -116,28 +118,25 @@ bool BackupManager::restoreCopy ( memory::Address hostAddr, memory::Address devA
     * to create and manage private checkpoints, so passing through the dictionary and
     * region cache is necessary.
     */
-   bool success;
-   try {
-      char* begin = static_cast<char*>(devAddr);
-      char* end = static_cast<char*>(devAddr)+len;
-      char* dest = static_cast<char*>(hostAddr);
-      /* We use another function call to perform the copy in order to
-       * be able to compile std::copy call in a separate file.
-       * This is needed to avoid the GCC bug related to 
-       * non-call-exceptions plus inline and ipa-pure-const
-       * optimizations.
-       */
-      rawCopy(begin, end, dest);
+   bool success = false;
+   do {
+      try {
+         char* begin = static_cast<char*>(devAddr);
+         char* end = static_cast<char*>(devAddr)+len;
+         char* dest = static_cast<char*>(hostAddr);
+         /* We use another function call to perform the copy in order to
+          * be able to compile std::copy call in a separate file.
+          * This is needed to avoid the GCC bug related to
+          * non-call-exceptions plus inline and ipa-pure-const
+          * optimizations.
+          */
+         rawCopy(begin, end, dest);
 
-      success = true;
-   } catch ( error::OperationFailure &e ) {
-      error::CheckpointFailure error(e);
-      //sys.getExceptionStats().incrInitializationErrors();
-      // FIXME: This is not an initialization error. should I add another type?
-      debug("Resiliency: error detected during task ", wd->getId(), " data restore.");
-
-      success = false;
-   }
+         success = true;
+      } catch ( error::OperationFailure &e ) {
+         error::RestoreFailure error(e);
+      }
+   } while ( !success );
 
    return success;
 }

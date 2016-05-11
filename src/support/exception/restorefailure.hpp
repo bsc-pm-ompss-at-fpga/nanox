@@ -27,19 +27,24 @@
 namespace nanos {
 namespace error {
 
-class RestoreFailure : public GenericException {
-	public:
-		RestoreFailure() :
-				GenericException( "RestoreFailure: could not restore Workdescriptor's input data." )
-		{
-			debug("Resiliency: restore error detected. ", what() );
-			FailureStats<RestoreFailure>::increase();
+class RestoreFailure {
+   private:
+      OperationFailure& _failedOperation;
+   public:
+      RestoreFailure( OperationFailure& operation ) :
+            _failedOperation( operation )
+      {
+         FailureStats<RestoreFailure>::increase();
 
-			WorkDescriptor* recoverableAncestor = getTask().propagateInvalidationAndGetRecoverableAncestor();
-			if( !recoverableAncestor ) {
-				fatal( "Could not find a recoverable task when recovering from ", what() );
-			}
-		}
+         // Just assume we can restore again because the backup has not been corrupted.
+         // The memory page has been remapped by OperationFailure constructor, so we can restart it.
+
+         //WorkDescriptor* recoverableAncestor = getTask().propagateInvalidationAndGetRecoverableAncestor();
+         //if( !recoverableAncestor ) {
+         //   fatal( "Could not find a recoverable task when recovering from ", what() );
+         //}
+         debug("Resiliency: restore error detected. ", operation.what() );
+      }
 };
 
 } // namespace error
