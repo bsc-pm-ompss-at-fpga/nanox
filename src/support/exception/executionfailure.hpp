@@ -21,7 +21,9 @@
 #define EXECUTION_FAILURE_HPP
 
 #include "operationfailure.hpp"
+
 #include "failurestats.hpp"
+#include "instrumentation.hpp"
 #include "workdescriptor.hpp"
 
 namespace nanos {
@@ -34,7 +36,11 @@ class ExecutionFailure {
       ExecutionFailure( OperationFailure& operation ) :
             _failedOperation( operation )
       {
-			FailureStats<ExecutionFailure>::increase();
+         FailureStats<ExecutionFailure>::increase();
+
+         NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
+         NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) NANOS_FT_EXEC_FAILURE );
+         NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_discard_key, &task_discard_val) );
 
          WorkDescriptor &task = operation.getTask();
          task.increaseFailedExecutions();

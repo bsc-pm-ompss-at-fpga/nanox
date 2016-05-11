@@ -791,8 +791,10 @@ typedef std::set<const Device *>  DeviceList;
    typedef class DeviceData DD;
 
    typedef enum {
-      NANOS_FT_RESTART, /* 1 */
-      NANOS_FT_DISCARD /* 2 */
+      NANOS_FT_EXEC_FAILURE = 1, /* 1 */
+      NANOS_FT_CKPT_FAILURE,     /* 2 */
+      NANOS_FT_RESTART,          /* 3 */
+      NANOS_FT_DISCARD           /* 4 */
    } task_operations_event_value_t;
 
 } // namespace nanos

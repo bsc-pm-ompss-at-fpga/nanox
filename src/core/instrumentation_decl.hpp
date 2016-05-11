@@ -682,8 +682,10 @@ namespace nanos {
             registerEventValue("ft-restore", "NANOS_FT_RT_INOUT","Restore backup for task's inout data." );/* 2 */
 
             /* 75 */ registerEventKey("ft-task-operation", "Fault tolerance task control." );
-            registerEventValue("ft-task-operation", "NANOS_FT_RESTART", "Current task is being executed again because its execution was erroneous." ); /* 1 */
-            registerEventValue("ft-task-operation", "NANOS_FT_DISCARD", "Skipping task execution due to invalidation." );                              /* 2 */
+            registerEventValue("ft-task-operation", "NANOS_FT_EXEC_FAILURE", "Task execution has failed." );                                           /* 1 */
+            registerEventValue("ft-task-operation", "NANOS_FT_CKPT_FAILURE", "Task data checkpoint has failed." );                                     /* 2 */
+            registerEventValue("ft-task-operation", "NANOS_FT_RESTART", "Current task is being executed again because its execution was erroneous." ); /* 3 */
+            registerEventValue("ft-task-operation", "NANOS_FT_DISCARD", "Skipping task execution due to invalidation." );                              /* 4 */
 
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }

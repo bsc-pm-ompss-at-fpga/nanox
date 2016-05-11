@@ -22,6 +22,7 @@
 
 #include "operationfailure.hpp"
 #include "failurestats.hpp"
+#include "instrumentation.hpp"
 #include "workdescriptor.hpp"
 
 namespace nanos {
@@ -35,6 +36,9 @@ class CheckpointFailure {
             _failedOperation( operation )
       {
          FailureStats<CheckpointFailure>::increase();
+         NANOS_INSTRUMENT ( static nanos_event_key_t task_discard_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
+         NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) NANOS_FT_CKPT_FAILURE );
+         NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_discard_key, &task_discard_val) );
 
          // Operation's task point to thread->currentWD()
          // In checkpoints, this is not the affected workdescriptor, since
