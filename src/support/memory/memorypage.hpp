@@ -24,6 +24,7 @@
 
 #include <vector>
 
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/user.h>
 
@@ -54,19 +55,33 @@ class MemoryPage : public AlignedMemoryChunk<PAGE_SIZE> {
       void unmap()
       {
          int err = munmap( begin(), size() );
-         fatal_cond( err != 0, "Failed to unmap memory page. Address:0x", begin() );
+         fatal_cond( err != 0, "Failed to unmap memory page. Address:", begin() );
       }
 
       void map()
       {
-         memory::Address newAddress( mmap( begin(), size(), PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, -1, 0 ) );
-         fatal_cond( newAddress != begin(), "Failed to remap memory page. Its virtual address has changed." );
+         memory::Address newAddress( mmap( begin(), size(), PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_FIXED, -1, 0 ) );
+         fatal_cond( newAddress == memory::Address(MAP_FAILED), "Failed to mmap memory page. Error: ", strerror(errno) );
+         fatal_cond( newAddress != begin(), "Failed to map memory page. Its virtual address has changed." );
       }
 
       void remap()
       {
-         unmap();
+         // If we mmap again with MAP_FIXED it discards the previously mapped page.
+         //unmap();
          map();
+      }
+
+      void lock()
+      {
+         int err = mlock( begin(), size() );
+         fatal_cond( err != 0, "Failed to lock memory page. Address:", begin() );
+      }
+
+      void unlock()
+      {
+         int err = munlock( begin(), size() );
+         fatal_cond( err != 0, "Failed to unlock memory page. Address:", begin() );
       }
 
       template<class Container, class ChunkType>
