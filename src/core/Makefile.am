@@ -355,7 +355,7 @@ instrumentation_libnanox_la_CXXFLAGS=$(common_includes) $(common_instrumentation
 instrumentation_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation
 instrumentation_libnanox_la_LIBADD=$(common_libadd) @dlb_instr@ @nanos_config_libs_instrumentation@ $(instrumentation_resiliencylibs)
 instrumentation_libnanox_la_SOURCES=$(common_sources) $(instr_sources)
-instrumentation_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_instrumentation@
+instrumentation_libnanox_la_DEPENDENCIES=$(common_libadd) $(instrumentation_resiliencylibs) @nanos_config_libs_instrumentation@
 endif
 
 if is_performance_enabled
@@ -376,6 +376,6 @@ performance_libnanox_la_CXXFLAGS=$(common_includes) $(common_performance_CXXFLAG
 performance_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/performance
 performance_libnanox_la_LIBADD=$(common_libadd) @dlb@ @nanos_config_libs_performance@ $(performance_resiliencylibs)
 performance_libnanox_la_SOURCES=$(common_sources)
-performance_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_performance@
+performance_libnanox_la_DEPENDENCIES=$(common_libadd) $(performance_resiliencylibs) @nanos_config_libs_performance@
 endif
 
