@@ -185,7 +185,7 @@ namespace nanos {
          // Current/following tasks: 
          WD                     &_threadWD;      /**< Thread implicit WorkDescriptor */
          WD                     *_currentWD;     /**< Current WorkDescriptor the thread is executing */
-         WD                     *_heldWD;
+         WD                     *_planningWD;
          WDDeque                 _nextWDs;       /**< Queue with all the tasks that the thread is being run simultaneously */
          // Thread's Team info:
          TeamData               *_teamData;      /**< Current team data, thread is registered and also it has entered to the team */
@@ -261,10 +261,10 @@ namespace nanos {
          virtual bool canBlock() { return false; }
 
          // set/get methods
-         void setHeldWD ( WD *wd );
-         WD * getHeldWD () const;
-         void setCurrentWD ( WD &current );
+         void setPlanningWD ( WD *wd );
+         WD * getPlanningWD () const;
 
+         void setCurrentWD ( WD &current );
          WD * getCurrentWD () const;
 
          WD & getThreadWD () const;

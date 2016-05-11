@@ -902,6 +902,8 @@ void Scheduler::switchHelper (WD *oldWD, WD *newWD, void *arg)
    } else if ( &(myThread->getThreadWD()) != oldWD ) {
       myThread->getTeam()->getSchedulePolicy().queue( myThread, *oldWD );
    }
+
+   myThread->setPlanningWD( NULL );
    myThread->setCurrentWD( *newWD );
 }
 
@@ -929,6 +931,9 @@ void Scheduler::switchTo ( WD *to )
 
    } else {
 */
+
+   myThread->setPlanningWD( to );
+
    if ( myThread->runningOn()->supportsUserLevelThreads() ) {
 
       if (!to->started()) {
