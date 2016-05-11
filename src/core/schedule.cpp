@@ -591,8 +591,10 @@ void Scheduler::preOutlineWorkWithThread ( BaseThread * thread, WD *wd )
    // we tie to when outlining, because we will notify the tied thread when the execution completes
    wd->tieTo( *thread );
    thread->setCurrentWD( *wd );
-   if (!wd->started())
+   if (!wd->started()) {
+      thread->setPlanningWD( wd );
       wd->init();
+   }
 
    NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( copy_data_in_key, 0 ); )
    //NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( NULL, wd, false) );
@@ -630,8 +632,10 @@ void Scheduler::preOutlineWork ( WD *wd )
    // we tie to when outlining, because we will notify the tied thread when the execution completes
    wd->tieTo( *thread );
    thread->setCurrentWD( *wd );
-   if (!wd->started())
+   if (!wd->started()) {
+      thread->setPlanningWD( wd );
       wd->init();
+   }
 
    NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( copy_data_in_key, 0 ); )
    //NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( NULL, wd, false) );
@@ -663,6 +667,7 @@ bool Scheduler::tryPreOutlineWork ( WD *wd )
       wd->tieTo( *thread );
       thread->setCurrentWD( *wd );
       if ( !wd->started() ) {
+         thread->setPlanningWD( wd );
          wd->init();
       }
 
@@ -783,6 +788,8 @@ bool Scheduler::inlineWork ( WD *wd, bool schedule )
 
    // Initializing wd if necessary. It will be started later in inlineWorkDependent call
    if ( !wd->started() ) { 
+      thread->setPlanningWD( wd );
+
       if ( !wd->_mcontrol.isMemoryAllocated() ) {
          wd->_mcontrol.initialize( *(thread->runningOn()) );
          bool result;
@@ -932,11 +939,10 @@ void Scheduler::switchTo ( WD *to )
    } else {
 */
 
-   myThread->setPlanningWD( to );
-
    if ( myThread->runningOn()->supportsUserLevelThreads() ) {
-
       if (!to->started()) {
+         myThread->setPlanningWD( to );
+
          to->_mcontrol.initialize( *(myThread->runningOn()) );
 
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
@@ -1002,6 +1008,7 @@ void Scheduler::switchToThread ( BaseThread *thread )
 void Scheduler::exitHelper (WD *oldWD, WD *newWD, void *arg)
 {
     myThread->exitHelperDependent(oldWD, newWD, arg);
+    myThread->setPlanningWD( NULL );
     myThread->setCurrentWD( *newWD );
     oldWD->~WorkDescriptor();
     delete[] (char *)oldWD;
@@ -1035,6 +1042,8 @@ void Scheduler::exitTo ( WD *to )
 //    WD *current = myThread->getCurrentWD();
 
     if (!to->started()) {
+       myThread->setPlanningWD( to );
+
        to->_mcontrol.initialize( *(myThread->runningOn()) );
        bool result;
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
