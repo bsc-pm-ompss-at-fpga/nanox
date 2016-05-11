@@ -27,7 +27,7 @@
 #ifdef NANOS_RESILIENCY_ENABLED
 #include "exception/operationfailure.hpp"
 #include "exception/executionfailure.hpp"
-#include "exception/restorefailure.hpp"
+#include "exception/taskrecoveryfailed.hpp"
 #endif
 
 using namespace nanos;
@@ -66,17 +66,14 @@ void SMPDD::initStack ( WD *wd )
 void SMPDD::workWrapper ( WD &wd )
 {
    SMPDD &dd = (SMPDD &) wd.getActiveDevice();
-#ifdef NANOS_INSTRUMENTATION_ENABLED
+
    NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("user-code") );
    NANOS_INSTRUMENT ( nanos_event_value_t val = wd.getId() );
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenStateAndBurst ( NANOS_RUNNING, key, val ) );
-#endif
 
    dd.execute(wd);
 
-#ifdef NANOS_INSTRUMENTATION_ENABLED
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseStateAndBurst ( key, val ) );
-#endif
 }
 
 void SMPDD::lazyInit ( WD &wd, bool isUserLevelThread, WD *previous )
@@ -146,7 +143,7 @@ void SMPDD::execute ( WD &wd ) throw ()
                NANOS_INSTRUMENT ( static nanos_event_key_t task_reexec_key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("ft-task-operation") );
                NANOS_INSTRUMENT ( nanos_event_value_t task_reexec_val = (nanos_event_value_t ) NANOS_FT_RESTART );
                NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_reexec_key, &task_reexec_val) );
-            } catch ( error::RestoreFailure &ex ) {
+            } catch ( error::TaskRecoveryFailed &ex ) {
                debug( "Recovering from restore error in task ", wd.getId(), "." );
                restart = false;
             }

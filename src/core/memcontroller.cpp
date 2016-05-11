@@ -33,7 +33,7 @@
 #ifdef NANOS_RESILIENCY_ENABLED
 #   include "backupmanager.hpp"
 #   include "backupprivatecopy.hpp"
-#   include "exception/restorefailure.hpp"
+#   include "exception/taskrecoveryfailed.hpp"
 #endif
 
 namespace nanos {
@@ -526,7 +526,7 @@ void MemController::restoreBackupData ( )
 
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseBurstEvent ( key, val ) );
       } else {
-         throw error::RestoreFailure();
+         throw error::TaskRecoveryFailed();
       }
    }
 }
@@ -611,7 +611,7 @@ bool MemController::isDataRestored( WD const &wd ) {
                CachedRegionStatus* entry = (CachedRegionStatus*)backup->getNewRegions()->getRegionData( backup->getAllocatedRegion().id );
                const bool invalid_entry = entry && !entry->isValid();
                if( invalid_entry ) {
-                  throw error::RestoreFailure();
+                  throw error::TaskRecoveryFailed();
                }
             }
          }
