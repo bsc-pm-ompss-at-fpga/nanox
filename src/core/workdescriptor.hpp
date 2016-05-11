@@ -539,16 +539,15 @@ inline bool WorkDescriptor::isRecoverable() const { return _flags.is_recoverable
 #ifdef NANOS_RESILIENCY_ENABLED
 inline WorkDescriptor *WorkDescriptor::propagateInvalidationAndGetRecoverableAncestor ()
 {
-   WorkDescriptor *current;
-	WorkDescriptor *next = this;
+   WorkDescriptor *current = this;
+   while( current && !current->isInvalid() && !current->isRecoverable() ) {
+      current->setInvalid(true);
+      current = current->getParent();
+   }
+   if( current )
+      current->setInvalid(true);
 
-   do {
-		current = next;
-		current->setInvalid(true);
-		next = current->getParent();
-	} while ( !current->isRecoverable() && next && !next->isInvalid() );
-
-	return current;
+   return current;
 }
 
 inline bool WorkDescriptor::isAbleToExecute() const { return !isInvalid() && (getParent() == NULL || !getParent()->isInvalid()); }
