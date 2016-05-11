@@ -37,12 +37,12 @@ namespace error {
  * fault injection purposes.
  */
 class OperationFailure : public SegmentationFaultException {
-	private:
-		using super=SegmentationFaultException;
-	public:
-		OperationFailure( siginfo_t* signalInfo, ucontext_t* executionContext ) :
-				super( signalInfo, executionContext )
-		{
+   private:
+      using super=SegmentationFaultException;
+   public:
+      OperationFailure( siginfo_t* signalInfo, ucontext_t* executionContext ) :
+            super( signalInfo, executionContext )
+      {
          // FIXME: probably this should be placed into the handler and not the
          // exception constructor.
          //
@@ -57,7 +57,7 @@ class OperationFailure : public SegmentationFaultException {
          for( memory::MemoryPage& page : affectedPages ) {
             page.remap();
          }
-		}
+      }
 };
 
 } // namespace error

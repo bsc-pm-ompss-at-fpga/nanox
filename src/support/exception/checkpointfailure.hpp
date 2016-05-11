@@ -28,25 +28,31 @@ namespace nanos {
 namespace error {
 
 class CheckpointFailure {
-	private:
-		OperationFailure& _failedOperation;
-	public:
-		CheckpointFailure( OperationFailure& operation ) :
-				_failedOperation( operation )
-		{
-			FailureStats<CheckpointFailure>::increase();
+   private:
+      OperationFailure& _failedOperation;
+   public:
+      CheckpointFailure( OperationFailure& operation ) :
+            _failedOperation( operation )
+      {
+         FailureStats<CheckpointFailure>::increase();
 
-			// This task's backups are not valid, therefore we
-			// can not recover it.
-			operation.getTask().setRecoverable(false);
+         // Operation's task point to thread->currentWD()
+         // In checkpoints, this is not the affected workdescriptor, since
+         // the current thread does not point to it until it finishes
+         // the context switch.
+         WorkDescriptor& task = operation.getPlanningTask();
 
-			WorkDescriptor* recoverableAncestor = operation.getTask().propagateInvalidationAndGetRecoverableAncestor();
-			if( !recoverableAncestor ) {
-				fatal( "Could not find a recoverable task when recovering from ", operation.what() );
-			} else {
-				debug("Resiliency: checkpoint error detected ", operation.what() );
-			}
-		}
+         // This task's backups are not valid, therefore we
+         // can not recover it.
+         task.setRecoverable(false);
+
+         WorkDescriptor* recoverableAncestor = task.propagateInvalidationAndGetRecoverableAncestor();
+         if( !recoverableAncestor ) {
+            fatal( "Could not find a recoverable task when recovering from ", operation.what() );
+         } else {
+            debug("Resiliency: checkpoint error detected ", operation.what() );
+         }
+      }
 };
 
 } // namespace error

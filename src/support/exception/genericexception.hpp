@@ -49,7 +49,10 @@ namespace error {
  */
 class GenericException : public ExceptionTracer, public std::runtime_error {
    private:
-      WorkDescriptor &_runningTaskOnError;//!< WorkDescriptor that was being executed when the error was found.
+      //! WorkDescriptor that was being executed when the error was found.
+      WorkDescriptor* _runningTaskOnError;
+      //! WorkDescriptor that was being prepared (if any) when the error was found.
+      WorkDescriptor* _planningTaskOnError;
 
    public:
       /**
@@ -60,7 +63,9 @@ class GenericException : public ExceptionTracer, public std::runtime_error {
 
       virtual ~GenericException() noexcept {}
 
-      WorkDescriptor& getTask() { return _runningTaskOnError; }
+      WorkDescriptor& getTask() { return *_runningTaskOnError; }
+
+      WorkDescriptor& getPlanningTask() { return *_planningTaskOnError; }
 };
 
 }// namespace error

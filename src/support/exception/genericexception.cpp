@@ -25,8 +25,10 @@ namespace error {
 
 GenericException::GenericException( std::string const& message ) :
 		std::runtime_error( message ),
-		_runningTaskOnError( *getMyThreadSafe()->getCurrentWD() )
-	{}
+		_runningTaskOnError( getMyThreadSafe()->getCurrentWD() ),
+		_planningTaskOnError( getMyThreadSafe()->getPlanningWD() )
+{
+}
 
 } // namespace error
 } // namespace nanos
