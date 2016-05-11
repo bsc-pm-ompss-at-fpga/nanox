@@ -508,13 +508,12 @@ void MemController::restoreBackupData ( )
       }
 
       if( !failed ) {
+         SeparateMemoryAddressSpace& memory = sys.getBackupMemory();
          // Restore the rest of the input data
          for( index = 0; index < _wd->getNumCopies(); index++ ) {
             if ( _wd->getCopies()[index].isInput()
              && !_wd->getCopies()[index].isOutput() ) {
-               _backupCacheCopies[index]._chunk->copyRegionToHost( *_restoreOps,
-                     _backupCacheCopies[index]._reg.id,
-                     _backupCacheCopies[index].getVersion(), *_wd, index);
+               _backupCacheCopies[index].generateOutOps( &memory, *_restoreOps, false, true, *_wd, index);
             }
             index++;
          }

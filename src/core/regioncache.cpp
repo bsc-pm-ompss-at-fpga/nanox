@@ -155,7 +155,7 @@ void AllocatedChunk::copyRegionToHost( SeparateAddressSpaceOutOps &ops, reg_t re
    NewNewRegionDirectory::RegionDirectoryKey key = _newRegions->getGlobalDirectoryKey();
    CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg );
 
-   if( !entry->isValid() ) {
+   if( entry && !entry->isValid() ) {
       // TODO replace by custom exception
       throw std::runtime_error("Invalidated region found");
    }
@@ -177,6 +177,7 @@ void AllocatedChunk::copyRegionToHost( SeparateAddressSpaceOutOps &ops, reg_t re
       *(myThread->_file) << std::endl;
    }
 }
+
 void AllocatedChunk::copyRegionFromHost( BaseAddressSpaceInOps &ops, reg_t reg, unsigned int version, WD const &wd, unsigned int copyIdx ) {
    NewNewRegionDirectory::RegionDirectoryKey key = _newRegions->getGlobalDirectoryKey();
    CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg );
