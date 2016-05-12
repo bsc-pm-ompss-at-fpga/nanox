@@ -94,7 +94,7 @@ inline void message( const Ts&... msg )
 }
 
 template <typename T>
-void messageMaster( T msg )
+inline void messageMaster( T msg )
 {
    do {
       if ( getNodeNumber() == 0 ) {

@@ -155,13 +155,13 @@ class Address {
 		}
 
 		constexpr
-		bool operator==( nullptr_t ) noexcept
+		bool operator==( std::nullptr_t ) noexcept
 		{
 			return _value == 0;
 		}
 
 		constexpr
-		bool operator!=( nullptr_t ) noexcept
+		bool operator!=( std::nullptr_t ) noexcept
 		{
 			return _value != 0;
 		}
