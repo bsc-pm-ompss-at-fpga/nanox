@@ -101,6 +101,11 @@ devinclude_HEADERS = \
 	genericevent_decl.hpp \
 	hwloc_decl.hpp \
 	error.hpp \
+	$(END)
+
+memorydir = $(devincludedir)/memory
+memory_HEADERS= \
+	memory/accessrights.hpp \
 	memory/blockedpage.hpp \
 	memory/memoryaddress.hpp \
 	memory/memorychunk.hpp \
@@ -108,22 +113,22 @@ devinclude_HEADERS = \
 	$(END) 
 
 exceptiondir = $(devincludedir)/exception
-
 exception_HEADERS= \
 	exception/checkpointfailure.hpp \
 	exception/exceptiontracer.hpp \
 	exception/executionfailure.hpp \
-   exception/failurestats.hpp \
+	exception/failurestats.hpp \
 	exception/genericexception.hpp \
 	exception/invalidatedregionfound.hpp \
+	exception/mpierror.hpp \
+	exception/mpierrorhandler.hpp \
+	exception/mpierrortranslator.hpp \
 	exception/operationfailure.hpp \
 	exception/restorefailure.hpp \
 	exception/signalexception.hpp \
 	exception/signalinfo.hpp \
 	exception/signaltranslator.hpp \
-	exception/mpierror.hpp \
-	exception/mpierrorhandler.hpp \
-	exception/mpierrortranslator.hpp \
+	exception/taskrecoveryfailed.hpp \
 	$(END)
 
 error_injectiondir = $(devincludedir)/error-injection
@@ -229,29 +234,19 @@ support_sources = \
 	hwloc.cpp \
 	dbmanager.hpp \
 	error.hpp \
-	exception/checkpointfailure.hpp \
-	exception/exceptiontracer.hpp \
-	exception/executionfailure.hpp \
-	exception/failurestats.hpp \
-	exception/failurestats.cpp \
-	exception/genericexception.hpp \
-	exception/genericexception.cpp \
-	exception/operationfailure.hpp \
-	exception/restorefailure.hpp \
-	exception/signalexception.hpp \
-	exception/signalexception.cpp \
-	exception/signalinfo.hpp \
-	exception/signaltranslator.hpp \
+	$(error_injection_HEADERS) \
 	error-injection/errorinjectioninterface.cpp \
-	memory/blockedpage.hpp \
-	memory/memoryaddress.hpp \
-	memory/memorychunk.hpp \
-	memory/memorypage.hpp \
+	$(exception_HEADERS) \
+	exception/failurestats.cpp \
+	exception/genericexception.cpp \
+	exception/mpierror.cpp \
+	exception/signalexception.cpp \
+	$(memory_HEADERS) \
 	$(END)
 
 mpi_exception_sources = \
-	exception/mpierror.hpp \
 	exception/mpierror.cpp \
+	exception/mpierror.hpp \
 	exception/mpierrorhandler.hpp \
 	exception/mpierrortranslator.hpp \
 	$(END)
