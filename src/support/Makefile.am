@@ -100,6 +100,11 @@ devinclude_HEADERS = \
 	pinnedallocator_decl.hpp \
 	genericevent_decl.hpp \
 	hwloc_decl.hpp \
+	error.hpp \
+	memory/blockedpage.hpp \
+	memory/memoryaddress.hpp \
+	memory/memorychunk.hpp \
+	memory/memorypage.hpp \
 	$(END) 
 
 exceptiondir = $(devincludedir)/exception
@@ -223,6 +228,7 @@ support_sources = \
 	hwloc_decl.hpp \
 	hwloc.cpp \
 	dbmanager.hpp \
+	error.hpp \
 	exception/checkpointfailure.hpp \
 	exception/exceptiontracer.hpp \
 	exception/executionfailure.hpp \
@@ -237,6 +243,10 @@ support_sources = \
 	exception/signalinfo.hpp \
 	exception/signaltranslator.hpp \
 	error-injection/errorinjectioninterface.cpp \
+	memory/blockedpage.hpp \
+	memory/memoryaddress.hpp \
+	memory/memorychunk.hpp \
+	memory/memorypage.hpp \
 	$(END)
 
 mpi_exception_sources = \
