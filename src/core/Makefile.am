@@ -118,6 +118,7 @@ devinclude_HEADERS = \
 	addressspace_fwd.hpp  \
 	memcontroller_fwd.hpp  \
 	memcontroller_decl.hpp  \
+	memcontroller.hpp  \
 	memcachecopy_decl.hpp \
 	memcachecopy.hpp \
 	memcachecopy_fwd.hpp \
@@ -260,6 +261,7 @@ common_sources=\
 	addressspace_fwd.hpp  \
 	memcontroller_fwd.hpp  \
 	memcontroller_decl.hpp  \
+	memcontroller.hpp  \
 	memcontroller.cpp  \
 	memcachecopy_decl.hpp \
 	memcachecopy_fwd.hpp \

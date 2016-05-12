@@ -101,6 +101,8 @@ devinclude_HEADERS = \
 	genericevent_decl.hpp \
 	hwloc_decl.hpp \
 	error.hpp \
+	frequency_traits.hpp \
+	frequency.hpp \
 	$(END)
 
 memorydir = $(devincludedir)/memory
@@ -234,12 +236,13 @@ support_sources = \
 	hwloc.cpp \
 	dbmanager.hpp \
 	error.hpp \
+	frequency_traits.hpp \
+	frequency.hpp \
 	$(error_injection_HEADERS) \
 	error-injection/errorinjectioninterface.cpp \
 	$(exception_HEADERS) \
 	exception/failurestats.cpp \
 	exception/genericexception.cpp \
-	exception/mpierror.cpp \
 	exception/signalexception.cpp \
 	$(memory_HEADERS) \
 	$(END)

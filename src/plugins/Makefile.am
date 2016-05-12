@@ -35,6 +35,11 @@ devinclude_HEADERS=\
 	instrumentation/ompt-headers/ompt-types-callbacks.h \
 	$(END)
 
+error_injectiondir = $(devincludedir)/error-injection
+error_injection_HEADERS = \
+	error-injection/blockaccessinjector.hpp \
+	error-injection/stubinjector.hpp \
+	$(END)
 
 
 
