@@ -142,8 +142,8 @@ error_injection_HEADERS= \
 	error-injection/errorinjectionthread.hpp \
 	error-injection/errorinjectionthread_decl.hpp \
 	error-injection/periodicinjectionpolicy.hpp \
-	error-injection/periodicinjectionpolicy_decl.hpp \
-	error-injection/periodicinjectionpolicy_fwd.hpp \
+	error-injection/blockaccessinjector.hpp \
+	error-injection/stubinjector.hpp \
 	$(END)
 
 support_sources = \

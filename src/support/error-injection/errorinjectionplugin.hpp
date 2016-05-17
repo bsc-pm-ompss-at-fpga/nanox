@@ -2,8 +2,8 @@
 #ifndef ERROR_INJECTION_PLUGIN_HPP
 #define ERROR_INJECTION_PLUGIN_HPP
 
-#include "errorinjectioninterface.hpp"
-#include "errorinjectionpolicy.hpp"
+#include "error-injection/errorinjectioninterface.hpp"
+#include "error-injection/errorinjectionpolicy.hpp"
 #include "plugin.hpp"
 
 #include <memory>

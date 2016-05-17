@@ -1,17 +1,14 @@
 
-#include "blockaccessinjector.hpp"
+#include "error-injection/blockaccessinjector.hpp"
 #include "error-injection/errorinjectionplugin.hpp"
+#include "error-injection/periodicinjectionpolicy.hpp"
 #include "system.hpp"
 
 using namespace nanos::error;
 
-class BlockPageAccessInjectionPlugin : public ErrorInjectionPlugin<BlockMemoryPageAccessInjector>
-{
-	public:
-		static const char* pluginName() { return "injection-block-access"; }
-};
+using BlockPageAccessInjectionPlugin = ErrorInjectionPlugin< PeriodicInjectionPolicy<BlockMemoryPageAccessInjector> >;
 
-DECLARE_PLUGIN( BlockPageAccessInjectionPlugin::pluginName(),
+DECLARE_PLUGIN( "injection-block-access",
                 BlockPageAccessInjectionPlugin
               );
 

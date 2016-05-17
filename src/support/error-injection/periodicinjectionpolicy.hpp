@@ -1,35 +1,38 @@
 
-#ifndef PERIODIC_INJECTION_POLICY_HPP
-#define PERIODIC_INJECTION_POLICY_HPP
+#ifndef PERIODIC_INJECTION_POLICY_DECL_HPP
+#define PERIODIC_INJECTION_POLICY_DECL_HPP
 
-#include "periodicinjectionpolicy_decl.hpp"
+#include "error-injection/errorinjectionpolicy.hpp"
 #include "error-injection/errorinjectionthread.hpp"
+
+#include <random>
 
 namespace nanos {
 namespace error {
 
-template < typename RandomEngine >
-PeriodicInjectionPolicy<RandomEngine>::PeriodicInjectionPolicy( ErrorInjectionConfig const& properties ) :
-	ErrorInjectionPolicy( properties ),
-	_generator( properties.getInjectionSeed() ),
-	_thread( *this, properties.getInjectionRate() )
+template < template<class> class InjectionPolicy, typename RandomEngine = std::minstd_rand >
+class PeriodicInjectionPolicy : public InjectionPolicy<RandomEngine>
 {
-}
+	private:
+		using Injector = InjectionPolicy<RandomEngine>;
 
-template < typename RandomEngine >
-void PeriodicInjectionPolicy<RandomEngine>::resume()
-{
-	_thread.resume();
-}
+		ErrorInjectionThread<RandomEngine,InjectionPolicy> _thread;
 
-template < typename RandomEngine >
-void PeriodicInjectionPolicy<RandomEngine>::stop()
-{
-	_thread.stop();
-}
+	public:
+		PeriodicInjectionPolicy( ErrorInjectionConfig const& properties ) :
+			Injector( properties ),
+			_thread( *this, properties.getInjectionRate() )
+		{
+		}
+
+		virtual ~PeriodicInjectionPolicy() {}
+
+		virtual void stop() { _thread.stop(); }
+
+		virtual void resume() { _thread.resume(); }
+};
 
 } // namespace error
 } // namespace nanos
 
-#endif // PERIODIC_INJECTION_POLICY_HPP
-
+#endif // PERIODIC_INJECTION_POLICY_DECL_HPP

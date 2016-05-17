@@ -295,7 +295,7 @@ void System::loadModules ()
    ensure( _defBarrFactory,"No default system barrier factory" );
    
 #ifdef NANOS_RESILIENCY_ENABLED
-	// load default error injection plugin
+   // load default error injection plugin
    verbose( "loading ", getInjectionPolicy(), " injection policy" );
 
    if ( !loadPlugin( std::string("injection-")+getInjectionPolicy() ) )
@@ -1641,16 +1641,6 @@ void System::environmentSummary( void )
 #else
    message( "=== Runtime resiliency:  Disabled" );
 #endif
-#ifdef NANOS_FAULT_INJECTION
-   if( sys.isPoisoningEnabled() ) {
-      message( "=== Fault injection:     Enabled" );
-      message( "===  | Rate:             ", sys.getMPoisonRate() );
-      message( "===  | Seed:             ", sys.getMPoisonSeed() );
-   } else
-#else
-      message( "=== Fault injection:     Disabled" );
-#endif
-
    NANOS_INSTRUMENT ( sys.getInstrumentation()->getInstrumentationDictionary()->printEventVerbosity(); )
 
    message( "=========================================================" );

@@ -1,101 +1,110 @@
 
-#ifndef ERROR_INJECTION_THREAD_HPP
-#define ERROR_INJECTION_THREAD_HPP
+#ifndef ERROR_INJECTION_THREAD_DECL_HPP
+#define ERROR_INJECTION_THREAD_DECL_HPP
 
-#include "errorinjectionthread_decl.hpp"
-#include "periodicinjectionpolicy_decl.hpp"
 #include "frequency.hpp"
 
-#include "debug.hpp"
-
+#include <atomic>
 #include <chrono>
-#include <ratio>
+#include <condition_variable>
+#include <mutex>
+#include <random>
+#include <thread>
 
 namespace nanos {
 namespace error {
 
-template < class RandomEngine >
-ErrorInjectionThread<RandomEngine>::ErrorInjectionThread( InjectionPolicy& manager, frequency<double, std::kilo> injectionRate ) noexcept :
-		_injectionPolicy( manager ),
-		_waitTimeDistribution( injectionRate.count() ),
-		_finish(false),
-		_wait(true),
-		_mutex(),
-		_suspendCondition(),
-		_injectionThread( &ErrorInjectionThread::injectionLoop, this )
-{
-	debug( "Starting injection thread" );
-}
+template <class RandomEngine, template<class> class InjectionPolicy>
+class ErrorInjectionThread {
+	private:
+		using milliseconds_t = std::chrono::duration<double, std::milli>;
+		using Injector = InjectionPolicy<RandomEngine>;
 
-template < class RandomEngine >
-ErrorInjectionThread<RandomEngine>::~ErrorInjectionThread() noexcept
-{
-	terminate();
-	debug( "Error injection thread finished." );
-}
+		Injector                             &_injectionPolicy;
+		std::exponential_distribution<double> _waitTimeDistribution;
+		bool                                  _finish;
+		bool                                  _wait;
+		std::mutex                            _mutex;
+		std::condition_variable               _suspendCondition;
+		std::thread                           _injectionThread;
 
-template < class RandomEngine >
-void ErrorInjectionThread<RandomEngine>::wait() {
-	std::unique_lock<std::mutex> lock( _mutex );
-	if( _wait ) {
-		_suspendCondition.wait( lock );
-	} else {
-		_suspendCondition.wait_for( lock, getWaitTime() );
-	}
-}
-
-template < class RandomEngine >
-void ErrorInjectionThread<RandomEngine>::terminate() noexcept {
-	{
-		std::unique_lock<std::mutex> lock( _mutex );
-		_finish = true;
-		_wait = false;
-		_suspendCondition.notify_all();
-	}
-	_injectionThread.join();
-}
-
-template < class RandomEngine >
-void ErrorInjectionThread<RandomEngine>::stop() noexcept {
-	std::unique_lock<std::mutex> lock( _mutex );
-	_wait = true;
-}
-
-template < class RandomEngine >
-void ErrorInjectionThread<RandomEngine>::resume() noexcept {
-	std::unique_lock<std::mutex> lock( _mutex );
-	if( _wait ) {
-		_wait = false;
-		_suspendCondition.notify_one();
-	}
-}
-
-template < class RandomEngine >
-PeriodicInjectionPolicy<RandomEngine> &ErrorInjectionThread<RandomEngine>::getInjectionPolicy()
-{
-	return _injectionPolicy;
-}
+	public:
+		ErrorInjectionThread( Injector& manager, frequency<double,std::kilo> injectionRate ) noexcept :
+			_injectionPolicy( manager ),
+			_waitTimeDistribution( injectionRate.count() ),
+			_finish(false),
+			_wait(true),
+			_mutex(),
+			_suspendCondition(),
+			_injectionThread( &ErrorInjectionThread::injectionLoop, this )
+		{
+			debug( "Injection thread: Starting thread" );
+		}
 
 
-using duration_t = std::chrono::duration<double, std::milli>;
+		virtual ~ErrorInjectionThread() noexcept
+		{
+			terminate();
+			debug( "Injection thread: thread finished" );
+		}
 
-template < class RandomEngine >
-duration_t ErrorInjectionThread<RandomEngine>::getWaitTime() noexcept {
-	return duration_t( 
-					_waitTimeDistribution( _injectionPolicy.getRandomGenerator() )
-				);
-}
+		Injector &getInjectionPolicy() { return _injectionPolicy; }
 
-template < class RandomEngine >
-void ErrorInjectionThread<RandomEngine>::injectionLoop() {
-	while( !_finish ) {
-		wait();
-		getInjectionPolicy().injectError();
-	}
-}
+		void terminate() noexcept
+		{
+			{
+				std::unique_lock<std::mutex> lock( _mutex );
+				_finish = true;
+				_wait = false;
+				_suspendCondition.notify_all();
+			}
+			_injectionThread.join();
+		}
+
+		void stop() noexcept
+		{
+			std::unique_lock<std::mutex> lock( _mutex );
+			_wait = true;
+		}
+
+		void resume() noexcept
+		{
+			std::unique_lock<std::mutex> lock( _mutex );
+			if( _wait ) {
+				_wait = false;
+				_suspendCondition.notify_one();
+			}
+		}
+
+	private:
+		void wait()
+		{
+			std::unique_lock<std::mutex> lock( _mutex );
+			if( _wait ) {
+				_suspendCondition.wait( lock );
+			} else {
+				_suspendCondition.wait_for( lock, getWaitTime() );
+			}
+		}
+
+		milliseconds_t getWaitTime() noexcept
+		{
+			return milliseconds_t( 
+							_waitTimeDistribution( _injectionPolicy.getRandomGenerator() )
+						);
+		}
+
+		void injectionLoop ()
+		{
+			while( !_finish ) {
+				wait();
+				debug("Injection thread: injecting an error");
+				getInjectionPolicy().injectError();
+			}
+		}
+};
 
 } // namespace error
 } // namespace nanos
 
-#endif // ERROR_INJECTION_THREAD_HPP
-
+#endif // ERROR_INJECTION_THREAD_DECL_HPP

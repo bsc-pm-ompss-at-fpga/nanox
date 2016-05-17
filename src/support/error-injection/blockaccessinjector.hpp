@@ -2,37 +2,43 @@
 #ifndef BLOCK_ACCESS_INJECTOR_HPP
 #define BLOCK_ACCESS_INJECTOR_HPP
 
-#include "error-injection/periodicinjectionpolicy.hpp"
+#include "error-injection/errorinjectionconfiguration.hpp"
+#include "error-injection/errorinjectionpolicy.hpp"
+#include "exception/failurestats.hpp"
 #include "memory/memorypage.hpp"
 #include "memory/blockedpage.hpp"
 
-#include <chrono>
 #include <deque>
-#include <set>
 #include <random>
+#include <set>
 
 namespace nanos {
 namespace error {
 
-class BlockMemoryPageAccessInjector : public PeriodicInjectionPolicy<>
+template < typename RandomEngine = std::minstd_rand >
+class BlockMemoryPageAccessInjector : public ErrorInjectionPolicy
 {
 	private:
-		std::deque<memory::MemoryPage> _candidatePages;
+		std::deque<memory::MemoryPage>      _candidatePages;
 		std::set<memory::BlockedMemoryPage> _blockedPages;
+		RandomEngine                        _generator;
 
 	public:
 		BlockMemoryPageAccessInjector( ErrorInjectionConfig const& properties ) noexcept :
-			PeriodicInjectionPolicy( properties ),
+			ErrorInjectionPolicy( properties ),
 			_candidatePages(),
-			_blockedPages()
+			_blockedPages(),
+			_generator( properties.getInjectionSeed() )
 		{
 		}
 
-		void config( ErrorInjectionConfig const& properties )
+		virtual ~BlockMemoryPageAccessInjector()
 		{
 		}
 
-		void injectError()
+		RandomEngine& getRandomGenerator() { return _generator; }
+
+		virtual void injectError()
 		{
 			using distribution = std::uniform_int_distribution<size_t>;
 			using dist_param = distribution::param_type;
@@ -41,18 +47,19 @@ class BlockMemoryPageAccessInjector : public PeriodicInjectionPolicy<>
 			
 			if( !_candidatePages.empty() ) {
 				dist_param parameter( 0, _candidatePages.size() );
-				size_t position = pageFaultDistribution( getRandomGenerator(), parameter );
+				size_t position = pageFaultDistribution( _generator, parameter );
 
 				_blockedPages.emplace( _candidatePages[position] );
 			}
+			FailureStats<ErrorInjection>::increase();
 		}
 
-		void injectError( void *address )
+		virtual void injectError( void *address )
 		{
 			_blockedPages.emplace( memory::MemoryPage(address) );
 		}
 
-		void declareResource( void *address, size_t size )
+		virtual void declareResource( void *address, size_t size )
 		{
 			memory::MemoryPage::retrievePagesInsideChunk( _candidatePages, memory::MemoryChunk( static_cast<memory::Address>(address), size) );
 		}
@@ -62,7 +69,7 @@ class BlockMemoryPageAccessInjector : public PeriodicInjectionPolicy<>
 			_candidatePages.push_back( page );
 		}
 
-		void recoverError( void* handle ) noexcept {
+		virtual void recoverError( void* handle ) noexcept {
 			memory::Address failedAddress( handle );
 
 			for( auto it = _blockedPages.begin(); it != _blockedPages.end(); it++ ) {

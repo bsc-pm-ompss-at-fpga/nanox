@@ -2,11 +2,15 @@
 #ifndef ERROR_INJECTION_STUB_HPP
 #define ERROR_INJECTION_STUB_HPP
 
+#include "error-injection/errorinjectionconfiguration.hpp"
 #include "error-injection/errorinjectionpolicy.hpp"
 
 namespace nanos {
 namespace error {
 
+// This injetor does only support standalone mode
+// It does not make any sense to use a more ellaborated policy
+// if in the end it does not inject anything anyway
 class StubInjector : public ErrorInjectionPolicy
 {
 	public:
@@ -15,19 +19,19 @@ class StubInjector : public ErrorInjectionPolicy
 		{
 		}
 
-		virtual void injectError()
+		void injectError()
 		{
 		}
 
-		virtual void injectError( void* handle )
+		void injectError( void* handle )
 		{
 		}
 
-		virtual void recoverError( void *handle ) noexcept
+		void recoverError( void *handle ) noexcept
 		{
 		}
 
-		virtual void declareResource( void* handle, size_t size )
+		void declareResource( void* handle, size_t size )
 		{
 		}
 };
