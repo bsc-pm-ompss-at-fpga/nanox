@@ -140,7 +140,6 @@ error_injection_HEADERS= \
 	error-injection/errorinjectionplugin.hpp \
 	error-injection/errorinjectionpolicy.hpp \
 	error-injection/errorinjectionthread.hpp \
-	error-injection/errorinjectionthread_decl.hpp \
 	error-injection/periodicinjectionpolicy.hpp \
 	error-injection/blockaccessinjector.hpp \
 	error-injection/stubinjector.hpp \
