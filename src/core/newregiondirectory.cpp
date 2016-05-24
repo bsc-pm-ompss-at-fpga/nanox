@@ -54,9 +54,10 @@
  //#define _VERBOSE_CACHE ( sys.getNetwork()->getNodeNum() == 0 )
 #endif
 
-using namespace nanos;
 
-std::ostream & nanos::operator<< (std::ostream &o, nanos::NewNewDirectoryEntryData const &ent)
+namespace nanos {
+
+std::ostream & operator<< (std::ostream &o, NewNewDirectoryEntryData const &ent)
 {
    //o << "WL: " << ent._writeLocation << " V: " << ent.getVersion() << " Locs: ";
    o << " V: " << ent.getVersion() << " Locs: ";
@@ -886,3 +887,6 @@ void NewNewRegionDirectory::unregisterObject( memory::Address baseAddr) {
    }
    hb._lock.release();
 }
+
+} // namespace nanos
+
