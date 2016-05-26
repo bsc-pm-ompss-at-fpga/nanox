@@ -77,7 +77,7 @@ inline bool FPGADevice::copyIn( void *localDst, CopyDescriptor &remoteSrc, size_
       //Transferring pinned kernel space buffer
       uint64_t offset;
       offset = src_addr - baseAddress;
-      bufHandle = allocator.getBufferHandle( (void *)src_addr );
+      bufHandle = allocator.getBufferHandle( (void *)baseAddress );
 
       NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_SUBMIT_IN_DMA_EVENT );
       //Support synchronous transfers??
@@ -148,7 +148,7 @@ bool FPGADevice::copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size
       uint64_t offset;
       xdma_buf_handle bufHandle;
       offset = src_addr - baseAddress;
-      bufHandle = allocator.getBufferHandle( (void *)src_addr );
+      bufHandle = allocator.getBufferHandle( (void *)baseAddress );
 
       NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_SUBMIT_OUT_DMA_EVENT );
       status = xdmaSubmitKBuffer( bufHandle, size, (unsigned int)offset, XDMA_ASYNC,
