@@ -487,6 +487,7 @@ namespace nanos
          int            * _threadActive;
          std::vector < DeviceInstrumentation * > _devices;
          int            _deviceCount;
+         int            _numThreads;
 
          //target buffer callbacks
          //TODO these should be inside a vector, per accelerator
@@ -515,6 +516,7 @@ namespace nanos
          {
             ompt_initialize ( ompt_nanos_lookup, "Nanos++ 0.8a", 1);
             int nthreads = sys.getSMPPlugin()->getNumThreads();
+            _numThreads = nthreads;
             _previousTask = ( ompt_task_id_t *) malloc ( nthreads * sizeof(ompt_task_id_t) );
             _threadActive = ( int *) malloc ( nthreads * sizeof(int) );
             for ( int i = 0; i < nthreads; i++ ){
@@ -761,7 +763,11 @@ namespace nanos
                ompt_nanos_event_thread_end((ompt_thread_type_t) ompt_thread_worker, (ompt_thread_id_t) nanos::myThread->getId());
             }
          }
-         void incrementMaxThreads( void ) {}
+         void incrementMaxThreads( void ) {
+            _numThreads++;
+            _previousTask = ( ompt_task_id_t* ) realloc( _previousTask, _numThreads );
+            _threadActive = ( int* ) realloc( _threadActive, _numThreads );
+         }
 
          virtual void registerInstrumentDevice( DeviceInstrumentation *devInstr ) {
             _devices.push_back( devInstr );
