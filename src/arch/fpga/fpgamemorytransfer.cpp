@@ -33,6 +33,7 @@ FPGAMemoryTransfer* FPGAMemoryTransferList::addTransfer(CopyDescriptor copyDesc,
    }
    _lock.acquire();
    _transfers.push_back(newTransfer);
+   //std::cerr << "Pending transfers in " << std::hex << this << std::dec << " : " << _transfers.size() << std::endl;
    _lock.release();
    return newTransfer;
 }
@@ -131,12 +132,12 @@ void FPGAMemoryInTransferList::syncTransfer(uint64_t hostAddress){
          verbose("DMAWait in" << transfer->_dmaHandle);
          {  NANOS_INSTRUMENT( InstrumentBurst i( "in-xdma" ,ext::NANOS_FPGA_WAIT_INPUT_DMA_EVENT); )
             status = xdmaWaitTransfer( transfer->_dmaHandle );
+            if ( status != XDMA_SUCCESS ) {
+               warning( "Failed to wait in transfer " << transfer->_dmaHandle
+                     << " @" << std::hex << (uintptr_t)hostAddress
+                     <<  std::dec << " status: " << status );
+            }
             xdmaReleaseTransfer( &transfer->_dmaHandle );
-         }
-         if ( status != XDMA_SUCCESS ) {
-            warning( "Failed to wait in transfer " << transfer->_dmaHandle
-                  << " @" << std::hex << (uintptr_t)hostAddress
-                  <<  std::dec << " status: " << status );
          }
 
          return;
@@ -157,12 +158,12 @@ void FPGAMemoryInTransferList::syncNTransfers(unsigned int n){
       NANOS_FPGA_CREATE_RUNTIME_EVENT( NANOS_FPGA_WAIT_INPUT_DMA_EVENT );
       status = xdmaWaitTransfer( transfer->_dmaHandle );
       NANOS_FPGA_CLOSE_RUNTIME_EVENT;
-      xdmaReleaseTransfer( &transfer->_dmaHandle );
       if ( status != XDMA_SUCCESS ) {
          warning( "Failed to wait in transfer " << transfer->_dmaHandle
                << " @" << std::hex << (uintptr_t)transfer->_copyDescriptor.getTag()
                <<  std::dec << " status: " << status );
       }
+      xdmaReleaseTransfer( &transfer->_dmaHandle );
       _transfers.pop_front();
    }
    //_lock.release();

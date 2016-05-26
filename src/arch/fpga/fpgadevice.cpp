@@ -67,7 +67,7 @@ inline bool FPGADevice::copyIn( void *localDst, CopyDescriptor &remoteSrc, size_
 
    debug("submitting input transfer:" << std::endl
            << "  @:" << std::hex << src_addr << std::dec << " size:" << size
-           << "  iChan:" << iChan );
+           << "  iChan:" << iChan << "devIdx: " << fpga->getActiveAcc() );
 
    FPGAPinnedAllocator& allocator = FPGAProcessor::getPinnedAllocator();
    uint64_t baseAddress = (uint64_t)allocator.getBasePointer( (void *)src_addr, size);
@@ -137,7 +137,7 @@ bool FPGADevice::copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size
 
    debug("submitting output transfer:" << std::endl
            << "  @:" << std::hex <<  src_addr << std::dec << " size:" << size
-           << "  oChan:" << oChan );
+           << "  oChan:" << oChan << "deviceIdx: " << fpga->getActiveAcc() );
 
    //get pinned buffer handle for this address
    //at this point, assume that all buffers to be transferred to fpga are pinned
