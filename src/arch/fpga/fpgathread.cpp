@@ -135,19 +135,32 @@ void FPGAThread::finishAllWD() {
    }
 }
 
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+
+static int __attribute__((noinline)) checkCounter(volatile xdma_instr_times *counters ) {
+    //std::cerr << "counter: " << counters->outTransfer << std::endl;
+    return (counters->outTransfer != 1);
+}
+
 void FPGAThread::readInstrCounters( WD *wd ) {
-   xdma_instr_times *counters = _hwInstrCounters[ wd ];
+
+   std::pair< xdma_instr_times*, int > &instEntry = _hwInstrCounters[ wd ];
+   volatile xdma_instr_times *counters = instEntry.first;
+   int activeAcc = instEntry.second;
+
    //TODO: Submit data to instrumentation layer
 
-#ifdef NANOS_INSTRUMENTATION_ENABLED
    Instrumentation *instr = sys.getInstrumentation();
    FPGAProcessor *fpga = ( FPGAProcessor* )runningOn();
    DeviceInstrumentation *devInstr =
-      fpga->getDeviceInstrumentation();
+      fpga->getDeviceInstrumentation( activeAcc );
    DeviceInstrumentation *dmaIn, *dmaOut;
 
-   dmaIn = fpga->getDmaInInstrumentation();
-   dmaOut = fpga->getDmaOutInstrumentation();
+   dmaIn = fpga->getDmaInInstrumentation( activeAcc );
+   dmaOut = fpga->getDmaOutInstrumentation( activeAcc );
+   //std::cout << "check counter... " << std::endl;
+   while ( ! checkCounter(counters) );
+   //std::cout << "ok" << std::endl;
 
    //Task execution
    instr->addDeviceEvent(
@@ -179,23 +192,25 @@ void FPGAThread::readInstrCounters( WD *wd ) {
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, dmaOut, wd ) );
 
-
-
-#endif
-
-
-   xdmaClearTaskTimes( counters );
+   xdmaClearTaskTimes( (xdma_instr_times*) counters );
    _hwInstrCounters.erase( wd );
 
 }
+#endif
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 void FPGAThread::setupTaskInstrumentation( WD *wd ) {
    //Set up HW instrumentation
+   FPGAProcessor *fpga = ( FPGAProcessor* ) myThread->runningOn();
+   int activeAcc = fpga->getActiveAcc();
    const xdma_device deviceHandle =
-      ( ( FPGAProcessor * ) myThread->runningOn() )->getFPGAProcessorInfo()->getDeviceHandle();
+      fpga->getFPGAProcessorInfo()[activeAcc].getDeviceHandle();
+   debug( "FPGA: Setting instrumentation for acc " << fpga->getActiveAcc() );
+//   const xdma_device deviceHandle =
+//      ( ( FPGAProcessor * ) myThread->runningOn() )->getFPGAProcessorInfo()->getDeviceHandle();
    xdma_instr_times * hwCounters;
    xdmaSetupTaskInstrument(deviceHandle, &hwCounters);
-   _hwInstrCounters[ wd ] = hwCounters;
+   hwCounters->outTransfer = 1;
+   _hwInstrCounters[ wd ] = std::make_pair( hwCounters, activeAcc );
 }
 #endif

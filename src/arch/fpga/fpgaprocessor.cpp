@@ -67,9 +67,10 @@ FPGAProcessor::~FPGAProcessor(){
 
 void FPGAProcessor::init()
 {
-   xdma_device *devices = NEW xdma_device[_numAcc];
+   int fpgaCount = FPGAConfig::getFPGACount();
+   xdma_device *devices = NEW xdma_device[fpgaCount];
    xdma_status status;
-   status = xdmaGetDevices(FPGAConfig::getFPGACount(), devices, NULL);
+   status = xdmaGetDevices(fpgaCount,  devices, NULL);
 
    for ( int i=0; i < _numAcc; i++ ) {
       xdma_channel iChan, oChan;

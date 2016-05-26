@@ -49,28 +49,30 @@ class FPGAPlugin : public ArchPlugin
       }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-      void registerDeviceInstrumentation( FPGAProcessor *fpga ) {
+      void registerDeviceInstrumentation( FPGAProcessor *fpga, int accNum ) {
           unsigned int id;
           //FIXME: assign proper IDs to deviceinstrumentation
-          id = sys.getNumInstrumentAccelerators();
-          FPGAInstrumentation *instr = new FPGAInstrumentation( "FPGA accelerator" );
-          instr->setId( id );
-          sys.addDeviceInstrumentation( instr );
+          for (int i=0; i<accNum; i++) {
+             id = sys.getNumInstrumentAccelerators();
+             FPGAInstrumentation *instr = new FPGAInstrumentation( "FPGA accelerator" + i );
+             instr->setId( id );
+             sys.addDeviceInstrumentation( instr );
 
-          id = sys.getNumInstrumentAccelerators();
-          FPGAInstrumentation *dmaInInstr = new FPGAInstrumentation( "DMA in" );
-          dmaInInstr->setId( id );
-          sys.addDeviceInstrumentation( dmaInInstr );
+             id = sys.getNumInstrumentAccelerators();
+             FPGAInstrumentation *dmaInInstr = new FPGAInstrumentation( "DMA in" + i );
+             dmaInInstr->setId( id );
+             sys.addDeviceInstrumentation( dmaInInstr );
 
-          id = sys.getNumInstrumentAccelerators();
-          FPGAInstrumentation *dmaOutInstr = new FPGAInstrumentation( "DMA out" );
-          dmaOutInstr->setId( id );
-          sys.addDeviceInstrumentation( dmaOutInstr );
+             id = sys.getNumInstrumentAccelerators();
+             FPGAInstrumentation *dmaOutInstr = new FPGAInstrumentation( "DMA out" + i );
+             dmaOutInstr->setId( id );
+             sys.addDeviceInstrumentation( dmaOutInstr );
 
-          instr->init();
-          //sys.getInstrumentation()->registerInstrumentDevice( instr );
-          fpga->setDeviceInstrumentation( instr );
-          fpga->setDmaInstrumentation( dmaInInstr, dmaOutInstr );
+             instr->init();
+             //sys.getInstrumentation()->registerInstrumentDevice( instr );
+             fpga->setDeviceInstrumentation( instr );
+             fpga->setDmaInstrumentation( dmaInInstr, dmaOutInstr );
+          }
       }
 #endif
 
@@ -132,7 +134,8 @@ class FPGAPlugin : public ArchPlugin
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
                //Register device in the instrumentation system
-               registerDeviceInstrumentation( fpga );
+               registerDeviceInstrumentation( fpga,
+                     FPGAConfig::getFPGACount()/FPGAConfig::getNumFPGAThreads() );
 #endif
             }
          } //!FPGAConfig::isDisabled()

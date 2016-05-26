@@ -56,7 +56,7 @@ namespace ext
 
       private:
          std::queue< WD* > _pendingWD;
-         std::map< WD*, xdma_instr_times* > _hwInstrCounters;
+         std::map< WD*, std::pair< xdma_instr_times*, int > > _hwInstrCounters;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          void readInstrCounters( WD *wd );
 #endif

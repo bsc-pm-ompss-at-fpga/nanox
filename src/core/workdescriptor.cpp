@@ -226,13 +226,16 @@ DeviceData & WorkDescriptor::activateDevice ( unsigned int deviceIdx )
    return *_devices[_activeDeviceIdx];
 }
 
-bool WorkDescriptor::canRunIn( const Device &device ) const
+bool WorkDescriptor::canRunIn( const Device &device , const ProcessingElement * pe) const
+//bool WorkDescriptor::canRunIn( const Device &device ) const
 {
-   if ( _activeDeviceIdx != _numDevices ) return _devices[_activeDeviceIdx]->isCompatible( device );
+   if ( _activeDeviceIdx != _numDevices ) return _devices[_activeDeviceIdx]->isCompatible( device , pe);
+   //if ( _activeDeviceIdx != _numDevices ) return _devices[_activeDeviceIdx]->isCompatible( device );
 
    unsigned int i;
    for ( i = 0; i < _numDevices; i++ ) {
-       if (_devices[i]->isCompatible( device )){
+       //if (_devices[i]->isCompatible( device )){
+       if (_devices[i]->isCompatible( device, pe )){
             return true;           
        }
    }
@@ -244,17 +247,18 @@ bool WorkDescriptor::canRunIn ( const ProcessingElement &pe ) const
 {
    bool result = false;
    if ( started() && !pe.supportsUserLevelThreads() ) return false;
+   result = canRunIn( *( pe.getDeviceTypes()[0] ), &pe ) ;
 
-   std::vector<const Device *> const &pe_archs = pe.getDeviceTypes();
-   if ( pe.getActiveDevice() == pe_archs.size() ) {
-      // all active 
-      for ( std::vector<const Device *>::const_iterator it = pe_archs.begin();
-            it != pe_archs.end() && !result; it++ ) {
-         result = canRunIn( *(*it) ) ;
-      }
-   } else {
-      result = canRunIn( *pe_archs[pe.getActiveDevice()] );
-   }
+//   std::vector<const Device *> const &pe_archs = pe.getDeviceTypes();
+//   if ( pe.getActiveDevice() == pe_archs.size() ) {
+//      // all active 
+//      for ( std::vector<const Device *>::const_iterator it = pe_archs.begin();
+//            it != pe_archs.end() && !result; it++ ) {
+//         result = canRunIn( *(*it) ) ;
+//      }
+//   } else {
+//      result = canRunIn( *pe_archs[pe.getActiveDevice()] );
+//   }
 
    return result;   
 }

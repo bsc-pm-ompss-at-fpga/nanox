@@ -63,7 +63,7 @@ inline bool FPGADevice::copyIn( void *localDst, CopyDescriptor &remoteSrc, size_
    iChan =  fpga->getFPGAProcessorInfo()[fpga->getActiveAcc()].getInputChannel();
    device = fpga->getFPGAProcessorInfo()[fpga->getActiveAcc()].getDeviceHandle();
 
-   syncTransfer(src_addr, fpga);
+   //syncTransfer(src_addr, fpga);
 
    debug("submitting input transfer:" << std::endl
            << "  @:" << std::hex << src_addr << std::dec << " size:" << size
