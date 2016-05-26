@@ -76,7 +76,7 @@ void FPGAWorker::FPGAWorkerLoop() {
          NANOS_INSTRUMENT ( values[2] = (nanos_event_value_t) total_spins; )
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(numEvents, keys, values); )
 
-         myThread->setupTaskInstrumentation( wd );
+         NANOS_INSTRUMENT( myThread->setupTaskInstrumentation( wd ); )
          Scheduler::prePreOutlineWork(wd);
          if ( Scheduler::tryPreOutlineWork(wd) ) {
             myThread->preOutlineWorkDependent( *wd );

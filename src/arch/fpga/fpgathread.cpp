@@ -109,7 +109,9 @@ void FPGAThread::finishPendingWD( int numWD ) {
    for (int i=0; i<n; i++) {
       WD * wd = _pendingWD.front();
       //Scheduler::postOutlineWork( wd, false, this );
+#ifdef NANOS_INSTRUMENTATION_ENABLED
       readInstrCounters( wd );
+#endif
       FPGAWorker::postOutlineWork(wd);
       _pendingWD.pop();
    }
@@ -125,7 +127,9 @@ void FPGAThread::finishAllWD() {
       //Scheduler::postOutlineWork( wd, false, this );
       //Retreive counter data from HW & clear entry
       //All task transfers have been finished so performance data should be ready
+#ifdef NANOS_INSTRUMENTATION_ENABLED
       readInstrCounters( wd );
+#endif
       FPGAWorker::postOutlineWork(wd);
       _pendingWD.pop();
    }
@@ -185,6 +189,7 @@ void FPGAThread::readInstrCounters( WD *wd ) {
 
 }
 
+#ifdef NANOS_INSTRUMENTATION_ENABLED
 void FPGAThread::setupTaskInstrumentation( WD *wd ) {
    //Set up HW instrumentation
    const xdma_device deviceHandle =
@@ -193,3 +198,4 @@ void FPGAThread::setupTaskInstrumentation( WD *wd ) {
    xdmaSetupTaskInstrument(deviceHandle, &hwCounters);
    _hwInstrCounters[ wd ] = hwCounters;
 }
+#endif

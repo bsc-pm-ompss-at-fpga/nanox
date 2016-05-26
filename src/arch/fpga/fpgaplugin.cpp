@@ -123,6 +123,7 @@ class FPGAPlugin : public ArchPlugin
                   warning0( "Unable to get free core to run the FPGA thread, using the first one" );
                   core = sys.getSMPPlugin()->getFirstSMPProcessor();
                   core->setNumFutureThreads( core->getNumFutureThreads()+1 );
+                  NANOS_INSTRUMENT ( sys.getInstrumentation()->incrementMaxThreads(); )
                } else {
                   core->setNumFutureThreads( 1 );
                }

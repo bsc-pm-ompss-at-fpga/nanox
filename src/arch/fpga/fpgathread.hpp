@@ -50,12 +50,16 @@ namespace ext
          void finishPendingWD( int numWD );
          void addPendingWD( WD *wd );
          void finishAllWD();
+#ifdef NANOS_INSTRUMENTATION_ENABLED
          void setupTaskInstrumentation( WD *wd );
+#endif
 
       private:
          std::queue< WD* > _pendingWD;
          std::map< WD*, xdma_instr_times* > _hwInstrCounters;
+#ifdef NANOS_INSTRUMENTATION_ENABLED
          void readInstrCounters( WD *wd );
+#endif
    };
 }
 }
