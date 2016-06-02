@@ -63,6 +63,7 @@ class BaseOps {
    std::set< DeviceOps * >  _otherDeviceOps;
    // Deprecated? Se utiliza para informacion
    std::size_t              _amountOfTransferredData;
+   bool                     _commitMetadata;
 
    BaseOps( BaseOps const &op );
    BaseOps &operator=( BaseOps const &op );
@@ -73,10 +74,9 @@ class BaseOps {
    void cancelOwnOps(WD const &wd);
 
    public:
-   BaseOps( ProcessingElement *pe, bool delayedCommit );
+   BaseOps( ProcessingElement *pe, bool delayedCommit, bool commitMetadata );
    ~BaseOps();
    // getter y setters
-   ProcessingElement *getPE() const;
    std::set< DeviceOps * > &getOtherOps();
    std::set< OwnOp > &getOwnOps();
    // añade una nueva transferencia y actualiza el directorio si no es _delayedCommit
@@ -100,7 +100,7 @@ class BaseAddressSpaceInOps : public BaseOps {
    MapType _separateTransfers;
 
    public:
-   BaseAddressSpaceInOps( ProcessingElement *pe, bool delayedCommit );
+   BaseAddressSpaceInOps( ProcessingElement *pe, bool delayedCommit, bool commitMetadata = true );
    virtual ~BaseAddressSpaceInOps();
 
    void addOp( SeparateMemoryAddressSpace *from, global_reg_t const &reg, unsigned int version, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const &wd,  unsigned int copyIdx );
@@ -123,6 +123,7 @@ class BaseAddressSpaceInOps : public BaseOps {
    
    // reserva memoria necesaria para almacenar los datos de output (no inout)
    //virtual void allocateOutputMemory( global_reg_t const &reg, unsigned int version, WD const &wd, unsigned int copyIdx );
+   virtual memory_space_id_t getMemorySpaceId() const { return 0; }
 };
 
 typedef BaseAddressSpaceInOps HostAddressSpaceInOps;
@@ -144,6 +145,7 @@ class SeparateAddressSpaceInOps : public BaseAddressSpaceInOps {
    virtual void issue( WD const *wd );
 
    virtual unsigned int getVersionNoLock( global_reg_t const &reg, WD const &wd, unsigned int copyIdx );
+   virtual memory_space_id_t getMemorySpaceId() const;
 };
 
 // Gestiona transferencias que sacan datos de dispositivo/s hacia el host

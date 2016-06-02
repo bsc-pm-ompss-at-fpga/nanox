@@ -415,9 +415,7 @@ void MemController::copyDataOut( MemControllerPolicy policy ) {
       }
    }
 
-   if ( _pe->getMemorySpaceId() == 0 /* HOST_MEMSPACE_ID */) {
-      _outputDataReady = true;
-   } else {
+   if ( _pe->getMemorySpaceId() != 0 /* HOST_MEMSPACE_ID */) {
       _outOps = NEW SeparateAddressSpaceOutOps( _pe, false, true );
 
       for ( unsigned int index = 0; index < _wd->getNumCopies(); index++ ) {
@@ -585,12 +583,18 @@ bool MemController::isOutputDataReady( WD const &wd ) {
    ensure( _preinitialized == true, "MemController not initialized! wd " );
    if ( _initialized ) {
       if ( !_outputDataReady ) {
-         _outputDataReady = _outOps->isDataReady( wd );
-         if ( _outputDataReady ) {
+         _outputDataReady = !_outOps || _outOps->isDataReady( wd );
+         if ( _outputDataReady && _pe->getMemorySpaceId() != 0 ) {
             verbose_cache( "Output data is ready for wd ", *_wd, "; obj:", _outOps );
 
             sys.getSeparateMemory( _pe->getMemorySpaceId() ).releaseRegions( _memCacheCopies.data(), _wd->getNumCopies(), *_wd ) ;
          }
+#ifdef NANOS_RESILIENCY_ENABLED
+         if ( _wd->isRecoverable() && _backupOpsOut) {
+            _outputDataReady &= _backupOpsOut->isDataReady(wd);
+            _backupOpsOut->releaseLockedSourceChunks(wd);
+         }
+#endif
       }
       return _outputDataReady;
    }

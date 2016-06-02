@@ -45,13 +45,7 @@ class ExecutionFailure {
          WorkDescriptor &task = operation.getTask();
          task.increaseFailedExecutions();
 
-         WorkDescriptor* recoverableAncestor = nullptr;
-         if( task.isExecutionRepeatable() ) {
-            recoverableAncestor = task.propagateInvalidationAndGetRecoverableAncestor();
-         } else if( task.getParent() != nullptr ) {
-            recoverableAncestor = task.getParent()->propagateInvalidationAndGetRecoverableAncestor();
-         }
-
+         WorkDescriptor* recoverableAncestor = task.propagateInvalidationAndGetRecoverableAncestor();
          if( !recoverableAncestor ) {
             fatal( "Could not find a recoverable task when recovering from ", operation.what() );
          } else {

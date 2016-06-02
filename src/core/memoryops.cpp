@@ -66,13 +66,14 @@ void BaseOps::OwnOp::commitMetadata( ProcessingElement *pe ) const {
    _reg.setLocationAndVersion( pe, _location, _version ); //commitMetadata
 }
 
-BaseOps::BaseOps( ProcessingElement *pe, bool delayedCommit ) : 
+BaseOps::BaseOps( ProcessingElement *pe, bool delayedCommit, bool commitMetadata ) :
      _delayedCommit( delayedCommit )
    , _dataReady( false )
    , _pe( pe )
    , _ownDeviceOps()
    , _otherDeviceOps()
    , _amountOfTransferredData( 0 )
+   , _commitMetadata( commitMetadata )
 {
 }
 
@@ -172,7 +173,7 @@ bool BaseOps::isDataReady( WD const &wd, bool inval ) {
          //}
          for ( it = _ownDeviceOps.begin(); it != _ownDeviceOps.end(); it++ ) {
             it->_ops->completeCacheOp( /* debug: */ &wd );
-            if ( _delayedCommit ) { 
+            if ( _commitMetadata && _delayedCommit ) {
                it->commitMetadata( _pe );
             }
          }
@@ -212,7 +213,7 @@ void BaseOps::insertOwnOp( DeviceOps *ops, global_reg_t reg, unsigned int versio
    // esto igual se puede mover al issue?
    // hay una diferencia: en algunos casos interesa hacerlo al principio.
    // Candidato a politica de commit: commitOnDeclare, commitOnIssue, noCommit...
-   if ( !_delayedCommit ) {
+   if ( _commitMetadata && !_delayedCommit ) {
       op.commitMetadata( _pe );
       //op._reg.setLocationAndVersion( _pe, op._location, op._version );
    }
@@ -220,10 +221,6 @@ void BaseOps::insertOwnOp( DeviceOps *ops, global_reg_t reg, unsigned int versio
 
 std::size_t BaseOps::getAmountOfTransferredData() const {
    return _amountOfTransferredData;
-}
-
-ProcessingElement *BaseOps::getPE() const {
-   return _pe;
 }
 
 void BaseOps::addAmountTransferredData( std::size_t amount ) {
@@ -234,7 +231,7 @@ bool BaseOps::checkDataReady() const {
    return _dataReady;
 }
 
-BaseAddressSpaceInOps::BaseAddressSpaceInOps( ProcessingElement *pe, bool delayedCommit ) : BaseOps( pe, delayedCommit )
+BaseAddressSpaceInOps::BaseAddressSpaceInOps( ProcessingElement *pe, bool delayedCommit, bool commitMetadata ) : BaseOps( pe, delayedCommit, commitMetadata )
    , _separateTransfers() {
 }
 
@@ -355,7 +352,11 @@ unsigned int SeparateAddressSpaceInOps::getVersionNoLock( global_reg_t const &re
    return _destination.getCurrentVersion( reg, wd, copyIdx );
 }
 
-SeparateAddressSpaceOutOps::SeparateAddressSpaceOutOps( ProcessingElement *pe, bool delayedCommit, bool isInval ) : BaseOps( pe, delayedCommit )
+memory_space_id_t SeparateAddressSpaceInOps::getMemorySpaceId() const {
+   return _destination.getMemorySpaceId();
+}
+
+SeparateAddressSpaceOutOps::SeparateAddressSpaceOutOps( ProcessingElement *pe, bool delayedCommit, bool isInval ) : BaseOps( pe, delayedCommit, true )
    , _invalidation( isInval )
    , _transfers()
 {

@@ -40,7 +40,7 @@ void MemCacheCopy::generateInOps( BaseAddressSpaceInOps &ops, bool input, bool o
       }
    }
 
-   if ( ops.getPE()->getMemorySpaceId() != 0 ) {
+   if ( ops.getMemorySpaceId() != 0 ) {
       /* CACHE ACCESS */
       if ( input )  {
          if ( _policy == RegionCache::FPGA ) {

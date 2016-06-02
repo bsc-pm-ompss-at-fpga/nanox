@@ -58,7 +58,7 @@ inline void MemCacheCopy::getVersionInfo() {
 }
 
 inline void MemCacheCopy::generateOutOps( SeparateMemoryAddressSpace *from, SeparateAddressSpaceOutOps &ops, bool input, bool output, WD const &wd, unsigned int copyIdx ) {
-   if ( ops.getPE()->getMemorySpaceId() != 0 ) {
+   if ( from->getMemorySpaceId() != 0 ) {
       if ( _policy == RegionCache::FPGA ) { //emit copy for all data
          if ( output ) {
             _chunk->copyRegionToHost( ops, _reg.id, _version + (output ? 1 : 0), wd, copyIdx );
