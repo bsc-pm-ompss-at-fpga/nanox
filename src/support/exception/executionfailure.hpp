@@ -49,7 +49,7 @@ class ExecutionFailure {
          if( !recoverableAncestor ) {
             fatal( "Could not find a recoverable task when recovering from ", operation.what() );
          } else {
-            debug("Resiliency: execution error detected ", operation.what() );
+            debug("Resiliency: execution error detected in task ", task, ". " , operation.what() );
          }
       }
 };

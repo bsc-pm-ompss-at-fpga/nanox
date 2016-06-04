@@ -10,24 +10,23 @@
 
 #include <deque>
 #include <random>
-#include <set>
 
 namespace nanos {
 namespace error {
+
+using namespace memory;
 
 template < typename RandomEngine = std::minstd_rand >
 class BlockMemoryPageAccessInjector : public ErrorInjectionPolicy
 {
 	private:
-		std::deque<memory::MemoryPage>      _candidatePages;
-		std::set<memory::BlockedMemoryPage> _blockedPages;
-		RandomEngine                        _generator;
+		std::deque<std::pair<BlockableAccessMemoryPage, bool> > _pages;
+		RandomEngine                          _generator;
 
 	public:
 		BlockMemoryPageAccessInjector( ErrorInjectionConfig const& properties ) noexcept :
 			ErrorInjectionPolicy( properties ),
-			_candidatePages(),
-			_blockedPages(),
+			_pages(),
 			_generator( properties.getInjectionSeed() )
 		{
 		}
@@ -38,6 +37,14 @@ class BlockMemoryPageAccessInjector : public ErrorInjectionPolicy
 
 		RandomEngine& getRandomGenerator() { return _generator; }
 
+		void injectError( std::pair<BlockableAccessMemoryPage,bool>& page )
+		{
+			if( !page.second && !page.first.isBlocked() ) {
+				page.second = true;
+				page.first.blockAccess();
+			}
+		}
+
 		virtual void injectError()
 		{
 			using distribution = std::uniform_int_distribution<size_t>;
@@ -45,36 +52,49 @@ class BlockMemoryPageAccessInjector : public ErrorInjectionPolicy
 
 			static distribution pageFaultDistribution;
 			
-			if( !_candidatePages.empty() ) {
-				dist_param parameter( 0, _candidatePages.size() );
+			if( !_pages.empty() ) {
+				dist_param parameter( 0, _pages.size()-1 );
 				size_t position = pageFaultDistribution( _generator, parameter );
-
-				_blockedPages.emplace( _candidatePages[position] );
+				injectError( _pages[position] );
 			}
 			FailureStats<ErrorInjection>::increase();
 		}
 
-		virtual void injectError( void *address )
+		virtual void injectError( void *handle )
 		{
-			_blockedPages.emplace( memory::MemoryPage(address) );
+			Address address( handle );
+
+			for( std::pair<BlockableAccessMemoryPage,bool>& page : _pages ) {
+				if( page.first.contains( address ) ) {
+					injectError( page );
+					return;
+				}
+			}
+			// This address has not been registered before. Insert it.
+			_pages.emplace_back( BlockableAccessMemoryPage(address, block_page_at_creation), true );
 		}
 
 		virtual void declareResource( void *address, size_t size )
 		{
-			memory::MemoryPage::retrievePagesInsideChunk( _candidatePages, memory::MemoryChunk( static_cast<memory::Address>(address), size) );
+			std::vector<MemoryPage> pagesInsideChunk =
+				MemoryPage::getPagesInsideChunk( memory::MemoryChunk( address, size ) );
+			for( const MemoryPage& page : pagesInsideChunk ) {
+				_pages.emplace_back( BlockableAccessMemoryPage(page, block_page_manually), false );
+			}
 		}
 
-		void insertCandidatePage( memory::MemoryPage const& page )
+		void insertCandidatePage( MemoryPage const& page )
 		{
-			_candidatePages.push_back( page );
+			_pages.emplace_back( BlockableAccessMemoryPage(page, block_page_manually), false );
 		}
 
 		virtual void recoverError( void* handle ) noexcept {
-			memory::Address failedAddress( handle );
+			Address failedAddress( handle );
 
-			for( auto it = _blockedPages.begin(); it != _blockedPages.end(); it++ ) {
-				if( it->contains( failedAddress ) ) {
-					_blockedPages.erase( it );
+			for( std::pair<BlockableAccessMemoryPage,bool>& page : _pages ) {
+				if( page.first.contains( failedAddress ) ) {
+					page.second = true;
+					page.first.unblockAccess();
 					return;
 				}
 			}

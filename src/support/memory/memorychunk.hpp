@@ -37,66 +37,79 @@ struct is_contiguous_memory_region : public std::false_type
 class MemoryChunk {
    private:
       Address _begin; //!< Beginning address of the chunk
-      Address _end;   //!< Size of the chunk
+      size_t  _size;  //!< Size of the chunk
    public:
-		MemoryChunk() = delete;
+      //constexpr
+      MemoryChunk( MemoryChunk const& other ) = default;
 
-		constexpr
-		MemoryChunk( MemoryChunk const& other ) = default;
-
-		/*! \brief Creates a new representation of an area of memory.
-		 * @param[in] base beginning address of the region.
-		 * @param[in] length size of the region.
-		 */
-      constexpr
+      /*! \brief Creates a new representation of an area of memory.
+       * @param[in] base beginning address of the region.
+       * @param[in] length size of the region.
+       */
+      //constexpr
       MemoryChunk( Address const& base, size_t length ) :
-            _begin( base ), _end( base+length )
+            _begin( base ), _size( length )
       {
+         fatal_cond( base == nullptr, "Invalid address" );
+         fatal_cond( length == 0, "Invalid size" );
       }
 
-		/*! \brief Creates a new representation of an area of memory.
-		 * @param[in] begin lower limit of the region. Inclusive.
-		 * @param[in] end upper limit of the region. Exclusive.
-		 */
-      constexpr
+      /*! \brief Creates a new representation of an area of memory.
+       * @param[in] begin lower limit of the region. Inclusive.
+       * @param[in] end upper limit of the region. Exclusive.
+       */
+      //constexpr
       MemoryChunk( Address const& beginAddress, Address const& endAddress ) :
-            _begin( beginAddress ), _end( endAddress )
+            _begin( beginAddress ), _size( endAddress-beginAddress )
       {
+         fatal_cond( beginAddress == nullptr, "Invalid address" );
+         fatal_cond( endAddress == nullptr, "Invalid address" );
+         fatal_cond( beginAddress == endAddress, "Invalid address" );
       }
 
-		//! \returns the size of the region.
-      constexpr
-      size_t size()
-		{
-			return _end - _begin;
-		}
+      //! \returns the size of the region.
+      //constexpr
+      size_t size() const
+      {
+         return _size;
+      }
 
-		//! \returns the lower limit address of the region.
-      constexpr
-      Address begin()
-		{
-			return _begin;
-		}
+      //! \returns the lower limit address of the region.
+      //constexpr
+      Address begin() const
+      {
+         return _begin;
+      }
 
-		//! \returns the upper limit address of the region.
-      constexpr
-      Address end()
-		{
-			return _end;
-		}
+      //! \returns the upper limit address of the region.
+      //constexpr
+      Address end() const
+      {
+         return _begin+_size;
+      }
 
-		//! \returns whether an address belongs to the region or not.
-		constexpr
-		bool contains( Address address )
-		{
-			return begin() <= address && address < end();
-		}
+      //! \returns whether an address belongs to the region or not.
+      //constexpr
+      bool contains( Address address ) const
+      {
+         return begin() <= address && address < end();
+      }
 
-		constexpr
-		bool operator< ( MemoryChunk const& chunk )
-		{
-			return end() < chunk.begin();
-		}
+      //constexpr
+      bool operator< ( MemoryChunk const& chunk ) const
+      {
+         return end() < chunk.begin();
+      }
+
+      void setBeginAddress( const Address& address )
+      {
+         _begin = address;
+      }
+
+      void setSize( size_t newSize )
+      {
+         _size = newSize;
+      }
 };
 
 /*!
@@ -108,40 +121,40 @@ class MemoryChunk {
 template <size_t alignment_restriction>
 class AlignedMemoryChunk : public MemoryChunk {
    public:
-		AlignedMemoryChunk() = delete;
+      AlignedMemoryChunk() = delete;
 
-		constexpr
-		AlignedMemoryChunk( AlignedMemoryChunk const& other ) = default;
+      //constexpr
+      AlignedMemoryChunk( AlignedMemoryChunk const& other ) = default;
 
-      constexpr
+      //constexpr
       AlignedMemoryChunk( Address const& baseAddress, size_t chunkSize ) :
             MemoryChunk( baseAddress, chunkSize )
       {
       }
 
-      constexpr
+      //constexpr
       AlignedMemoryChunk( Address const& baseAddress, Address const& endAddress ) :
             MemoryChunk( baseAddress, endAddress )
       {
       }
 
-		/*!
-		 * \brief Constructs an AlignedMemoryChunk that wraps
-		 * any other kind of contiguous memory chunk.
-		 */
+      /*!
+       * \brief Constructs an AlignedMemoryChunk that wraps
+       * any other kind of contiguous memory chunk.
+       */
       template<class ChunkType>
-      constexpr
+      //constexpr
       AlignedMemoryChunk( ChunkType const& chunk ) :
             MemoryChunk(
                      chunk.begin().template align<alignment_restriction>(),
                      chunk.end().template align<alignment_restriction>()
-								+ (chunk.end().template isAligned<alignment_restriction>()?
-									0 : 
-									alignment_restriction)
+                        + (chunk.end().template isAligned<alignment_restriction>()?
+                           0 :
+                           alignment_restriction)
                   )
       {
-			static_assert( is_contiguous_memory_region<ChunkType>::value,
-					"Provided chunk does not represent contiguous memory." );
+         static_assert( is_contiguous_memory_region<ChunkType>::value,
+               "Provided chunk does not represent contiguous memory." );
       }
 };
 

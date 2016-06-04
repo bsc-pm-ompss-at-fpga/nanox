@@ -55,13 +55,13 @@ class MemoryPage : public AlignedMemoryChunk<PAGE_SIZE> {
       void unmap()
       {
          int err = munmap( begin(), size() );
-         fatal_cond( err != 0, "Failed to unmap memory page. Address:", begin() );
+         fatal_cond( err != 0, "Failed to unmap memory page. Address:", begin(), ". Error: ", strerror(errno) );
       }
 
       void map()
       {
          memory::Address newAddress( mmap( begin(), size(), PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE|MAP_FIXED, -1, 0 ) );
-         fatal_cond( newAddress == memory::Address(MAP_FAILED), "Failed to mmap memory page. Error: ", strerror(errno) );
+         fatal_cond( newAddress == memory::Address(MAP_FAILED), "Failed to mmap memory page ", begin(), ". Error: ", strerror(errno) );
          fatal_cond( newAddress != begin(), "Failed to map memory page. Its virtual address has changed." );
       }
 
@@ -75,56 +75,65 @@ class MemoryPage : public AlignedMemoryChunk<PAGE_SIZE> {
       void lock()
       {
          int err = mlock( begin(), size() );
-         fatal_cond( err != 0, "Failed to lock memory page. Address:", begin() );
+         fatal_cond( err != 0, "Failed to lock memory page. Address:", begin(), ". Error: ", strerror(errno) );
       }
 
       void unlock()
       {
          int err = munlock( begin(), size() );
-         fatal_cond( err != 0, "Failed to unlock memory page. Address:", begin() );
+         fatal_cond( err != 0, "Failed to unlock memory page. Address:", begin(), ". Error: ", strerror(errno) );
       }
 
-      template<class Container, class ChunkType>
-      static void retrievePagesWrappingChunk( Container &pageContainer, ChunkType const& chunk )
+      void protect( int rights = PROT_NONE )
       {
-         // Create a page-aligned chunk that wraps the given one
-         AlignedMemoryChunk<MemoryPage::size()> wrap( chunk );
-         for( Address addr = wrap.begin(); addr < wrap.end(); addr+= MemoryPage::size() )
-            pageContainer.emplace_back( addr );
+          verbose( "Changing access rights of page ", begin(), " to ", std::hex, rights );
+          int err = mprotect( begin(), size(), rights );
+          fatal_cond( err != 0, "Failed to protect memory page. Address:", begin(), ". Error: ", strerror(errno) );
       }
 
-      // Specialization for a new std::vector
       template<class ChunkType>
-      static std::vector<MemoryPage> retrievePagesWrappingChunk( ChunkType const& chunk )
+      static std::vector<MemoryPage> getPagesWrappingChunk( ChunkType const& chunk )
       {
-         // Create a page-aligned chunk that wraps the given one
-         AlignedMemoryChunk<MemoryPage::size()> wrap( chunk );
-         size_t numPages = wrap.size() / MemoryPage::size();
+         std::vector<MemoryPage> pages;
+
+         Address begin = chunk.begin().align(MemoryPage::size());
+         Address end = chunk.end().align(MemoryPage::size());
+
+         if( end < chunk.end() )
+            end += MemoryPage::size();
 
          // Reserve as many space as necessary
-         std::vector<MemoryPage> pageContainer;
-         pageContainer.reserve( numPages );
+         pages.reserve( (end-begin) / MemoryPage::size() );
 
          // Fill the container with the appropiate values
-         for( Address addr = wrap.begin(); addr < wrap.end(); addr+= MemoryPage::size() )
-            pageContainer.emplace_back( addr );
+         for( Address address = begin; address < end; address += MemoryPage::size() ) {
+            pages.emplace_back( address );
+         }
 
-         return pageContainer;
+         return pages;
       }
 
-      template<class Container, class ChunkType>
-      static void retrievePagesInsideChunk( Container &pageContainer, ChunkType const& chunk )
+      template<class ChunkType>
+      static std::vector<MemoryPage> getPagesInsideChunk( ChunkType const& chunk )
       {
-         // Create a page-aligned chunk that is wrapped by the given one
-         Address addr = chunk.begin();
-         if( !addr.template isAligned<MemoryPage::size()>() ) {
-            addr = addr.template align<MemoryPage::size()>() + MemoryPage::size();
+         std::vector<MemoryPage> pages;
+
+         Address begin = chunk.begin().align(MemoryPage::size());
+         Address end = chunk.end().align(MemoryPage::size());
+
+         if( begin < chunk.begin() )
+            begin += MemoryPage::size();
+         if( end < begin )
+            end = begin;
+
+         // Reserve as many space as necessary
+         pages.reserve( (end-begin) / MemoryPage::size() );
+
+         // Fill the container with the appropiate values
+         for( Address address = begin; address < end; address += MemoryPage::size() ) {
+            pages.emplace_back( address );
          }
-         Address end = chunk.end().template align<MemoryPage::size()>();
-         while( addr < end ) {
-            pageContainer.emplace_back( addr );
-            addr+= MemoryPage::size();
-         }
+         return pages;
       }
 };
 
@@ -132,6 +141,7 @@ template<>
 struct is_contiguous_memory_region<MemoryPage> : public std::true_type
 {
 };
+
 
 } // namespace memory
 } // namespace nanos

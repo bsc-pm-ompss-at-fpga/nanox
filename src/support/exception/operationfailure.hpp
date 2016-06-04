@@ -52,7 +52,7 @@ class OperationFailure : public SegmentationFaultException {
          const memory::MemoryChunk affectedMemory = getSignalInfo().getAffectedMemoryLocation();
 
          std::vector<memory::MemoryPage> affectedPages =
-            memory::MemoryPage::retrievePagesWrappingChunk( affectedMemory );
+            memory::MemoryPage::getPagesWrappingChunk( affectedMemory );
 
          for( memory::MemoryPage& page : affectedPages ) {
             page.remap();

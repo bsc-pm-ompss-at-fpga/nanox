@@ -96,9 +96,10 @@ class ErrorInjectionThread {
 
 		void injectionLoop ()
 		{
+			wait();
 			while( !_finish ) {
 				wait();
-				debug("Injection thread: injecting an error");
+				message("Injection thread: injecting an error");
 				getInjectionPolicy().injectError();
 			}
 		}

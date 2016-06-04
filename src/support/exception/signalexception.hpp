@@ -73,6 +73,7 @@ class SegmentationFaultException : public SignalException {
 		SegmentationFaultException( siginfo_t* signalInfo, ucontext_t* executionContext ) :
 				SignalException( signalInfo, executionContext, getErrorMessage() )
 		{
+			verbose("Segmentation fault at address ", getSignalInfo().getAddress() );
 		}
 
 		virtual ~SegmentationFaultException() noexcept
@@ -89,6 +90,7 @@ class BusErrorException : public SignalException {
 		BusErrorException( siginfo_t* signalInfo, ucontext_t* executionContext ) :
 				SignalException( signalInfo, executionContext, getErrorMessage()  )
 		{
+			verbose("Bus error at address ", getSignalInfo().getAddress() );
 		}
 
 		virtual ~BusErrorException() noexcept

@@ -54,7 +54,7 @@ class CheckpointFailure {
          if( !recoverableAncestor ) {
             fatal( "Could not find a recoverable task when recovering from ", operation.what() );
          } else {
-            debug("Resiliency: checkpoint error detected ", operation.what() );
+            debug("Resiliency: checkpoint error detected in task ", task, ". ", operation.what() );
          }
       }
 };
