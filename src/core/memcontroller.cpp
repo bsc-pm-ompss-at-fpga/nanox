@@ -511,7 +511,7 @@ void MemController::restoreBackupData ( )
          for( index = 0; index < _wd->getNumCopies(); index++ ) {
             if ( _wd->getCopies()[index].isInput()
              && !_wd->getCopies()[index].isOutput() ) {
-               _backupCacheCopies[index].generateOutOps( &memory, *_restoreOps, false, true, *_wd, index);
+               _backupCacheCopies[index].generateOutOpsForced( &memory, *_restoreOps, false, true, *_wd, index);
             }
             index++;
          }

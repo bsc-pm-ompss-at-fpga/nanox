@@ -73,6 +73,10 @@ inline void MemCacheCopy::generateOutOps( SeparateMemoryAddressSpace *from, Sepa
    }
 }
 
+inline void MemCacheCopy::generateOutOpsForced( SeparateMemoryAddressSpace *from, SeparateAddressSpaceOutOps &ops, bool input, bool output, WD const &wd, unsigned int copyIdx ) {
+   _chunk->copyRegionToHost( ops, _reg.id, _version + (output ? 1 : 0), wd, copyIdx );
+}
+
 inline unsigned int MemCacheCopy::getVersion() const {
    return _version;
 }

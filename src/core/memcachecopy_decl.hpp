@@ -43,6 +43,7 @@ namespace nanos {
 
          void generateInOps( BaseAddressSpaceInOps &ops, bool input, bool output, WD const &wd, unsigned int copyIdx );
          void generateOutOps( SeparateMemoryAddressSpace *from, SeparateAddressSpaceOutOps &ops, bool input, bool output, WD const &wd, unsigned int copyIdx );
+         void generateOutOpsForced( SeparateMemoryAddressSpace *from, SeparateAddressSpaceOutOps &ops, bool input, bool output, WD const &wd, unsigned int copyIdx );
          unsigned int getVersion() const;
          void setVersion( unsigned int version );
          bool isRooted( memory_space_id_t &loc ) const;
