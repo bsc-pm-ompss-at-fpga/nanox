@@ -50,7 +50,7 @@ inline bool DeviceOps::aborted() {
 }
 
 inline bool DeviceOps::allCommited() {
-   return !aborted() && allCompleted();
+   return aborted() && allCompleted();
 }
 
 inline bool DeviceOps::allCompleted() {

@@ -564,9 +564,13 @@ bool MemController::isDataReady ( WD const &wd )
       if ( !_inputDataReady ) {
          _inputDataReady = _inOps->isDataReady( wd );
 #ifdef NANOS_RESILIENCY_ENABLED
-         if ( _wd->isRecoverable() && _backupOpsIn) {
-            _inputDataReady &= _backupOpsIn->isDataReady(wd);
-            _backupOpsIn->releaseLockedSourceChunks(wd);
+         if ( _backupOpsIn ) {
+            if( _wd->isInvalid() ) {
+               _backupOpsIn->cancel(wd);
+            } else {
+               _inputDataReady &= _backupOpsIn->isDataReady(wd);
+               _backupOpsIn->releaseLockedSourceChunks(wd);
+            }
          }
 #endif
       }

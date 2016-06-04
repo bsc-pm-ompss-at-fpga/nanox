@@ -92,6 +92,8 @@ class BaseOps {
    // el workdescriptor es para debug de las invalidaciones
    void releaseLockedSourceChunks( WD const &wd );
    void print( std::ostream &out ) const;
+
+   void cancel( WD const &wd );
 };
 
 class BaseAddressSpaceInOps : public BaseOps {
@@ -166,7 +168,6 @@ class SeparateAddressSpaceOutOps : public BaseOps {
    void issue( WD const *wd );
    void copyOutputData( SeparateMemoryAddressSpace *from, MemCacheCopy const &memCopy, bool output, WD const &wd, unsigned int copyIdx );
    bool hasPendingOps() const;
-   void cancel( WD const &wd );
 };
 
 } // namespace nanos

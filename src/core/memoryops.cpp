@@ -402,7 +402,7 @@ bool SeparateAddressSpaceOutOps::hasPendingOps() const {
    return ( _transfers.size() > 0 && !this->checkDataReady() );
 }
 
-void SeparateAddressSpaceOutOps::cancel( WD const &wd ) {
+void BaseOps::cancel( WD const &wd ) {
    // for ( MapType::iterator it = _transfers.begin(); it != _transfers.end(); it++ ) {
    //    TransferList &list = it->second;
    //    for ( TransferList::iterator lit = list.begin(); lit != list.end(); lit++ ) {
@@ -411,7 +411,7 @@ void SeparateAddressSpaceOutOps::cancel( WD const &wd ) {
    //       }
    //    }
    // }
-   this->cancelOwnOps(wd);
+   cancelOwnOps(wd);
    releaseLockedSourceChunks( wd );
 }
 

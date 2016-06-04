@@ -117,6 +117,7 @@ namespace nanos {
 
 
          void copyRegionToHost( SeparateAddressSpaceOutOps &ops, reg_t reg, unsigned int version, WD const &wd, unsigned int copyIdx );
+         void copyRegionToHostForced( SeparateAddressSpaceOutOps &ops, reg_t reg, unsigned int version, WD const &wd, unsigned int copyIdx );
          void copyRegionFromHost( BaseAddressSpaceInOps &ops, reg_t reg, unsigned int version, WD const &wd, unsigned int copyIdx );
          void printReferencingWDs() const;
          void makeFlushable();

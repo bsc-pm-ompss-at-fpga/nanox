@@ -178,6 +178,25 @@ void AllocatedChunk::copyRegionToHost( SeparateAddressSpaceOutOps &ops, reg_t re
    }
 }
 
+void AllocatedChunk::copyRegionToHostForced( SeparateAddressSpaceOutOps &ops, reg_t reg, unsigned int version, WD const &wd, unsigned int copyIdx ) {
+   NewNewRegionDirectory::RegionDirectoryKey key = _newRegions->getGlobalDirectoryKey();
+   CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg );
+
+   if( entry && !entry->isValid() ) {
+      // TODO replace by custom exception
+      throw std::runtime_error("Invalidated region found");
+   }
+
+   global_reg_t greg( reg, key );
+   DeviceOps * dops = greg.getHomeDeviceOps( wd, copyIdx );
+   if ( dops->addCacheOp( &wd, 8 ) ) {
+      ops.insertOwnOp( dops, greg, version, 0 );
+      ops.addOutOp( 0/* to host*/, _owner.getMemorySpaceId(), greg, version, dops, this, wd, copyIdx );
+   } else {
+      ops.getOtherOps().insert( dops );
+   }
+}
+
 void AllocatedChunk::copyRegionFromHost( BaseAddressSpaceInOps &ops, reg_t reg, unsigned int version, WD const &wd, unsigned int copyIdx ) {
    NewNewRegionDirectory::RegionDirectoryKey key = _newRegions->getGlobalDirectoryKey();
    CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg );
@@ -276,7 +295,7 @@ bool AllocatedChunk::NEWaddReadRegion2( BaseAddressSpaceInOps &ops, reg_t reg, u
          if ( !entry && skipNull ) {
             continue;
          }
-         if ( !entry || version > entry->getVersion() ) {
+         if ( !entry || version != entry->getVersion() ) {
             //NewNewDirectoryEntryData *_dentry1 = NewNewRegionDirectory::getDirectoryEntry( *key, it->first );
             //NewNewDirectoryEntryData *_dentry2 = NewNewRegionDirectory::getDirectoryEntry( *key, it->second );
             //o << " 1. DENTRY " << (void *)_dentry1  << " for reg " << it->first << std::endl;
@@ -399,9 +418,6 @@ bool AllocatedChunk::NEWaddReadRegion2( BaseAddressSpaceInOps &ops, reg_t reg, u
             // entry already at desired version.
             //o << "NO NEED TO COPY: I have this region already "  << std::endl;
             ops.getOtherOps().insert( entry->getDeviceOps() );
-         } else {
-            fatal( "ERROR: version in cache (", entry->getVersion(), ")"
-            " > than version requested (", version, "). WD id: ", wd.getId(), " desc: ", (wd.getDescription() ? wd.getDescription() : "n/a"), " w index ", copyIdx );
          }
       }
       //*(myThread->_file) << __FUNCTION__ << " set region cache entry version to " << version << " for wd " << wd.getId() << " idx " << copyIdx << std::endl;
