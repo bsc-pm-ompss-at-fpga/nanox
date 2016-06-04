@@ -22,6 +22,7 @@
 #include "system.hpp"
 #include "config.hpp"
 #include "compatibility.hpp"
+#include "commutationdepobj.hpp"
 #include "regiontree.hpp"
 #include "regionbuilder.hpp"
 #include "trackableobject.hpp"
