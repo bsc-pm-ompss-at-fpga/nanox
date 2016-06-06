@@ -52,6 +52,7 @@ namespace nanos
             static Lock                      _dmaLock;
             static int                       _idleSyncBurst;
             static bool                      _syncTransfers;
+            static int                       _fpgaFreq;
 
          public:
             static void printConfiguration( void );
@@ -72,6 +73,10 @@ namespace nanos
             //should be areSyncTransfersDisabled() but is for consistency with other bool getters
             static inline int getIdleSyncBurst() { return _idleSyncBurst; }
             static bool getSyncTransfersEnabled() { return _syncTransfers; }
+            //Returns cycle time in ns
+            static unsigned int getCycleTime() {
+                return 1000/_fpgaFreq; //_fpgaFreq is in MHz
+            }
 
       };
        //create instrumentation macros (as gpu) to make code cleaner

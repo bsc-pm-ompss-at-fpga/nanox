@@ -38,6 +38,7 @@ namespace nanos
       int FPGAConfig::_maxTransfers = 32;
       int FPGAConfig::_idleSyncBurst = 4;
       bool FPGAConfig::_syncTransfers = false;
+      int FPGAConfig::_fpgaFreq = 100; //default to 100MHz
 
       void FPGAConfig::prepare( Config &config )
       {
@@ -76,6 +77,11 @@ namespace nanos
                "Perform fpga transfers synchronously" );
          config.registerEnvOption( "fpga_sync_transfers", "NX_FPGA_SYNC_TRANSFERS" );
          config.registerArgOption( "fpga_sync_transfers", "fpga-sync-transfers" );
+
+         config.registerConfigOption( "fpga_freq", NEW Config::IntegerVar( _fpgaFreq ),
+               "FPGA accelerator clock frequency in MHz" );
+         config.registerEnvOption( "fpga_freq", "NX_FPGA_FREQ" );
+         config.registerArgOption( "fpga_freq", "nx-fpga-freq" );
 
       }
 
