@@ -199,13 +199,3 @@ void FPGADevice::syncTransfer( uint64_t hostAddress, ProcessingElement *pe)
     ((FPGAProcessor *)pe)->getOutTransferList()->syncTransfer(hostAddress);
     //((FPGAProcessor *)pe)->getInTransferList()->syncTransfer(hostAddress);
 }
- bool FPGADevice::copyDevToDev( void * addrDst, CopyDescriptor& dstCd, void * addrSrc, std::size_t size,
-         ProcessingElement *peDst, ProcessingElement *peSrc )
-{
-   //sync transfer on the origin
-   //This will cause the transfer to be synchronized
-   syncTransfer(dstCd.getTag(), peSrc);
-   //submit input copy to dest accelerator
-   return copyIn(addrDst, dstCd, size, peDst );
-
-}

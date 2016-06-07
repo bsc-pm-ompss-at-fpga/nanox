@@ -121,18 +121,6 @@ namespace nanos
 
          }
 
-         /*! \brief Copy data between 2 accelerators
-          * \warning addrDst and addrSrc are null for FPGA devices as there is no separate address space at this point
-          * \param addrDst Copy destination address.
-          * \param addrSrc Copy source address.
-          * \param dstCd   Transfer copy descriptor, which contains the tag (aka. host address).
-          * \param size    Data size to be copied.
-          * \param peDst   Destination device.
-          * \param peSrc   Source device.
-          * \return Returns true if the operation is synchronous, false otherwise
-          */
-         static bool copyDevToDev( void * addrDst, CopyDescriptor& dstCd, void * addrSrc, std::size_t size, ProcessingElement *peDst, ProcessingElement *peSrc );
-
          /*!
           * \brief Finish pending transfer
           * Usually this causes to priorize a data transfer because someone else needs it
