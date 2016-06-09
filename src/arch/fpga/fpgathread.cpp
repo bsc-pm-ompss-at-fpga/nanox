@@ -206,11 +206,31 @@ void FPGAThread::setupTaskInstrumentation( WD *wd ) {
    const xdma_device deviceHandle =
       fpga->getFPGAProcessorInfo()[activeAcc].getDeviceHandle();
    debug( "FPGA: Setting instrumentation for acc " << fpga->getActiveAcc() );
+
+
+   //Instrument instrumentation setup
+   Instrumentation *instr = sys.getInstrumentation();
+   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation(
+           fpga->getActiveAcc() );
+   unsigned long long timestamp;
+   xdmaGetDeviceTime( &timestamp );
+   instr->addDeviceEvent(
+           Instrumentation::DeviceEvent( timestamp, TaskBegin, submitInstr, wd ) );
+   instr->addDeviceEvent(
+           Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, NULL, wd) );
+
+
 //   const xdma_device deviceHandle =
 //      ( ( FPGAProcessor * ) myThread->runningOn() )->getFPGAProcessorInfo()->getDeviceHandle();
    xdma_instr_times * hwCounters;
    xdmaSetupTaskInstrument(deviceHandle, &hwCounters);
    hwCounters->outTransfer = 1;
    _hwInstrCounters[ wd ] = std::make_pair( hwCounters, activeAcc );
+
+   timestamp = submitInstr->getDeviceTime();
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, wd, NULL) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( timestamp, TaskEnd, submitInstr, wd) );
 }
 #endif

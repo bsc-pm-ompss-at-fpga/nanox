@@ -75,10 +75,17 @@ class FPGAPlugin : public ArchPlugin
              dmaOutInstr->setId( id );
              sys.addDeviceInstrumentation( dmaOutInstr );
 
+             id = sys.getNumInstrumentAccelerators();
+             FPGAInstrumentation *submitInstr = new FPGAInstrumentation(
+                   std::string( "DMA submit" ) + devNum );
+             submitInstr->setId( id );
+             sys.addDeviceInstrumentation( submitInstr );
+
              instr->init();
              //sys.getInstrumentation()->registerInstrumentDevice( instr );
              fpga->setDeviceInstrumentation( instr );
              fpga->setDmaInstrumentation( dmaInInstr, dmaOutInstr );
+             fpga->setSubmitInstrumentation( submitInstr );
           }
       }
 #endif

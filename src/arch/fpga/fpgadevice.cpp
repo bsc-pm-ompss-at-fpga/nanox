@@ -27,6 +27,7 @@
 #include "fpgaconfig.hpp"
 #include "deviceops.hpp"
 #include "fpgapinnedallocator.hpp"
+#include "instrumentation_decl.hpp"
 
 using namespace nanos;
 using namespace nanos::ext;
@@ -41,14 +42,47 @@ void FPGADevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, 
    cd._ops = ops;
    ops->addOp();
    ProcessingElement &pe = mem.getPE();
-   bool done = copyIn((void*)devAddr, cd, len, &pe);
+   bool done = copyIn((void*)devAddr, cd, len, &pe, wd);
    if ( done ) ops->completeOp();
 }
+
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+static void dmaSubmitStart( FPGAProcessor *fpga, const WD *wd ) {
+   Instrumentation *instr = sys.getInstrumentation();
+   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation(
+           fpga->getActiveAcc() );
+   unsigned long long timestamp;
+   xdmaGetDeviceTime( &timestamp );
+
+   //std::cout << "submit start " << timestamp << std::endl;
+
+   instr->addDeviceEvent(
+           Instrumentation::DeviceEvent( timestamp, TaskBegin, submitInstr, wd ) );
+   instr->addDeviceEvent(
+           Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, NULL, wd) );
+}
+
+static void dmaSubmitEnd( FPGAProcessor *fpga, const WD *wd ) {
+   Instrumentation *instr = sys.getInstrumentation();
+   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation(
+         fpga->getActiveAcc() );
+   unsigned long long timestamp;
+   xdmaGetDeviceTime( &timestamp );
+
+   //std::cout << "submit end " << timestamp << std::endl;
+
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, wd, NULL) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( timestamp, TaskEnd, submitInstr, wd) );
+}
+#endif  //NANOS_INSTRUMENTATION_ENABLED
 
 /*
  * Allow transfers to be performed synchronously 
  */
-inline bool FPGADevice::copyIn( void *localDst, CopyDescriptor &remoteSrc, size_t size, ProcessingElement *pe )
+inline bool FPGADevice::copyIn( void *localDst, CopyDescriptor &remoteSrc, size_t size, ProcessingElement *pe, const WD* wd )
 {
    verbose("fpga copy in");
 
@@ -80,9 +114,11 @@ inline bool FPGADevice::copyIn( void *localDst, CopyDescriptor &remoteSrc, size_
       bufHandle = allocator.getBufferHandle( (void *)baseAddress );
 
       NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_SUBMIT_IN_DMA_EVENT );
+      NANOS_INSTRUMENT( dmaSubmitStart( fpga, wd ) );
       //Support synchronous transfers??
       status = xdmaSubmitKBuffer( bufHandle, size, (unsigned int)offset, XDMA_ASYNC,
             device, iChan, &dmaHandle );
+      NANOS_INSTRUMENT( dmaSubmitEnd ( fpga, wd ) );
       NANOS_FPGA_CLOSE_RUNTIME_EVENT;
    } else {
       //Transfer user space memory (pin buffer & submit transfer)
@@ -116,11 +152,11 @@ void FPGADevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
    cd._ops = ops;
    ops->addOp();
    ProcessingElement &pe = mem.getPE();
-   bool done = copyOut(cd, (void*)devAddr, len, &pe);
+   bool done = copyOut(cd, (void*)devAddr, len, &pe, wd);
    if ( done ) ops->completeOp();
 }
 
-bool FPGADevice::copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size, ProcessingElement *pe )
+bool FPGADevice::copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size, ProcessingElement *pe, const WD *wd)
 {
    verbose("fpga copy out");
 
@@ -151,8 +187,10 @@ bool FPGADevice::copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size
       bufHandle = allocator.getBufferHandle( (void *)baseAddress );
 
       NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_SUBMIT_OUT_DMA_EVENT );
+      NANOS_INSTRUMENT( dmaSubmitStart( fpga, wd ) );
       status = xdmaSubmitKBuffer( bufHandle, size, (unsigned int)offset, XDMA_ASYNC,
             device, oChan, &dmaHandle );
+      NANOS_INSTRUMENT( dmaSubmitEnd( fpga, wd ) );
       NANOS_FPGA_CLOSE_RUNTIME_EVENT;
 
    } else {

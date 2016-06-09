@@ -57,7 +57,7 @@ namespace nanos
          /*! \brief Copy from remoteSrc in the host to localDst in the device
           *        Returns true if the operation is synchronous
           */
-         static bool copyIn( void *localDst, CopyDescriptor &remoteSrc, size_t size, ProcessingElement *pe );
+         static bool copyIn( void *localDst, CopyDescriptor &remoteSrc, size_t size, ProcessingElement *pe, const WD *wd );
 
          virtual void _copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
                SeparateMemoryAddressSpace &mem, DeviceOps *ops,
@@ -65,7 +65,7 @@ namespace nanos
          /*! \brief Copy from localSrc in the device to remoteDst in the host
           *        Returns true if the operation is synchronous
           */
-         static bool copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size, ProcessingElement *pe );
+         static bool copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size, ProcessingElement *pe, const WD *wd );
 
          /*!
           * Copy memory inside the same device. This is empty as currently does

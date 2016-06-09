@@ -65,6 +65,7 @@ namespace nanos
             std::vector< DeviceInstrumentation * > _devInstr;
             std::vector< DeviceInstrumentation * > _dmaInInstr;
             std::vector< DeviceInstrumentation * > _dmaOutInstr;
+            std::vector< DeviceInstrumentation * > _submitInstrumentation;
 #endif
 
          public:
@@ -149,6 +150,9 @@ namespace nanos
                _dmaInInstr.push_back( dmaIn );
                _dmaOutInstr.push_back( dmaOut );
             }
+            void setSubmitInstrumentation( DeviceInstrumentation * submitInstr ) {
+               _submitInstrumentation.push_back( submitInstr );
+            }
 
             DeviceInstrumentation *getDeviceInstrumentation( int acc ) {
                return _devInstr[ acc ];
@@ -158,6 +162,9 @@ namespace nanos
             }
             DeviceInstrumentation *getDmaOutInstrumentation( int acc ) {
                return _dmaOutInstr[ acc ];
+            }
+            DeviceInstrumentation *getSubmitInstrumentation( int acc ) {
+               return _submitInstrumentation[ acc ];
             }
 #endif
 
