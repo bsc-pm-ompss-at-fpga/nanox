@@ -135,11 +135,9 @@ void FPGAThread::finishAllWD() {
    }
 }
 
+#ifdef NANOS_INSTRUMENTATION_ENABLED
 void FPGAThread::readInstrCounters( WD *wd ) {
    xdma_instr_times *counters = _hwInstrCounters[ wd ];
-   //TODO: Submit data to instrumentation layer
-
-#ifdef NANOS_INSTRUMENTATION_ENABLED
    Instrumentation *instr = sys.getInstrumentation();
    FPGAProcessor *fpga = ( FPGAProcessor* )runningOn();
    DeviceInstrumentation *devInstr =
@@ -179,15 +177,11 @@ void FPGAThread::readInstrCounters( WD *wd ) {
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, dmaOut, wd ) );
 
-
-
-#endif
-
-
    xdmaClearTaskTimes( counters );
    _hwInstrCounters.erase( wd );
 
 }
+#endif
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 void FPGAThread::setupTaskInstrumentation( WD *wd ) {
