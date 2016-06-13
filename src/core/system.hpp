@@ -36,7 +36,7 @@
 #include <climits>
 
 
-using namespace nanos;
+namespace nanos {
 
 // methods to access configuration variable
 //inline void System::setNumPEs ( int npes ) { _numPEs = npes; }
@@ -620,7 +620,7 @@ inline unsigned int System::getNewAcceleratorId() {
    return _acceleratorCount++;
 }
 
-inline const ThreadManagerConf& System::getThreadManagerConf() const {
+inline ThreadManagerConf& System::getThreadManagerConf() {
    return _threadManagerConf;
 }
 
@@ -700,5 +700,7 @@ inline bool System::useFineAllocLock() const {
 inline SMPDevice &System::_getSMPDevice() {
    return _SMP;
 }
+
+} // namespace nanos
 
 #endif

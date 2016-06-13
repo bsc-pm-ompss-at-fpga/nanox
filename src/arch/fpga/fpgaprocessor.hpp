@@ -30,10 +30,8 @@
 #include "cachedaccelerator.hpp"
 #include "fpgapinnedallocator.hpp"
 
-namespace nanos
-{
-   namespace ext
-   {
+namespace nanos {
+namespace ext {
 
 //As in gpu, we could keep track of copied data
 
@@ -161,7 +159,7 @@ namespace nanos
 
 
       };
-   }
-}
+} // namespace ext
+} // namespace nanos
 
 #endif

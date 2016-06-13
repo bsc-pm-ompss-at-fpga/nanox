@@ -28,8 +28,7 @@
 #include "libxdma.h"
 
 namespace nanos {
-namespace ext
-{
+namespace ext {
 
    class FPGAThread : public SMPThread
    {
@@ -61,7 +60,7 @@ namespace ext
          void readInstrCounters( WD *wd );
 #endif
    };
-}
-}
+} // namespace ext
+} // namespace nanos
 
 #endif

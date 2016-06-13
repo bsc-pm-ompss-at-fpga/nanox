@@ -57,8 +57,7 @@
 #include "openclprocessor_fwd.hpp"
 #endif
 
-namespace nanos
-{
+namespace nanos {
 
 // This class initializes/finalizes the library
 // All global variables MUST be declared inside
@@ -697,7 +696,7 @@ namespace nanos
          unsigned int getNewAcceleratorId();
          memory_space_id_t getMemorySpaceIdOfAccelerator( unsigned int acceleratorId ) const;
 
-         const ThreadManagerConf& getThreadManagerConf() const;
+         ThreadManagerConf& getThreadManagerConf();
          ThreadManager* getThreadManager() const;
 
          //! \brief Returns true if the compiler says priorities are required
@@ -726,6 +725,6 @@ global_reg_t _registerMemoryChunk_2dim(void *addr, std::size_t rows, std::size_t
 
    extern System sys;
 
-};
+} // namespace nanos
 
 #endif
