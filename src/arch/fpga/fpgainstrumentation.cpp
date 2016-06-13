@@ -1,6 +1,9 @@
 #include "fpgainstrumentation.hpp"
 #include "libxdma.h"
 
+using namespace nanos;
+using namespace ext;
+
 unsigned long long int FPGAInstrumentation::getDeviceTime() {
    uint64_t time;
    //TODO error checking
