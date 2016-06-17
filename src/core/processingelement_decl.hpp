@@ -60,7 +60,7 @@ namespace ext {
       public:
          virtual WorkDescriptor & getMasterWD () const = 0;
          virtual WorkDescriptor & getWorkerWD () const = 0;
-         virtual WorkDescriptor & getMultiWorkerWD () const = 0;
+         virtual WorkDescriptor & getMultiWorkerWD ( DD::work_fct ) const = 0;
 
          /*! \brief ProcessingElement constructor
           */
@@ -91,7 +91,8 @@ namespace ext {
          //BaseThread & associateThisThread ( bool untieMain=true );
 
          BaseThread & startWorker ( ext::SMPMultiThread *parent=NULL );
-         BaseThread & startMultiWorker ( unsigned int numPEs, ProcessingElement **repPEs );
+         BaseThread & startMultiWorker ( unsigned int numPEs, ProcessingElement **repPEs,
+                 DD::work_fct workerFun);
 
          void stopAll();
          void stopAllThreads();

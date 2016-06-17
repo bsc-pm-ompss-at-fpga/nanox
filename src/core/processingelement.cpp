@@ -107,9 +107,9 @@ BaseThread& ProcessingElement::startWorker ( ext::SMPMultiThread *parent )
    return startThread( worker, parent );
 }
 
-BaseThread& ProcessingElement::startMultiWorker ( unsigned int numPEs, ProcessingElement **repPEs )
+BaseThread& ProcessingElement::startMultiWorker ( unsigned int numPEs, ProcessingElement **repPEs, DD::work_fct workerFun )
 {
-   WD & worker = getMultiWorkerWD();
+   WD & worker = getMultiWorkerWD( workerFun );
 
    //NANOS_INSTRUMENT (sys.getInstrumentation()->raiseOpenPtPEvent ( NANOS_WD_DOMAIN, (nanos_event_id_t) worker.getId(), 0, 0 ); )
    //NANOS_INSTRUMENT (InstrumentationContextData *icd = worker.getInstrumentationContextData() );

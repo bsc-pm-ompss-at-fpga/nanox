@@ -240,9 +240,14 @@ void ClusterPlugin::startSupportThreads() {
    if ( _gasnetApi->getNumNodes() > 1 )
    {
       if ( _gasnetApi->getNodeNum() == 0 ) {
-         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker( _gasnetApi->getNumNodes() - 1, (ProcessingElement **) &(*_remoteNodes)[0] ) );
+         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker(
+                     _gasnetApi->getNumNodes() - 1,
+                     (ProcessingElement **) &(*_remoteNodes)[0],
+                     ( DD::work_fct ) ClusterThread::workerClusterLoop ) );
       } else {
-         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker( 0, NULL ) );
+         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker(
+                     0, NULL,
+                     ( DD::work_fct )ClusterThread::workerClusterLoop ) );
          if ( sys.getPMInterface().getInternalDataSize() > 0 )
             _clusterThread->getThreadWD().setInternalData(NEW char[sys.getPMInterface().getInternalDataSize()]);
          //_pmInterface->setupWD( smpRepThd->getThreadWD() );

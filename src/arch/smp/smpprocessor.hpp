@@ -60,7 +60,7 @@ namespace ext {
 
          virtual ~SMPProcessor() {}
 
-         virtual WD & getMultiWorkerWD () const;
+         virtual WD & getMultiWorkerWD ( DD::work_fct workerFun ) const;
          virtual WD & getWorkerWD () const;
          virtual WD & getMasterWD () const;
          virtual BaseThread & createThread ( WorkDescriptor &wd, SMPMultiThread *parent=NULL );
