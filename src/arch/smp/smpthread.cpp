@@ -250,3 +250,15 @@ void SMPMultiThread::addThreadsFromPEs(unsigned int representingPEsCount, PE **r
    }
    _totalThreads = representingPEsCount;
 }
+
+void SMPMultiThread::initializeDependent( void ) {
+
+   BaseThread *tmpMyThread = myThread;
+   for ( unsigned int i = 0; i<_totalThreads; i++ ) {
+      //Change myThread so calls to myThread->... or getMythreadSafe()->...
+      //    work as expected and do not try call parent multithread (this)
+      myThread = _threads[ i ];
+      myThread->initializeDependent();
+   }
+   myThread = tmpMyThread;
+}
