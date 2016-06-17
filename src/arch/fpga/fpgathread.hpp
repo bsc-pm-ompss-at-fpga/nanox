@@ -30,11 +30,14 @@
 namespace nanos {
 namespace ext {
 
-   class FPGAThread : public SMPThread
+   class FPGAThread : public BaseThread
    {
       public:
-         FPGAThread(WD &wd, PE *pe, SMPProcessor *core, Atomic<int> fpgaDevice) :
-            SMPThread(wd, pe, core), _pendingWD(), _hwInstrCounters() {}
+         //FPGAThread(WD &wd, PE *pe, SMPProcessor *core, Atomic<int> fpgaDevice) :
+            //SMPThread(wd, pe, core), _pendingWD(), _hwInstrCounters() {}
+         FPGAThread(WD &wd, PE *pe, SMPMultiThread *parent, Atomic<int> fpgaDevice) :
+            BaseThread( ( unsigned int ) -1, wd, pe, parent),
+            _pendingWD(), _hwInstrCounters() {}
 
          void initializeDependent( void );
          void runDependent ( void );
@@ -49,6 +52,20 @@ namespace ext {
          void finishPendingWD( int numWD );
          void addPendingWD( WD *wd );
          void finishAllWD();
+
+         virtual void switchTo( WD *work, SchedulerHelper *helper );
+         virtual void exitTo( WD *work, SchedulerHelper *helper );
+         virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
+         virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg );
+         virtual void switchToNextThread();
+
+         virtual void start() {}
+         virtual void join() {}
+         virtual BaseThread *getNextThread();
+         virtual bool isCluster() { return false; }
+
+
+
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          void setupTaskInstrumentation( WD *wd );
 #endif

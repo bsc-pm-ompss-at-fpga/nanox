@@ -28,6 +28,7 @@
 #include "smpprocessor.hpp"
 #include "instrumentationmodule_decl.hpp"
 #include "fpgainstrumentation.hpp"
+#include "fpgaworker.hpp"
 
 #include "libxdma.h"
 
@@ -39,6 +40,8 @@ class FPGAPlugin : public ArchPlugin
    private:
       std::vector< FPGAProcessor* > *_fpgas;
       std::vector< FPGAThread* > *_fpgaThreads;
+      SMPProcessor *_core;
+      SMPMultiThread *_fpgaHelper;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -81,7 +84,8 @@ class FPGAPlugin : public ArchPlugin
       void init()
       {
          FPGAConfig::apply();
-         _fpgas = NEW std::vector< FPGAProcessor* >( FPGAConfig::getNumFPGAThreads(),( FPGAProcessor* )NULL) ;
+         FPGADD::init();
+         _fpgas = NEW std::vector< FPGAProcessor* >( FPGAConfig::getFPGACount(),( FPGAProcessor* )NULL) ;
          _fpgaThreads = NEW std::vector< FPGAThread* >( FPGAConfig::getNumFPGAThreads(),( FPGAThread* )NULL) ;
          /*
           * Initialize dma library here if fpga device is not disabled
@@ -104,36 +108,39 @@ class FPGAPlugin : public ArchPlugin
             //Otherwise this will cause problems (segfaults/hangs) later on the execution
             if (status)
                fatal0( "Error initializing DMA library: Returned status: " << status );
-            //get a core to run the helper thread. First one available
-            for ( int i = 0; i<FPGAConfig::getNumFPGAThreads(); i++ ) {
 
-//               memory_space_id_t memSpaceId = sys.getNewSeparateMemoryAddressSpaceId();
-//               SeparateMemoryAddressSpace *fpgaAddressSpace =
-//                  NEW SeparateMemoryAddressSpace( memSpaceId, nanos::ext::FPGA, true );
+
+            //Accelerator setup
+            for ( int i=0; i < FPGAConfig::getFPGACount(); i++) {
+               std::stringstream name;
+               name << "FPGA acc " << i;
+               std::string accName = name.str();
+               FPGADevice *device = NEW FPGADevice( accName.c_str() );
 
                memory_space_id_t memSpaceId = sys.addSeparateMemoryAddressSpace(
-                     nanos::ext::FPGA, true, 0 );
+                     *device, true, 0 );
                SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
                fpgaAddressSpace.setAcceleratorNumber( sys.getNewAcceleratorId() );
                fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
-               ext::SMPProcessor *core;
-               core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
-               if ( !core ) {
-                  //TODO: Run fpga threads in the core running least threads
-                  warning0( "Unable to get free core to run the FPGA thread, using the first one" );
-                  core = sys.getSMPPlugin()->getFirstSMPProcessor();
-                  core->setNumFutureThreads( core->getNumFutureThreads()+1 );
-                  NANOS_INSTRUMENT ( sys.getInstrumentation()->incrementMaxThreads(); )
-               } else {
-                  core->setNumFutureThreads( 1 );
-               }
-               FPGAProcessor* fpga = NEW FPGAProcessor( memSpaceId, core );
-               (*_fpgas)[i] = fpga;
 
+               FPGADD::addAccDevice( device );
+               FPGAProcessor *fpga = NEW FPGAProcessor( device, memSpaceId );
+               (*_fpgas)[i] = fpga;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
                //Register device in the instrumentation system
                registerDeviceInstrumentation( fpga );
 #endif
+            }
+
+            //Assuming 1 FPGA helper thread
+            //TODO: Allow any number of fpga threads
+            _core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
+            if ( _core ) {
+               _core->setNumFutureThreads( 1 );
+            } else {
+               _core = sys.getSMPPlugin()->getFirstSMPProcessor();
+               _core->setNumFutureThreads( _core->getNumFutureThreads() + 1 );
+               NANOS_INSTRUMENT( sys.getInstrumentation()->incrementMaxThreads(); );
             }
          } //!FPGAConfig::isDisabled()
       }
@@ -192,18 +199,16 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual void startSupportThreads () {
-         for ( unsigned int i = 0; i<_fpgas->size(); i++ ) {
-            FPGAProcessor *fpga = ( *_fpgas )[i];
-            ( *_fpgaThreads )[i] = ( FPGAThread* ) &fpga->startFPGAThread();
-         }
+         _fpgaHelper = dynamic_cast< ext::SMPMultiThread * >( &_core->startMultiWorker(
+                  FPGAConfig::getFPGACount(), (ProcessingElement **) &(*_fpgas)[0],
+                  ( DD::work_fct )FPGAWorker::FPGAWorkerLoop ) );
       }
 
       virtual void startWorkerThreads( std::map<unsigned int, BaseThread*> &workers ) {
-          for ( std::vector<FPGAThread*>::iterator it = _fpgaThreads->begin();
-                  it != _fpgaThreads->end(); it++ )
-          {
-              workers.insert( std::make_pair( (*it)->getId(), *it ));
-          }
+         for ( unsigned int i=0; i< _fpgaHelper->getNumThreads(); i++) {
+            BaseThread *thd = _fpgaHelper->getThreadVector()[ i ];
+            workers.insert( std::make_pair( thd->getId(), thd ) );
+         }
       }
 
       virtual ProcessingElement * createPE( unsigned id , unsigned uid) {

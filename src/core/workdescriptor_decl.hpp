@@ -152,7 +152,7 @@ typedef std::set<const Device *>  DeviceList;
           *  \param[in] arch is the Device which we have to compare to.
           *  \return a boolean indicating if both elements (DeviceData and Device) are compatible.
           */
-         bool isCompatible ( const Device &arch ) ;
+         virtual bool isCompatible ( const Device &arch ) ;
 
          /*! \brief FIXME: (#170) documentation needed
           */

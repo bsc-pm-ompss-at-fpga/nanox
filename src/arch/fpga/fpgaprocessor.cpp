@@ -41,10 +41,10 @@ FPGAPinnedAllocator FPGAProcessor::_allocator;
 /*
  * TODO: Support the case where each thread may manage a different number of accelerators
  */
-FPGAProcessor::FPGAProcessor( memory_space_id_t memSpaceId, SMPProcessor *core ) :
-   ProcessingElement( &FPGA, memSpaceId, 0, 0, false, 0, false ),
-   _fpgaDevice(0), _numAcc(FPGAConfig::getAccPerThread()), _update(true),
-   _fallBackAcc(0), _core( core )
+FPGAProcessor::FPGAProcessor( const Device *arch,  memory_space_id_t memSpaceId ) :
+   ProcessingElement( arch, memSpaceId, 0, 0, false, 0, false ),
+   _fpgaDevice(0), _numAcc( 1 ), _update(true),
+   _fallBackAcc(0)
 {
    //initilalize to _numAcc so if setActiveAcc() kicks in, first accelerator is #0
    _activeAcc = _numAcc-1;
@@ -160,17 +160,7 @@ WD & FPGAProcessor::getMasterWD () const
 BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThread *parent )
 {
    ensure( helper.canRunIn( getSMPDevice() ), "Incompatible worker thread" );
-   FPGAThread &th = *NEW FPGAThread( helper, this, _core, _fpgaDevice );
+   FPGAThread  &th = *NEW FPGAThread( helper, this, parent, _fpgaDevice );
    return th;
 }
 
-BaseThread & FPGAProcessor::startFPGAThread() {
-
-   WD & worker = getWorkerWD();
-
-   NANOS_INSTRUMENT (sys.getInstrumentation()->raiseOpenPtPEvent ( NANOS_WD_DOMAIN, (nanos_event_id_t) worker.getId(), 0, 0 ); )
-   NANOS_INSTRUMENT (InstrumentationContextData *icd = worker.getInstrumentationContextData() );
-   NANOS_INSTRUMENT (icd->setStartingWD(true) );
-
-   return _core->startThread( *this, worker, NULL );
-}

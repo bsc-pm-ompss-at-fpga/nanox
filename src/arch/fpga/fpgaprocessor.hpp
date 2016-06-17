@@ -67,13 +67,7 @@ namespace ext {
 
          public:
 
-            /*!
-             * Constructor:
-             * \param id        Processing element ID
-             * \param fpgaId    ID of the fpga device
-             */
-            //FPGAProcessor(int id, int fpgaId, unsigned int uid, memory_space_id_t memSpaceId);
-            FPGAProcessor(memory_space_id_t memSpaceId, SMPProcessor *core);
+            FPGAProcessor(const Device *arch, memory_space_id_t memSpaceId);
             ~FPGAProcessor();
 
             FPGAProcessorInfo* getFPGAProcessorInfo() const {
@@ -101,7 +95,7 @@ namespace ext {
             WD & getWorkerWD () const;
             WD & getMasterWD () const;
 
-            virtual WD & getMultiWorkerWD() const {
+            virtual WD & getMultiWorkerWD( DD::work_fct ) const {
                fatal( "getMasterWD(): FPGA processor is not allowed to create MultiThreads" );
             }
 
@@ -133,7 +127,7 @@ namespace ext {
             // This avoids accessing the cache to retrieve a (null) address
             virtual void* getAddress(WorkDescriptor &wd, uint64_t tag, nanos_sharing_t sharing ) {return NULL;}
 
-            BaseThread &startFPGAThread();
+            //BaseThread &startFPGAThread();
             static  FPGAPinnedAllocator& getPinnedAllocator() { return _allocator; }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED

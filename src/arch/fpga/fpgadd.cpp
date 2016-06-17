@@ -24,7 +24,11 @@
 using namespace nanos;
 using namespace nanos::ext;
 
-FPGADevice nanos::ext::FPGA( "FPGA" );
+std::vector < FPGADevice * > *FPGADD::_accDevices;
+
+void FPGADD::init() {
+    _accDevices = NEW std::vector< FPGADevice * >;
+}
 
 FPGADD * FPGADD::copyTo ( void *toAddr )
 {
@@ -32,6 +36,12 @@ FPGADD * FPGADD::copyTo ( void *toAddr )
    //we are not allocating anithind, therefore, system allocator cannot be used here
    FPGADD *dd = new ( toAddr ) FPGADD( *this );
    return dd;
+}
+
+
+bool FPGADD::isCompatible ( const Device &arch ) {
+   if ( _accNum == -1 ) return true;
+   return DeviceData::isCompatible( arch );
 }
 
 bool FPGADD::isCompatibleWithPE ( const ProcessingElement *pe ){

@@ -55,18 +55,21 @@ void FPGAWorker::FPGAWorkerLoop() {
    NANOS_INSTRUMENT ( unsigned long long total_yields = 0; ) /* Number of yields by idle phase */
    NANOS_INSTRUMENT ( unsigned long long time_yields = 0; ) /* Time of yields by idle phase */
 
+   BaseThread *parent = getMyThreadSafe();
+   myThread = parent->getNextThread();
+   FPGAThread *currentThread = ( FPGAThread* )myThread;
    for (;;){
       //check if we have reached maximum pending WD
       //  finalize one (or some of them)
-      FPGAThread *myThread = (FPGAThread*)getMyThreadSafe();
+      //FPGAThread *myThread = (FPGAThread*)getMyThreadSafe();
 
-      if ( myThread->getPendingWDs() > _maxPendingWD ) {
-          myThread->finishPendingWD( _finishBurst );
+      if ( currentThread->getPendingWDs() > _maxPendingWD ) {
+          currentThread->finishPendingWD( _finishBurst );
       }
 
-      if ( !myThread->isRunning() ) break;
+      if ( !parent->isRunning() ) break;
       //get next WD
-      WD *wd = getFPGAWD(myThread);
+      WD *wd = getFPGAWD(currentThread);
       if ( wd ) {
          //update instrumentation values & rise event
          NANOS_INSTRUMENT ( nanos_event_value_t values[numEvents]; )
@@ -76,21 +79,21 @@ void FPGAWorker::FPGAWorkerLoop() {
          NANOS_INSTRUMENT ( values[2] = (nanos_event_value_t) total_spins; )
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(numEvents, keys, values); )
 
-         NANOS_INSTRUMENT( myThread->setupTaskInstrumentation( wd ); )
+         NANOS_INSTRUMENT( currentThread->setupTaskInstrumentation( wd ); )
          Scheduler::prePreOutlineWork(wd);
          if ( Scheduler::tryPreOutlineWork(wd) ) {
-            myThread->preOutlineWorkDependent( *wd );
+            currentThread->preOutlineWorkDependent( *wd );
          }
          //TODO: may need to increment copies version number here
          if ( wd->isInputDataReady() ) {
-            Scheduler::outlineWork( myThread, wd );
+            Scheduler::outlineWork( currentThread, wd );
          } else {
             //do whatever is needed if input is not ready
             //wait or whatever, for instance, sync needed copies
          }
          //add to the list of pending WD
          wd->submitOutputCopies();
-         myThread->addPendingWD( wd );
+         currentThread->addPendingWD( wd );
          spins = init_spins;
 
          //Scheduler::postOutlineWork( wd, false, myThread ); <--moved to fpga thread
@@ -104,7 +107,7 @@ void FPGAWorker::FPGAWorkerLoop() {
          spins--;
          //we may be waiting for the last tasks to finalize or
          //waiting for some dependence to be released
-         myThread->finishAllWD();
+         currentThread->finishAllWD();
          //myThread->finishPendingWD(1);
       }
 
@@ -118,7 +121,7 @@ void FPGAWorker::FPGAWorkerLoop() {
             NANOS_INSTRUMENT ( total_yields++; )
             NANOS_INSTRUMENT ( unsigned long long begin_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  ); )
 
-            myThread->yield();
+            currentThread->yield();
 
             NANOS_INSTRUMENT ( unsigned long long end_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9 ); );
             NANOS_INSTRUMENT ( time_yields += ( end_yield - begin_yield ); );
@@ -126,12 +129,25 @@ void FPGAWorker::FPGAWorkerLoop() {
             spins = init_spins;
          } else {
              //idle if we do not yield
-             myThread->idle(false);
+             currentThread->idle(false);
          }
       }
+      myThread->idle();
+      currentThread = ( FPGAThread * )parent->getNextThread();
+      myThread = currentThread;
 
    }
    //we may need to chech for remaining WD
+
+   //Let the threads exit the team
+
+   SMPMultiThread *parentM = ( SMPMultiThread * ) parent;
+   for ( unsigned int i = 0; i < parentM->getNumThreads(); i += 1 ) {
+      myThread = parentM->getThreadVector()[ i ];
+      myThread->leaveTeam();
+      myThread->joined();
+   }
+   myThread = parent;
 }
 
 WD * FPGAWorker::getFPGAWD(BaseThread *thread) {

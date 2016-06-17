@@ -87,8 +87,6 @@ void FPGAThread::yield() {
    //Synchronizing transfers here seems to yield slightly better performance
    ((FPGAProcessor*)runningOn())->getOutTransferList()->syncAll();
    ((FPGAProcessor*)runningOn())->getInTransferList()->syncAll();
-
-   SMPThread::yield();
 }
 
 //Sync transfers on idle
@@ -193,3 +191,16 @@ void FPGAThread::setupTaskInstrumentation( WD *wd ) {
    _hwInstrCounters[ wd ] = hwCounters;
 }
 #endif
+void FPGAThread::switchTo( WD *work, SchedulerHelper *helper ) {}
+void FPGAThread::exitTo( WD *work, SchedulerHelper *helper ) {}
+void FPGAThread::switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
+void FPGAThread::exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
+void FPGAThread::switchToNextThread() {}
+
+BaseThread *FPGAThread::getNextThread() {
+   if ( getParent() != NULL ) {
+      return getParent()->getNextThread();
+   } else {
+      return this;
+   }
+}

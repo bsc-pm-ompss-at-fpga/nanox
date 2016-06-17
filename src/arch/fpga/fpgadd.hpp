@@ -27,18 +27,18 @@
 namespace nanos {
 namespace ext {
 
-      extern FPGADevice FPGA;
       class FPGADD : public DD
       {
 
          private:
             int            _accNum; //! Accelerator that will run the task
+            static std::vector < FPGADevice * > *_accDevices;
 
          public:
             // constructors
-            FPGADD( work_fct w , int accNum ) : DD( &FPGA, w ), _accNum( accNum ) {}
-
-            FPGADD() : DD( &FPGA, NULL ) {}
+            FPGADD( work_fct w , int accNum ) :
+                DD( (accNum < 0) ? (*_accDevices)[ 0 ] : (*_accDevices)[accNum], w ),
+                _accNum( accNum ) {}
 
             // copy constructors
             FPGADD( const FPGADD &dd ) : DD( dd ), _accNum( dd._accNum ){}
@@ -49,12 +49,22 @@ namespace ext {
             // destructor
             virtual ~FPGADD() { }
 
+            static void init();
+
             virtual void lazyInit ( WD &wd, bool isUserLevelThread, WD *previous ) { }
             virtual size_t size ( void ) { return sizeof( FPGADD ); }
             virtual FPGADD *copyTo ( void *toAddr );
             virtual FPGADD *clone () const { return NEW FPGADD ( *this ); }
+            virtual bool isCompatible ( const Device &arch );
 
             virtual bool isCompatibleWithPE ( const ProcessingElement *pe=NULL );
+
+            static void addAccDevice( FPGADevice *dev ) {
+                _accDevices->push_back( dev );
+            }
+            static std::vector< FPGADevice* > *getAccDevices() {
+               return _accDevices;
+            }
       };
       inline const FPGADD & FPGADD::operator= ( const FPGADD &dd )
       {
