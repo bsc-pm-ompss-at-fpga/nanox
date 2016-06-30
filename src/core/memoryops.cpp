@@ -289,7 +289,7 @@ void BaseAddressSpaceInOps::copyInputData( MemCacheCopy const &memCopy, WD const
       unsigned int rs_version = region_shape.getVersion();
       unsigned int ds_version = data_source.getVersion();
 
-      if ( ds_version > rs_version ) {
+      if ( ds_version != rs_version ) {
          if ( !data_source.isLocatedIn( 0 ) && rs_ops->addCacheOp( &wd ) ) {
             memory_space_id_t location = data_source.getPreferedSourceLocation(0);
             if ( location == 0 ) {
@@ -323,8 +323,6 @@ void BaseAddressSpaceInOps::copyInputData( MemCacheCopy const &memCopy, WD const
             getOtherOps().insert( rs_ops );
             getOtherOps().insert( ds_ops );
          }
-      } else {
-         fatal("Impossible path");
       }
    }
 }

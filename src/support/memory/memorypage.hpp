@@ -46,7 +46,7 @@ class MemoryPage : public AlignedMemoryChunk<PAGE_SIZE> {
        * page that contains a given address.
        * \param[in] address the address that belongs to the page.
        */
-      constexpr
+      //constexpr
       MemoryPage( Address const& address ) :
             AlignedMemoryChunk( address.align<PAGE_SIZE>(), MemoryPage::size() )
       {
