@@ -34,7 +34,9 @@ void FPGAThread::initializeDependent()
    ( ( FPGAProcessor * ) myThread->runningOn() )->init();
    //initialize instrumentation
    xdmaInitHWInstrumentation();
+   //allocate sync buffer to ensure instrumentation data is ready
 
+   xdmaAllocateKernelBuffer( ( void ** )&_syncBuffer, &_syncHandle, sizeof( unsigned int ) );
 }
 
 
@@ -137,11 +139,6 @@ void FPGAThread::finishAllWD() {
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 
-static int __attribute__((noinline)) checkCounter(volatile xdma_instr_times *counters ) {
-    //std::cerr << "counter: " << counters->outTransfer << std::endl;
-    return (counters->outTransfer != 1);
-}
-
 void FPGAThread::readInstrCounters( WD *wd ) {
 
    std::pair< xdma_instr_times*, int > &instEntry = _hwInstrCounters[ wd ];
@@ -149,6 +146,11 @@ void FPGAThread::readInstrCounters( WD *wd ) {
    int activeAcc = instEntry.second;
 
    //TODO: Submit data to instrumentation layer
+
+
+   //sync up before reading instrumentation data
+   xdma_transfer_handle syncHandle = _instrSyncHandles[ wd ];
+   xdmaWaitTransfer( syncHandle );
 
    Instrumentation *instr = sys.getInstrumentation();
    FPGAProcessor *fpga = ( FPGAProcessor* )runningOn();
@@ -158,9 +160,6 @@ void FPGAThread::readInstrCounters( WD *wd ) {
 
    dmaIn = fpga->getDmaInInstrumentation( activeAcc );
    dmaOut = fpga->getDmaOutInstrumentation( activeAcc );
-   //std::cout << "check counter... " << std::endl;
-   while ( ! checkCounter(counters) );
-   //std::cout << "ok" << std::endl;
 
    //Task execution
    instr->addDeviceEvent(
@@ -219,9 +218,6 @@ void FPGAThread::setupTaskInstrumentation( WD *wd ) {
    instr->addDeviceEvent(
            Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, NULL, wd) );
 
-
-//   const xdma_device deviceHandle =
-//      ( ( FPGAProcessor * ) myThread->runningOn() )->getFPGAProcessorInfo()->getDeviceHandle();
    xdma_instr_times * hwCounters;
    xdmaSetupTaskInstrument(deviceHandle, &hwCounters);
    hwCounters->outTransfer = 1;
@@ -232,5 +228,17 @@ void FPGAThread::setupTaskInstrumentation( WD *wd ) {
          Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, wd, NULL) );
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( timestamp, TaskEnd, submitInstr, wd) );
+}
+
+void FPGAThread::submitInstrSync( WD *wd ) {
+   FPGAProcessor *fpga = ( FPGAProcessor* ) myThread->runningOn();
+   int activeAcc = fpga->getActiveAcc();
+   const xdma_device deviceHandle =
+      fpga->getFPGAProcessorInfo()[activeAcc].getDeviceHandle();
+   const xdma_channel oChan = fpga->getFPGAProcessorInfo()[fpga->getActiveAcc()].getOutputChannel();
+   xdma_transfer_handle handle;
+   xdmaSubmitKBuffer( _syncHandle, sizeof( unsigned long long int ), 0, XDMA_ASYNC,
+         deviceHandle, oChan, &handle );
+   _instrSyncHandles[ wd ] = handle;
 }
 #endif

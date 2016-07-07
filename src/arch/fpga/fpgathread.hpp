@@ -52,11 +52,15 @@ namespace ext
          void finishAllWD();
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          void setupTaskInstrumentation( WD *wd );
+         void submitInstrSync( WD *wd );
 #endif
 
       private:
          std::queue< WD* > _pendingWD;
          std::map< WD*, std::pair< xdma_instr_times*, int > > _hwInstrCounters;
+         std::map< WD*, xdma_transfer_handle > _instrSyncHandles;
+         xdma_buf_handle _syncHandle;
+         unsigned int *_syncBuffer;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          void readInstrCounters( WD *wd );
 #endif
