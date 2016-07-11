@@ -40,6 +40,7 @@ class FPGAPlugin : public ArchPlugin
    private:
       std::vector< FPGAProcessor* > *_fpgas;
       std::vector< FPGAThread* > *_fpgaThreads;
+      std::vector< std::string > _devNames;
       SMPProcessor *_core;
       SMPMultiThread *_fpgaHelper;
 
@@ -114,9 +115,8 @@ class FPGAPlugin : public ArchPlugin
             for ( int i=0; i < FPGAConfig::getFPGACount(); i++) {
                std::stringstream name;
                name << "FPGA acc " << i;
-               std::string accName = name.str();
-               FPGADevice *device = NEW FPGADevice( accName.c_str() );
-
+               _devNames.push_back( name.str() );
+               FPGADevice *device = NEW FPGADevice( _devNames.back().c_str() );
                memory_space_id_t memSpaceId = sys.addSeparateMemoryAddressSpace(
                      *device, true, 0 );
                SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
