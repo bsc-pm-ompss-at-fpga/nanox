@@ -67,7 +67,7 @@ FPGAProcessor::~FPGAProcessor(){
 
 void FPGAProcessor::init()
 {
-   xdma_device *devices = NEW xdma_device[_numAcc];
+   xdma_device *devices = NEW xdma_device[FPGAConfig::getFPGACount()];
    xdma_status status;
    status = xdmaGetDevices(FPGAConfig::getFPGACount(), devices, NULL);
 
