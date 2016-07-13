@@ -60,9 +60,10 @@ namespace ext {
             static FPGAPinnedAllocator _allocator;
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-            DeviceInstrumentation *_devInstr;
-            DeviceInstrumentation *_dmaInInstr;
-            DeviceInstrumentation *_dmaOutInstr;
+            std::vector< DeviceInstrumentation * > _devInstr;
+            std::vector< DeviceInstrumentation * > _dmaInInstr;
+            std::vector< DeviceInstrumentation * > _dmaOutInstr;
+            std::vector< DeviceInstrumentation * > _submitInstrumentation;
 #endif
 
          public:
@@ -132,22 +133,30 @@ namespace ext {
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
             void setDeviceInstrumentation( DeviceInstrumentation * devInstr ) {
-               _devInstr = devInstr;
+               _devInstr.push_back( devInstr );
             }
             void setDmaInstrumentation( DeviceInstrumentation *dmaIn,
                     DeviceInstrumentation *dmaOut ) {
-                _dmaInInstr = dmaIn;
-                _dmaOutInstr = dmaOut;
+//                _dmaInInstr = dmaIn;
+//                _dmaOutInstr = dmaOut;
+               _dmaInInstr.push_back( dmaIn );
+               _dmaOutInstr.push_back( dmaOut );
+            }
+            void setSubmitInstrumentation( DeviceInstrumentation * submitInstr ) {
+               _submitInstrumentation.push_back( submitInstr );
             }
 
-            DeviceInstrumentation *getDeviceInstrumentation() {
-               return _devInstr;
+            DeviceInstrumentation *getDeviceInstrumentation( int acc ) {
+               return _devInstr[ acc ];
             }
-            DeviceInstrumentation *getDmaInInstrumentation() {
-               return _dmaInInstr;
+            DeviceInstrumentation *getDmaInInstrumentation( int acc ) {
+               return _dmaInInstr[ acc ];
             }
-            DeviceInstrumentation *getDmaOutInstrumentation() {
-               return _dmaOutInstr;
+            DeviceInstrumentation *getDmaOutInstrumentation( int acc ) {
+               return _dmaOutInstr[ acc ];
+            }
+            DeviceInstrumentation *getSubmitInstrumentation( int acc ) {
+               return _submitInstrumentation[ acc ];
             }
 #endif
 

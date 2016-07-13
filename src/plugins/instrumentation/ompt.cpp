@@ -821,7 +821,7 @@ namespace nanos
          }
 
          void addDeviceEvent( const DeviceEvent &event ) {
-            DeviceInstrumentation *devInstr = event.getDeviceInstrumentation();
+            const DeviceInstrumentation *devInstr = event.getDeviceInstrumentation();
             int deviceId = devInstr->getId();
             BufferInfo &buffer = _devEventBuffers[ deviceId ];
             //Request buffer if it's not initialized
@@ -850,8 +850,8 @@ namespace nanos
             //Host thread that emits the event (TODO check)
             omptEvent->thread_id = (ompt_thread_id_t) nanos::myThread->getId();
             //Task ID (TODO check)
-            WorkDescriptor * wd = event.getWD();
-            WorkDescriptor * auxWD = event.getAuxWD();
+            const WorkDescriptor * wd = event.getWD();
+            const WorkDescriptor * auxWD = event.getAuxWD();
             //When running a task (task switch from 0 to a task) wd may be null
             if ( wd != NULL ) {
                omptEvent->dev_task_id = wd->getId();
