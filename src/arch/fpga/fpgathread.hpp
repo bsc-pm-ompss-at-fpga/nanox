@@ -35,9 +35,7 @@ namespace ext {
       public:
          //FPGAThread(WD &wd, PE *pe, SMPProcessor *core, Atomic<int> fpgaDevice) :
             //SMPThread(wd, pe, core), _pendingWD(), _hwInstrCounters() {}
-         FPGAThread(WD &wd, PE *pe, SMPMultiThread *parent, Atomic<int> fpgaDevice) :
-            BaseThread( ( unsigned int ) -1, wd, pe, parent),
-            _pendingWD(), _hwInstrCounters() {}
+         FPGAThread(WD &wd, PE *pe, SMPMultiThread *parent, Atomic<int> fpgaDevice);
 
          void initializeDependent( void );
          void runDependent ( void );

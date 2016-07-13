@@ -28,6 +28,12 @@
 using namespace nanos;
 using namespace nanos::ext;
 
+FPGAThread::FPGAThread(WD &wd, PE *pe, SMPMultiThread *parent, Atomic<int> fpgaDevice) :
+   BaseThread( ( unsigned int ) -1, wd, pe, parent),
+   _pendingWD(), _hwInstrCounters() {
+      setCurrentWD( wd );
+   }
+
 void FPGAThread::initializeDependent()
 {
    //initialize device
