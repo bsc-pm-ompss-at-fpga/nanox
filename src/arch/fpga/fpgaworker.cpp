@@ -94,9 +94,9 @@ void FPGAWorker::FPGAWorkerLoop() {
          //add to the list of pending WD
          wd->submitOutputCopies();
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-         myThread->submitInstrSync( wd );
+         currentThread->submitInstrSync( wd );
 #endif
-         myThread->addPendingWD( wd );
+         currentThread->addPendingWD( wd );
          spins = init_spins;
 
          //Scheduler::postOutlineWork( wd, false, myThread ); <--moved to fpga thread

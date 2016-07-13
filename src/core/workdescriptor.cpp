@@ -229,14 +229,12 @@ DeviceData & WorkDescriptor::activateDevice ( unsigned int deviceIdx )
 bool WorkDescriptor::canRunIn( const Device &device , const ProcessingElement * pe) const
 //bool WorkDescriptor::canRunIn( const Device &device ) const
 {
-   if ( _activeDeviceIdx != _numDevices ) return _devices[_activeDeviceIdx]->isCompatible( device , pe);
-   //if ( _activeDeviceIdx != _numDevices ) return _devices[_activeDeviceIdx]->isCompatible( device );
+   if ( _activeDeviceIdx != _numDevices ) return _devices[_activeDeviceIdx]->isCompatible( device );
 
    unsigned int i;
    for ( i = 0; i < _numDevices; i++ ) {
-       //if (_devices[i]->isCompatible( device )){
-       if (_devices[i]->isCompatible( device, pe )){
-            return true;           
+       if (_devices[i]->isCompatible( device )){
+            return true;
        }
    }
 
