@@ -535,15 +535,19 @@ void WorkDescriptor::waitCompletion( bool avoidFlush )
 {
    _depsDomain->finalizeAllReductions();
    // Ask for more resources once we have finished creating tasks
-   sys.getThreadManager()->returnClaimedCpus();
-   sys.getThreadManager()->acquireResourcesIfNeeded();
-
+   if ( sys.getPMInterface().isMalleable() ) {
+      sys.getThreadManager()->returnClaimedCpus();
+      sys.getThreadManager()->acquireResourcesIfNeeded();
+   }
    _componentsSyncCond.waitConditionAndSignalers();
    if ( !avoidFlush ) {
       _mcontrol.synchronize();
    }
 
+   removeAllTaskReductions();
+
    _depsDomain->clearDependenciesDomain();
+
 }
 
 void WorkDescriptor::exitWork ( WorkDescriptor &work )
@@ -663,13 +667,30 @@ bool WorkDescriptor::removeTaskReduction( void *p_dep, bool del )
    }
 
    if ( it != _taskReductions.rend() ) {
-      if ( del ) delete (*it);
-      // Reverse iterators cannot be erased directly, we need to transform them
-      // to common iterators
-      _taskReductions.erase( --(it.base()) );
+      if ( del ) {
+         delete (*it);
+         // Reverse iterators cannot be erased directly, we need to transform them
+         // to common iterators
+         _taskReductions.erase( --(it.base()) );
+      }
       return true;
    }
    return false;
+}
+
+void WorkDescriptor::removeAllTaskReductions( void )
+{
+   bool b;
+   // Check if we have registered a reduction with this address
+   task_reduction_vector_t::reverse_iterator it;
+   for ( it = _taskReductions.rbegin(); it != _taskReductions.rend(); it++) {
+      if ( _parent )  b = _parent->removeTaskReduction( (*it)->get(0), false ) ; 
+      else b = false;
+      if ( !b) {
+         delete (*it);
+         _taskReductions.erase( --(it.base()) );
+      }
+   }
 }
 
 TaskReduction * WorkDescriptor::getTaskReduction( const void *p_dep )
@@ -705,3 +726,69 @@ bool WorkDescriptor::resourceCheck( BaseThread const &thd, bool considerInvalida
 //   while ( ! _myGraphRepList.cswap( myList, NULL ) );
 //   return myList;
 //}
+
+
+// comm_accesses is a map of access:owner for commutative accesess
+int WorkDescriptor::getConcurrencyLevel( std::map<WD**, WD*> &comm_accesses ) const
+{
+   int num_wds = 0;
+
+   // Slicer: return from 1 to N
+   if ( _slicer != NULL ) {
+      nanos_loop_info_t *loop_info;
+      loop_info = ( nanos_loop_info_t* ) _data;
+      int _chunk = loop_info->chunk;
+      int _lower = loop_info->lower;
+      int _upper = loop_info->upper;
+      int _step  = loop_info->step;
+      int _niters = (((_upper - _lower) / _step ) + 1 );
+
+      if ( _chunk == 0 ) {
+         num_wds = 1;
+      } else {
+         num_wds = (_niters + _chunk - 1) / _chunk;
+      }
+   }
+
+   // Commutative: return 0 to 1
+   else if ( _commutativeOwners != NULL ) {
+      WorkDescriptorPtrList::const_iterator owner_it;
+      // Check first that all the WD'a accesses can be acquired
+      for ( owner_it = _commutativeOwners->begin();
+            owner_it != _commutativeOwners->end();
+            ++owner_it ) {
+         // WD** that contains the parent's commutative access
+         WD **owner_ptr = *owner_it;
+         // WD* owner of the actual access
+         WD *owner = *owner_ptr;
+
+         // If the access has an owner, update the local structure
+         if ( owner && owner != comm_accesses[owner_ptr] ) {
+            comm_accesses[owner_ptr] = owner;
+         }
+
+         // We stop looking if the access is reserved by other WD
+         if ( comm_accesses[owner_ptr] != NULL && comm_accesses[owner_ptr] != (WD*) this ) {
+            break;
+         }
+      }
+
+      // All the WD's accessed can be acquired, register them into comm_accesses
+      if ( owner_it == _commutativeOwners->end() ) {
+         for ( owner_it = _commutativeOwners->begin();
+               owner_it != _commutativeOwners->end();
+               ++owner_it ) {
+            WD **owner_ptr = *owner_it;
+            comm_accesses[owner_ptr] = (WD*) this;
+         }
+         num_wds = 1;
+      }
+   }
+
+   // Normal non-tied task: return 1
+   else if ( _tiedTo == NULL ) {
+      num_wds = 1;
+   }
+
+   return num_wds;
+}

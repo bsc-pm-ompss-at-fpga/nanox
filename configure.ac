@@ -1,4 +1,4 @@
-AC_INIT([nanox], [0.10a], [pm-tools@bsc.es])
+AC_INIT([nanox], [0.11a], [pm-tools@bsc.es])
 AC_LANG([C++])
 AC_CONFIG_SRCDIR([src/core/system.cpp])
 AC_DEFINE_UNQUOTED([NANOX_CONFIGURE_ARGS], ["$0 $@"], [Configure line])
@@ -325,7 +325,6 @@ AC_CONFIG_FILES([
                  tests/gens/api-generator
                  tests/gens/api-omp-generator
                  tests/gens/core-generator
-                 tests/gens/gpu-generator
                  tests/gens/mcc-openmp-generator
                  tests/gens/mcc-ompss-generator
                  tests/gens/opencl-generator
