@@ -53,7 +53,11 @@ static void dmaSubmitStart( FPGAProcessor *fpga, const WD *wd ) {
    DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation(
            fpga->getActiveAcc() );
    unsigned long long timestamp;
-   xdmaGetDeviceTime( &timestamp );
+   xdma_status status;
+   status = xdmaGetDeviceTime( &timestamp );
+   if ( status != XDMA_SUCCESS ) {
+      warning("Could not read accelerator clock (dma submit start)");
+   }
 
    //std::cout << "submit start " << timestamp << std::endl;
 
@@ -68,9 +72,13 @@ static void dmaSubmitEnd( FPGAProcessor *fpga, const WD *wd ) {
    DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation(
          fpga->getActiveAcc() );
    unsigned long long timestamp;
-   xdmaGetDeviceTime( &timestamp );
+   xdma_status status;
+   status = xdmaGetDeviceTime( &timestamp );
+   if ( status != XDMA_SUCCESS ) {
+      warning("Could not read accelerator clock (dma submit end)");
+   }
 
-   //std::cout << "submit end " << timestamp << std::endl;
+   std::cout << "submit end " << timestamp << std::endl;
 
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, wd, NULL) );
