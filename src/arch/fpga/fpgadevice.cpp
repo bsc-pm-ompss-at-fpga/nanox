@@ -97,7 +97,7 @@ inline bool FPGADevice::copyIn( void *localDst, CopyDescriptor &remoteSrc, size_
    nanos::ext::FPGAProcessor *fpga = ( nanos::ext::FPGAProcessor* ) pe;
 
    uint64_t  src_addr = remoteSrc.getTag();
-   int status;
+   xdma_status status;
    xdma_channel iChan;
    xdma_transfer_handle dmaHandle;
    xdma_device device;
@@ -134,7 +134,7 @@ inline bool FPGADevice::copyIn( void *localDst, CopyDescriptor &remoteSrc, size_
    }
 
    debug ( "  got intput handle: " << dmaHandle );
-   if ( status )
+   if ( status != XDMA_SUCCESS )
       warning("Error submitting output: " << status);
 
    if ( FPGAConfig::getSyncTransfersEnabled() ) {
@@ -174,7 +174,7 @@ bool FPGADevice::copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size
    xdma_channel oChan;
    xdma_transfer_handle dmaHandle;
    xdma_device device;
-   int status;
+   xdma_status status;
    uint64_t src_addr = remoteDst.getTag();
    device = fpga->getFPGAProcessorInfo()[fpga->getActiveAcc()].getDeviceHandle();
    oChan = fpga->getFPGAProcessorInfo()[fpga->getActiveAcc()].getOutputChannel();
@@ -205,7 +205,7 @@ bool FPGADevice::copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size
       status = xdmaSubmitBuffer( (void*)src_addr, size, XDMA_ASYNC, device, oChan, &dmaHandle );
    }
 
-   if ( status )
+   if ( status != XDMA_SUCCESS )
       warning( "Error submitting output:" << status );
 
    debug( "  got out handle: " << dmaHandle );
