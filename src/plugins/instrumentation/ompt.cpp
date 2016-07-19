@@ -28,6 +28,7 @@ using namespace nanos;
 extern "C" {
 
    namespace nanos {
+      class InstrumentationOMPT;
       namespace ompt {
          Lock _lock;
          std::map<void *, int> map_parallel_id;
@@ -40,6 +41,8 @@ extern "C" {
          const char *runtime_version,    /* OpenMP runtime version string */
          unsigned int ompt_version       /* integer that identifies the OMPT revision */
          );
+
+   ompt_thread_id_t ompt_nanos_get_thread_id( void );
 
    int ompt_initialize( ompt_function_lookup_t lookup, const char *runtime_version, unsigned int ompt_version )
    {
@@ -214,18 +217,6 @@ extern "C" {
          *next_state = nanos_state_values[i];
          *next_state_name = nanos_state_string[i];
          return 1;
-      } else {
-         return 0;
-      }
-   }
-
-   ompt_thread_id_t ompt_nanos_get_thread_id( void );
-   ompt_thread_id_t ompt_nanos_get_thread_id( void )
-   {
-      //If instrumentation calls this before anything is initialized,
-      //return 0 as the master is doing everything
-      if ( nanos::myThread != NULL ) {
-         return (ompt_thread_id_t) nanos::myThread->getId();
       } else {
          return 0;
       }
@@ -522,6 +513,18 @@ namespace nanos
             _previousTask( NULL ), _deviceCount( 0 ), _requestBufferCallback( NULL ),
             _completeBufferCallback( NULL ) {}
          ~InstrumentationOMPT() { }
+
+         static int getCurrentThreadId() {
+             BaseThread *parent = myThread->getParent();
+             int id;
+             if ( parent != NULL ) {
+                 id = parent->getId();
+             } else {
+                 id = myThread->getId();
+             }
+             return id;
+         }
+
          void initialize( void )
          {
             ompt_initialize ( ompt_nanos_lookup, "Nanos++ 0.8a", 1);
@@ -543,7 +546,7 @@ namespace nanos
          void finalize( void )
          {
             if (ompt_nanos_event_thread_end) {
-               ompt_nanos_event_thread_end((ompt_thread_type_t) ompt_thread_initial, (ompt_thread_id_t) nanos::myThread->getId());
+               ompt_nanos_event_thread_end((ompt_thread_type_t) ompt_thread_initial, (ompt_thread_id_t) getCurrentThreadId());
             }
             if ( ompt_nanos_event_shutdown ) ompt_nanos_event_shutdown();
             if ( _previousTask ) free ( _previousTask );
@@ -575,7 +578,7 @@ namespace nanos
                Event &e = events[i];
 // XXX: debug information
 #if 0
-               int thid = nanos::myThread? nanos::myThread->getId():0; 
+               int thid = nanos::myThread? getCurrentThreadId():0; 
                fprintf(stderr,"NANOS++ [%d]: (%d/%d) event %ld value %lu\n",
                      thid,
                      (int)i+1,
@@ -746,7 +749,7 @@ namespace nanos
 
             ompt_task_id_t post = (ompt_task_id_t) w.getId();
 
-            int thid = (int) nanos::myThread->getId();
+            int thid = (int) getCurrentThreadId();
             if (!_threadActive[thid]) return;
 
             ompt_task_id_t pre = (ompt_task_id_t) _previousTask[thid];
@@ -755,7 +758,7 @@ namespace nanos
          }
          void addSuspendTask( WorkDescriptor &w, bool last )
          {
-            int thid = (int) nanos::myThread->getId();
+            int thid = (int) getCurrentThreadId();
             if (last) _previousTask[thid] = (ompt_task_id_t) 0;
             else _previousTask[thid] = (ompt_task_id_t) w.getId();
 
@@ -769,7 +772,7 @@ namespace nanos
             thread.setSteps (1);
             thread.setCallBack ( breakPointCallBack );
 
-            int thid = nanos::myThread->getId();
+            int thid = getCurrentThreadId();
 
             if (ompt_nanos_event_thread_begin) {
                ompt_nanos_event_thread_begin( (ompt_thread_type_t) ompt_thread_worker, (ompt_thread_id_t) thid );
@@ -779,7 +782,7 @@ namespace nanos
          void threadFinish ( BaseThread &thread )
          {
             if (ompt_nanos_event_thread_end) {
-               ompt_nanos_event_thread_end((ompt_thread_type_t) ompt_thread_worker, (ompt_thread_id_t) nanos::myThread->getId());
+               ompt_nanos_event_thread_end((ompt_thread_type_t) ompt_thread_worker, (ompt_thread_id_t) getCurrentThreadId());
             }
          }
          void incrementMaxThreads( void ) {
@@ -865,7 +868,7 @@ namespace nanos
             omptEvent->type = ( ompt_event_t ) event.getEventType();
             omptEvent->time = event.getDeviceTime();
             //Host thread that emits the event (TODO check)
-            omptEvent->thread_id = (ompt_thread_id_t) nanos::myThread->getId();
+            omptEvent->thread_id = (ompt_thread_id_t) getCurrentThreadId();
             //Task ID (TODO check)
             const WorkDescriptor * wd = event.getWD();
             const WorkDescriptor * auxWD = event.getAuxWD();
@@ -983,6 +986,18 @@ extern "C" {
       //Complete event buffer for this device
       instr->completeDeviceBuffer( devInst->getId() );
       return 0;
+   }
+
+   ompt_thread_id_t ompt_nanos_get_thread_id( void );
+   ompt_thread_id_t ompt_nanos_get_thread_id( void )
+   {
+      //If instrumentation calls this before anything is initialized,
+      //return 0 as the master is doing everything
+      if ( nanos::myThread != NULL ) {
+         return (ompt_thread_id_t) nanos::InstrumentationOMPT::getCurrentThreadId();
+      } else {
+         return 0;
+      }
    }
 }
    namespace ext
