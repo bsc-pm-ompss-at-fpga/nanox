@@ -59,8 +59,6 @@ static void dmaSubmitStart( FPGAProcessor *fpga, const WD *wd ) {
       warning("Could not read accelerator clock (dma submit start)");
    }
 
-   //std::cout << "submit start " << timestamp << std::endl;
-
    instr->addDeviceEvent(
            Instrumentation::DeviceEvent( timestamp, TaskBegin, submitInstr, wd ) );
    instr->addDeviceEvent(
@@ -77,8 +75,6 @@ static void dmaSubmitEnd( FPGAProcessor *fpga, const WD *wd ) {
    if ( status != XDMA_SUCCESS ) {
       warning("Could not read accelerator clock (dma submit end)");
    }
-
-   std::cout << "submit end " << timestamp << std::endl;
 
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, wd, NULL) );
