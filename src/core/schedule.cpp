@@ -169,7 +169,7 @@ struct TestInputs {
 };
 
 template<class behaviour>
-inline void Scheduler::idleLoop ()
+inline void Scheduler::idleLoop ( bool exit )
 {
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
 
@@ -359,9 +359,12 @@ inline void Scheduler::idleLoop ()
          num_steals = 0;
          // Also reset the number of empty calls
          num_empty_calls = 0;
-         continue;
+         //if called from a multithread, don not start a new iteration
+         if ( !exit ) continue;
       }
-      
+      //exit if called from another architecture
+      if ( exit ) break;
+
       // Otherwise, getWD returned NULL, increase the counter
       ++num_empty_calls;
 
@@ -552,9 +555,9 @@ struct AsyncWorkerBehaviour
    static bool exiting() { return false; }
 };
 
-void Scheduler::workerLoop ()
+void Scheduler::workerLoop ( bool exit )
 {
-   idleLoop<WorkerBehaviour>();
+   idleLoop<WorkerBehaviour>( exit );
 }
 
 void Scheduler::asyncWorkerLoop ()

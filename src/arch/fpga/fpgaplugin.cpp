@@ -226,6 +226,8 @@ class FPGAPlugin : public ArchPlugin
             BaseThread *thd = _fpgaHelper->getThreadVector()[ i ];
             workers.insert( std::make_pair( thd->getId(), thd ) );
          }
+         //Push multithread into the team to let ir steam tasks from other smp threads
+         workers.insert( std::make_pair( _fpgaHelper->getId(), _fpgaHelper ) );
       }
 
       virtual ProcessingElement * createPE( unsigned id , unsigned uid) {

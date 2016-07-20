@@ -135,6 +135,14 @@ void FPGAWorker::FPGAWorkerLoop() {
              currentThread->idle(false);
          }
       }
+
+      //Try to run a smp task
+      //FIXME: Run a smp task when there are no fpga tasks available
+      BaseThread *tmpThread = myThread;
+      myThread = parent; //Parent should be already an smp thread
+      Scheduler::workerLoop( true );
+      myThread = tmpThread;
+
       myThread->idle();
       currentThread = ( FPGAThread * )parent->getNextThread();
       myThread = currentThread;
@@ -151,6 +159,9 @@ void FPGAWorker::FPGAWorkerLoop() {
       myThread->joined();
    }
    myThread = parent;
+   //let the parent thread leave the team
+   myThread->leaveTeam();
+   myThread->joined();
 }
 
 WD * FPGAWorker::getFPGAWD(BaseThread *thread) {
