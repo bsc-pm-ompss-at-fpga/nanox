@@ -32,7 +32,8 @@ int FPGAWorker::_maxPendingWD = 4;
 int FPGAWorker::_finishBurst = 1;
 
 void FPGAWorker::FPGAWorkerLoop() {
-   const int init_spins = sys.getSchedulerConf().getNumSpins();
+   BaseThread *parent = getMyThreadSafe();
+   const int init_spins = ( ( SMPMultiThread* ) parent )->getNumThreads();
    const bool use_yield = false;
    unsigned int spins = init_spins;
 
@@ -55,7 +56,6 @@ void FPGAWorker::FPGAWorkerLoop() {
    NANOS_INSTRUMENT ( unsigned long long total_yields = 0; ) /* Number of yields by idle phase */
    NANOS_INSTRUMENT ( unsigned long long time_yields = 0; ) /* Time of yields by idle phase */
 
-   BaseThread *parent = getMyThreadSafe();
    myThread = parent->getNextThread();
    FPGAThread *currentThread = ( FPGAThread* )myThread;
    for (;;){
@@ -119,6 +119,13 @@ void FPGAWorker::FPGAWorkerLoop() {
          NANOS_INSTRUMENT ( total_spins += init_spins; )
 
          spins = init_spins;
+         //When spins go to 0 it means that there is no work for any fpga accelerator
+         // -> get an SMP task
+         BaseThread *tmpThread = myThread;
+         myThread = parent; //Parent should be already an smp thread
+         Scheduler::workerLoop( true );
+         myThread = tmpThread;
+
          //do not limit number of yields disregard of configuration options
          if ( use_yield ) {
             NANOS_INSTRUMENT ( total_yields++; )
@@ -136,12 +143,6 @@ void FPGAWorker::FPGAWorkerLoop() {
          }
       }
 
-      //Try to run a smp task
-      //FIXME: Run a smp task when there are no fpga tasks available
-      BaseThread *tmpThread = myThread;
-      myThread = parent; //Parent should be already an smp thread
-      Scheduler::workerLoop( true );
-      myThread = tmpThread;
 
       myThread->idle();
       currentThread = ( FPGAThread * )parent->getNextThread();
