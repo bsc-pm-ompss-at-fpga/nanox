@@ -39,6 +39,7 @@ namespace nanos
       int FPGAConfig::_idleSyncBurst = 4;
       bool FPGAConfig::_syncTransfers = false;
       int FPGAConfig::_fpgaFreq = 100; //default to 100MHz
+      bool FPGAConfig::_hybridWorker = false;
 
       void FPGAConfig::prepare( Config &config )
       {
@@ -82,6 +83,12 @@ namespace nanos
                "FPGA accelerator clock frequency in MHz" );
          config.registerEnvOption( "fpga_freq", "NX_FPGA_FREQ" );
          config.registerArgOption( "fpga_freq", "nx-fpga-freq" );
+
+         config.registerConfigOption( "fpga_hybrid_worker",
+               NEW Config::FlagOption( _hybridWorker ),
+              "Allow FPGA helper thread to run smp tasks" );
+         config.registerEnvOption( "fpga_hybrid_worker", "NX_FPGA_HYBRID_WORKER" );
+         config.registerArgOption( "fpga_hybrid_worker", "fpga-hybrid-worker" );
 
       }
 

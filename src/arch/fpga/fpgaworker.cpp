@@ -119,12 +119,14 @@ void FPGAWorker::FPGAWorkerLoop() {
          NANOS_INSTRUMENT ( total_spins += init_spins; )
 
          spins = init_spins;
-         //When spins go to 0 it means that there is no work for any fpga accelerator
-         // -> get an SMP task
-         BaseThread *tmpThread = myThread;
-         myThread = parent; //Parent should be already an smp thread
-         Scheduler::workerLoop( true );
-         myThread = tmpThread;
+         if ( FPGAConfig::getHybridWorkerEnabled() ) {
+             //When spins go to 0 it means that there is no work for any fpga accelerator
+             // -> get an SMP task
+             BaseThread *tmpThread = myThread;
+             myThread = parent; //Parent should be already an smp thread
+             Scheduler::workerLoop( true );
+             myThread = tmpThread;
+         }
 
          //do not limit number of yields disregard of configuration options
          if ( use_yield ) {

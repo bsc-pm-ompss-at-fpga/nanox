@@ -51,6 +51,7 @@ namespace ext {
             static int                       _idleSyncBurst;
             static bool                      _syncTransfers;
             static int                       _fpgaFreq;
+            static bool                      _hybridWorker;
 
          public:
             static void printConfiguration( void );
@@ -75,6 +76,7 @@ namespace ext {
             static unsigned int getCycleTime() {
                 return 1000/_fpgaFreq; //_fpgaFreq is in MHz
             }
+            static bool getHybridWorkerEnabled() { return _hybridWorker; }
 
       };
        //create instrumentation macros (as gpu) to make code cleaner
