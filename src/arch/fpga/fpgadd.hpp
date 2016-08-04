@@ -57,7 +57,7 @@ namespace ext {
             virtual FPGADD *clone () const { return NEW FPGADD ( *this ); }
             virtual bool isCompatible ( const Device &arch );
 
-            virtual bool isCompatibleWithPE ( const ProcessingElement *pe=NULL );
+            //virtual bool isCompatibleWithPE ( const ProcessingElement *pe=NULL );
 
             static void addAccDevice( FPGADevice *dev ) {
                 _accDevices->push_back( dev );

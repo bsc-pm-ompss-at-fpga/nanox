@@ -48,10 +48,6 @@ namespace ext {
             FPGAProcessorInfo *_fpgaProcessorInfo;
             static int _accelSeed;  ///Keeps track of the created accelerators
             int _accelBase;         ///Base of the range of assigned accelerators
-            int _numAcc;            ///Number of accelerators managed by this thread
-            int _activeAcc;         ///Currently active accelerator. This is a local acc ID/index
-            bool _update;           ///Update after submitting data for a task
-            int _fallBackAcc;       ///Active accelerator when current task can run anywhere
             SMPProcessor *_core;
 
             FPGAMemoryTransferList *_inputTransfers;
@@ -60,10 +56,10 @@ namespace ext {
             static FPGAPinnedAllocator _allocator;
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-            std::vector< DeviceInstrumentation * > _devInstr;
-            std::vector< DeviceInstrumentation * > _dmaInInstr;
-            std::vector< DeviceInstrumentation * > _dmaOutInstr;
-            std::vector< DeviceInstrumentation * > _submitInstrumentation;
+            DeviceInstrumentation * _devInstr;
+            DeviceInstrumentation * _dmaInInstr;
+            DeviceInstrumentation * _dmaOutInstr;
+            DeviceInstrumentation * _submitInstrumentation;
 #endif
 
          public:
@@ -110,20 +106,6 @@ namespace ext {
             //virtual void waitInputs(WorkDescriptor& wd);
             int getAccelBase() const { return _accelBase; }
 
-            void setActiveAcc( int activeAcc ) { _activeAcc = activeAcc; }
-            int getActiveAcc() const { return _activeAcc < 0 ? _fallBackAcc : _activeAcc; }
-
-            int getNumAcc() const { return _numAcc; }
-
-            void setNextAccelerator() {
-               if ( _update ) {
-                  _fallBackAcc = (_fallBackAcc+1)%_numAcc;
-                  _update = false;
-               }
-            }
-
-            void setUpdate(bool update) { _update = update; }
-
             /// \brief Override (disable) getAddres as this device does not have a dedicated memory nor separated address space
             // This avoids accessing the cache to retrieve a (null) address
             virtual void* getAddress(WorkDescriptor &wd, uint64_t tag, nanos_sharing_t sharing ) {return NULL;}
@@ -133,30 +115,28 @@ namespace ext {
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
             void setDeviceInstrumentation( DeviceInstrumentation * devInstr ) {
-               _devInstr.push_back( devInstr );
+               _devInstr = devInstr;
             }
             void setDmaInstrumentation( DeviceInstrumentation *dmaIn,
                     DeviceInstrumentation *dmaOut ) {
-//                _dmaInInstr = dmaIn;
-//                _dmaOutInstr = dmaOut;
-               _dmaInInstr.push_back( dmaIn );
-               _dmaOutInstr.push_back( dmaOut );
+               _dmaInInstr = dmaIn;
+               _dmaOutInstr = dmaOut;
             }
             void setSubmitInstrumentation( DeviceInstrumentation * submitInstr ) {
-               _submitInstrumentation.push_back( submitInstr );
+               _submitInstrumentation = submitInstr;
             }
 
-            DeviceInstrumentation *getDeviceInstrumentation( int acc ) {
-               return _devInstr[ acc ];
+            DeviceInstrumentation *getDeviceInstrumentation() {
+               return _devInstr;
             }
-            DeviceInstrumentation *getDmaInInstrumentation( int acc ) {
-               return _dmaInInstr[ acc ];
+            DeviceInstrumentation *getDmaInInstrumentation() {
+               return _dmaInInstr;
             }
-            DeviceInstrumentation *getDmaOutInstrumentation( int acc ) {
-               return _dmaOutInstr[ acc ];
+            DeviceInstrumentation *getDmaOutInstrumentation() {
+               return _dmaOutInstr;
             }
-            DeviceInstrumentation *getSubmitInstrumentation( int acc ) {
-               return _submitInstrumentation[ acc ];
+            DeviceInstrumentation *getSubmitInstrumentation() {
+               return _submitInstrumentation;
             }
 #endif
 

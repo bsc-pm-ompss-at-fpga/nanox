@@ -44,29 +44,3 @@ bool FPGADD::isCompatible ( const Device &arch ) {
    return DeviceData::isCompatible( arch );
 }
 
-bool FPGADD::isCompatibleWithPE ( const ProcessingElement *pe ){
-
-   if (pe == NULL) return true;
-   nanos::ext::FPGAProcessor* myPE = ( nanos::ext::FPGAProcessor* ) pe;
-   int accBase = myPE->getAccelBase();
-   int numAcc = myPE->getNumAcc();
-
-   // Currently each fpga processor (helper thread) manages numAcc starting from accBase.
-   bool compatible = _accNum < 0 || ( ( _accNum >= accBase ) && ( _accNum < ( accBase + numAcc ) ) );
-   //once checked if current PE is compatible with this task(wd) it is going to run it so
-   //we set the accelerator on which the task may be run.
-   if (compatible) {
-      if ( _accNum < 0 ) {
-         //If the user has not specified any accelerator (which means that can run in any)
-         //assign one of them in a round robin fashion
-         myPE->setActiveAcc(-1);
-         myPE->setNextAccelerator();
-      } else {
-         //myPE->setUpdate(false);
-         myPE->setActiveAcc(_accNum - accBase);
-      }
-   }
-
-   return compatible;
-
-}

@@ -71,7 +71,7 @@ namespace ext {
 
       private:
          std::queue< WD* > _pendingWD;
-         std::map< WD*, std::pair< xdma_instr_times*, int > > _hwInstrCounters;
+         std::map< WD*, xdma_instr_times* > _hwInstrCounters;
          std::map< WD*, xdma_transfer_handle > _instrSyncHandles;
          xdma_buf_handle _syncHandle;
          unsigned int *_syncBuffer;

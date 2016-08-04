@@ -50,8 +50,7 @@ void FPGADevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 static void dmaSubmitStart( FPGAProcessor *fpga, const WD *wd ) {
    Instrumentation *instr = sys.getInstrumentation();
-   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation(
-           fpga->getActiveAcc() );
+   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation();
    unsigned long long timestamp;
    xdma_status status;
    status = xdmaGetDeviceTime( &timestamp );
@@ -67,8 +66,8 @@ static void dmaSubmitStart( FPGAProcessor *fpga, const WD *wd ) {
 
 static void dmaSubmitEnd( FPGAProcessor *fpga, const WD *wd ) {
    Instrumentation *instr = sys.getInstrumentation();
-   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation(
-         fpga->getActiveAcc() );
+   //FIXME: Emit the accelerator ID
+   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation();
    unsigned long long timestamp;
    xdma_status status;
    status = xdmaGetDeviceTime( &timestamp );
@@ -98,14 +97,14 @@ inline bool FPGADevice::copyIn( void *localDst, CopyDescriptor &remoteSrc, size_
    xdma_transfer_handle dmaHandle;
    xdma_device device;
 
-   iChan =  fpga->getFPGAProcessorInfo()[fpga->getActiveAcc()].getInputChannel();
-   device = fpga->getFPGAProcessorInfo()[fpga->getActiveAcc()].getDeviceHandle();
+   iChan =  fpga->getFPGAProcessorInfo()->getInputChannel();
+   device = fpga->getFPGAProcessorInfo()->getDeviceHandle();
 
    //syncTransfer(src_addr, fpga);
 
    debug("submitting input transfer:" << std::endl
            << "  @:" << std::hex << src_addr << std::dec << " size:" << size
-           << "  iChan:" << iChan << "devIdx: " << fpga->getActiveAcc() );
+           << "  iChan:" << iChan );
 
    FPGAPinnedAllocator& allocator = FPGAProcessor::getPinnedAllocator();
    uint64_t baseAddress = (uint64_t)allocator.getBasePointer( (void *)src_addr, size);
@@ -172,12 +171,12 @@ bool FPGADevice::copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size
    xdma_device device;
    xdma_status status;
    uint64_t src_addr = remoteDst.getTag();
-   device = fpga->getFPGAProcessorInfo()[fpga->getActiveAcc()].getDeviceHandle();
-   oChan = fpga->getFPGAProcessorInfo()[fpga->getActiveAcc()].getOutputChannel();
+   device = fpga->getFPGAProcessorInfo()->getDeviceHandle();
+   oChan = fpga->getFPGAProcessorInfo()->getOutputChannel();
 
    debug("submitting output transfer:" << std::endl
            << "  @:" << std::hex <<  src_addr << std::dec << " size:" << size
-           << "  oChan:" << oChan << "deviceIdx: " << fpga->getActiveAcc() );
+           << "  oChan:" << oChan );
 
    //get pinned buffer handle for this address
    //at this point, assume that all buffers to be transferred to fpga are pinned
