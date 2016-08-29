@@ -75,7 +75,9 @@ void FPGAThread::preOutlineWorkDependent ( WD &wd ) {
 
 void FPGAThread::outlineWorkDependent ( WD &wd ) {
    //wd.start( WD::IsNotAUserLevelThread );
-   //FPGAProcessor* fpga = ( FPGAProcessor * ) myThread->runningOn();
+   FPGAProcessor* fpga = ( FPGAProcessor * ) myThread->runningOn();
+
+   fpga->createAndSubmitTask( wd );
 
    //set flag to allow new opdate
    FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
@@ -108,9 +110,14 @@ void FPGAThread::finishPendingWD( int numWD ) {
    for (int i=0; i<n; i++) {
       WD * wd = _pendingWD.front();
       //Scheduler::postOutlineWork( wd, false, this );
+      //Wait for the task to finish
+      FPGAProcessor *fpga = (FPGAProcessor *)runningOn();
+      fpga->waitTask( wd );
+
 #ifdef NANOS_INSTRUMENTATION_ENABLED
       readInstrCounters( wd );
 #endif
+      fpga->deleteTask( wd );
       FPGAWorker::postOutlineWork(wd);
       _pendingWD.pop();
    }
@@ -126,9 +133,12 @@ void FPGAThread::finishAllWD() {
       //Scheduler::postOutlineWork( wd, false, this );
       //Retreive counter data from HW & clear entry
       //All task transfers have been finished so performance data should be ready
+      FPGAProcessor *fpga = ( FPGAProcessor* )runningOn();
+      fpga->waitTask( wd );
 #ifdef NANOS_INSTRUMENTATION_ENABLED
       readInstrCounters( wd );
 #endif
+      fpga->deleteTask( wd );
       FPGAWorker::postOutlineWork(wd);
       _pendingWD.pop();
    }
@@ -137,14 +147,10 @@ void FPGAThread::finishAllWD() {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 void FPGAThread::readInstrCounters( WD *wd ) {
 
-   xdma_instr_times *counters = _hwInstrCounters[ wd ];
-
-   //sync up before reading instrumentation data
-   xdma_transfer_handle syncHandle = _instrSyncHandles[ wd ];
-   xdmaWaitTransfer( syncHandle );
+   FPGAProcessor *fpga = ( FPGAProcessor* )runningOn();
+   xdma_instr_times *counters = fpga->getInstrCounters( wd );
 
    Instrumentation *instr = sys.getInstrumentation();
-   FPGAProcessor *fpga = ( FPGAProcessor* )runningOn();
    DeviceInstrumentation *devInstr =
       fpga->getDeviceInstrumentation();
    DeviceInstrumentation *dmaIn, *dmaOut;

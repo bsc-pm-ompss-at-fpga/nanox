@@ -38,12 +38,12 @@ FPGADevice::FPGADevice ( const char *n ): Device( n ) {}
 
 void FPGADevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len, SeparateMemoryAddressSpace &mem, DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId ) {
 
-   CopyDescriptor cd( hostAddr );
-   cd._ops = ops;
-   ops->addOp();
-   ProcessingElement &pe = mem.getPE();
-   bool done = copyIn((void*)devAddr, cd, len, &pe, wd);
-   if ( done ) ops->completeOp();
+//   CopyDescriptor cd( hostAddr );
+//   cd._ops = ops;
+//   ops->addOp();
+//   ProcessingElement &pe = mem.getPE();
+//   bool done = copyIn((void*)devAddr, cd, len, &pe, wd);
+//   if ( done ) ops->completeOp();
 }
 
 
@@ -151,12 +151,12 @@ void FPGADevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
       SeparateMemoryAddressSpace &mem, DeviceOps *ops,
       WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) {
 
-   CopyDescriptor cd( hostAddr );
-   cd._ops = ops;
-   ops->addOp();
-   ProcessingElement &pe = mem.getPE();
-   bool done = copyOut(cd, (void*)devAddr, len, &pe, wd);
-   if ( done ) ops->completeOp();
+//   CopyDescriptor cd( hostAddr );
+//   cd._ops = ops;
+//   ops->addOp();
+//   ProcessingElement &pe = mem.getPE();
+//   bool done = copyOut(cd, (void*)devAddr, len, &pe, wd);
+//   if ( done ) ops->completeOp();
 }
 
 bool FPGADevice::copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size, ProcessingElement *pe, const WD *wd)

@@ -153,3 +153,73 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
    return th;
 }
 
+void FPGAProcessor::createAndSubmitTask( WD &wd ) {
+
+   xdma_task_handle task;
+   int numCopies;
+   CopyData *copies;
+   int numInputs, numOutputs;
+   numCopies = wd.getNumCopies();
+   copies = wd.getCopies();
+   numInputs = 0;
+   numOutputs = 0;
+   for ( int i=0; i<numCopies; i++ ) {
+      if ( copies[i].isInput() ) {
+         numInputs++;
+      }
+      if ( copies[i].isOutput() ) {
+         numOutputs++;
+      }
+   }
+
+   xdmaInitTask( _accelBase, numInputs, XDMA_COMPUTE_ENABLE, numOutputs, &task );
+   int inputIdx, outputIdx;
+   inputIdx = 0; outputIdx = 0;
+   for ( int i=0; i<numCopies; i++ ) {
+      //Get handle & offset based on copy address
+      int size;
+      uint64_t srcAddress, baseAddress, offset;
+      xdma_buf_handle copyHandle;
+
+      size = copies[i].getSize();
+      srcAddress = copies[i].getAddress();
+      baseAddress = (uint64_t)_allocator.getBasePointer( (void *)srcAddress, size );
+      offset = srcAddress - baseAddress;
+      copyHandle = _allocator.getBufferHandle( (void *)baseAddress );
+
+      if ( copies[i].isInput() ) {
+         xdmaAddDataCopy(&task, inputIdx, XDMA_GLOBAL, XDMA_TO_DEVICE, &copyHandle,
+               size, offset);
+         inputIdx++;
+      }
+      if ( copies[i].isOutput() ) {
+         xdmaAddDataCopy(&task, outputIdx, XDMA_GLOBAL, XDMA_FROM_DEVICE, &copyHandle,
+               size, offset);
+      }
+
+   }
+   xdmaSendTask(_fpgaProcessorInfo->getDeviceHandle(), &task);
+   _pendingTasks[&wd] = task;
+}
+
+void FPGAProcessor::waitTask( WD *wd ) {
+   xdma_task_handle task;
+
+   task = _pendingTasks[wd];
+   xdmaWaitTask(task);
+}
+
+void FPGAProcessor::deleteTask( WD *wd ) {
+   //XXX Delete task from task map?
+   xdma_task_handle task = _pendingTasks[wd];
+   xdmaDeleteTask(&task);
+
+}
+
+xdma_instr_times *FPGAProcessor::getInstrCounters( WD *wd ) {
+
+   xdma_task_handle task = _pendingTasks[wd];
+   xdma_instr_times *times;
+   xdmaGetInstrumentData(task, &times);
+   return times;
+}

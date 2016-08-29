@@ -54,6 +54,7 @@ namespace ext {
             FPGAMemoryTransferList *_outputTransfers;
 
             static FPGAPinnedAllocator _allocator;
+            std::map <WD*, xdma_task_handle> _pendingTasks;
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
             DeviceInstrumentation * _devInstr;
@@ -113,6 +114,12 @@ namespace ext {
             //BaseThread &startFPGAThread();
             static  FPGAPinnedAllocator& getPinnedAllocator() { return _allocator; }
 
+            void createAndSubmitTask( WD &wd );
+            void waitTask( WD *wd );
+            void deleteTask( WD *wd );
+            xdma_instr_times * getInstrCounters( WD *wd );
+
+
 #ifdef NANOS_INSTRUMENTATION_ENABLED
             void setDeviceInstrumentation( DeviceInstrumentation * devInstr ) {
                _devInstr = devInstr;
@@ -139,7 +146,6 @@ namespace ext {
                return _submitInstrumentation;
             }
 #endif
-
 
       };
 } // namespace ext

@@ -79,7 +79,6 @@ void FPGAWorker::FPGAWorkerLoop() {
          NANOS_INSTRUMENT ( values[2] = (nanos_event_value_t) total_spins; )
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(numEvents, keys, values); )
 
-         NANOS_INSTRUMENT( currentThread->setupTaskInstrumentation( wd ); )
          Scheduler::prePreOutlineWork(wd);
          if ( Scheduler::tryPreOutlineWork(wd) ) {
             currentThread->preOutlineWorkDependent( *wd );
@@ -93,9 +92,6 @@ void FPGAWorker::FPGAWorkerLoop() {
          }
          //add to the list of pending WD
          wd->submitOutputCopies();
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-         currentThread->submitInstrSync( wd );
-#endif
          currentThread->addPendingWD( wd );
          spins = init_spins;
 
