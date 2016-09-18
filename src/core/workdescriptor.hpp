@@ -161,7 +161,7 @@ inline WorkDescriptor::~WorkDescriptor()
     union { char* p; intptr_t i; } u = { (char*)_wdData };
     bool internalDataOwned = (u.i & 1);
     // Clear the own status if set
-    u.i &= ((~(intptr_t)0) << 1);
+    u.i &= ((~(intptr_t)1));
 
     if (internalDataOwned
             && (( (void*)u.p < chunkLower) || ( (void *) u.p > chunkUpper ) ))
@@ -285,7 +285,7 @@ inline void * WorkDescriptor::getInternalData () const {
     union { void* p; intptr_t i; } u = { _wdData };
 
     // Clear the own status if set
-    u.i &= ((~(intptr_t)0) << 1);
+    u.i &= ~(intptr_t)1;
 
     return u.p;
 }
@@ -304,7 +304,7 @@ inline ScheduleWDData * WorkDescriptor::getSchedulerData () const {
     union {ScheduleWDData* p; intptr_t i; } u = { _scheduleData };
 
     // Clear the own status if set
-    u.i &= ((~(intptr_t)0) << 1);
+    u.i &= ~(intptr_t)1;
 
     return u.p;
 }
