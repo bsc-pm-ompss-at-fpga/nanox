@@ -153,6 +153,41 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
    return th;
 }
 
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+static void dmaSubmitStart( FPGAProcessor *fpga, const WD *wd ) {
+   Instrumentation *instr = sys.getInstrumentation();
+   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation();
+   unsigned long long timestamp;
+   xdma_status status;
+   status = xdmaGetDeviceTime( &timestamp );
+   if ( status != XDMA_SUCCESS ) {
+      warning("Could not read accelerator clock (dma submit start)");
+   }
+
+   instr->addDeviceEvent(
+           Instrumentation::DeviceEvent( timestamp, TaskBegin, submitInstr, wd ) );
+   instr->addDeviceEvent(
+           Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, NULL, wd) );
+}
+
+static void dmaSubmitEnd( FPGAProcessor *fpga, const WD *wd ) {
+   Instrumentation *instr = sys.getInstrumentation();
+   //FIXME: Emit the accelerator ID
+   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation();
+   unsigned long long timestamp;
+   xdma_status status;
+   status = xdmaGetDeviceTime( &timestamp );
+   if ( status != XDMA_SUCCESS ) {
+      warning("Could not read accelerator clock (dma submit end)");
+   }
+
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, wd, NULL) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( timestamp, TaskEnd, submitInstr, wd) );
+}
+#endif  //NANOS_INSTRUMENTATION_ENABLED
+
 void FPGAProcessor::createAndSubmitTask( WD &wd ) {
 
    xdma_task_handle task;
@@ -198,7 +233,13 @@ void FPGAProcessor::createAndSubmitTask( WD &wd ) {
       }
 
    }
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+    dmaSubmitStart( this, &wd );
+#endif
    xdmaSendTask(_fpgaProcessorInfo->getDeviceHandle(), &task);
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   dmaSubmitEnd( this, &wd );
+#endif
    _pendingTasks[&wd] = task;
 }
 
