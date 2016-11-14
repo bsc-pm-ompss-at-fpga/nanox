@@ -141,8 +141,6 @@ void FPGAWorker::FPGAWorkerLoop() {
          }
       }
 
-
-      myThread->idle();
       currentThread = ( FPGAThread * )parent->getNextThread();
       myThread = currentThread;
 
