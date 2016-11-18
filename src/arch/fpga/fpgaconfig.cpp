@@ -32,7 +32,6 @@ namespace nanos
       bool FPGAConfig::_disableFPGA = false;
       Lock FPGAConfig::_dmaLock;
       Atomic <int> FPGAConfig::_accelID(0);
-      const int FPGAConfig::_maxAccelerators = 2;
       //TODO set sensible defaults (disabling transfers when necessary, etc.)
       unsigned int FPGAConfig::_burst = 8;
       int FPGAConfig::_maxTransfers = 32;
@@ -108,12 +107,6 @@ namespace nanos
              _disableFPGA = true;
          }
 
-         if (_numAccelerators > _maxAccelerators) {
-             warning0( "The number of accelerators is greater then the accelerators in the system. Using "
-                     << _maxAccelerators << " accelerators" );
-             _numAccelerators = _maxAccelerators;
-         }
-
          if ( _numFPGAThreads < 0 ) {
             warning0( "Number of fpga threads cannot be negative. Using one thread per accelerator" );
             _numFPGAThreads = _numAccelerators;
@@ -126,5 +119,3 @@ namespace nanos
       }
    }
 }
-
-

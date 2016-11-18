@@ -126,9 +126,21 @@ class FPGAPlugin : public ArchPlugin
             if (status)
                fatal0( "Error initializing DMA library: Returned status: " << status );
 
+            //Check the number of accelerators in the system
+            int numAccelTmp;
+            status = xdmaGetNumDevices( &numAccelTmp );
+            unsigned int numAccel = std::max( numAccelTmp, 0 );
+            if ( status != XDMA_SUCCESS ) {
+               warning0( "Error getting the number of accelerators in the system: Returned status: " <<
+                  status << "\nAssuming Nanos parameter value as valid." );
+            } else if ( numAccel < _fpgas->size() ) {
+               warning0( "The number of accelerators is greater then the accelerators in the system. Using "
+                        << numAccel << " accelerators" );
+               _fpgas->resize( numAccel );
+            }
 
             //Accelerator setup
-            for ( int i=0; i < FPGAConfig::getFPGACount(); i++) {
+            for ( unsigned int i=0; i < _fpgas->size(); i++) {
                std::stringstream name;
                name << "FPGA acc " << i;
                _devNames.push_back( name.str() );
@@ -145,7 +157,7 @@ class FPGAPlugin : public ArchPlugin
 #ifdef NANOS_INSTRUMENTATION_ENABLED
                //Register device in the instrumentation system
                registerDeviceInstrumentation( fpga,
-                     FPGAConfig::getFPGACount()/FPGAConfig::getNumFPGAThreads() );
+                     _fpgas->size()/FPGAConfig::getNumFPGAThreads() );
 #endif
             }
 
@@ -217,7 +229,7 @@ class FPGAPlugin : public ArchPlugin
 
       virtual void startSupportThreads () {
          _fpgaHelper = dynamic_cast< ext::SMPMultiThread * >( &_core->startMultiWorker(
-                  FPGAConfig::getFPGACount(), (ProcessingElement **) &(*_fpgas)[0],
+                  _fpgas->size(), (ProcessingElement **) &(*_fpgas)[0],
                   ( DD::work_fct )FPGAWorker::FPGAWorkerLoop ) );
       }
 

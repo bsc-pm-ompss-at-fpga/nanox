@@ -37,7 +37,6 @@ namespace ext {
             static int                       _numAccelerators;
             static bool                      _disableFPGA;
             static int                       _numFPGAThreads;
-            static const int                 _maxAccelerators;
 
             static unsigned int              _burst;
             static int                       _maxTransfers;
