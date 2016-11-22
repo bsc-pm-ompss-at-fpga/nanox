@@ -32,8 +32,6 @@ namespace nanos {
          static WD * getFPGAWD(BaseThread *thread);
          static void postOutlineWork( WD * wd );
       private:
-         static int _maxPendingWD;
-         static int _finishBurst;
 
    };
 } // namespace nanos

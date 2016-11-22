@@ -52,6 +52,8 @@ namespace ext {
             static bool                      _syncTransfers;
             static int                       _fpgaFreq;
             static bool                      _hybridWorker;
+            static int                       _maxPendingWD;
+            static int                       _finishWDBurst;
 
          public:
             static void printConfiguration( void );
@@ -77,6 +79,8 @@ namespace ext {
                 return 1000/_fpgaFreq; //_fpgaFreq is in MHz
             }
             static bool getHybridWorkerEnabled() { return _hybridWorker; }
+            static int getMaxPendingWD() { return  _maxPendingWD; }
+            static int getFinishWDBurst() { return _finishWDBurst; }
 
       };
        //create instrumentation macros (as gpu) to make code cleaner

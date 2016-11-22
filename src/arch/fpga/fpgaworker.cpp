@@ -28,14 +28,13 @@
 using namespace nanos;
 using namespace ext;
 
-int FPGAWorker::_maxPendingWD = 4;
-int FPGAWorker::_finishBurst = 1;
-
 void FPGAWorker::FPGAWorkerLoop() {
    BaseThread *parent = getMyThreadSafe();
    const int init_spins = ( ( SMPMultiThread* ) parent )->getNumThreads();
    const bool use_yield = false;
    unsigned int spins = init_spins;
+   int maxPendingWD = FPGAConfig::getMaxPendingWD();
+   int finishBurst = FPGAConfig::getFinishWDBurst();
 
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
 
@@ -63,8 +62,8 @@ void FPGAWorker::FPGAWorkerLoop() {
       //  finalize one (or some of them)
       //FPGAThread *myThread = (FPGAThread*)getMyThreadSafe();
 
-      if ( currentThread->getPendingWDs() > _maxPendingWD ) {
-          currentThread->finishPendingWD( _finishBurst );
+      if ( currentThread->getPendingWDs() > maxPendingWD ) {
+          currentThread->finishPendingWD( finishBurst );
       }
 
       if ( !parent->isRunning() ) break;

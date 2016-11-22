@@ -40,6 +40,9 @@ namespace nanos
       bool FPGAConfig::_syncTransfers = false;
       int FPGAConfig::_fpgaFreq = 100; //default to 100MHz
       bool FPGAConfig::_hybridWorker = false;
+      int FPGAConfig::_maxPendingWD = 8;
+      int FPGAConfig::_finishWDBurst = 4;
+
 
       void FPGAConfig::prepare( Config &config )
       {
@@ -89,6 +92,18 @@ namespace nanos
               "Allow FPGA helper thread to run smp tasks" );
          config.registerEnvOption( "fpga_hybrid_worker", "NX_FPGA_HYBRID_WORKER" );
          config.registerArgOption( "fpga_hybrid_worker", "fpga-hybrid-worker" );
+
+         config.registerConfigOption( "fpga_max_pending_tasks",
+                 NEW Config::IntegerVar( _maxPendingWD ),
+                 "Number of tasks allowed to be pending finalization for an fpga accelerator" );
+         config.registerEnvOption( "fpga_max_pending_tasks", "NX_FPGA_MAX_PENDING_TASKS" );
+         config.registerArgOption( "fpga_max_pending_tasks", "fpga-max-pending-tasks" );
+
+         config.registerConfigOption( "fpga_finish_task_busrt",
+                 NEW Config::IntegerVar( _finishWDBurst ),
+                 "Number of tasks to be finalized in a burst when limit is reached" );
+         config.registerEnvOption( "fpga_finish_task_busrt", "NX_FPGA_FINISH_TASK_BURST" );
+         config.registerArgOption( "fpga_finish_task_busrt", "fpga-finish-task-burst" );
 
       }
 
