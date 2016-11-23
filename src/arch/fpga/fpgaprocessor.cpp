@@ -66,7 +66,9 @@ void FPGAProcessor::init()
    int fpgaCount = FPGAConfig::getFPGACount();
    xdma_device *devices = NEW xdma_device[fpgaCount];
    xdma_status status;
-   status = xdmaGetDevices(fpgaCount,  devices, NULL);
+   int copiedDevices = -1;
+   status = xdmaGetDevices(fpgaCount,  devices, &copiedDevices);
+   ensure(copiedDevices > _accelBase, "Number of devices from the xdma library is smaller the used index");
 
    xdma_channel iChan, oChan;
    _fpgaProcessorInfo->setDeviceHandle( devices[_accelBase] );
@@ -152,4 +154,3 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
    FPGAThread  &th = *NEW FPGAThread( helper, this, parent, _fpgaDevice );
    return th;
 }
-
