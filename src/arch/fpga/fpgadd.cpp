@@ -38,9 +38,10 @@ FPGADD * FPGADD::copyTo ( void *toAddr )
    return dd;
 }
 
-
 bool FPGADD::isCompatible ( const Device &arch ) {
-   if ( _accNum == -1 ) return true;
+   if ( _accNum == -1 ) {
+      // Don't matter the accelerator type. Only check if Device is FPGAType
+      return ( dynamic_cast<const FPGADevice*>(&arch) != NULL );
+   }
    return DeviceData::isCompatible( arch );
 }
-
