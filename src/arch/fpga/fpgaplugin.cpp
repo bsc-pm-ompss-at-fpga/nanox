@@ -211,11 +211,11 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual unsigned getNumHelperPEs() const {
-         return FPGAConfig::getNumFPGAThreads();
+         return ( _fpgaHelper != NULL );
       }
 
       virtual unsigned getNumPEs() const {
-         return getNumHelperPEs();
+         return _fpgas->size();
       }
 
       virtual unsigned getNumThreads() const {
@@ -223,10 +223,10 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual unsigned getNumWorkers() const {
-         return FPGAConfig::getNumFPGAThreads();
+         return _fpgaThreads->size();
       }
 
-      virtual void addPEs( std::map< unsigned int,  ProcessingElement*> &pes  ) const {
+      virtual void addPEs( std::map< unsigned int,  ProcessingElement*> &pes ) const {
           for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas->begin();
                   it != _fpgas->end(); it++ )
           {
