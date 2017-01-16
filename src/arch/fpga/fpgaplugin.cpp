@@ -100,14 +100,39 @@ class FPGAPlugin : public ArchPlugin
        */
       void init()
       {
-         FPGAConfig::apply();
-         FPGADD::init();
-         _fpgas = NEW std::vector< FPGAProcessor* >( FPGAConfig::getFPGACount(),( FPGAProcessor* )NULL) ;
-         _fpgaThreads = NEW std::vector< FPGAThread* >( FPGAConfig::getNumFPGAThreads(),( FPGAThread* )NULL) ;
          /*
           * Initialize dma library here if fpga device is not disabled
           * We must init the DMA lib before any operation using it is performed
           */
+         int xdmaOpened = false;
+         if ( !FPGAConfig::isDisabled() ) {
+            debug0( "xilinx dma initialization" );
+            //Instrumentation has not been initialized yet so we cannot trace things yet
+            int status = xdmaOpen();
+            //Abort if dma library failed to initialize
+            //Otherwise this will cause problems (segfaults/hangs) later on the execution
+            if (status)
+               fatal0( "Error initializing DMA library: Returned status: " << status );
+            xdmaOpened = true;
+
+            //Check the number of accelerators in the system
+            int numAccel;
+            status = xdmaGetNumDevices( &numAccel );
+            if ( status != XDMA_SUCCESS ) {
+               warning0( "Error getting the number of accelerators in the system: Returned status: " << status );
+            } else {
+               FPGAConfig::setFPGASystemCount( numAccel );
+            }
+         }
+
+         //NOTE: Apply the config now because before FPGAConfig doesn't know the number of accelerators in the system
+         FPGAConfig::apply();
+         FPGADD::init();
+         _fpgas = NEW std::vector< FPGAProcessor* >( FPGAConfig::getFPGACount(),( FPGAProcessor* )NULL) ;
+         _fpgaThreads = NEW std::vector< FPGAThread* >( FPGAConfig::getNumFPGAThreads(),( FPGAThread* )NULL) ;
+         _core = NULL;
+         _fpgaHelper = NULL;
+
          if ( !FPGAConfig::isDisabled() ) {
             if ( sys.getRegionCachePolicyStr().compare( "fpga" ) != 0 ) {
                if ( sys.getRegionCachePolicyStr().compare( "" ) != 0 ) {
@@ -118,17 +143,8 @@ class FPGAPlugin : public ArchPlugin
                sys.setRegionCachePolicyStr( "fpga" );
             }
 
-            debug0( "xilinx dma initialization" );
-            //Instrumentation has not been initialized yet so we cannot trace things yet
-            int status = xdmaOpen();
-            //Abort if dma library failed to initialize
-            //Otherwise this will cause problems (segfaults/hangs) later on the execution
-            if (status)
-               fatal0( "Error initializing DMA library: Returned status: " << status );
-
-
             //Accelerator setup
-            for ( int i=0; i < FPGAConfig::getFPGACount(); i++) {
+            for ( unsigned int i=0; i < _fpgas->size(); i++) {
                std::stringstream name;
                name << "FPGA acc " << i;
                _devNames.push_back( name.str() );
@@ -145,21 +161,36 @@ class FPGAPlugin : public ArchPlugin
 #ifdef NANOS_INSTRUMENTATION_ENABLED
                //Register device in the instrumentation system
                registerDeviceInstrumentation( fpga,
-                     FPGAConfig::getFPGACount()/FPGAConfig::getNumFPGAThreads() );
+                     _fpgas->size()/FPGAConfig::getNumFPGAThreads() );
 #endif
             }
 
-            //Assuming 1 FPGA helper thread
-            //TODO: Allow any number of fpga threads
-            _core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
-            if ( _core ) {
-               _core->setNumFutureThreads( 1 );
-            } else {
-               _core = sys.getSMPPlugin()->getFirstSMPProcessor();
-               _core->setNumFutureThreads( _core->getNumFutureThreads() + 1 );
-               NANOS_INSTRUMENT( sys.getInstrumentation()->incrementMaxThreads(); );
+            if ( _fpgaThreads->size() > 0 ) {
+               //Assuming 1 FPGA helper thread
+               //TODO: Allow any number of fpga threads
+               _core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
+               if ( _core ) {
+                  _core->setNumFutureThreads( 1 );
+               } else {
+                  _core = sys.getSMPPlugin()->getFirstSMPProcessor();
+                  _core->setNumFutureThreads( _core->getNumFutureThreads() + 1 );
+                  NANOS_INSTRUMENT( sys.getInstrumentation()->incrementMaxThreads(); );
+               }
             }
-         } //!FPGAConfig::isDisabled()
+         } else { //!FPGAConfig::isDisabled()
+            //NOTE: Add a fake device to allow FPGADD instantiation
+            FPGADD::addAccDevice( NULL );
+            
+            if ( xdmaOpened ) {
+               int status;
+               debug0( "Xilinx close dma" );
+               status = xdmaClose();
+               if ( status ) {
+                  warning( "Error de-initializing xdma core library: " << status );
+               }
+            }
+         }
+
       }
       /*!
        * \brief Finalize plugin and close dma library.
@@ -216,12 +247,15 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual void startSupportThreads () {
-         _fpgaHelper = dynamic_cast< ext::SMPMultiThread * >( &_core->startMultiWorker(
-                  FPGAConfig::getFPGACount(), (ProcessingElement **) &(*_fpgas)[0],
-                  ( DD::work_fct )FPGAWorker::FPGAWorkerLoop ) );
+         if ( !_core || _fpgas->empty() ) return;
+         _fpgaHelper = dynamic_cast< ext::SMPMultiThread * >(
+            &_core->startMultiWorker( _fpgas->size(), (ProcessingElement **) &(*_fpgas)[0],
+            ( DD::work_fct )FPGAWorker::FPGAWorkerLoop )
+         );
       }
 
       virtual void startWorkerThreads( std::map<unsigned int, BaseThread*> &workers ) {
+         if ( !_fpgaHelper ) return;
          for ( unsigned int i=0; i< _fpgaHelper->getNumThreads(); i++) {
             BaseThread *thd = _fpgaHelper->getThreadVector()[ i ];
             workers.insert( std::make_pair( thd->getId(), thd ) );

@@ -35,9 +35,9 @@ namespace ext {
             //! Data transfer's mode (synchronous / asynchronous, ...)
             //Basically determines where the waits will be placed for now we will only support sync
             static int                       _numAccelerators;
+            static int                       _numAcceleratorsSystem;
             static bool                      _disableFPGA;
             static int                       _numFPGAThreads;
-            static const int                 _maxAccelerators;
 
             static unsigned int              _burst;
             static int                       _maxTransfers;
@@ -70,7 +70,7 @@ namespace ext {
                _accelID++;
                return t;
             }
-            static inline bool isDisabled() {return _disableFPGA; }
+            static inline bool isDisabled() { return _disableFPGA; }
             //should be areSyncTransfersDisabled() but is for consistency with other bool getters
             static inline int getIdleSyncBurst() { return _idleSyncBurst; }
             static bool getSyncTransfersEnabled() { return _syncTransfers; }
@@ -82,6 +82,8 @@ namespace ext {
             static int getMaxPendingWD() { return  _maxPendingWD; }
             static int getFinishWDBurst() { return _finishWDBurst; }
 
+            //Set the number of FPGAs and return the old value
+            static void setFPGASystemCount ( int numFPGAs );
       };
        //create instrumentation macros (as gpu) to make code cleaner
 #define NANOS_FPGA_CREATE_RUNTIME_EVENT(x)    NANOS_INSTRUMENT( \

@@ -28,11 +28,11 @@ namespace nanos
    namespace ext
    {
       int  FPGAConfig::_numAccelerators = -1;
+      int  FPGAConfig::_numAcceleratorsSystem = -1;
       int  FPGAConfig::_numFPGAThreads = -1;
       bool FPGAConfig::_disableFPGA = false;
       Lock FPGAConfig::_dmaLock;
       Atomic <int> FPGAConfig::_accelID(0);
-      const int FPGAConfig::_maxAccelerators = 2;
       //TODO set sensible defaults (disabling transfers when necessary, etc.)
       unsigned int FPGAConfig::_burst = 8;
       int FPGAConfig::_maxTransfers = 32;
@@ -113,24 +113,22 @@ namespace nanos
 
          if ( _disableFPGA ) {
             _numAccelerators = 0; //system won't instanciate accelerators if count=0
+            _numFPGAThreads = 0;
          } else if ( _numAccelerators < 0 ) {
             /* if not given, assume we are using one accelerator
              * We should get the number of accelerators on the system
              * and use it as a default
              */
-            _numAccelerators = 1;
-         } else if ( _numAccelerators == 0 ) {
-             _disableFPGA = true;
+            _numAccelerators = _numAcceleratorsSystem < 0 ? 1 : _numAcceleratorsSystem;
+         } else if ( _numAccelerators > _numAcceleratorsSystem ) {
+            warning0( "The number of accelerators is larger than the accelerators in the system. Using "
+                     << _numAcceleratorsSystem << " accelerators." );
+            _numAccelerators = _numAcceleratorsSystem;
          }
-
-         if (_numAccelerators > _maxAccelerators) {
-             warning0( "The number of accelerators is greater then the accelerators in the system. Using "
-                     << _maxAccelerators << " accelerators" );
-             _numAccelerators = _maxAccelerators;
-         }
+         _disableFPGA = _numAccelerators == 0;
 
          if ( _numFPGAThreads < 0 ) {
-            warning0( "Number of fpga threads cannot be negative. Using one thread per accelerator" );
+            //warning0( "Number of fpga threads cannot be negative. Using one thread per accelerator" );
             _numFPGAThreads = _numAccelerators;
          } else if ( _numFPGAThreads > _numAccelerators ) {
             warning0( "Number of helper is greater than the number of accelerators. Using one thread per accelerator" );
@@ -139,7 +137,10 @@ namespace nanos
          _idleSyncBurst = ( _idleSyncBurst < 0 ) ? _burst : _idleSyncBurst;
 
       }
+
+      void FPGAConfig::setFPGASystemCount ( int numFPGAs )
+      {
+         _numAcceleratorsSystem = numFPGAs;
+      }
    }
 }
-
-
