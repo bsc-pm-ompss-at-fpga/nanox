@@ -11,7 +11,7 @@ extern "C" {
 
 NANOS_API_DECL( void, nanos_inject_error, ( void *handle ));
 
-NANOS_API_DECL( void, nanos_declare_resource, ( void *handle, size_t size ));
+NANOS_API_DECL( void, nanos_declare_resource, ( void *handle, size_t* size ));
 
 NANOS_API_DECL( void, nanos_injection_start, (void));
 

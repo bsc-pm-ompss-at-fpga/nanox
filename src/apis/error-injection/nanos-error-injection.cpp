@@ -1,30 +1,32 @@
 
+#include "nanos-int.h"
 #include "nanos-error-injection.h"
 #include "error-injection/errorinjectioninterface.hpp"
 
 using namespace nanos::error;
 
-void nanos_inject_error( void *handle )
+NANOS_API_DEF( void, nanos_inject_error, ( void *handle ) )
 {
 	ErrorInjectionInterface::injectError( handle );
 }
 
-void nanos_declare_resource( void *handle, size_t size )
+NANOS_API_DEF( void, nanos_declare_resource, ( void *handle, size_t *size ) )
 {
-	ErrorInjectionInterface::declareResource( handle, size );
+	ErrorInjectionInterface::declareResource( handle, *size );
 }
 
-void nanos_injection_start()
+NANOS_API_DEF( void, nanos_injection_start, (void) )
 {
 	ErrorInjectionInterface::resumeInjection();
 }
 
-void nanos_injection_stop()
+NANOS_API_DEF( void, nanos_injection_stop, (void) )
 {
 	ErrorInjectionInterface::stopInjection();
 }
 
-void nanos_injection_finalize()
+NANOS_API_DEF( void, nanos_injection_finalize, (void) )
 {
 	ErrorInjectionInterface::terminateInjection();
 }
+
