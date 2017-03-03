@@ -84,7 +84,7 @@ AS_IF([test "$enable_fault_injection" = "yes"],[
         [stl_random_support=yes],
         [stl_random_support=no])
     AC_LANG_POP([C++])
-    AS_IF([test "$stl_random_support" != "xyes"],[
+    AS_IF([test "$stl_random_support" != "yes"],[
         AC_MSG_ERROR([fault injection module depends on standard random number library. Try using a newer compiler version.])
     ])
 

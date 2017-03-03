@@ -14,7 +14,7 @@ class ErrorInjectionInterface {
 private:
 	class InjectionInterfaceSingleton {
 		private:
-			std::unique_ptr<ErrorInjectionPolicy> _policy;
+			ErrorInjectionPolicy* _policy;
 
 			friend class ErrorInjectionInterface;
 		public:
@@ -36,13 +36,16 @@ private:
 			}
 	};
 
-	static InjectionInterfaceSingleton interfaceObject;
+	static InjectionInterfaceSingleton& getInterface () {
+        static InjectionInterfaceSingleton interfaceObject;
+        return interfaceObject;
+    }
 
 public:
 	//! Deterministically injects an error
 	static void injectError( void* handle )
 	{
-		interfaceObject._policy->injectError( handle );
+		getInterface()._policy->injectError( handle );
 	}
 
 	/*! Restore an injected error providing some hint
@@ -50,7 +53,7 @@ public:
 	 */
 	static void recoverError( void* handle ) noexcept
 	{
-		interfaceObject._policy->recoverError( handle );
+		getInterface()._policy->recoverError( handle );
 	}
 
 	/*! Declares some resource that will be
@@ -58,27 +61,28 @@ public:
 	 */
 	static void declareResource(void* handle, size_t size )
 	{
-		interfaceObject._policy->declareResource( handle, size );
+		getInterface()._policy->declareResource( handle, size );
 	}
 
 	static void resumeInjection()
 	{
-		interfaceObject._policy->resume();
+		getInterface()._policy->resume();
 	}
 
 	static void stopInjection()
 	{
-		interfaceObject._policy->stop();
+		getInterface()._policy->stop();
 	}
 
 	static void terminateInjection()
 	{
-		interfaceObject._policy.reset(nullptr);
+		delete(getInterface()._policy);
+		getInterface()._policy = nullptr;
 	}
 
 	static void setInjectionPolicy( ErrorInjectionPolicy *selectedPolicy ) 
 	{
-		interfaceObject._policy.reset( selectedPolicy );
+		getInterface()._policy = selectedPolicy;
 	}
 };
 

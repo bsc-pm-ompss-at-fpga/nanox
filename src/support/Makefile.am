@@ -238,7 +238,6 @@ support_sources = \
 	frequency_traits.hpp \
 	frequency.hpp \
 	$(error_injection_HEADERS) \
-	error-injection/errorinjectioninterface.cpp \
 	$(exception_HEADERS) \
 	exception/failurestats.cpp \
 	exception/genericexception.cpp \
