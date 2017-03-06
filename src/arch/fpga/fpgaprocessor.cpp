@@ -221,6 +221,7 @@ void FPGAProcessor::createAndSubmitTask( WD &wd ) {
       size = copies[i].getSize();
       srcAddress = copies[i].getAddress();
       baseAddress = (uint64_t)_allocator.getBasePointer( (void *)srcAddress, size );
+      ensure(baseAddress > 0, "Trying to register an invalid FPGA data copy. The memory region is not registered in the FPGA Allocator.");
       offset = srcAddress - baseAddress;
       copyHandle = _allocator.getBufferHandle( (void *)baseAddress );
 
