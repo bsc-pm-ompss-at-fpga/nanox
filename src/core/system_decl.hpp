@@ -47,6 +47,7 @@
 
 #include "newregiondirectory_decl.hpp"
 #include "smpdevice_decl.hpp"
+#include "eventdispatcher_decl.hpp"
 
 #ifdef GPU_DEV
 #include "pinnedallocator_decl.hpp"
@@ -207,6 +208,9 @@ namespace nanos {
          /*! Thread Manager members */
          ThreadManagerConf                             _threadManagerConf;
          ThreadManager *                               _threadManager;
+
+         /*! Event dispatcher members */
+         EventDispatcher                               _eventDispatcher;
 
 #ifdef GPU_DEV
          //! Keep record of the data that's directly allocated on pinned memory
@@ -698,6 +702,9 @@ namespace nanos {
 
          ThreadManagerConf& getThreadManagerConf();
          ThreadManager* getThreadManager() const;
+
+         //! \brief Returns the Event Dispatcher
+         EventDispatcher& getEventDispatcher();
 
          //! \brief Returns true if the compiler says priorities are required
          bool getPrioritiesNeeded() const;

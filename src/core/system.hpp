@@ -628,6 +628,10 @@ inline ThreadManager* System::getThreadManager() const {
    return _threadManager;
 }
 
+inline EventDispatcher& System::getEventDispatcher() {
+   return _eventDispatcher;
+}
+
 inline bool System::getPrioritiesNeeded() const {
    return _compilerSuppliedFlags.prioritiesNeeded;
 }

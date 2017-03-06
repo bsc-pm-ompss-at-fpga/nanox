@@ -144,6 +144,7 @@ devinclude_HEADERS = \
 	invalidationcontroller_fwd.hpp \
 	task_reduction_decl.hpp \
 	task_reduction.hpp \
+	eventdispatcher_decl.hpp \
 	$(END)
 
 common_sources=\
@@ -290,8 +291,10 @@ common_sources=\
 	invalidationcontroller.cpp \
 	threadmanager_decl.hpp \
 	threadmanager.cpp \
-   task_reduction_decl.hpp \
-   task_reduction.hpp \
+	task_reduction_decl.hpp \
+	task_reduction.hpp \
+	eventdispatcher_decl.hpp \
+	eventdispatcher.cpp \
 	$(END)
 
 instr_sources = \

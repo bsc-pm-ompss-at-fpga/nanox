@@ -82,6 +82,7 @@ void SMPThread::idle( bool debug )
       }
    }
    getSMPDevice().tryExecuteTransfer();
+   sys.getEventDispatcher().atIdle();
 }
 
 void SMPThread::wait()

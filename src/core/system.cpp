@@ -122,7 +122,7 @@ System::System () :
       _instrumentation ( NULL ), _defSchedulePolicy( NULL ), _dependenciesManager( NULL ),
       _pmInterface( NULL ), _masterGpuThd( NULL ), _separateMemorySpacesCount(1), _separateAddressSpaces(1024), _hostMemory( ext::getSMPDevice() ),
       _regionCachePolicy( RegionCache::WRITE_BACK ), _regionCachePolicyStr(""), _regionCacheSlabSize(0), _clusterNodes(), _numaNodes(),
-      _activeMemorySpaces(), _acceleratorCount(0), _numaNodeMap(), _threadManagerConf(), _threadManager( NULL )
+      _activeMemorySpaces(), _acceleratorCount(0), _numaNodeMap(), _threadManagerConf(), _threadManager( NULL ), _eventDispatcher()
 #ifdef GPU_DEV
       , _pinnedMemoryCUDA( NEW CUDAPinnedMemoryManager() )
 #endif
