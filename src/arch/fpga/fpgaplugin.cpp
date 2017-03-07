@@ -29,6 +29,7 @@
 #include "instrumentationmodule_decl.hpp"
 #include "fpgainstrumentation.hpp"
 #include "fpgaworker.hpp"
+#include "eventdispatcher_decl.hpp"
 
 #include "libxdma.h"
 
@@ -37,14 +38,63 @@
 namespace nanos {
 namespace ext {
 
+class FPGAListener : public EventListener {
+   private:
+      FPGAThread* _fpgaThread;
+   public:
+     FPGAListener( FPGAThread* thread ) : _fpgaThread( thread ) {}
+     ~FPGAListener() {}
+     void callback( BaseThread* thread );
+};
+
+void FPGAListener::callback( BaseThread* thread )
+{ 
+   int maxPendingWD = FPGAConfig::getMaxPendingWD();
+   int finishBurst = FPGAConfig::getFinishWDBurst();
+   for (;;){
+      //check if we have reached maximum pending WD
+      //  finalize one (or some of them)
+      //FPGAThread *myThread = (FPGAThread*)getMyThreadSafe();
+
+      if ( _fpgaThread->getPendingWDs() > maxPendingWD ) {
+          _fpgaThread->finishPendingWD( finishBurst );
+      }
+
+      if ( !thread->isRunning() ) break;
+      //get next WD
+      WD *wd = FPGAWorker::getFPGAWD( _fpgaThread );
+      if ( wd ) {
+         Scheduler::prePreOutlineWork(wd);
+         if ( Scheduler::tryPreOutlineWork(wd) ) {
+            _fpgaThread->preOutlineWorkDependent( *wd );
+         }
+         //TODO: may need to increment copies version number here
+         if ( wd->isInputDataReady() ) {
+            Scheduler::outlineWork( _fpgaThread, wd );
+         } else {
+            //do whatever is needed if input is not ready
+            //wait or whatever, for instance, sync needed copies
+         }
+         //add to the list of pending WD
+         wd->submitOutputCopies();
+         _fpgaThread->addPendingWD( wd );
+
+         //Scheduler::postOutlineWork( wd, false, myThread ); <--moved to fpga thread
+      } else {
+         break;
+      }
+   }
+}
+
 class FPGAPlugin : public ArchPlugin
 {
    private:
       std::vector< FPGAProcessor* > *_fpgas;
-      std::vector< FPGAThread* > *_fpgaThreads;
-      std::vector< std::string > _devNames;
-      SMPProcessor *_core;
-      SMPMultiThread *_fpgaHelper;
+      std::vector< FPGAThread* >    *_fpgaThreads;
+      std::vector< FPGAListener* >   _fpgaListeners;
+      std::vector< std::string >     _devNames;
+      SMPProcessor                  *_core;
+      SMPMultiThread                *_fpgaHelper;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -207,6 +257,10 @@ class FPGAPlugin : public ArchPlugin
             if ( status ) {
                warning( "Error de-initializing xdma core library: " << status );
             }
+
+            for (size_t i = 0; i < _fpgaListeners.size(); ++i) {
+               delete _fpgaListeners[i];
+            }
          }
       }
 
@@ -259,6 +313,11 @@ class FPGAPlugin : public ArchPlugin
          for ( unsigned int i=0; i< _fpgaHelper->getNumThreads(); i++) {
             BaseThread *thd = _fpgaHelper->getThreadVector()[ i ];
             workers.insert( std::make_pair( thd->getId(), thd ) );
+
+            // Register Event Listener
+            FPGAListener* l = new FPGAListener( (FPGAThread*)(thd) );
+            _fpgaListeners.push_back( l );
+            sys.getEventDispatcher().addListenerAtIdle( *l );
          }
          //Push multithread into the team to let ir steam tasks from other smp threads
          workers.insert( std::make_pair( _fpgaHelper->getId(), _fpgaHelper ) );
