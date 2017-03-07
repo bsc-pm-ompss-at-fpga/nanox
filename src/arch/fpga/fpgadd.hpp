@@ -38,7 +38,11 @@ namespace ext {
             // constructors
             FPGADD( work_fct w , int accNum ) :
                 DD( (accNum < 0) ? (*_accDevices)[ 0 ] : (*_accDevices)[accNum], w ),
-                _accNum( accNum ) {}
+                _accNum( accNum )
+            {
+               ensure( getDevice() != NULL,
+                       "Trying to use an unexisting FPGA Accelerator." );
+            }
 
             // copy constructors
             FPGADD( const FPGADD &dd ) : DD( dd ), _accNum( dd._accNum ){}
