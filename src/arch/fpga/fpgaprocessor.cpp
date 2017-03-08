@@ -233,6 +233,7 @@ void FPGAProcessor::createAndSubmitTask( WD &wd ) {
       if ( copies[i].isOutput() ) {
          xdmaAddDataCopy(&task, outputIdx, XDMA_GLOBAL, XDMA_FROM_DEVICE, &copyHandle,
                size, offset);
+         outputIdx++;
       }
 
    }
