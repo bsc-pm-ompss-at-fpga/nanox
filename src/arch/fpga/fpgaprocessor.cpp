@@ -226,8 +226,8 @@ void FPGAProcessor::createAndSubmitTask( WD &wd ) {
       copyHandle = _allocator.getBufferHandle( (void *)baseAddress );
 
       if ( copies[i].isInput() ) {
-         xdmaAddDataCopy(&task, inputIdx, XDMA_GLOBAL, XDMA_TO_DEVICE, &copyHandle,
-               size, offset);
+         xdmaAddDataCopy(&task, inputIdx, XDMA_GLOBAL, XDMA_TO_DEVICE,
+            &copyHandle, size, offset);
          inputIdx++;
       }
       if ( copies[i].isOutput() ) {
@@ -239,7 +239,10 @@ void FPGAProcessor::createAndSubmitTask( WD &wd ) {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
     dmaSubmitStart( this, &wd );
 #endif
-   xdmaSendTask(_fpgaProcessorInfo->getDeviceHandle(), &task);
+   if (xdmaSendTask(_fpgaProcessorInfo->getDeviceHandle(), &task) != XDMA_SUCCESS) {
+      //TODO: If error is XDMA_ENOMEM we can retry after a while
+      fatal("Error sending a task to the FPGA");
+   }
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    dmaSubmitEnd( this, &wd );
 #endif
