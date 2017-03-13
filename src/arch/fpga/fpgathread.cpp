@@ -38,10 +38,13 @@ void FPGAThread::initializeDependent()
 {
    //initialize device
    ( ( FPGAProcessor * ) myThread->runningOn() )->init();
-   //initialize instrumentation
-   xdmaInitHWInstrumentation();
-   //allocate sync buffer to ensure instrumentation data is ready
 
+   //initialize instrumentation
+   //xdmaInitHWInstrumentation();
+   //jbosch: Disabling the previous call because it is called several times (SMPMultiWorker)
+   //        Moving the call after the xdmaInit
+
+   //allocate sync buffer to ensure instrumentation data is ready
    xdmaAllocateKernelBuffer( ( void ** )&_syncBuffer, &_syncHandle, sizeof( unsigned int ) );
 }
 

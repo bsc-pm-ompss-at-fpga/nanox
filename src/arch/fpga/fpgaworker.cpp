@@ -173,7 +173,8 @@ WD * FPGAWorker::getFPGAWD(BaseThread *thread) {
 
 void FPGAWorker::postOutlineWork( WD *wd ) {
    wd->waitOutputCopies();
-   Scheduler::updateExitStats (*wd);
+   //NOTE: Scheduler::updateExitStats is called inside Scheduler::finishWork
+   //Scheduler::updateExitStats (*wd);
    Scheduler::finishWork(wd, true);
    NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, NULL, true) );
 }

@@ -184,6 +184,14 @@ class FPGAPlugin : public ArchPlugin
          _fpgaHelper = NULL;
 
          if ( !FPGAConfig::isDisabled() ) {
+            //NOTE: Do it only when NANOS_INSTRUMENTATION_ENABLED?
+            //Init the instrumentation
+            int status = xdmaInitHWInstrumentation();
+            if (status) {
+               fatal0("Error initializing the instrumentation support in the DMA library. Returned status: " << status);
+            }
+
+            //Check the cache policy
             if ( sys.getRegionCachePolicyStr().compare( "fpga" ) != 0 ) {
                if ( sys.getRegionCachePolicyStr().compare( "" ) != 0 ) {
                   warning0( "Switching the cache-policy from '" << sys.getRegionCachePolicyStr() << "' to 'fpga'" );

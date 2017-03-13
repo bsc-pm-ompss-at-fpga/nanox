@@ -221,24 +221,29 @@ void FPGAProcessor::createAndSubmitTask( WD &wd ) {
       size = copies[i].getSize();
       srcAddress = copies[i].getAddress();
       baseAddress = (uint64_t)_allocator.getBasePointer( (void *)srcAddress, size );
+      ensure(baseAddress > 0, "Trying to register an invalid FPGA data copy. The memory region is not registered in the FPGA Allocator.");
       offset = srcAddress - baseAddress;
       copyHandle = _allocator.getBufferHandle( (void *)baseAddress );
 
       if ( copies[i].isInput() ) {
-         xdmaAddDataCopy(&task, inputIdx, XDMA_GLOBAL, XDMA_TO_DEVICE, &copyHandle,
-               size, offset);
+         xdmaAddDataCopy(&task, inputIdx, XDMA_GLOBAL, XDMA_TO_DEVICE,
+            &copyHandle, size, offset);
          inputIdx++;
       }
       if ( copies[i].isOutput() ) {
          xdmaAddDataCopy(&task, outputIdx, XDMA_GLOBAL, XDMA_FROM_DEVICE, &copyHandle,
                size, offset);
+         outputIdx++;
       }
 
    }
 #ifdef NANOS_INSTRUMENTATION_ENABLED
     dmaSubmitStart( this, &wd );
 #endif
-   xdmaSendTask(_fpgaProcessorInfo->getDeviceHandle(), &task);
+   if (xdmaSendTask(_fpgaProcessorInfo->getDeviceHandle(), &task) != XDMA_SUCCESS) {
+      //TODO: If error is XDMA_ENOMEM we can retry after a while
+      fatal("Error sending a task to the FPGA");
+   }
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    dmaSubmitEnd( this, &wd );
 #endif
