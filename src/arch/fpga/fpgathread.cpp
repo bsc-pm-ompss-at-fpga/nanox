@@ -30,15 +30,14 @@ using namespace nanos::ext;
 
 FPGAThread::FPGAThread(WD &wd, PE *pe, SMPMultiThread *parent, Atomic<int> fpgaDevice) :
    BaseThread( ( unsigned int ) -1, wd, pe, parent),
-   _pendingWD(), _hwInstrCounters() {
+   _lock(), _pendingWD(), _hwInstrCounters() {
       setCurrentWD( wd );
    }
 
 void FPGAThread::initializeDependent()
 {
    //initialize device
-   ( ( FPGAProcessor * ) myThread->runningOn() )->init();
-
+   ( ( FPGAProcessor * ) this->runningOn() )->init();
    //initialize instrumentation
    //xdmaInitHWInstrumentation();
    //jbosch: Disabling the previous call because it is called several times (SMPMultiWorker)
@@ -56,7 +55,7 @@ void FPGAThread::runDependent()
    setCurrentWD( work );
    SMPDD &dd = ( SMPDD & ) work.activateDevice( getSMPDevice() );
    dd.getWorkFct()( work.getData() );
-   ( ( FPGAProcessor * ) myThread->runningOn() )->cleanUp();
+   ( ( FPGAProcessor * ) this->runningOn() )->cleanUp();
 }
 
 bool FPGAThread::inlineWorkDependent( WD &wd )
@@ -64,7 +63,7 @@ bool FPGAThread::inlineWorkDependent( WD &wd )
    verbose( "fpga nlineWorkDependent" );
 
    wd.start( WD::IsNotAUserLevelThread );
-   //FPGAProcessor* fpga = ( FPGAProcessor * ) myThread->runningOn();
+   //FPGAProcessor* fpga = ( FPGAProcessor * ) this->runningOn();
 
    FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
    ( dd.getWorkFct() )( wd.getData() );
@@ -78,7 +77,7 @@ void FPGAThread::preOutlineWorkDependent ( WD &wd ) {
 
 void FPGAThread::outlineWorkDependent ( WD &wd ) {
    //wd.start( WD::IsNotAUserLevelThread );
-   FPGAProcessor* fpga = ( FPGAProcessor * ) myThread->runningOn();
+   FPGAProcessor* fpga = ( FPGAProcessor * ) this->runningOn();
 
    fpga->createAndSubmitTask( wd );
 
@@ -200,7 +199,7 @@ void FPGAThread::readInstrCounters( WD *wd ) {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 void FPGAThread::setupTaskInstrumentation( WD *wd ) {
    //Set up HW instrumentation
-   FPGAProcessor *fpga = ( FPGAProcessor* ) myThread->runningOn();
+   FPGAProcessor *fpga = ( FPGAProcessor* ) this->runningOn();
    const xdma_device deviceHandle =
       fpga->getFPGAProcessorInfo()->getDeviceHandle();
 
@@ -227,7 +226,7 @@ void FPGAThread::setupTaskInstrumentation( WD *wd ) {
 }
 
 void FPGAThread::submitInstrSync( WD *wd ) {
-   FPGAProcessor *fpga = ( FPGAProcessor* ) myThread->runningOn();
+   FPGAProcessor *fpga = ( FPGAProcessor* ) this->runningOn();
    const xdma_device deviceHandle =
       fpga->getFPGAProcessorInfo()->getDeviceHandle();
    const xdma_channel oChan = fpga->getFPGAProcessorInfo()->getOutputChannel();

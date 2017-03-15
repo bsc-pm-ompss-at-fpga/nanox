@@ -48,10 +48,13 @@ class FPGAListener : public EventListener {
 };
 
 void FPGAListener::callback( BaseThread* thread )
-{ 
+{
+   if (!_fpgaThread->_lock.tryAcquire()) return;
+   myThread = _fpgaThread;
+
    int maxPendingWD = FPGAConfig::getMaxPendingWD();
    int finishBurst = FPGAConfig::getFinishWDBurst();
-   for (;;){
+   for (;;) {
       //check if we have reached maximum pending WD
       //  finalize one (or some of them)
       //FPGAThread *myThread = (FPGAThread*)getMyThreadSafe();
@@ -84,6 +87,9 @@ void FPGAListener::callback( BaseThread* thread )
          break;
       }
    }
+
+   myThread = thread;
+   _fpgaThread->_lock.release();
 }
 
 class FPGAPlugin : public ArchPlugin
@@ -238,7 +244,7 @@ class FPGAPlugin : public ArchPlugin
          } else { //!FPGAConfig::isDisabled()
             //NOTE: Add a fake device to allow FPGADD instantiation
             FPGADD::addAccDevice( NULL );
-            
+
             if ( xdmaOpened ) {
                int status;
                debug0( "Xilinx close dma" );

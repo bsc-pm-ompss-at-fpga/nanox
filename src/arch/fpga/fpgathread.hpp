@@ -69,6 +69,7 @@ namespace ext {
          void submitInstrSync( WD *wd );
 #endif
 
+         Lock _lock;
       private:
          std::queue< WD* > _pendingWD;
          std::map< WD*, xdma_instr_times* > _hwInstrCounters;
