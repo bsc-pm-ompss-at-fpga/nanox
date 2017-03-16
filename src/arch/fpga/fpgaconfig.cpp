@@ -42,6 +42,7 @@ namespace nanos
       bool FPGAConfig::_hybridWorker = false;
       int FPGAConfig::_maxPendingWD = 8;
       int FPGAConfig::_finishWDBurst = 4;
+      bool FPGAConfig::_idleCallback = true;
 
 
       void FPGAConfig::prepare( Config &config )
@@ -105,6 +106,9 @@ namespace nanos
          config.registerEnvOption( "fpga_finish_task_busrt", "NX_FPGA_FINISH_TASK_BURST" );
          config.registerArgOption( "fpga_finish_task_busrt", "fpga-finish-task-burst" );
 
+         config.registerConfigOption( "fpga_idle_callback", NEW Config::FlagOption( _idleCallback ),
+               "Perform fpga operations using the IDLE event callback of Event Dispatcher (def: enabled)" );
+         config.registerArgOption( "fpga_idle_callback", "fpga-idle-callback" );
       }
 
       void FPGAConfig::apply()
@@ -121,7 +125,7 @@ namespace nanos
              */
             _numAccelerators = _numAcceleratorsSystem < 0 ? 1 : _numAcceleratorsSystem;
          } else if ( _numAccelerators > _numAcceleratorsSystem ) {
-            warning0( "The number of accelerators is larger than the accelerators in the system. Using "
+            warning0( "The number of FPGA accelerators is larger than the accelerators in the system. Using "
                      << _numAcceleratorsSystem << " accelerators." );
             _numAccelerators = _numAcceleratorsSystem;
          }
@@ -131,8 +135,12 @@ namespace nanos
             //warning0( "Number of fpga threads cannot be negative. Using one thread per accelerator" );
             _numFPGAThreads = _numAccelerators;
          } else if ( _numFPGAThreads > _numAccelerators ) {
-            warning0( "Number of helper is greater than the number of accelerators. Using one thread per accelerator" );
+            warning0( "Number of FPGA helpers is greater than the number of FPGA accelerators. "
+                     << "Using one thread per accelerator" );
             _numFPGAThreads = _numAccelerators;
+         } else if ( _numFPGAThreads == 0 && !_idleCallback ) {
+            warning0( "No FPGA helper threads requested and IDLE callback feature is disabled. "
+                     << "The execution may not finish." );
          }
          _idleSyncBurst = ( _idleSyncBurst < 0 ) ? _burst : _idleSyncBurst;
 

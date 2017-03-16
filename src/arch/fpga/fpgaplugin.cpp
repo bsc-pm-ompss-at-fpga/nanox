@@ -329,9 +329,11 @@ class FPGAPlugin : public ArchPlugin
             workers.insert( std::make_pair( thd->getId(), thd ) );
 
             // Register Event Listener
-            FPGAListener* l = new FPGAListener( (FPGAThread*)(thd) );
-            _fpgaListeners.push_back( l );
-            sys.getEventDispatcher().addListenerAtIdle( *l );
+            if ( FPGAConfig::getIdleCallbackEnabled() ) {
+               FPGAListener* l = new FPGAListener( (FPGAThread*)(thd) );
+               _fpgaListeners.push_back( l );
+               sys.getEventDispatcher().addListenerAtIdle( *l );
+            }
          }
          //Push multithread into the team to let ir steam tasks from other smp threads
          workers.insert( std::make_pair( _fpgaHelper->getId(), _fpgaHelper ) );

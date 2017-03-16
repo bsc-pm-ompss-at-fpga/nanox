@@ -54,6 +54,7 @@ namespace ext {
             static bool                      _hybridWorker;
             static int                       _maxPendingWD;
             static int                       _finishWDBurst;
+            static bool                      _idleCallback;
 
          public:
             static void printConfiguration( void );
@@ -81,6 +82,7 @@ namespace ext {
             static bool getHybridWorkerEnabled() { return _hybridWorker; }
             static int getMaxPendingWD() { return  _maxPendingWD; }
             static int getFinishWDBurst() { return _finishWDBurst; }
+            static bool getIdleCallbackEnabled() { return _idleCallback; }
 
             //Set the number of FPGAs and return the old value
             static void setFPGASystemCount ( int numFPGAs );
