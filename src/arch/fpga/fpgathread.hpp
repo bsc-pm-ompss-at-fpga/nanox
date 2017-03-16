@@ -58,7 +58,7 @@ namespace ext {
          virtual void switchToNextThread();
 
          virtual void start() {}
-         virtual void join() {}
+         virtual void join() { joined(); }
          virtual BaseThread *getNextThread();
          virtual bool isCluster() { return false; }
 
