@@ -191,7 +191,9 @@ static void dmaSubmitEnd( FPGAProcessor *fpga, const WD *wd ) {
 #endif  //NANOS_INSTRUMENTATION_ENABLED
 
 void FPGAProcessor::createAndSubmitTask( WD &wd ) {
-
+#ifdef NANOS_DEBUG_ENABLED
+   xdma_status status;
+#endif
    xdma_task_handle task;
    int numCopies;
    CopyData *copies;
@@ -209,7 +211,15 @@ void FPGAProcessor::createAndSubmitTask( WD &wd ) {
       }
    }
 
+#ifndef NANOS_DEBUG_ENABLED
    xdmaInitTask( _accelBase, numInputs, XDMA_COMPUTE_ENABLE, numOutputs, &task );
+#else
+   status = xdmaInitTask( _accelBase, numInputs, XDMA_COMPUTE_ENABLE, numOutputs, &task );
+   if ( status != XDMA_SUCCESS ) {
+      //TODO: If status == XDMA_ENOMEM, block and wait untill mem is available
+      fatal( "Cannot initialize FPGA task info." );
+   }
+#endif
    int inputIdx, outputIdx;
    inputIdx = 0; outputIdx = 0;
    for ( int i=0; i<numCopies; i++ ) {
@@ -221,7 +231,8 @@ void FPGAProcessor::createAndSubmitTask( WD &wd ) {
       size = copies[i].getSize();
       srcAddress = copies[i].getAddress();
       baseAddress = (uint64_t)_allocator.getBasePointer( (void *)srcAddress, size );
-      ensure(baseAddress > 0, "Trying to register an invalid FPGA data copy. The memory region is not registered in the FPGA Allocator.");
+      ensure( baseAddress > 0,
+         "Trying to register an invalid FPGA data copy. The memory region is not registered in the FPGA Allocator." );
       offset = srcAddress - baseAddress;
       copyHandle = _allocator.getBufferHandle( (void *)baseAddress );
 
