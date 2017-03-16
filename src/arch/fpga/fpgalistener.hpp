@@ -26,56 +26,120 @@ namespace ext {
 
 class FPGAListener : public EventListener {
    private:
-      FPGAThread* _fpgaThread;
+      /*!
+       * Thread that has to be represented when the callback is executed
+       * This is needed to allow the SMPThread get ready FPGA WDs
+       */
+      FPGAThread * _fpgaThread;
+
+      /*!
+       * Returns the pointer to the FPGAThread associated to this listener
+       */
+      FPGAThread * getFPGAThread();
    public:
-     FPGAListener( FPGAThread* thread ) : _fpgaThread( thread ) {}
-     ~FPGAListener() {}
-     void callback( BaseThread* thread );
+      /*!
+       * \brief Default constructor
+       * \param [in] thread      Pointer to the thread that the callback simulates
+       * \param [in] ownsThread  Flag that defines if thread is exclusively for the listener and
+       *                         must be deleted with the listener
+       */
+      FPGAListener( FPGAThread * thread, const bool ownsThread = false );
+      ~FPGAListener();
+      void callback( BaseThread * thread );
+
+      /*!
+       * Aux function used to create the SMPMultiThread when the there are no helper threads
+       */
+      static void FPGAWorkerLoop();
 };
 
-void FPGAListener::callback( BaseThread* thread )
+FPGAListener::FPGAListener( FPGAThread * thread, const bool onwsThread )
 {
-   if (!_fpgaThread->_lock.tryAcquire()) return;
-   myThread = _fpgaThread;
+   union { FPGAThread * p; intptr_t i; } u = { thread };
+   // Set the own status
+   u.i |= int( onwsThread );
+   _fpgaThread = u.p;
+}
+
+FPGAListener::~FPGAListener()
+{
+   union { BaseThread * p; intptr_t i; } u = { _fpgaThread };
+   bool deleteThread = (u.i & 1);
+
+   /*
+   * The FPGAThread is only associated to the FPGAListener
+   * The thread must be deleted before deleting the listener
+   */
+   if ( deleteThread ) {
+      BaseThread * self = myThread;
+      BaseThread * fpga = getFPGAThread();
+      _fpgaThread = NULL;
+
+      // Simulate be the BaseThread that is being deleted
+      myThread = fpga;
+      fpga->leaveTeam();
+      fpga->join();
+
+      // Restore the real thread identity and delete the FPGAThread
+      myThread = self;
+      delete fpga;
+   }
+}
+
+inline FPGAThread * FPGAListener::getFPGAThread()
+{
+   union { FPGAThread * p; intptr_t i; } u = { _fpgaThread };
+   // Clear the own status if set
+   u.i &= ((~(intptr_t)0) << 1);
+   return u.p;
+}
+
+void FPGAListener::callback( BaseThread* self )
+{
+   FPGAThread * thread = getFPGAThread();
+   ensure( thread != NULL, "FPGAThread pointer in the FPGAListener cannot be NULL" );
+   if (!thread->_lock.tryAcquire()) return;
+   myThread = thread;
 
    int maxPendingWD = FPGAConfig::getMaxPendingWD();
    int finishBurst = FPGAConfig::getFinishWDBurst();
    for (;;) {
-      //check if we have reached maximum pending WD
-      //  finalize one (or some of them)
-      //FPGAThread *myThread = (FPGAThread*)getMyThreadSafe();
-
-      if ( _fpgaThread->getPendingWDs() > maxPendingWD ) {
-          _fpgaThread->finishPendingWD( finishBurst );
+      if ( thread->getPendingWDs() > maxPendingWD ) {
+          thread->finishPendingWD( finishBurst );
       }
 
-      if ( !thread->isRunning() ) break;
+      if ( !self->isRunning() ) break;
       //get next WD
-      WD *wd = FPGAWorker::getFPGAWD( _fpgaThread );
+      WD *wd = FPGAWorker::getFPGAWD( thread );
       if ( wd ) {
          Scheduler::prePreOutlineWork(wd);
          if ( Scheduler::tryPreOutlineWork(wd) ) {
-            _fpgaThread->preOutlineWorkDependent( *wd );
+            thread->preOutlineWorkDependent( *wd );
          }
          //TODO: may need to increment copies version number here
          if ( wd->isInputDataReady() ) {
-            Scheduler::outlineWork( _fpgaThread, wd );
+            Scheduler::outlineWork( thread, wd );
          } else {
             //do whatever is needed if input is not ready
             //wait or whatever, for instance, sync needed copies
          }
          //add to the list of pending WD
          wd->submitOutputCopies();
-         _fpgaThread->addPendingWD( wd );
+         thread->addPendingWD( wd );
 
-         //Scheduler::postOutlineWork( wd, false, myThread ); <--moved to fpga thread
+         //Scheduler::postOutlineWork( wd, false, thread ); <--moved to fpga thread
       } else {
+         thread->finishPendingWD( finishBurst );
          break;
       }
    }
 
-   myThread = thread;
-   _fpgaThread->_lock.release();
+   myThread = self;
+   thread->_lock.release();
+}
+
+void FPGAListener::FPGAWorkerLoop() {
+   fatal( "This method (FPGAListener::FPGAWorkerLoop) never should be called!" );
 }
 
 } /* namespace ext */

@@ -241,11 +241,11 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual void addPEs( std::map< unsigned int,  ProcessingElement*> &pes ) const {
-          for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas->begin();
-                  it != _fpgas->end(); it++ )
-          {
-              pes.insert( std::make_pair( (*it)->getId(), *it) );
-          }
+         for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas->begin();
+               it != _fpgas->end(); it++ )
+         {
+            pes.insert( std::make_pair( (*it)->getId(), *it) );
+         }
       }
 
       virtual void addDevices( DeviceList &devices ) const {
@@ -269,20 +269,38 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual void startWorkerThreads( std::map<unsigned int, BaseThread*> &workers ) {
-         if ( !_fpgaHelper ) return;
-         for ( unsigned int i=0; i< _fpgaHelper->getNumThreads(); i++) {
-            BaseThread *thd = _fpgaHelper->getThreadVector()[ i ];
-            workers.insert( std::make_pair( thd->getId(), thd ) );
+         if ( _fpgaHelper ) {
+            for ( unsigned int i=0; i< _fpgaHelper->getNumThreads(); i++) {
+               BaseThread *thd = _fpgaHelper->getThreadVector()[ i ];
+               workers.insert( std::make_pair( thd->getId(), thd ) );
 
-            // Register Event Listener
-            if ( FPGAConfig::getIdleCallbackEnabled() ) {
-               FPGAListener* l = new FPGAListener( (FPGAThread*)(thd) );
+               // Register Event Listener
+               if ( FPGAConfig::getIdleCallbackEnabled() ) {
+                  FPGAListener* l = new FPGAListener( (FPGAThread*)(thd) );
+                  _fpgaListeners.push_back( l );
+                  sys.getEventDispatcher().addListenerAtIdle( *l );
+               }
+            }
+            //Push multithread into the team to let ir steam tasks from other smp threads
+            workers.insert( std::make_pair( _fpgaHelper->getId(), _fpgaHelper ) );
+         } else if ( FPGAConfig::getIdleCallbackEnabled() ) {
+            //Not using helperThreads -> using the IDLE event callback
+            for ( std::vector<FPGAProcessor*>::iterator it = _fpgas->begin();
+               it != _fpgas->end(); it++ )
+            {
+               //TODO: Check where the WD will be deleted to avoid memory leaks
+               SMPDD * dd = NEW SMPDD( ( SMPDD::work_fct )FPGAListener::FPGAWorkerLoop );
+               WD * helper = NEW WD( dd );
+               BaseThread & thd = (*it)->createThread( *helper, NULL );
+               thd.initializeDependent();
+               workers.insert( std::make_pair( thd.getId(), &thd ) );
+
+               // Register Event Listener
+               FPGAListener* l = new FPGAListener( (FPGAThread*)(&thd), true /* ownsThread */ );
                _fpgaListeners.push_back( l );
                sys.getEventDispatcher().addListenerAtIdle( *l );
             }
          }
-         //Push multithread into the team to let ir steam tasks from other smp threads
-         workers.insert( std::make_pair( _fpgaHelper->getId(), _fpgaHelper ) );
       }
 
       virtual ProcessingElement * createPE( unsigned id , unsigned uid) {
