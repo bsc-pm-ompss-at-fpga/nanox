@@ -29,7 +29,7 @@
 #include "instrumentationmodule_decl.hpp"
 #include "fpgainstrumentation.hpp"
 #include "fpgaworker.hpp"
-#include "eventdispatcher_decl.hpp"
+#include "fpgalistener.hpp"
 
 #include "libxdma.h"
 
@@ -37,60 +37,6 @@
 
 namespace nanos {
 namespace ext {
-
-class FPGAListener : public EventListener {
-   private:
-      FPGAThread* _fpgaThread;
-   public:
-     FPGAListener( FPGAThread* thread ) : _fpgaThread( thread ) {}
-     ~FPGAListener() {}
-     void callback( BaseThread* thread );
-};
-
-void FPGAListener::callback( BaseThread* thread )
-{
-   if (!_fpgaThread->_lock.tryAcquire()) return;
-   myThread = _fpgaThread;
-
-   int maxPendingWD = FPGAConfig::getMaxPendingWD();
-   int finishBurst = FPGAConfig::getFinishWDBurst();
-   for (;;) {
-      //check if we have reached maximum pending WD
-      //  finalize one (or some of them)
-      //FPGAThread *myThread = (FPGAThread*)getMyThreadSafe();
-
-      if ( _fpgaThread->getPendingWDs() > maxPendingWD ) {
-          _fpgaThread->finishPendingWD( finishBurst );
-      }
-
-      if ( !thread->isRunning() ) break;
-      //get next WD
-      WD *wd = FPGAWorker::getFPGAWD( _fpgaThread );
-      if ( wd ) {
-         Scheduler::prePreOutlineWork(wd);
-         if ( Scheduler::tryPreOutlineWork(wd) ) {
-            _fpgaThread->preOutlineWorkDependent( *wd );
-         }
-         //TODO: may need to increment copies version number here
-         if ( wd->isInputDataReady() ) {
-            Scheduler::outlineWork( _fpgaThread, wd );
-         } else {
-            //do whatever is needed if input is not ready
-            //wait or whatever, for instance, sync needed copies
-         }
-         //add to the list of pending WD
-         wd->submitOutputCopies();
-         _fpgaThread->addPendingWD( wd );
-
-         //Scheduler::postOutlineWork( wd, false, myThread ); <--moved to fpga thread
-      } else {
-         break;
-      }
-   }
-
-   myThread = thread;
-   _fpgaThread->_lock.release();
-}
 
 class FPGAPlugin : public ArchPlugin
 {

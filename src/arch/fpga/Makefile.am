@@ -27,48 +27,50 @@ pkginclude_HEADERS=\
 	$(END)
 
 devinclude_HEADERS = \
-    fpgaconfig.hpp \
-    fpgadd.hpp \
-    fpgadevice.hpp \
-    fpgaprocessor.hpp \
-    fpgaprocessorinfo.hpp \
-    fpgathread.hpp \
-    fpgamemorytransfer.hpp \
-    fpgaworker.hpp \
-    fpgapinnedallocator.hpp \
+	fpgaconfig.hpp \
+	fpgadd.hpp \
+	fpgadevice.hpp \
+	fpgalistener.hpp \
+	fpgaprocessor.hpp \
+	fpgaprocessorinfo.hpp \
+	fpgathread.hpp \
+	fpgamemorytransfer.hpp \
+	fpgaworker.hpp \
+	fpgapinnedallocator.hpp \
 	fpgainstrumentation.hpp \
-    $(END) 
+	$(END)
 
 fpga_api_sources = \
-    nanos-fpga.h \
-    fpga-api.cpp \
-    $(END)
+	nanos-fpga.h \
+	fpga-api.cpp \
+	$(END)
 
 fpga_sources = \
-    fpgaconfig.hpp \
-    fpgaconfig.cpp \
-    fpgadd.hpp \
-    fpgadd.cpp \
-    fpgadevice.hpp \
-    fpgadevice.cpp \
-    fpgaprocessor.hpp \
-    fpgaprocessor.cpp \
-    fpgaprocessorinfo.hpp \
-    fpgathread.hpp \
-    fpgathread.cpp \
-    fpgamemorytransfer.hpp \
-    fpgamemorytransfer.cpp \
-    fpgaworker.hpp \
-    fpgaworker.cpp \
-    fpgapinnedallocator.hpp \
-    fpgapinnedallocator.cpp \
+	fpgaconfig.hpp \
+	fpgaconfig.cpp \
+	fpgadd.hpp \
+	fpgadd.cpp \
+	fpgadevice.hpp \
+	fpgadevice.cpp \
+	fpgaprocessor.hpp \
+	fpgaprocessor.cpp \
+	fpgaprocessorinfo.hpp \
+	fpgathread.hpp \
+	fpgathread.cpp \
+	fpgamemorytransfer.hpp \
+	fpgamemorytransfer.cpp \
+	fpgaworker.hpp \
+	fpgaworker.cpp \
+	fpgapinnedallocator.hpp \
+	fpgapinnedallocator.cpp \
 	fpgainstrumentation.hpp \
 	fpgainstrumentation.cpp \
-    $(END)
+	fpgalistener.hpp \
+	$(END)
 
 pe_fpga_sources = \
-    fpgaplugin.cpp \
-    $(END)
+	fpgaplugin.cpp \
+	$(END)
 
 noinst_LTLIBRARIES =
 debug_LTLIBRARIES =
@@ -155,4 +157,3 @@ performance_libnanox_pe_fpga_la_CXXFLAGS=$(common_performance_CXXFLAGS)
 performance_libnanox_pe_fpga_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags) @xdmalib@
 performance_libnanox_pe_fpga_la_SOURCES=$(pe_fpga_sources)
 endif
-
