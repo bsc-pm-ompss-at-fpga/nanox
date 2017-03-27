@@ -37,7 +37,9 @@ using namespace nanos::ext;
 
 int FPGAProcessor::_accelSeed = 0;
 Lock FPGAProcessor::_initLock;
-FPGAPinnedAllocator FPGAProcessor::_allocator;
+//TODO: We should have an FPGAPinnedAllocator for each FPGAProcessor and only have one FPGAProcessor
+//      with several FPGADevices
+FPGAPinnedAllocator FPGAProcessor::_allocator( 1024*1024*64 );
 /*
  * TODO: Support the case where each thread may manage a different number of accelerators
  */
@@ -219,7 +221,7 @@ void FPGAProcessor::createAndSubmitTask( WD &wd ) {
       xdma_buf_handle copyHandle;
 
       size = copies[i].getSize();
-      srcAddress = copies[i].getAddress();
+      srcAddress = wd._mcontrol.getAddress( i );
       baseAddress = (uint64_t)_allocator.getBasePointer( (void *)srcAddress, size );
       ensure(baseAddress > 0, "Trying to register an invalid FPGA data copy. The memory region is not registered in the FPGA Allocator.");
       offset = srcAddress - baseAddress;

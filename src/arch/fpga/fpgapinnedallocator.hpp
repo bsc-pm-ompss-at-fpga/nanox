@@ -4,46 +4,37 @@
 #include <map>
 
 #include "atomic.hpp"
+#include "simpleallocator_decl.hpp"
 
 #include "libxdma.h"
 
 namespace nanos {
+namespace ext {
 
-   //   class FPGAPinnedAllocator;
-   //
-   //   class FPGAPinnedMemoryManager : public PinnedMemoryManager
-   //   {
-   //      public:
-   //         FPGAPinnedMemoryManager( FPGAPinnedAllocator *allocator );
-   //         ~FPGAPinnedMemoryManager();
-   //
-   //         virtual void *allocate( size_t size );
-   //         virtual void free( void * address );
-   //
-   //      private:
-   //         FPGAPinnedAllocator *_allocator;
-   //   };
-
-   //class FPGAPinnedAllocator: public PinnedAllocator
    class FPGAPinnedAllocator
    {
       private:
-         typedef std::map < void *, size_t > PinnedMemoryMap;
-         std::map< void *, xdma_buf_handle > _handleMap;
-         std::map< void *, size_t > _pinnedChunks;
-         Lock _lock;
+         typedef struct {
+            xdma_buf_handle      _handle;    //! Handler of the region for the xdmaLibrary
+            SimpleAllocator      _allocator; //! Allocator that manages the memory region
+         } FPGAMemoryRegion;
+
+         /*!
+          * NOTE: The idea here is to have a design that may allow further chunk allocations
+          *       if an allocate fails in the current chunck.
+          */
+         FPGAMemoryRegion        _chunk;
 
       public:
-         FPGAPinnedAllocator() {}
-         ~FPGAPinnedAllocator() {}
+         FPGAPinnedAllocator( const size_t size );
+         ~FPGAPinnedAllocator();
 
          void *allocate( size_t size );
          void free( void * address );
          void * getBasePointer( void *address, size_t size );
-         void addBufferHandle( void * address, xdma_buf_handle handle );
          xdma_buf_handle getBufferHandle( void *address );
-         void delBufferHandle( void *address );
    };
+} // namespace ext
 } // namespace nanos
 
 #endif //_NANOS_PINNED_ALLOCATOR

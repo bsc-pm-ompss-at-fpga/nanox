@@ -33,6 +33,12 @@ namespace nanos {
     */
    class FPGADevice : public Device
    {
+      private:
+         /*!
+          * Copy memory from src to dst where one of them can be a pinned FPGA memory region
+          */
+         static void copyData( void* dst, void* src, size_t len );
+
       public:
 
          FPGADevice ( const char *n );
@@ -53,33 +59,22 @@ namespace nanos {
                SeparateMemoryAddressSpace &mem, DeviceOps *ops,
                WD const *wd, void *hostObject, reg_t hostRegionId );
 
-         /*! \brief Copy from remoteSrc in the host to localDst in the device
-          *        Returns true if the operation is synchronous
-          */
-         static bool copyIn( void *localDst, CopyDescriptor &remoteSrc, size_t size, ProcessingElement *pe, const WD *wd );
-
          virtual void _copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
                SeparateMemoryAddressSpace &mem, DeviceOps *ops,
                WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId );
-         /*! \brief Copy from localSrc in the device to remoteDst in the host
-          *        Returns true if the operation is synchronous
-          */
-         static bool copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size, ProcessingElement *pe, const WD *wd );
 
          /*!
-          * Copy memory inside the same device. This is empty as currently does
-          * not make sense for FPGA (no local memory in the fpga is accessible)
+          * Copy memory inside the same device.
           */
-         static void copyLocal( void *dst, void *src, size_t size, ProcessingElement *pe ){}
+         // static void copyLocal( void *dst, void *src, size_t size, ProcessingElement *pe );
 
          /*!
           * Reallocate memory in the device.
-          * Empty as there is no allocatable memory inside an fpga.
           */
-         static void * realloc( void * address, size_t size, size_t ceSize, ProcessingElement *pe )
-         {
-            return NULL;
-         }
+         // static void * realloc( void * address, size_t size, size_t ceSize, ProcessingElement *pe )
+         // {
+         //    return NULL;
+         // }
 
          virtual bool _copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len,
                SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig,

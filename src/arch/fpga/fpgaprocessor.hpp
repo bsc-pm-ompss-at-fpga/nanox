@@ -109,7 +109,10 @@ namespace ext {
 
             /// \brief Override (disable) getAddres as this device does not have a dedicated memory nor separated address space
             // This avoids accessing the cache to retrieve a (null) address
-            virtual void* getAddress(WorkDescriptor &wd, uint64_t tag, nanos_sharing_t sharing ) {return NULL;}
+            virtual void* getAddress(WorkDescriptor &wd, uint64_t tag, nanos_sharing_t sharing ) {
+               fatal0("Calls to FPGAProcessor::getAddress() don't have a defined behaviour");
+               return NULL;
+            }
 
             //BaseThread &startFPGAThread();
             static  FPGAPinnedAllocator& getPinnedAllocator() { return _allocator; }
