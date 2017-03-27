@@ -142,14 +142,14 @@ class FPGAPlugin : public ArchPlugin
             }
 
             //Check the cache policy
-            if ( sys.getRegionCachePolicyStr().compare( "fpga" ) != 0 ) {
-               if ( sys.getRegionCachePolicyStr().compare( "" ) != 0 ) {
-                  warning0( "Switching the cache-policy from '" << sys.getRegionCachePolicyStr() << "' to 'fpga'" );
-               } else {
-                  debug0( "Setting the cache-policy option to 'fpga'" );
-               }
-               sys.setRegionCachePolicyStr( "fpga" );
-            }
+            // if ( sys.getRegionCachePolicyStr().compare( "fpga" ) != 0 ) {
+            //    if ( sys.getRegionCachePolicyStr().compare( "" ) != 0 ) {
+            //       warning0( "Switching the cache-policy from '" << sys.getRegionCachePolicyStr() << "' to 'fpga'" );
+            //    } else {
+            //       debug0( "Setting the cache-policy option to 'fpga'" );
+            //    }
+            //    sys.setRegionCachePolicyStr( "fpga" );
+            // }
 
             //Accelerator setup
             for ( unsigned int i=0; i < _fpgas->size(); i++) {

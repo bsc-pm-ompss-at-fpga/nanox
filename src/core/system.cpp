@@ -60,11 +60,11 @@
 
 
 // extern "C" {
-// 
+//
 //    // MPI INTERCEPTION
-// 
+//
 //    int MPI_Init(int *argc, char ***argv);
-//    int MPI_Init(int *argc, char ***argv) 
+//    int MPI_Init(int *argc, char ***argv)
 //    {
 //       //fprintf(stderr ,"Calling MPI_Init\n");
 //       //int result = MPI_Init_C_Wrapper(argc, argv);
@@ -73,7 +73,7 @@
 //       sys.initClusterMPI(argc, argv);
 //       return 0;
 //    }
-// 
+//
 //    int MPI_Init_thread( int *argc, char ***argv, int required, int *provided );
 //    int MPI_Init_thread( int *argc, char ***argv, int required, int *provided )
 //    {
@@ -84,8 +84,8 @@
 //       sys.initClusterMPI(argc, argv);
 //       return 0;
 //    }
-// 
-//    // int MPI_Finalize() 
+//
+//    // int MPI_Finalize()
 //    // {
 //    //    //printf("Calling MPI_Finalize\n");
 //    //    FTI_Finalize();
@@ -114,7 +114,7 @@ System::System () :
       _instrument( false ), _verboseMode( false ), _summary( false ), _executionMode( DEDICATED ), _initialMode( POOL ),
       _untieMaster( true ), _delayedStart( false ), _synchronizedStart( true ), _alreadyFinished( false ),
       _predecessorLists( false ), _throttlePolicy ( NULL ),
-      _schedStats(), _schedConf(), _defSchedule( "bf" ), _defThrottlePolicy( "hysteresis" ), 
+      _schedStats(), _schedConf(), _defSchedule( "bf" ), _defThrottlePolicy( "hysteresis" ),
       _defBarr( "centralized" ), _defInstr ( "empty_trace" ), _defDepsManager( "plain" ), _defArch( "smp" ),
       _initializedThreads ( 0 ), /*_targetThreads ( 0 ),*/ _pausedThreads( 0 ),
       _pausedThreadsCond(), _unpausedThreadsCond(),
@@ -178,7 +178,7 @@ void System::loadArchitectures()
    _pluginManager.init();
    verbose0 ( "Loading architectures" );
 
-   
+
    // load host processor module
    if ( _hostFactory == NULL ) {
      verbose0( "loading Host support" );
@@ -194,7 +194,7 @@ void System::loadArchitectures()
    if ( !loadPlugin( "pe-gpu" ) )
       fatal0 ( "Couldn't load GPU support" );
 #endif
-   
+
 #ifdef OpenCL_DEV
    verbose0( "loading OpenCL support" );
    if ( !loadPlugin( "pe-opencl" ) )
@@ -229,7 +229,7 @@ void System::loadArchitectures()
    verbose0( "Architectures loaded");
 
 #ifdef MPI_DEV
-   char* isOffloadSlave = getenv(const_cast<char*> ("OMPSS_OFFLOAD_SLAVE")); 
+   char* isOffloadSlave = getenv(const_cast<char*> ("OMPSS_OFFLOAD_SLAVE"));
    //Plugin->init of MPI will initialize MPI when we are slaves so MPI spawn returns ASAP in the master
    //This plugin does not reserve any PE at initialization time, just perform MPI Init and other actions
    if ( isOffloadSlave ) sys.loadPlugin("arch-mpi");
@@ -242,9 +242,9 @@ void System::loadModules ()
 
    const OS::ModuleList & modules = OS::getRequestedModules();
    std::for_each(modules.begin(),modules.end(), LoadModule());
-   
+
    if ( !loadPlugin( "instrumentation-"+getDefaultInstrumentation() ) )
-      fatal0( "Could not load " + getDefaultInstrumentation() + " instrumentation" );   
+      fatal0( "Could not load " + getDefaultInstrumentation() + " instrumentation" );
 
    // load default dependencies plugin
    verbose0( "loading " << getDefaultDependenciesManager() << " dependencies manager support" );
@@ -282,11 +282,11 @@ void System::loadModules ()
 }
 
 void System::unloadModules ()
-{   
+{
    delete _throttlePolicy;
-   
+
    delete _defSchedulePolicy;
-   
+
    //! \todo (#613): delete GPU plugin?
 }
 
@@ -312,7 +312,7 @@ void System::config ()
 
    const OS::InitList & externalInits = OS::getInitializationFunctions();
    std::for_each(externalInits.begin(),externalInits.end(), ExecInit());
-   
+
    //! Declare all configuration core's flags
    verbose0( "Preparing library configuration" );
 
@@ -370,7 +370,7 @@ void System::config ()
                          "Defines the dependencies plugin", cfg );
    cfg.registerArgOption( "deps", "deps" );
    cfg.registerEnvOption( "deps", "NX_DEPS" );
-   
+
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    cfg.registerConfigOption( "instrument-default", NEW Config::StringVar ( _instrumentDefault ),
@@ -465,14 +465,14 @@ void System::config ()
    verbose0 ( "Reading Configuration" );
 
    cfg.init();
-   
+
    // Now read compiler-supplied flags
    // Open the own executable
    void * myself = dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
 
    // Check if the compiler marked myself as requiring priorities (#1041)
    _compilerSuppliedFlags.prioritiesNeeded = dlsym(myself, "nanos_need_priorities_") != NULL;
-   
+
    // Close handle to myself
    dlclose( myself );
 }
@@ -480,7 +480,7 @@ void System::config ()
 void System::start ()
 {
    _hwloc.loadHwloc();
-   
+
    // Modules can be loaded now
    loadArchitectures();
    loadModules();
@@ -507,8 +507,8 @@ void System::start ()
          _regionCachePolicy = RegionCache::WRITE_THROUGH;
       } else if ( _regionCachePolicyStr.compare("writeback") == 0 ) {
          _regionCachePolicy = RegionCache::WRITE_BACK;
-      } else if ( _regionCachePolicyStr.compare("fpga") == 0 ) {
-         _regionCachePolicy = RegionCache::FPGA;
+      // } else if ( _regionCachePolicyStr.compare("fpga") == 0 ) {
+      //    _regionCachePolicy = RegionCache::FPGA;
       } else {
          warning0("Invalid option for region cache policy '" << _regionCachePolicyStr << "', using default value.");
       }
@@ -541,22 +541,22 @@ void System::start ()
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
    {
-      verbose0("addPEs for arch: " << (*it)->getName()); 
+      verbose0("addPEs for arch: " << (*it)->getName());
       (*it)->addPEs( _pes );
       (*it)->addDevices( _devices );
    }
-   
+
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
    {
       (*it)->startSupportThreads();
-   }   
-   
+   }
+
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
    {
       (*it)->startWorkerThreads( _workers );
-   }   
+   }
 
    for ( PEList::iterator it = _pes.begin(); it != _pes.end(); it++ ) {
       if ( it->second->isActive() ) {
@@ -570,10 +570,10 @@ void System::start ()
          _activeMemorySpaces.insert( it->second->getMemorySpaceId() );
       }
    }
-   
+
    // gmiranda: was completeNUMAInfo() We must do this after the
    // previous loop since we need the size of _numaNodes
-   
+
    unsigned availNUMANodes = 0;
    // #994: this should be the number of NUMA objects in hwloc, but if we don't
    // want to query, this max should be enough
@@ -581,7 +581,7 @@ void System::start ()
    // Create the NUMA node translation table. Do this before creating the team,
    // as the schedulers might need the information.
    _numaNodeMap.resize( maxNUMANode + 1, INT_MIN );
-   
+
    for ( std::set<unsigned int>::const_iterator it = _numaNodes.begin();
         it != _numaNodes.end(); ++it )
    {
@@ -603,7 +603,7 @@ void System::start ()
    //     it != _archs.end(); ++it )
    //{
    //   (*it)->createBindingList();
-   //}   
+   //}
 
    _targetThreads = _smpPlugin->getNumThreads();
 
@@ -628,7 +628,7 @@ void System::start ()
    }
 
 #if 0 /* _defDeviceName and _defDevice seem unused */
-   if ( !_defDeviceName.empty() ) 
+   if ( !_defDeviceName.empty() )
    {
        PEList::iterator it;
        for ( it = _pes.begin() ; it != _pes.end(); it++ )
@@ -674,8 +674,8 @@ void System::start ()
    NANOS_INSTRUMENT ( static nanos_event_key_t num_threads_key = ID->getEventKey("set-num-threads"); )
    NANOS_INSTRUMENT ( nanos_event_value_t team_size =  (nanos_event_value_t) myThread->getTeam()->size(); )
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &num_threads_key, &team_size); )
-   
-   // Paused threads: set the condition checker 
+
+   // Paused threads: set the condition checker
    _pausedThreadsCond.setConditionChecker( EqualConditionChecker<unsigned int >( &_pausedThreads.override(), _workers.size() ) );
    _unpausedThreadsCond.setConditionChecker( EqualConditionChecker<unsigned int >( &_pausedThreads.override(), 0 ) );
 
@@ -691,7 +691,7 @@ void System::start ()
    if ( !unrecog.empty() )
       warning( "Unrecognised arguments: " << unrecog );
    Config::deleteOrphanOptions();
-      
+
    if ( _summary ) environmentSummary();
 
    // Thread Manager initialization is delayed until a safe point
@@ -722,7 +722,7 @@ void System::finish ()
    //! \note waiting for remaining tasks
    myThread->getCurrentWD()->waitCompletion( true );
 
-   //! \note switching main work descriptor (current) to the main thread to shutdown the runtime 
+   //! \note switching main work descriptor (current) to the main thread to shutdown the runtime
    if ( _workers[0]->isSleeping() ) {
       if ( !_workers[0]->hasTeam() ) {
          acquireWorker( myThread->getTeam(), _workers[0], true, false, false );
@@ -822,7 +822,7 @@ void System::finish ()
    for ( WorkSharings::const_iterator it = _worksharings.begin(); it !=   _worksharings.end(); it++ ) {
       delete ( WorkSharing * )  it->second;
    }
-   
+
    //! \note  printing thread team statistics and deleting it
    if ( team->getScheduleData() != NULL ) team->getScheduleData()->printStats();
 
@@ -835,11 +835,11 @@ void System::finish ()
          delete it->second;
       }
    }
-   
+
    for ( unsigned int idx = 1; idx < _separateMemorySpacesCount; idx += 1 ) {
       delete _separateAddressSpaces[ idx ];
    }
-   
+
    //! \note unload modules
    unloadModules();
 
@@ -862,12 +862,12 @@ void System::finish ()
 /*! \brief Creates a new WD
  *
  *  This function creates a new WD, allocating memory space for device ptrs and
- *  data when necessary. 
+ *  data when necessary.
  *
  *  \param [in,out] uwd is the related addr for WD if this parameter is null the
  *                  system will allocate space in memory for the new WD
  *  \param [in] num_devices is the number of related devices
- *  \param [in] devices is a vector of device descriptors 
+ *  \param [in] devices is a vector of device descriptors
  *  \param [in] data_size is the size of the related data
  *  \param [in,out] data is the related data (allocated if needed)
  *  \param [in] uwg work group to relate with
@@ -963,7 +963,7 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
       offset_PMD = offset_Dimensions;
       size_PMD = size_Dimensions;
    }
-   
+
    // Compute Scheduling Data size
    static size_t size_Sched = _defSchedulePolicy->getWDDataSize();
    if ( size_Sched != 0 )
@@ -995,7 +995,7 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    //std::cerr << "num_copies=" << num_copies <<" copies=" <<copies << " num_dimensions=" <<num_dimensions << " dimensions=" << dimensions<< std::endl;
    //ensure ((num_copies==0 && copies==NULL && num_dimensions==0 && dimensions==NULL) || (num_copies!=0 && copies!=NULL && num_dimensions!=0 && dimensions!=NULL ), "Number of copies and copy data conflict" );
    ensure ((num_copies==0 && copies==NULL && num_dimensions==0 /*&& dimensions==NULL*/ ) || (num_copies!=0 && copies!=NULL && num_dimensions!=0 && dimensions!=NULL ), "Number of copies and copy data conflict" );
-   
+
 
    // allocating copy-ins/copy-outs
    if ( copies != NULL && *copies == NULL ) {
@@ -1012,10 +1012,10 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
 
    // Set WD's socket
    wd->setNUMANode( sys.getUserDefinedNUMANode() );
-   
+
    // Set total size
    wd->setTotalSize(total_size );
-   
+
    if ( wd->getNUMANode() >= (int)sys.getNumNumaNodes() )
       throw NANOS_INVALID_PARAM;
 
@@ -1027,7 +1027,7 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
       _pmInterface->initInternalData( chunk + offset_PMD );
       wd->setInternalData( chunk + offset_PMD );
    }
-   
+
    // Create Scheduling data
    if ( size_Sched > 0 ){
       _defSchedulePolicy->initWDData( chunk + offset_Sched );
@@ -1058,9 +1058,9 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    }
 
    if ( dyn_props && dyn_props->tie_to ) wd->tieTo( *( BaseThread * )dyn_props->tie_to );
-   
+
    /* DLB */
-   // In case the master have been busy crating tasks 
+   // In case the master have been busy crating tasks
    // every 10 tasks created I'll check if I must return claimed cpus
    // or there are available cpus idle
    if ( sys.getPMInterface().isMalleable() ) {
@@ -1092,7 +1092,7 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
  *  Device's pointers, internal data, etc). Finally calls WorkDescriptor constructor
  *  using new and placement.
  *
- *  \sa WorkDescriptor, createWD 
+ *  \sa WorkDescriptor, createWD
  */
 void System::duplicateWD ( WD **uwd, WD *wd)
 {
@@ -1191,20 +1191,20 @@ void System::duplicateWD ( WD **uwd, WD *wd)
       chunk_iter += size_CopyData;
    }
 
-   // creating new WD 
+   // creating new WD
    //FIXME jbueno (#758) should we have to take into account dimensions?
    new (*uwd) WD( *wd, dev_ptrs, wdCopies, data );
 
    // Set total size
    (*uwd)->setTotalSize(total_size );
-   
+
    // initializing internal data
    if ( size_PMD != 0) {
       _pmInterface->initInternalData( chunk + offset_PMD );
       (*uwd)->setInternalData( chunk + offset_PMD );
       memcpy ( chunk + offset_PMD, wd->getInternalData(), size_PMD );
    }
-   
+
    // Create Scheduling data
    if ( size_Sched > 0 ){
       _defSchedulePolicy->initWDData( chunk + offset_Sched );
@@ -1216,7 +1216,7 @@ void System::duplicateWD ( WD **uwd, WD *wd)
 void System::setupWD ( WD &work, WD *parent )
 {
    work.setDepth( parent->getDepth() +1 );
-   
+
    // Inherit priority
    if ( parent != NULL ){
       // Add the specified priority to its parent's
@@ -1262,7 +1262,7 @@ void System::setupWD ( WD &work, WD *parent )
    work.prepareCopies();
 
    // Invoke pmInterface
-   
+
    _pmInterface->setupWD(work);
    Scheduler::updateCreateStats(work);
 }
@@ -1289,7 +1289,7 @@ void System::submitWithDependencies (WD& work, size_t numDataAccesses, DataAcces
 /*
    setupWD( work, myThread->getCurrentWD() );
 */
-   WD *current = myThread->getCurrentWD(); 
+   WD *current = myThread->getCurrentWD();
    current->submitWithDependencies( work, numDataAccesses , dataAccesses);
 }
 
@@ -1436,7 +1436,7 @@ ThreadTeam * System::createTeam ( unsigned nthreads, void *constraints, bool reu
       remaining_threads--;
    }
 
-   //! \note Getting rest of the members 
+   //! \note Getting rest of the members
    while ( remaining_threads > 0 ) {
 
       BaseThread *thread = getUnassignedWorker();
@@ -1473,14 +1473,14 @@ void System::endTeam ( ThreadTeam *team )
       // FIXME: Is it really necessary?
       memoryFence();
    }
-   
+
    fatal_cond( team->size() > 0, "Trying to end a team with running threads");
 
    /* For OpenMP applications
       At the end of the parallel return the claimed cpus
    */
    _threadManager->returnClaimedCpus();
-   
+
    delete team;
 }
 
@@ -1495,8 +1495,8 @@ void System::waitUntilThreadsUnpaused ()
    // Wait until all threads are paused
    _unpausedThreadsCond.wait();
 }
- 
-void System::addPEsAndThreadsToTeam(PE **pes, int num_pes, BaseThread** threads, int num_threads) {  
+
+void System::addPEsAndThreadsToTeam(PE **pes, int num_pes, BaseThread** threads, int num_threads) {
     //Insert PEs to the team
     for (int i=0; i<num_pes; i++){
         _pes.insert( std::make_pair( pes[i]->getId(), pes[i] ) );
@@ -1566,7 +1566,7 @@ namespace {
 }
 #endif
 
-//If someone needs argc and argv, it may be possible, but then a fortran 
+//If someone needs argc and argv, it may be possible, but then a fortran
 //main should be done too
 void System::ompss_nanox_main(void *addr, const char* file, int line){
     #ifdef MPI_DEV
@@ -1578,7 +1578,7 @@ void System::ompss_nanox_main(void *addr, const char* file, int line){
     #ifdef CLUSTER_DEV
     nanos::ext::ClusterNode::clusterWorker();
     #endif
-    
+
     #ifdef NANOS_RESILIENCY_ENABLED
         getMyThreadSafe()->setupSignalHandlers();
     #endif
