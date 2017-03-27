@@ -43,11 +43,11 @@ void MemCacheCopy::generateInOps( BaseAddressSpaceInOps &ops, bool input, bool o
    if ( ops.getPE()->getMemorySpaceId() != 0 ) {
       /* CACHE ACCESS */
       if ( input )  {
-         if ( _policy == RegionCache::FPGA ) {
-            _chunk->copyRegionFromHost( ops, _reg.id, _version, wd, copyIdx );
-         } else {
+         // if ( _policy == RegionCache::FPGA ) {
+         //    _chunk->copyRegionFromHost( ops, _reg.id, _version, wd, copyIdx );
+         // } else {
             _chunk->NEWaddReadRegion2( ops, _reg.id, _version, _locations, wd, copyIdx );
-         }
+         // }
       } else if ( output ) {
          _chunk->NEWaddWriteRegion( _reg.id, _version, &wd, copyIdx );
       } else {
