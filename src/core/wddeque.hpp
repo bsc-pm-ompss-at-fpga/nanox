@@ -91,6 +91,7 @@ inline Lock& WDDeque::getLock()
 
 inline void WDDeque::push_front( WD** wds, size_t numElems )
 {
+   LockBlock lock( _lock );
    for( size_t i = 0; i < numElems; ++i )
    {
       WD* wd = wds[i];
@@ -109,6 +110,7 @@ inline void WDDeque::push_front( WD** wds, size_t numElems )
 
 inline void WDDeque::push_back( WD** wds, size_t numElems )
 {
+   LockBlock lock( _lock );
    for( size_t i = 0; i < numElems; ++i )
    {
       WD* wd = wds[i];
@@ -339,21 +341,23 @@ inline void WDDeque::decreaseTasksInQueues( int tasks, int decrement )
    _nelems -= decrement;
 }
 
-inline int WDDeque::getNumConcurrentWDs()
+inline bool WDDeque::testDequeue()
 {
-   // Cumulative wd counter
-   int num_wds = 0;
+   if ( _dq.empty() )
+      return false;
+
    // Auxiliary map to count successful commutative accesses
    std::map<WD**, WD*> comm_accesses;
    // ReadyQueue iterator
    WDDeque::BaseContainer::const_iterator it;
    LockBlock lock( _lock );
    for ( it = _dq.begin(); it != _dq.end(); ++it ) {
-      WD &wd = *(WD *)*it;
-      num_wds += wd.getConcurrencyLevel( comm_accesses );
+      const WD &wd = *(WD *)*it;
+      if ( wd.getConcurrencyLevel( comm_accesses ) > 0 )
+         return true;
    }
 
-   return num_wds;
+   return false;
 }
 
 inline void WDDeque::transferElemsFrom( WDDeque &dq )
@@ -406,6 +410,11 @@ inline void WDLFQueue::push_front ( WorkDescriptor *wd )
    fatal0("Calling push_front method is not allowed using WDLFQueue's"); /*XXX*/
 }
 
+inline void WDLFQueue::push_front ( WorkDescriptor **wd, size_t numElems )
+{
+   fatal0("Calling push_front method is not allowed using WDLFQueue's"); /*XXX*/
+}
+
 inline void WDLFQueue::push_back( WorkDescriptor *wd )
 {
    volatile WDNode *tail;
@@ -427,6 +436,11 @@ inline void WDLFQueue::push_back( WorkDescriptor *wd )
    }
    /* int tasks = */ ++( sys.getSchedulerStats()._readyTasks );
    compareAndSwap( (void **) &_tail, (void *) tail, (void *) NANOS_ABA_COMPOSE(node,tail) );
+}
+
+inline void WDLFQueue::push_back ( WorkDescriptor **wd, size_t numElems )
+{
+   fatal0("Calling push_back method is not implemented yet but it should"); /*XXX*/
 }
 
 inline void WDLFQueue::push_back_node ( WDNode *node )
@@ -702,6 +716,7 @@ inline Lock& WDPriorityQueue<T>::getLock()
 template<typename T>
 inline void WDPriorityQueue<T>::push_front( WD** wds, size_t numElems )
 {
+   LockBlock lock( _lock );
    for( size_t i = 0; i < numElems; ++i )
    {
       WD* wd = wds[i];
@@ -721,6 +736,7 @@ inline void WDPriorityQueue<T>::push_front( WD** wds, size_t numElems )
 template<typename T>
 inline void WDPriorityQueue<T>::push_back( WD** wds, size_t numElems )
 {
+   LockBlock lock( _lock );
    fatal_cond( numElems == 0, "No reason to call push_back for 0 elements" );
    // Get the priority of the first one
   /* T firstPrio = (*wds)->getPriority();
@@ -977,21 +993,23 @@ inline void WDPriorityQueue<T>::decreaseTasksInQueues( int tasks, int decrement 
 }
 
 template<typename T>
-inline int WDPriorityQueue<T>::getNumConcurrentWDs()
+inline bool WDPriorityQueue<T>::testDequeue()
 {
-   // Cumulative wd counter
-   int num_wds = 0;
+   if ( _dq.empty() )
+      return false;
+
    // Auxiliary map to count successful commutative accesses
    std::map<WD**, WD*> comm_accesses;
    // ReadyQueue iterator
    WDPQ::BaseContainer::const_iterator it;
    LockBlock lock( _lock );
    for ( it = _dq.begin(); it != _dq.end(); ++it ) {
-      WD &wd = *(WD *)*it;
-      num_wds += wd.getConcurrencyLevel( comm_accesses );
+      const WD &wd = *(WD *)*it;
+      if ( wd.getConcurrencyLevel( comm_accesses ) > 0 )
+         return true;
    }
 
-   return num_wds;
+   return false;
 }
 
 } // namespace nanos

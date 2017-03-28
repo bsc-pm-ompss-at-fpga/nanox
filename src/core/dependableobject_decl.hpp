@@ -99,7 +99,7 @@ namespace nanos {
          DependenciesDomain      *_domain;          /**< DependenciesDomain where this is located */
          TargetVector             _outputObjects;   /**< List of output objects */
          TargetVector             _readObjects;     /**< List of read objects */
-         Lock                     _objectLock;      /**< Lock to do exclusive use of the DependableObject */
+         mutable Lock             _objectLock;      /**< Lock to do exclusive use of the DependableObject */
 #ifdef HAVE_NEW_GCC_ATOMIC_OPS
          bool                     _submitted;
 #else
@@ -108,25 +108,24 @@ namespace nanos {
          bool                     _needsSubmission; /**< Does this DependableObject need to be submitted? */
          WorkDescriptor           *_wd;             /**< Pointer to the work descriptor represented by this DependableObject */
          DOSchedulerData          *_schedulerData;  /**< Data needed for specific scheduling policies */
+         int _num;
+         int _lss;
 
       public:
         /*! \brief DependableObject default constructor
          */
          DependableObject ( ) 
             :  _id ( 0 ), _numPredecessors ( 0 ), _references( 1 ), _predecessors(), _successors(), _domain( NULL ), _outputObjects(),
-               _readObjects(), _objectLock(), _submitted( false ), _needsSubmission( false ), _wd( NULL ), _schedulerData(NULL) {}
+               _readObjects(), _objectLock(), _submitted( false ), _needsSubmission( false ), _wd( NULL ), _schedulerData(NULL), _num(0), _lss(-1) {}
 
          DependableObject ( WorkDescriptor *wd ) 
             :  _id ( 0 ), _numPredecessors ( 0 ), _references( 1 ), _predecessors(), _successors(), _domain( NULL ), _outputObjects(),
-               _readObjects(), _objectLock(), _submitted( false ), _needsSubmission( false ), _wd( wd ), _schedulerData(NULL) {}
+               _readObjects(), _objectLock(), _submitted( false ), _needsSubmission( false ), _wd( wd ), _schedulerData(NULL), _num(0), _lss(-1) {}
 
         /*! \brief DependableObject copy constructor
          *  \param depObj another DependableObject
          */
-         DependableObject ( const DependableObject &depObj )
-            : _id ( depObj._id ), _numPredecessors ( depObj._numPredecessors ), _references(depObj._references),
-              _predecessors ( depObj._predecessors ), _successors ( depObj._successors ), _domain ( depObj._domain ), _outputObjects( ), _readObjects(),
-              _objectLock(), _submitted( false ), _needsSubmission( false ), _wd( depObj._wd ), _schedulerData(NULL) {}
+         DependableObject ( const DependableObject &depObj );
 
         /*! \brief DependableObject copy assignment operator, can be self-assigned.
          *  \param depObj another DependableObject
@@ -326,6 +325,9 @@ namespace nanos {
 
          DOSchedulerData* getSchedulerData ( );
          void setSchedulerData ( DOSchedulerData * scData );
+
+         int getNum() const { return _num; };
+         int getLSS() const { return _lss; };
    };
 
 } // namespace nanos

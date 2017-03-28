@@ -166,16 +166,7 @@ ThreadManager* ThreadManagerConf::create()
 
 bool ThreadManagerConf::canUntieMaster() const
 {
-   // If the user forces it, ignore everything else
-   if ( _forceTieMaster ) return false;
-
-   const char *lb_policy = OS::getEnvironmentVariable( "LB_POLICY" );
-   if ( !_useDLB || lb_policy == NULL ) return true;
-   else {
-      std::string dlb_policy( lb_policy );
-      // Currently auto_LeWI_mask is the only dlb policy that supports untied master
-      return (dlb_policy == "auto_LeWI_mask");
-   }
+   return !_forceTieMaster;
 }
 
 /**********************************/
@@ -183,7 +174,8 @@ bool ThreadManagerConf::canUntieMaster() const
 /**********************************/
 
 ThreadManager::ThreadManager( bool warmup )
-   : _lock(), _initialized(false), _cpuProcessMask(NULL), _cpuActiveMask(NULL), _warmupThreads(warmup)
+   : _lock(), _initialized(false), _maxThreads(0),
+   _cpuProcessMask(NULL), _cpuActiveMask(NULL), _warmupThreads(warmup)
 {}
 
 void ThreadManager::init()
@@ -193,24 +185,30 @@ void ThreadManager::init()
    }
    _cpuProcessMask = &sys.getCpuProcessMask();
    _cpuActiveMask = &sys.getCpuActiveMask();
+   _maxThreads = sys.getSMPPlugin()->getRequestedWorkers();
    _initialized = true;
 }
 
-bool ThreadManager::lastActiveThread()
+bool ThreadManager::lastActiveThread( void )
 {
-   // We omit the test if the Thread Manager is not yet initializated
+   //! \note We omit the test if the Thread Manager is not yet initializated
    if ( !_initialized ) return false;
 
-   // We omit the test if the cpu does not belong to my process_mask
+   //! \note We omit the test if the cpu does not belong to my process_mask
    BaseThread *thread = getMyThreadSafe();
    int my_cpu = thread->getCpuId();
    if ( !_cpuProcessMask->isSet( my_cpu ) ) return false;
 
+   //! \note Getting initial process mask (not yielded threads) having into account
+   //!       these currently active. Checking if the list of processor have only one
+   //!       single active processor (and this processor is my cpu).
    CpuSet mine_and_active = *_cpuProcessMask & *_cpuActiveMask;
    bool last = mine_and_active.size() == 1 && mine_and_active.isSet(my_cpu);
 
-   // Watch out if we have oversubscription
-   last &= thread->runningOn()->getRunningThreads() <= 1;
+   //! \note Watch out if we have oversubscription. As the current thread may be already
+   //        marked as leaving the processor we need to take that into account
+   last &= thread->runningOn()->getRunningThreads() <= (thread->isSleeping()? 0:1) ;
+
    return last;
 }
 
@@ -219,7 +217,7 @@ bool ThreadManager::lastActiveThread()
 /**********************************/
 
 BlockingThreadManager::BlockingThreadManager( unsigned int num_yields, bool use_block, bool use_dlb, bool warmup )
-   : ThreadManager(warmup), _maxCPUs(OS::getMaxProcessors()), _isMalleable(false),
+   : ThreadManager(warmup), _isMalleable(false),
    _numYields(num_yields), _useBlock(use_block), _useDLB(use_dlb)
 {}
 
@@ -232,7 +230,14 @@ void BlockingThreadManager::init()
 {
    ThreadManager::init();
    _isMalleable = sys.getPMInterface().isMalleable();
+   _maxThreads = _useDLB ? OS::getMaxProcessors() : sys.getSMPPlugin()->getRequestedWorkers();
    if ( _useDLB ) DLB_Init();
+}
+
+bool BlockingThreadManager::isGreedy()
+{
+   if ( !_initialized ) return false;
+   return _cpuActiveMask->size() < _maxThreads;
 }
 
 void BlockingThreadManager::idle( int& yields
@@ -244,86 +249,100 @@ void BlockingThreadManager::idle( int& yields
 {
    if ( !_initialized ) return;
 
-   if ( _isMalleable ) {
-      acquireResourcesIfNeeded();
-   }
+   if ( _useDLB ) DLB_Update();
 
    BaseThread *thread = getMyThreadSafe();
 
    if ( yields > 0 ) {
-      NANOS_INSTRUMENT ( total_yields++; )
-      NANOS_INSTRUMENT ( unsigned long long begin_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  ); )
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+      total_yields++;
+      unsigned long long begin_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  );
+#endif
       thread->yield();
-      NANOS_INSTRUMENT ( unsigned long long end_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  ); )
-      NANOS_INSTRUMENT ( time_yields += ( end_yield - begin_yield ); )
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+      unsigned long long end_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  );
+      time_yields += ( end_yield - begin_yield );
+#endif
       if ( _useBlock ) yields--;
    } else {
       if ( _useBlock && thread->canBlock() ) {
-         NANOS_INSTRUMENT ( total_blocks++; )
-         NANOS_INSTRUMENT ( unsigned long long begin_block = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  ); )
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+         total_blocks++;
+         unsigned long long begin_block = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  );
+#endif
          blockThread( thread );
-         NANOS_INSTRUMENT ( unsigned long long end_block = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  ); )
-         NANOS_INSTRUMENT ( time_blocks += ( end_block - begin_block ); )
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+         unsigned long long end_block = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  );
+         time_blocks += ( end_block - begin_block );
+#endif
          if ( _numYields != 0 ) yields = _numYields;
+      }
+   }
+}
+
+void BlockingThreadManager::acquireOne()
+{
+   if ( !_initialized ) return;
+   if ( !_isMalleable ) return;
+
+   ThreadTeam *team = getMyThreadSafe()->getTeam();
+   if ( !team ) return;
+
+   LockBlock Lock( _lock );
+
+   if ( _cpuActiveMask->size() >= _maxThreads ) return;
+
+   CpuSet new_active_cpus = *_cpuActiveMask;
+   CpuSet mine_and_active = *_cpuProcessMask & *_cpuActiveMask;
+
+   // Check first that we have some owned CPU not active
+   if ( mine_and_active != *_cpuProcessMask ) {
+      // Iterate over default cpus not running and wake them up if needed
+      for ( CpuSet::const_iterator it=_cpuProcessMask->begin();
+            it!=_cpuProcessMask->end(); ++it ) {
+         int cpu = *it;
+         if ( !new_active_cpus.isSet(cpu) ) {
+            new_active_cpus.set(cpu);
+            sys.setCpuActiveMask( new_active_cpus );
+            break;
+         }
       }
    }
 }
 
 void BlockingThreadManager::acquireResourcesIfNeeded()
 {
+   fatal_cond( _isMalleable, "acquireResourcesIfNeeded function should only be called"
+                              " before opening OpenMP parallels");
+
    if ( !_initialized ) return;
 
-   NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
-   NANOS_INSTRUMENT ( static nanos_event_key_t ready_tasks_key = ID->getEventKey("concurrent-tasks"); )
-
-   ThreadTeam *team = getMyThreadSafe()->getTeam();
-
-   if ( !team ) return;
-
+   LockBlock Lock( _lock );
    if ( _useDLB ) DLB_Update();
-
-   if ( _isMalleable ) {
-      /* OmpSs*/
-      int ready_tasks = team->getSchedulePolicy().getNumConcurrentWDs();
-      if ( ready_tasks > 1 ) {
-
-         NANOS_INSTRUMENT( nanos_event_value_t ready_tasks_value = (nanos_event_value_t) ready_tasks )
-         NANOS_INSTRUMENT( sys.getInstrumentation()->raisePointEvents(1, &ready_tasks_key, &ready_tasks_value); )
-
-         LockBlock Lock( _lock );
-
-         CpuSet new_active_cpus = *_cpuActiveMask;
-         CpuSet mine_and_active = *_cpuProcessMask & *_cpuActiveMask;
-
-         // Check first that we have some owned CPU not active
-         if ( mine_and_active != *_cpuProcessMask ) {
-            bool dirty = false;
-            // Iterate over default cpus not running and wake them up if needed
-            for (int i=0; i<_maxCPUs; i++) {
-               if ( _cpuProcessMask->isSet(i) && !new_active_cpus.isSet(i) ) {
-                  new_active_cpus.set(i);
-                  dirty = true;
-                  if ( --ready_tasks == 0 )
-                     break;
-               }
-            }
-            if (dirty) {
-               sys.setCpuActiveMask( new_active_cpus );
-            }
-         }
-      }
-   } else {
-      /* OpenMP */
-      LockBlock Lock( _lock );
-      if ( *_cpuProcessMask != *_cpuActiveMask ) {
-         sys.setCpuActiveMask( *_cpuProcessMask );
-      }
+   if ( *_cpuProcessMask != *_cpuActiveMask ) {
+      sys.setCpuActiveMask( *_cpuProcessMask );
    }
 }
 
-void BlockingThreadManager::returnClaimedCpus() {}
+void BlockingThreadManager::returnClaimedCpus()
+{
+   if ( !_initialized ) return;
+   if ( !_useDLB ) return;
+   if ( !getMyThreadSafe()->isMainThread() ) return;
 
-void BlockingThreadManager::returnMyCpuIfClaimed() {}
+   LockBlock Lock( _lock );
+
+   CpuSet mine_or_active = *_cpuProcessMask | *_cpuActiveMask;
+   if ( mine_or_active.size() > _cpuProcessMask->size() ) {
+      // Only return if I am using external CPUs
+      DLB_ReturnClaimedCpus();
+   }
+}
+
+void BlockingThreadManager::returnMyCpuIfClaimed()
+{
+   returnClaimedCpus();
+}
 
 void BlockingThreadManager::waitForCpuAvailability() {}
 
@@ -345,7 +364,9 @@ void BlockingThreadManager::blockThread( BaseThread *thread )
       return;
 
    // Clear CPU from active mask when all threads of a process are blocked
+   thread->lock();
    thread->sleep();
+   thread->unlock();
    sys.getSMPPlugin()->updateCpuStatus( my_cpu );
 }
 
@@ -353,24 +374,13 @@ void BlockingThreadManager::unblockThread( BaseThread* thread )
 {
    if ( !_initialized ) return;
 
-   /* This method should only be called after a simple block call.
-    * Also, the thread should be in a team */
-   ensure( thread->hasTeam(), "Trying to unblock a non ready thread" );
-   thread->wakeup();
+   ThreadTeam *team = myThread->getTeam();
+   fatal_cond( team == NULL, "Cannot unblock another thread from a teamless thread" );
+
+   thread->lock();
+   thread->tryWakeUp( team );
+   thread->unlock();
    sys.getSMPPlugin()->updateCpuStatus( thread->getCpuId() );
-}
-
-void BlockingThreadManager::unblockThreads( std::vector<BaseThread*> threads )
-{
-   if ( !_initialized ) return;
-
-   std::vector<BaseThread*>::iterator it;
-   for (it=threads.begin(); it!=threads.end(); ++it) {
-      BaseThread *thread = *it;
-      ensure( thread->hasTeam(), "Trying to unblock a non ready thread" );
-      thread->wakeup();
-      sys.getSMPPlugin()->updateCpuStatus( thread->getCpuId() );
-   }
 }
 
 void BlockingThreadManager::processMaskChanged()
@@ -385,7 +395,7 @@ void BlockingThreadManager::processMaskChanged()
 
 BusyWaitThreadManager::BusyWaitThreadManager( unsigned int num_yields, unsigned int sleep_time,
                                                 bool use_sleep, bool use_dlb, bool warmup )
-   : ThreadManager(warmup), _maxCPUs(OS::getMaxProcessors()), _isMalleable(false),
+   : ThreadManager(warmup), _isMalleable(false),
    _numYields(num_yields), _sleepTime(sleep_time), _useSleep(use_sleep), _useDLB(use_dlb)
 {
 }
@@ -399,7 +409,16 @@ void BusyWaitThreadManager::init()
 {
    ThreadManager::init();
    _isMalleable = sys.getPMInterface().isMalleable();
+   _maxThreads = _useDLB ? OS::getMaxProcessors() : sys.getSMPPlugin()->getRequestedWorkers();
    if ( _useDLB ) DLB_Init();
+}
+
+bool BusyWaitThreadManager::isGreedy()
+{
+   if ( !_initialized ) return false;
+   if ( !_useDLB ) return false;
+
+   return _cpuActiveMask->size() < _maxThreads;
 }
 
 void BusyWaitThreadManager::idle( int& yields
@@ -412,44 +431,43 @@ void BusyWaitThreadManager::idle( int& yields
    if ( !_initialized ) return;
 
    BaseThread *thread = getMyThreadSafe();
-   thread->lock();
-   if ( !thread->hasTeam() && !thread->runningOn()->isActive() ) {
-      // Sleep teamless threads only if the PE has been deactivated
-      thread->setNextTeam(NULL);
-      blockThread(thread);
-      thread->unlock();
-      return;
-   }
-   thread->unlock();
 
-   if ( _useDLB && _isMalleable ) acquireResourcesIfNeeded();
+   if ( _useDLB ) DLB_Update();
 
    if ( yields > 0 ) {
-      NANOS_INSTRUMENT ( total_yields++; )
-      NANOS_INSTRUMENT ( unsigned long long begin_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  ); )
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+      total_yields++;
+      unsigned long long begin_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  );
+#endif
       thread->yield();
-      NANOS_INSTRUMENT ( unsigned long long end_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  ); )
-      NANOS_INSTRUMENT ( time_yields += ( end_yield - begin_yield ); )
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+      unsigned long long end_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  );
+      time_yields += ( end_yield - begin_yield );
+#endif
       if ( _useSleep ) yields--;
    } else {
       if ( _useSleep ) {
-         NANOS_INSTRUMENT ( total_blocks++; )
-         NANOS_INSTRUMENT ( unsigned long begin_block = (unsigned long) ( OS::getMonotonicTime() * 1.0e9  ); )
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+         total_blocks++;
+         unsigned long begin_block = (unsigned long) ( OS::getMonotonicTime() * 1.0e9  );
+#endif
          OS::nanosleep( _sleepTime );
-         NANOS_INSTRUMENT ( unsigned long end_block = (unsigned long) ( OS::getMonotonicTime() * 1.0e9  ); )
-         NANOS_INSTRUMENT ( time_blocks += ( end_block - begin_block ); )
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+         unsigned long end_block = (unsigned long) ( OS::getMonotonicTime() * 1.0e9  );
+         time_blocks += ( end_block - begin_block );
+#endif
          if ( _numYields != 0 ) yields = _numYields;
       }
    }
+
+   blockThread(thread);
 }
 
-void BusyWaitThreadManager::acquireResourcesIfNeeded ()
+void BusyWaitThreadManager::acquireOne()
 {
    if ( !_initialized ) return;
+   if ( !_isMalleable ) return;
    if ( !_useDLB ) return;
-
-   NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
-   NANOS_INSTRUMENT ( static nanos_event_key_t ready_tasks_key = ID->getEventKey("concurrent-tasks"); )
 
    BaseThread *thread = getMyThreadSafe();
    ThreadTeam *team = thread->getTeam();
@@ -457,40 +475,34 @@ void BusyWaitThreadManager::acquireResourcesIfNeeded ()
    if ( !thread->isMainThread() ) return;
    if ( !team ) return;
 
-   DLB_Update();
+   LockBlock Lock( _lock );
 
-   if ( _isMalleable ) {
-      /* OmpSs*/
-      int ready_tasks = team->getSchedulePolicy().getNumConcurrentWDs();
-      if ( ready_tasks > 0 ) {
-
-         NANOS_INSTRUMENT( nanos_event_value_t ready_tasks_value = (nanos_event_value_t) ready_tasks )
-         NANOS_INSTRUMENT( sys.getInstrumentation()->raisePointEvents(1, &ready_tasks_key, &ready_tasks_value); )
-
-         LockBlock Lock( _lock );
-
-         int needed_resources = ready_tasks - team->getFinalSize();
-         if ( needed_resources > 0 ) {
-            // If ready tasks > num threads I claim my cpus being used by someone else
-            CpuSet mine_and_active = *_cpuProcessMask & *_cpuActiveMask;
-            if ( mine_and_active != *_cpuProcessMask ) {
-               // Only claim if some of my CPUs are not active
-               DLB_ClaimCpus( needed_resources );
-            }
-
-            // If ready tasks > num threads I check if there are available cpus
-            needed_resources = ready_tasks - team->getFinalSize();
-            if ( needed_resources > 0 ){
-               DLB_UpdateResources_max( needed_resources );
-            }
-         }
-      }
-
-   } else {
-      /* OpenMP */
-      LockBlock Lock( _lock );
-      DLB_UpdateResources();
+   CpuSet mine_and_active = *_cpuProcessMask & *_cpuActiveMask;
+   size_t previous_mine_and_active = mine_and_active.size();
+   if ( mine_and_active != *_cpuProcessMask ) {
+      // Only claim if some of my CPUs are not active
+      DLB_ClaimCpus( 1 );
    }
+
+   mine_and_active = *_cpuProcessMask & *_cpuActiveMask;
+   if ( previous_mine_and_active == mine_and_active.size() ) {
+      // Only ask if DLB_ClaimCpus didn't give us anything
+      DLB_UpdateResources_max( 1 );
+   }
+}
+
+void BusyWaitThreadManager::acquireResourcesIfNeeded ()
+{
+   fatal_cond( _isMalleable, "acquireResourcesIfNeeded function should only be called"
+                              " before opening OpenMP parallels");
+
+   if ( !_initialized ) return;
+   if ( !_useDLB ) return;
+   if ( !myThread->isMainThread() ) return;
+
+   LockBlock Lock( _lock );
+   DLB_Update();
+   DLB_UpdateResources();
 }
 
 void BusyWaitThreadManager::returnClaimedCpus()
@@ -508,7 +520,10 @@ void BusyWaitThreadManager::returnClaimedCpus()
    }
 }
 
-void BusyWaitThreadManager::returnMyCpuIfClaimed() {}
+void BusyWaitThreadManager::returnMyCpuIfClaimed()
+{
+   returnClaimedCpus();
+}
 
 void BusyWaitThreadManager::waitForCpuAvailability()
 {
@@ -548,33 +563,30 @@ void BusyWaitThreadManager::blockThread(BaseThread *thread)
    if ( mine_and_active.size() == 1 && mine_and_active.isSet(my_cpu) )
       return;
 
+   thread->lock();
+   if ( !thread->hasTeam() && !thread->runningOn()->isActive() ) {
+      // Sleep teamless threads only if the PE has been deactivated
+      thread->setNextTeam(NULL);
+      thread->sleep();
+   }
+   thread->unlock();
+
+   // FIXME: this call causes a bug when in OpenMP
    // Clear CPU from active mask when all threads of a process are blocked
-   thread->sleep();
-   sys.getSMPPlugin()->updateCpuStatus( my_cpu );
+   // sys.getSMPPlugin()->updateCpuStatus( my_cpu );
 }
 
 void BusyWaitThreadManager::unblockThread( BaseThread* thread )
 {
    if ( !_initialized ) return;
 
-   /* This method should only be called after a simple block call.
-    * Also, the thread should be in a team */
-   ensure( thread->hasTeam(), "Trying to unblock a non ready thread" );
-   thread->wakeup();
+   ThreadTeam *team = myThread->getTeam();
+   fatal_cond( team == NULL, "Cannot unblock another thread from a teamless thread" );
+
+   thread->lock();
+   thread->tryWakeUp( team );
+   thread->unlock();
    sys.getSMPPlugin()->updateCpuStatus( thread->getCpuId() );
-}
-
-void BusyWaitThreadManager::unblockThreads( std::vector<BaseThread*> threads )
-{
-   if ( !_initialized ) return;
-
-   std::vector<BaseThread*>::iterator it;
-   for (it=threads.begin(); it!=threads.end(); ++it) {
-      BaseThread *thread = *it;
-      ensure( thread->hasTeam(), "Trying to unblock a non ready thread" );
-      thread->wakeup();
-      sys.getSMPPlugin()->updateCpuStatus( thread->getCpuId() );
-   }
 }
 
 void BusyWaitThreadManager::processMaskChanged()
@@ -588,8 +600,7 @@ void BusyWaitThreadManager::processMaskChanged()
 /**********************************/
 
 DlbThreadManager::DlbThreadManager( unsigned int num_yields, bool warmup )
-   : ThreadManager(warmup), _maxCPUs(OS::getMaxProcessors()),
-   _isMalleable(false), _numYields(num_yields)
+   : ThreadManager(warmup), _isMalleable(false), _numYields(num_yields)
 {
 }
 
@@ -602,7 +613,15 @@ void DlbThreadManager::init()
 {
    ThreadManager::init();
    _isMalleable = sys.getPMInterface().isMalleable();
+   _maxThreads = OS::getMaxProcessors();
    DLB_Init();
+}
+
+bool DlbThreadManager::isGreedy()
+{
+   if ( !_initialized ) return false;
+
+   return _cpuActiveMask->size() < _maxThreads;
 }
 
 void DlbThreadManager::idle( int& yields
@@ -614,77 +633,58 @@ void DlbThreadManager::idle( int& yields
 {
    if ( !_initialized ) return;
 
-   if ( _isMalleable ) {
-      acquireResourcesIfNeeded();
-   }
+   DLB_Update();
 
    BaseThread *thread = getMyThreadSafe();
 
    if ( yields > 0 ) {
-      NANOS_INSTRUMENT ( total_yields++; )
-      NANOS_INSTRUMENT ( unsigned long long begin_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  ); )
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+      total_yields++;
+      unsigned long long begin_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  );
+#endif
       thread->yield();
-      NANOS_INSTRUMENT ( unsigned long long end_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  ); )
-      NANOS_INSTRUMENT ( time_yields += ( end_yield - begin_yield ); )
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+      unsigned long long end_yield = (unsigned long long) ( OS::getMonotonicTime() * 1.0e9  );
+      time_yields += ( end_yield - begin_yield );
+#endif
       yields--;
    } else {
       if ( thread->canBlock() ) {
          // blockThread only gives the sleep order, we can skip instrumentation
-         //NANOS_INSTRUMENT ( total_blocks++; )
-         //NANOS_INSTRUMENT ( unsigned long begin_block = (unsigned long) ( OS::getMonotonicTime() * 1.0e9  ); )
          blockThread( thread );
-         //NANOS_INSTRUMENT ( unsigned long end_block = (unsigned long) ( OS::getMonotonicTime() * 1.0e9  ); )
-         //NANOS_INSTRUMENT ( time_blocks += ( end_block - begin_block ); )
          if ( _numYields != 0 ) yields = _numYields;
       }
    }
 }
 
-void DlbThreadManager::acquireResourcesIfNeeded ()
+void DlbThreadManager::acquireOne()
 {
    if ( !_initialized ) return;
-
-   NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
-   NANOS_INSTRUMENT ( static nanos_event_key_t ready_tasks_key = ID->getEventKey("concurrent-tasks"); )
+   if ( !_isMalleable ) return;
 
    ThreadTeam *team = getMyThreadSafe()->getTeam();
-
    if ( !team ) return;
 
-   DLB_Update();
-
-   if ( _isMalleable ) {
-      /* OmpSs*/
-      int ready_tasks = team->getSchedulePolicy().getNumConcurrentWDs();
-      if ( ready_tasks > 0 ) {
-
-         NANOS_INSTRUMENT( nanos_event_value_t ready_tasks_value = (nanos_event_value_t) ready_tasks )
-         NANOS_INSTRUMENT( sys.getInstrumentation()->raisePointEvents(1, &ready_tasks_key, &ready_tasks_value); )
-
-         LockBlock Lock( _lock );
-
-         int needed_resources = ready_tasks - team->getFinalSize();
-         if ( needed_resources > 0 ) {
-            // If ready tasks > num threads I claim my cpus being used by someone else
-            CpuSet mine_and_active = *_cpuProcessMask & *_cpuActiveMask;
-            if ( mine_and_active != *_cpuProcessMask ) {
-               // Only claim if some of my CPUs are not active
-               DLB_ClaimCpus( needed_resources );
-            }
-
-            // If ready tasks > num threads I check if there are available cpus
-            needed_resources = ready_tasks - team->getFinalSize();
-            if ( needed_resources > 0 ){
-               DLB_UpdateResources_max( needed_resources );
-            }
-         }
-      }
-
+   CpuSet mine_and_active = *_cpuProcessMask & *_cpuActiveMask;
+   if ( mine_and_active != *_cpuProcessMask ) {
+      // We claim if some of our CPUs is lent
+      DLB_ClaimCpus( 1 );
    } else {
-      /* OpenMP */
-      LockBlock Lock( _lock );
-      DLB_UpdateResources();
+      // Otherwise, just ask for 1 cpu
+      DLB_UpdateResources_max( 1 );
    }
+}
+
+void DlbThreadManager::acquireResourcesIfNeeded ()
+{
+   fatal_cond( _isMalleable, "acquireResourcesIfNeeded function should only be called"
+                              " before opening OpenMP parallels");
+
+   if ( !_initialized ) return;
+
+   LockBlock Lock( _lock );
+   DLB_Update();
+   DLB_UpdateResources();
 }
 
 void DlbThreadManager::returnClaimedCpus() {
@@ -745,30 +745,14 @@ void DlbThreadManager::blockThread( BaseThread *thread )
    DLB_ReleaseCpu( my_cpu );
 }
 
-void DlbThreadManager::unblockThread(BaseThread* thread) {
+void DlbThreadManager::unblockThread( BaseThread* thread )
+{
    if ( !_initialized ) return;
 
    int cpu = thread->getCpuId();
    if ( !_cpuActiveMask->isSet(cpu) ) {
-      //If the cpu is not active claim it and wake up thread
       DLB_AcquireCpu( cpu );
    }
-}
-
-void DlbThreadManager::unblockThreads(std::vector<BaseThread*> threads) {
-   if ( !_initialized ) return;
-
-   CpuSet cpus;
-   std::vector<BaseThread*>::iterator it;
-   for (it=threads.begin(); it!=threads.end(); ++it) {
-      BaseThread *thread = *it;
-      int cpu = thread->getCpuId();
-      if ( !_cpuActiveMask->isSet(cpu) ) {
-         //If the cpu is not active claim it and wake up thread
-         cpus.set(cpu);
-      }
-   }
-   DLB_AcquireCpus( &cpus.get_cpu_set() );
 }
 
 void DlbThreadManager::processMaskChanged()

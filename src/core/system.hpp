@@ -61,8 +61,6 @@ inline bool System::getVerbose () const { return _verboseMode; }
 
 inline void System::setVerbose ( bool value ) { _verboseMode = value; }
 
-inline bool System::isSummaryEnabled() const{ return _summary; }
-
 inline void System::setInitialMode ( System::InitialMode mode ) { _initialMode = mode; }
 
 inline System::InitialMode System::getInitialMode() const { return _initialMode; }
@@ -484,6 +482,8 @@ inline ProcessingElement &System::getPEWithMemorySpaceId( memory_space_id_t id )
    return *target;
 }
 
+inline PEList& System::getPEList() { return _pes; }
+
 inline void System::setValidPlugin ( const std::string &module,  const std::string &plugin )
 {
    _validPlugins.insert( make_pair( module, plugin ) );
@@ -548,6 +548,10 @@ inline void System::setVerboseDevOps(bool value) {
 
 inline bool System::getVerboseDevOps() const {
    return _verboseDevOps;
+}
+
+inline void System::setVerboseCopies(bool value) {
+   _verboseCopies = value;
 }
 
 inline bool System::getVerboseCopies() const {
@@ -683,7 +687,7 @@ inline std::set<memory_space_id_t> const &System::getActiveMemorySpaces() const 
    return _activeMemorySpaces;
 }
 
-inline std::map<unsigned int, PE *> const &System::getPEs() const {
+inline PEList const &System::getPEs() const {
    return _pes;
 }
 

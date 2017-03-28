@@ -24,7 +24,7 @@
 #include "os.hpp"
 #include "memtracker.hpp"
 #include "regioncache.hpp"
-#include "newregiondirectory.hpp"
+#include "regiondirectory.hpp"
 
 //#define EXTRA_QUEUE_DEBUG
 
@@ -420,7 +420,7 @@ namespace nanos {
                         NewLocationInfoList const &locs = wd._mcontrol._memCacheCopies[ i ]._locations;
                         if ( !locs.empty() ) {
                            for ( NewLocationInfoList::const_iterator it = locs.begin(); it != locs.end(); it++ ) {
-                              if ( ! NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn()->getMemorySpaceId() ) ) {
+                              if ( ! RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn()->getMemorySpaceId() ) ) {
                                  return false;
                               }
                            }
@@ -536,6 +536,11 @@ namespace nanos {
             }
 
 
+            virtual void queue ( BaseThread ** threads, WD ** wds, size_t numElems )
+            {
+               fatal ( "This method is not implemented yet" );
+            }
+
             /*!
              *  \brief Enqueue a work descriptor in the readyQueue of the passed thread
              *  \param thread pointer to the thread to which readyQueue the task must be appended
@@ -630,7 +635,7 @@ namespace nanos {
             virtual WD *atIdle ( BaseThread *thread, int numSteal );
             virtual WD *atBlock ( BaseThread *thread, WD *current );
 
-            virtual WD *atAfterExit ( BaseThread *thread, WD *current, bool steal )
+            virtual WD *atAfterExit ( BaseThread *thread, WD *current, int  numStealDummy )
             {
                return atBlock(thread, current );
             }
@@ -869,7 +874,7 @@ namespace nanos {
                   for ( NewLocationInfoList::const_iterator it = locs.begin(); it != locs.end(); it++ ) {
                      for ( unsigned int mem = 0; mem < numMemSpaces; mem++ ) {
                         if ( scores[mem] != -1 ) {
-                           if ( NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->second, mem ) ) {
+                           if ( RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->second, mem ) ) {
                               scores[ mem ] += wd._mcontrol._memCacheCopies[ i ]._reg.getDataSize();
                            }
                         }

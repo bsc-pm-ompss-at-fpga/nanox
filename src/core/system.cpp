@@ -60,11 +60,11 @@
 
 
 // extern "C" {
-//
+// 
 //    // MPI INTERCEPTION
-//
+// 
 //    int MPI_Init(int *argc, char ***argv);
-//    int MPI_Init(int *argc, char ***argv)
+//    int MPI_Init(int *argc, char ***argv) 
 //    {
 //       //fprintf(stderr ,"Calling MPI_Init\n");
 //       //int result = MPI_Init_C_Wrapper(argc, argv);
@@ -73,7 +73,7 @@
 //       sys.initClusterMPI(argc, argv);
 //       return 0;
 //    }
-//
+// 
 //    int MPI_Init_thread( int *argc, char ***argv, int required, int *provided );
 //    int MPI_Init_thread( int *argc, char ***argv, int required, int *provided )
 //    {
@@ -84,8 +84,8 @@
 //       sys.initClusterMPI(argc, argv);
 //       return 0;
 //    }
-//
-//    // int MPI_Finalize()
+// 
+//    // int MPI_Finalize() 
 //    // {
 //    //    //printf("Calling MPI_Finalize\n");
 //    //    FTI_Finalize();
@@ -114,7 +114,7 @@ System::System () :
       _instrument( false ), _verboseMode( false ), _summary( false ), _executionMode( DEDICATED ), _initialMode( POOL ),
       _untieMaster( true ), _delayedStart( false ), _synchronizedStart( true ), _alreadyFinished( false ),
       _predecessorLists( false ), _throttlePolicy ( NULL ),
-      _schedStats(), _schedConf(), _defSchedule( "bf" ), _defThrottlePolicy( "hysteresis" ),
+      _schedStats(), _schedConf(), _defSchedule( "bf" ), _defThrottlePolicy( "hysteresis" ), 
       _defBarr( "centralized" ), _defInstr ( "empty_trace" ), _defDepsManager( "plain" ), _defArch( "smp" ),
       _initializedThreads ( 0 ), /*_targetThreads ( 0 ),*/ _pausedThreads( 0 ),
       _pausedThreadsCond(), _unpausedThreadsCond(),
@@ -138,12 +138,14 @@ System::System () :
       , _router()
       , _hwloc()
       , _immediateSuccessorDisabled( false )
-      , _predecessorCopyInfoDisabled( false )
+      , _predecessorCopyInfoDisabled( true )
       , _invalControl( false )
-      , _cgAlloc( false )
+      , _cgAlloc( true )
       , _inIdle( false )
-	  , _lazyPrivatizationEnabled (false)
-	  , _watchAddr (NULL)
+      , _lazyPrivatizationEnabled (false)
+      , _preSchedule (false)
+      , _slots()
+      , _watchAddr (NULL)
 {
    verbose0 ( "NANOS++ initializing... start" );
 
@@ -178,7 +180,7 @@ void System::loadArchitectures()
    _pluginManager.init();
    verbose0 ( "Loading architectures" );
 
-
+   
    // load host processor module
    if ( _hostFactory == NULL ) {
      verbose0( "loading Host support" );
@@ -194,7 +196,7 @@ void System::loadArchitectures()
    if ( !loadPlugin( "pe-gpu" ) )
       fatal0 ( "Couldn't load GPU support" );
 #endif
-
+   
 #ifdef OpenCL_DEV
    verbose0( "loading OpenCL support" );
    if ( !loadPlugin( "pe-opencl" ) )
@@ -228,8 +230,8 @@ void System::loadArchitectures()
 
    verbose0( "Architectures loaded");
 
-#ifdef MPI_DEV
-   char* isOffloadSlave = getenv(const_cast<char*> ("OMPSS_OFFLOAD_SLAVE"));
+#ifdef HAVE_MPI_H
+   char* isOffloadSlave = getenv(const_cast<char*> ("OMPSS_OFFLOAD_SLAVE")); 
    //Plugin->init of MPI will initialize MPI when we are slaves so MPI spawn returns ASAP in the master
    //This plugin does not reserve any PE at initialization time, just perform MPI Init and other actions
    if ( isOffloadSlave ) sys.loadPlugin("arch-mpi");
@@ -242,9 +244,9 @@ void System::loadModules ()
 
    const OS::ModuleList & modules = OS::getRequestedModules();
    std::for_each(modules.begin(),modules.end(), LoadModule());
-
+   
    if ( !loadPlugin( "instrumentation-"+getDefaultInstrumentation() ) )
-      fatal0( "Could not load " + getDefaultInstrumentation() + " instrumentation" );
+      fatal0( "Could not load " + getDefaultInstrumentation() + " instrumentation" );   
 
    // load default dependencies plugin
    verbose0( "loading " << getDefaultDependenciesManager() << " dependencies manager support" );
@@ -282,11 +284,11 @@ void System::loadModules ()
 }
 
 void System::unloadModules ()
-{
+{   
    delete _throttlePolicy;
-
+   
    delete _defSchedulePolicy;
-
+   
    //! \todo (#613): delete GPU plugin?
 }
 
@@ -312,7 +314,7 @@ void System::config ()
 
    const OS::InitList & externalInits = OS::getInitializationFunctions();
    std::for_each(externalInits.begin(),externalInits.end(), ExecInit());
-
+   
    //! Declare all configuration core's flags
    verbose0( "Preparing library configuration" );
 
@@ -370,7 +372,7 @@ void System::config ()
                          "Defines the dependencies plugin", cfg );
    cfg.registerArgOption( "deps", "deps" );
    cfg.registerEnvOption( "deps", "NX_DEPS" );
-
+   
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    cfg.registerConfigOption( "instrument-default", NEW Config::StringVar ( _instrumentDefault ),
@@ -457,6 +459,10 @@ void System::config ()
 		   "Enable lazy reduction privatization" );
    cfg.registerArgOption ( "enable-lazy-privatization", "enable-lazy-privatization" );
 
+   cfg.registerConfigOption( "preschedule", NEW Config::FlagOption( _preSchedule ),
+                             "Enables pre scheduling" );
+   cfg.registerArgOption( "preschedule", "preschedule" );
+
    _schedConf.config( cfg );
 
    _hwloc.config( cfg );
@@ -465,14 +471,14 @@ void System::config ()
    verbose0 ( "Reading Configuration" );
 
    cfg.init();
-
+   
    // Now read compiler-supplied flags
    // Open the own executable
    void * myself = dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
 
    // Check if the compiler marked myself as requiring priorities (#1041)
    _compilerSuppliedFlags.prioritiesNeeded = dlsym(myself, "nanos_need_priorities_") != NULL;
-
+   
    // Close handle to myself
    dlclose( myself );
 }
@@ -480,7 +486,7 @@ void System::config ()
 void System::start ()
 {
    _hwloc.loadHwloc();
-
+   
    // Modules can be loaded now
    loadArchitectures();
    loadModules();
@@ -541,22 +547,22 @@ void System::start ()
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
    {
-      verbose0("addPEs for arch: " << (*it)->getName());
+      verbose0("addPEs for arch: " << (*it)->getName()); 
       (*it)->addPEs( _pes );
       (*it)->addDevices( _devices );
    }
-
+   
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
    {
       (*it)->startSupportThreads();
-   }
-
+   }   
+   
    for ( ArchitecturePlugins::const_iterator it = _archs.begin();
         it != _archs.end(); ++it )
    {
       (*it)->startWorkerThreads( _workers );
-   }
+   }   
 
    for ( PEList::iterator it = _pes.begin(); it != _pes.end(); it++ ) {
       if ( it->second->isActive() ) {
@@ -570,10 +576,10 @@ void System::start ()
          _activeMemorySpaces.insert( it->second->getMemorySpaceId() );
       }
    }
-
+   
    // gmiranda: was completeNUMAInfo() We must do this after the
    // previous loop since we need the size of _numaNodes
-
+   
    unsigned availNUMANodes = 0;
    // #994: this should be the number of NUMA objects in hwloc, but if we don't
    // want to query, this max should be enough
@@ -581,7 +587,7 @@ void System::start ()
    // Create the NUMA node translation table. Do this before creating the team,
    // as the schedulers might need the information.
    _numaNodeMap.resize( maxNUMANode + 1, INT_MIN );
-
+   
    for ( std::set<unsigned int>::const_iterator it = _numaNodes.begin();
         it != _numaNodes.end(); ++it )
    {
@@ -603,7 +609,7 @@ void System::start ()
    //     it != _archs.end(); ++it )
    //{
    //   (*it)->createBindingList();
-   //}
+   //}   
 
    _targetThreads = _smpPlugin->getNumThreads();
 
@@ -628,7 +634,7 @@ void System::start ()
    }
 
 #if 0 /* _defDeviceName and _defDevice seem unused */
-   if ( !_defDeviceName.empty() )
+   if ( !_defDeviceName.empty() ) 
    {
        PEList::iterator it;
        for ( it = _pes.begin() ; it != _pes.end(); it++ )
@@ -674,8 +680,8 @@ void System::start ()
    NANOS_INSTRUMENT ( static nanos_event_key_t num_threads_key = ID->getEventKey("set-num-threads"); )
    NANOS_INSTRUMENT ( nanos_event_value_t team_size =  (nanos_event_value_t) myThread->getTeam()->size(); )
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &num_threads_key, &team_size); )
-
-   // Paused threads: set the condition checker
+   
+   // Paused threads: set the condition checker 
    _pausedThreadsCond.setConditionChecker( EqualConditionChecker<unsigned int >( &_pausedThreads.override(), _workers.size() ) );
    _unpausedThreadsCond.setConditionChecker( EqualConditionChecker<unsigned int >( &_pausedThreads.override(), 0 ) );
 
@@ -691,7 +697,7 @@ void System::start ()
    if ( !unrecog.empty() )
       warning( "Unrecognised arguments: " << unrecog );
    Config::deleteOrphanOptions();
-
+      
    if ( _summary ) environmentSummary();
 
    // Thread Manager initialization is delayed until a safe point
@@ -719,22 +725,32 @@ void System::finish ()
 
    verbose ( "NANOS++ shutting down.... init" );
 
+//   for ( std::map<int, std::set< WD * > >::const_iterator it = _slots.begin();
+//         it != _slots.end(); it++ ) {
+//      std::cerr << "["<< it->first << "]: ";
+//      for ( std::set< WD * >::const_iterator sit = it->second.begin();
+//            sit != it->second.end(); sit++ ) {
+//         std::cerr << (*sit)->getId() << " ";
+//      }
+//      std::cerr << std::endl;
+//   }
+
    //! \note waiting for remaining tasks
    myThread->getCurrentWD()->waitCompletion( true );
 
-   //! \note switching main work descriptor (current) to the main thread to shutdown the runtime
-   if ( _workers[0]->isSleeping() ) {
-      if ( !_workers[0]->hasTeam() ) {
-         acquireWorker( myThread->getTeam(), _workers[0], true, false, false );
-      }
-      _workers[0]->wakeup();
-   }
-   getMyThreadSafe()->getCurrentWD()->tied().tieTo(*_workers[0]);
-   Scheduler::switchToThread(_workers[0]);
-   BaseThread *mythread = getMyThreadSafe();
-   mythread->getTeam()->getSchedulePolicy().atShutdown();
+   //! \note finalizing scheduler
+   myThread->getTeam()->getSchedulePolicy().atShutdown();
 
-   ensure( mythread->isMainThread(), "Main thread is not finishing the application!");
+   //! \note switching main work descriptor (current) to the main thread to shut down the runtime
+   BaseThread *master_thread = _workers[0];
+   master_thread->lock();
+   master_thread->tryWakeUp( _mainTeam );
+   master_thread->unlock();
+   myThread->getCurrentWD()->tied().tieTo( *master_thread );
+   Scheduler::switchToThread( master_thread );
+
+   BaseThread *mythread = getMyThreadSafe();
+   fatal_cond( !mythread->isMainThread(), "Main thread is not finishing the application!" );
 
    ThreadTeam* team = mythread->getTeam();
    while ( !(team->isStable()) ) memoryFence();
@@ -822,7 +838,7 @@ void System::finish ()
    for ( WorkSharings::const_iterator it = _worksharings.begin(); it !=   _worksharings.end(); it++ ) {
       delete ( WorkSharing * )  it->second;
    }
-
+   
    //! \note  printing thread team statistics and deleting it
    if ( team->getScheduleData() != NULL ) team->getScheduleData()->printStats();
 
@@ -835,11 +851,11 @@ void System::finish ()
          delete it->second;
       }
    }
-
+   
    for ( unsigned int idx = 1; idx < _separateMemorySpacesCount; idx += 1 ) {
       delete _separateAddressSpaces[ idx ];
    }
-
+   
    //! \note unload modules
    unloadModules();
 
@@ -862,12 +878,12 @@ void System::finish ()
 /*! \brief Creates a new WD
  *
  *  This function creates a new WD, allocating memory space for device ptrs and
- *  data when necessary.
+ *  data when necessary. 
  *
  *  \param [in,out] uwd is the related addr for WD if this parameter is null the
  *                  system will allocate space in memory for the new WD
  *  \param [in] num_devices is the number of related devices
- *  \param [in] devices is a vector of device descriptors
+ *  \param [in] devices is a vector of device descriptors 
  *  \param [in] data_size is the size of the related data
  *  \param [in,out] data is the related data (allocated if needed)
  *  \param [in] uwg work group to relate with
@@ -963,7 +979,7 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
       offset_PMD = offset_Dimensions;
       size_PMD = size_Dimensions;
    }
-
+   
    // Compute Scheduling Data size
    static size_t size_Sched = _defSchedulePolicy->getWDDataSize();
    if ( size_Sched != 0 )
@@ -995,7 +1011,7 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    //std::cerr << "num_copies=" << num_copies <<" copies=" <<copies << " num_dimensions=" <<num_dimensions << " dimensions=" << dimensions<< std::endl;
    //ensure ((num_copies==0 && copies==NULL && num_dimensions==0 && dimensions==NULL) || (num_copies!=0 && copies!=NULL && num_dimensions!=0 && dimensions!=NULL ), "Number of copies and copy data conflict" );
    ensure ((num_copies==0 && copies==NULL && num_dimensions==0 /*&& dimensions==NULL*/ ) || (num_copies!=0 && copies!=NULL && num_dimensions!=0 && dimensions!=NULL ), "Number of copies and copy data conflict" );
-
+   
 
    // allocating copy-ins/copy-outs
    if ( copies != NULL && *copies == NULL ) {
@@ -1012,10 +1028,10 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
 
    // Set WD's socket
    wd->setNUMANode( sys.getUserDefinedNUMANode() );
-
+   
    // Set total size
    wd->setTotalSize(total_size );
-
+   
    if ( wd->getNUMANode() >= (int)sys.getNumNumaNodes() )
       throw NANOS_INVALID_PARAM;
 
@@ -1027,7 +1043,7 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
       _pmInterface->initInternalData( chunk + offset_PMD );
       wd->setInternalData( chunk + offset_PMD );
    }
-
+   
    // Create Scheduling data
    if ( size_Sched > 0 ){
       _defSchedulePolicy->initWDData( chunk + offset_Sched );
@@ -1059,16 +1075,6 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
 
    if ( dyn_props && dyn_props->tie_to ) wd->tieTo( *( BaseThread * )dyn_props->tie_to );
 
-   /* DLB */
-   // In case the master have been busy crating tasks
-   // every 10 tasks created I'll check if I must return claimed cpus
-   // or there are available cpus idle
-   if ( sys.getPMInterface().isMalleable() ) {
-      if(_atomicWDSeed.value()%10==0){
-         _threadManager->returnClaimedCpus();
-         _threadManager->acquireResourcesIfNeeded();
-      }
-   }
    if (_createLocalTasks) {
       wd->tieToLocation( 0 );
    }
@@ -1092,7 +1098,7 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
  *  Device's pointers, internal data, etc). Finally calls WorkDescriptor constructor
  *  using new and placement.
  *
- *  \sa WorkDescriptor, createWD
+ *  \sa WorkDescriptor, createWD 
  */
 void System::duplicateWD ( WD **uwd, WD *wd)
 {
@@ -1191,20 +1197,20 @@ void System::duplicateWD ( WD **uwd, WD *wd)
       chunk_iter += size_CopyData;
    }
 
-   // creating new WD
+   // creating new WD 
    //FIXME jbueno (#758) should we have to take into account dimensions?
    new (*uwd) WD( *wd, dev_ptrs, wdCopies, data );
 
    // Set total size
    (*uwd)->setTotalSize(total_size );
-
+   
    // initializing internal data
    if ( size_PMD != 0) {
       _pmInterface->initInternalData( chunk + offset_PMD );
       (*uwd)->setInternalData( chunk + offset_PMD );
       memcpy ( chunk + offset_PMD, wd->getInternalData(), size_PMD );
    }
-
+   
    // Create Scheduling data
    if ( size_Sched > 0 ){
       _defSchedulePolicy->initWDData( chunk + offset_Sched );
@@ -1216,7 +1222,7 @@ void System::duplicateWD ( WD **uwd, WD *wd)
 void System::setupWD ( WD &work, WD *parent )
 {
    work.setDepth( parent->getDepth() +1 );
-
+   
    // Inherit priority
    if ( parent != NULL ){
       // Add the specified priority to its parent's
@@ -1262,7 +1268,7 @@ void System::setupWD ( WD &work, WD *parent )
    work.prepareCopies();
 
    // Invoke pmInterface
-
+   
    _pmInterface->setupWD(work);
    Scheduler::updateCreateStats(work);
 }
@@ -1289,7 +1295,7 @@ void System::submitWithDependencies (WD& work, size_t numDataAccesses, DataAcces
 /*
    setupWD( work, myThread->getCurrentWD() );
 */
-   WD *current = myThread->getCurrentWD();
+   WD *current = myThread->getCurrentWD(); 
    current->submitWithDependencies( work, numDataAccesses , dataAccesses);
 }
 
@@ -1313,7 +1319,7 @@ void System::inlineWork ( WD &work )
       do {
          result = work._mcontrol.allocateTaskMemory();
          if ( !result ) {
-            myThread->idle();
+            myThread->processTransfers();
          }
       } while( result == false );
       Scheduler::inlineWork( &work, /*schedule*/ false );
@@ -1436,7 +1442,7 @@ ThreadTeam * System::createTeam ( unsigned nthreads, void *constraints, bool reu
       remaining_threads--;
    }
 
-   //! \note Getting rest of the members
+   //! \note Getting rest of the members 
    while ( remaining_threads > 0 ) {
 
       BaseThread *thread = getUnassignedWorker();
@@ -1473,30 +1479,39 @@ void System::endTeam ( ThreadTeam *team )
       // FIXME: Is it really necessary?
       memoryFence();
    }
-
+   
    fatal_cond( team->size() > 0, "Trying to end a team with running threads");
 
    /* For OpenMP applications
       At the end of the parallel return the claimed cpus
    */
    _threadManager->returnClaimedCpus();
-
+   
    delete team;
 }
 
 void System::waitUntilThreadsPaused ()
 {
+   // Wake up all workers to avoid deadlock
+   for ( ThreadList::const_iterator it = _workers.begin(); it != _workers.end(); it++ ) {
+      it->second->tryWakeUp(NULL);
+   }
+
    // Wait until all threads are paused
    _pausedThreadsCond.wait();
 }
 
 void System::waitUntilThreadsUnpaused ()
 {
+   // Wake up all workers to avoid deadlock
+   for ( ThreadList::const_iterator it = _workers.begin(); it != _workers.end(); it++ ) {
+      it->second->tryWakeUp(NULL);
+   }
    // Wait until all threads are paused
    _unpausedThreadsCond.wait();
 }
-
-void System::addPEsAndThreadsToTeam(PE **pes, int num_pes, BaseThread** threads, int num_threads) {
+ 
+void System::addPEsAndThreadsToTeam(PE **pes, int num_pes, BaseThread** threads, int num_threads) {  
     //Insert PEs to the team
     for (int i=0; i<num_pes; i++){
         _pes.insert( std::make_pair( pes[i]->getId(), pes[i] ) );
@@ -1508,7 +1523,7 @@ void System::addPEsAndThreadsToTeam(PE **pes, int num_pes, BaseThread** threads,
     }
 }
 
-void System::environmentSummary( void )
+void System::environmentSummary()
 {
    /* Get Prog. Model string */
    std::string prog_model;
@@ -1525,36 +1540,47 @@ void System::environmentSummary( void )
          break;
    }
 
-   message0( "========== Nanos++ Initial Environment Summary ==========" );
-   message0( "=== PID:                 " << getpid() );
-   message0( "=== Num. worker threads: " << _workers.size() );
-   message0( "=== System CPUs:         " << _smpPlugin->getBindingMaskString() );
-   message0( "=== Binding:             " << std::boolalpha << _smpPlugin->getBinding() );
-   message0( "=== Prog. Model:         " << prog_model );
-   message0( "=== Priorities:          " << (getPrioritiesNeeded() ? "Needed" : "Not needed") << " / " << ( _defSchedulePolicy->usingPriorities() ? "enabled" : "disabled" ) );
+   std::ostringstream output;
+   output << "Nanos++ Initial Environment Summary" << std::endl;
+   output << "==========================================================" << std::endl;
+   output << "===================== Global Summary =====================" << std::endl;
+   output << "=== Nanos++ version:     " << PACKAGE_VERSION << std::endl;
+   output << "=== PID:                 " << getpid() << std::endl;
+   output << "=== Num. worker threads: " << _workers.size() << std::endl;
+   output << "=== System CPUs:         " << _smpPlugin->getBindingMaskString() << std::endl;
+   output << "=== Binding:             " << std::boolalpha << _smpPlugin->getBinding() << std::endl;
+   output << "=== Prog. Model:         " << prog_model << std::endl;
+   output << "=== Priorities:          " << (getPrioritiesNeeded() ? "Needed" : "Not needed")
+      << " / " << (_defSchedulePolicy->usingPriorities() ? "Enabled" : "Disabled") << std::endl;
 
-   for ( ArchitecturePlugins::const_iterator it = _archs.begin();
-        it != _archs.end(); ++it ) {
-      message0( "=== Plugin:              " << (*it)->getName() );
-      message0( "===  | PEs:              " << (*it)->getNumPEs() );
-      message0( "===  | Worker Threads:   " << (*it)->getNumWorkers() );
+   for ( ArchitecturePlugins::const_iterator it = _archs.begin(); it != _archs.end(); ++it ) {
+      output << "=== Plugin:              " << (*it)->getName() << std::endl;
+      output << "===  | PEs:              " << (*it)->getNumPEs() << std::endl;
+      output << "===  | Worker Threads:   " << (*it)->getNumWorkers() << std::endl;
    }
 
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->getInstrumentationDictionary()->printEventVerbosity(); )
+   output << _mainTeam->getSchedulePolicy().getSummary();
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   output << sys.getInstrumentation()->getInstrumentationDictionary()->getSummary();
+#endif
 
-   message0( "=========================================================" );
+   output << "==========================================================" << std::endl;
+   message0 ( output.str() );
 
    // Get start time
    _summaryStartTime = time(NULL);
 }
 
-void System::executionSummary( void )
+void System::executionSummary()
 {
-   time_t seconds = time(NULL) -_summaryStartTime;
-   message0( "============ Nanos++ Final Execution Summary ============" );
-   message0( "=== Application ended in " << seconds << " seconds" );
-   message0( "=== " << getCreatedTasks() << " tasks have been executed" );
-   message0( "=========================================================" );
+   time_t seconds = time(NULL) - _summaryStartTime;
+   std::ostringstream output;
+   output << "Nanos++ Final Execution Summary" << std::endl;
+   output << "==========================================================" << std::endl;
+   output << "=== Application ended in " << seconds << " seconds" << std::endl;
+   output << "=== " << getCreatedTasks() << " tasks have been executed" << std::endl;
+   output << "==========================================================" << std::endl;
+   message0( output.str() );
 }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
@@ -1566,10 +1592,10 @@ namespace {
 }
 #endif
 
-//If someone needs argc and argv, it may be possible, but then a fortran
+//If someone needs argc and argv, it may be possible, but then a fortran 
 //main should be done too
 void System::ompss_nanox_main(void *addr, const char* file, int line){
-    #ifdef MPI_DEV
+    #ifdef HAVE_MPI_H
     if (getenv("OMPSS_OFFLOAD_SLAVE")){
         //Plugin->init of MPI will do everything and then exit(0)
         sys.loadPlugin("arch-mpi");
@@ -1578,7 +1604,7 @@ void System::ompss_nanox_main(void *addr, const char* file, int line){
     #ifdef CLUSTER_DEV
     nanos::ext::ClusterNode::clusterWorker();
     #endif
-
+    
     #ifdef NANOS_RESILIENCY_ENABLED
         getMyThreadSafe()->setupSignalHandlers();
     #endif
@@ -1625,7 +1651,7 @@ global_reg_t System::_registerMemoryChunk(void *addr, std::size_t len) {
    cd.setDimensions( &dim );
    cd.setNumDimensions( 1 );
    global_reg_t reg;
-   getHostMemory().getRegionId( cd, reg, *((WD *) 0), 0 );
+   getHostMemory().getRegionId( cd, reg, NULL, 0 );
    return reg;
 }
 
@@ -1642,7 +1668,7 @@ global_reg_t System::_registerMemoryChunk_2dim(void *addr, std::size_t rows, std
    cd.setDimensions( &dim[0] );
    cd.setNumDimensions( 2 );
    global_reg_t reg;
-   getHostMemory().getRegionId( cd, reg, *((WD *) 0), 0 );
+   getHostMemory().getRegionId( cd, reg, NULL, 0 );
    return reg;
 }
 
@@ -1663,12 +1689,12 @@ void System::_distributeObject( global_reg_t &reg, unsigned int start_node, std:
       dims[ num_dims-1 ].accessed_length = size_per_node + (node_idx < rest_size);
       assigned_size += size_per_node + (node_idx < rest_size);
       global_reg_t fragmented_reg;
-      getHostMemory().getRegionId( cd, fragmented_reg, *((WD *) 0), 0 );
+      getHostMemory().getRegionId( cd, fragmented_reg, NULL, 0 );
       std::cerr << "fragment " << node_idx << " is "; fragmented_reg.key->printRegion(std::cerr, fragmented_reg.id); std::cerr << std::endl;
       fragmented_reg.key->addFixedRegion( fragmented_reg.id );
       unsigned int version = 0;
       NewLocationInfoList missing_parts;
-      NewNewRegionDirectory::__getLocation( fragmented_reg.key, fragmented_reg.id, missing_parts, version, *((WD *) 0) );
+      RegionDirectory::__getLocation( fragmented_reg.key, fragmented_reg.id, missing_parts, version );
       memory_space_id_t loc = 0;
       for ( std::vector<SeparateMemoryAddressSpace *>::iterator it = _separateAddressSpaces.begin(); it != _separateAddressSpaces.end(); it++ ) {
          if ( *it != NULL ) {
@@ -1711,7 +1737,7 @@ void System::stickToProducer(void *addr, std::size_t len) {
       cd.setDimensions( &dim );
       cd.setNumDimensions( 1 );
       global_reg_t reg;
-      getHostMemory().getRegionId( cd, reg, *((WD *) 0), 0 );
+      getHostMemory().getRegionId( cd, reg, NULL, 0 );
       reg.key->setKeepAtOrigin( true );
    }
 }
@@ -1767,11 +1793,9 @@ void System::stopFirstThread( void ) {
 }
 
 void System::notifyIntoBlockingMPICall() {
-   NANOS_INSTRUMENT(static nanos_event_key_t ikey = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("debug");)
    static int created = 0;
    if ( _schedStats._createdTasks.value() > created ) {
       _inIdle = true;
-      NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 4444 );)
       *myThread->_file << "created " << ( _schedStats._createdTasks.value() - created ) << " tasks. Send msg." << std::endl;
       created = _schedStats._createdTasks.value();
       //*myThread->_file << "Into blocking mpi call: " << "[Created: " << _schedStats._createdTasks.value() << " Ready: " << _schedStats._readyTasks.value() << " Total: " << _schedStats._totalTasks.value() << "]" << std::endl;
@@ -1780,9 +1804,7 @@ void System::notifyIntoBlockingMPICall() {
 }
 
 void System::notifyOutOfBlockingMPICall() {
-   NANOS_INSTRUMENT(static nanos_event_key_t ikey = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("debug");)
    if ( _inIdle ) {
-      NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 0 );)
       _inIdle = false;
    }
    //*myThread->_file << "Out of blocking mpi call: " << "[Created: " << _schedStats._createdTasks.value() << " Ready: " << _schedStats._readyTasks.value() << " Total: " << _schedStats._totalTasks.value() << "]" << std::endl;
@@ -1806,4 +1828,199 @@ void System::notifyIdle( unsigned int node ) {
 }
 
 void System::disableHelperNodes() {
+}
+
+void System::preSchedule() {
+   if ( _preSchedule ) {
+   unsigned int max_wd_per_level = 0;
+   for ( std::map<int, std::set< WD * > >::const_iterator it = _slots.begin();
+         it != _slots.end(); it++ ) {
+      max_wd_per_level = it->second.size() > max_wd_per_level ? it->second.size() : max_wd_per_level;
+       //std::cerr << "["<< it->first << "]: ";
+       //for ( std::set< WD * >::const_iterator sit = it->second.begin();
+       //      sit != it->second.end(); sit++ ) {
+       //   std::cerr << "[" << (*sit)->getId() << ", " << (*sit)->getDOSubmit()->getNum() << ", " << (*sit)->getDOSubmit()->getLSS() << "] ";
+       //}
+       //std::cerr << std::endl;
+   }
+      std::cerr << "Computed max_wd_per_level " << max_wd_per_level << std::endl;
+   int max_prio = max_wd_per_level + 1;
+   for ( std::map<int, std::set< WD * > >::const_iterator it = _slots.begin();
+         it != _slots.end(); it++ ) {
+      int this_level_prio = max_prio - it->second.size();
+      unsigned int this_level_count = 0;
+      for ( std::set< WD * >::const_iterator sit = it->second.begin();
+            sit != it->second.end(); sit++ ) {
+         WD *wd = *sit;
+         wd->setPriority( this_level_prio );
+         if ( sys.getNetwork()->getNodeNum() == 0 ) {
+            wd->tieToLocation( this_level_count % sys.getNumClusterNodes() );
+         }
+         this_level_count += 1;
+      }
+   }
+
+   memory_space_id_t max_mem_id = 0;
+   for( std::set<memory_space_id_t>::const_iterator locit = getActiveMemorySpaces().begin();
+         locit != getActiveMemorySpaces().end(); locit++ ) {
+      std::cerr << "this loc " << *locit << std::endl;
+      max_mem_id = max_mem_id < *locit ? *locit : max_mem_id;
+   }
+   std::vector< std::map< unsigned int, std::set< WD * > > * > memspace_usage_sets( max_mem_id+1, NULL );
+   for( std::set<memory_space_id_t>::const_iterator locit = getActiveMemorySpaces().begin();
+         locit != getActiveMemorySpaces().end(); locit++ ) {
+      memspace_usage_sets[*locit] = NEW std::map< unsigned int, std::set< WD * > >();
+   }
+   std::vector< int > memspace_usage( max_mem_id+1, -1 );
+   for( std::set<memory_space_id_t>::const_iterator locit = getActiveMemorySpaces().begin();
+         locit != getActiveMemorySpaces().end(); locit++ ) {
+      memspace_usage[*locit] = 0;
+   }
+
+
+   for ( std::map<int, std::set< WD * > >::const_reverse_iterator it = _slots.rbegin();
+         it != _slots.rend(); it++ ) {
+
+      {
+         std::cerr << "=== start process slot " << it->first << std::endl;
+
+         /* assign */
+         unsigned int max_wd_count = 0;
+         std::vector< int > this_slot_memspace_usage( memspace_usage );
+         std::vector< std::map< unsigned int, std::set< WD * > > * > this_slot_memspace_usage_sets( memspace_usage_sets );
+         std::set<memory_space_id_t>::const_iterator locs = getActiveMemorySpaces().begin();
+         for ( std::set< WD * >::const_iterator sit = it->second.begin();
+               sit != it->second.end(); sit++ ) {
+            WD *wd = *sit;
+            memory_space_id_t target_loc = (memory_space_id_t) -1;
+            if ( !wd->_schedPredecessorLocs.empty() ) {
+               //FIXME: elaborate
+               std::map<memory_space_id_t, unsigned int>::const_iterator it2 = (*sit)->_schedPredecessorLocs.begin();
+               memory_space_id_t selected = it2->first;
+               unsigned int max_count = it2->second;
+               it2++;
+               while ( it2 != (*sit)->_schedPredecessorLocs.end() ) {
+                  if ( it2->second > max_count ) {
+                     selected = it2->first;
+                  }
+                  it2++;
+               }
+               target_loc = selected;
+            } else {
+               target_loc = *locs;
+               locs++;
+               if ( locs == getActiveMemorySpaces().end() ) {
+                  locs = getActiveMemorySpaces().begin();
+               }
+            }
+            int criticality = wd->getDOSubmit()->getLSS() < 0 ? 0 : wd->getDOSubmit()->getLSS() - wd->getDOSubmit()->getNum() ;
+
+            (*this_slot_memspace_usage_sets[ target_loc ])[criticality].insert( wd );
+            this_slot_memspace_usage[ target_loc ] += 1;
+            max_wd_count = this_slot_memspace_usage[ target_loc ] > (int)max_wd_count ? this_slot_memspace_usage[ target_loc ] : max_wd_count;
+            wd->_schedValues[0] = target_loc;
+         }
+
+         /* balance */
+         int num_wds_per_memspace = it->second.size() / getActiveMemorySpaces().size();
+
+         for ( unsigned int idx = 0; idx < max_mem_id + 1; idx += 1 ) {
+            if ( this_slot_memspace_usage[ idx ] != -1 ) {
+               if ( this_slot_memspace_usage[ idx ] < (num_wds_per_memspace-1) ) {
+                  std::cerr << "slot " << it->first << " should rebalance (ADD) for memspace " << idx << " current assign " << this_slot_memspace_usage[idx] << " max is " << max_wd_count << " target balance is " << num_wds_per_memspace << std::endl;
+                  for (std::map< unsigned int, std::set<WD *> >::reverse_iterator sit = this_slot_memspace_usage_sets[ idx ]->rbegin();
+                        sit != this_slot_memspace_usage_sets[ idx ]->rend(); sit++ ) {
+                     std::cerr << " WDs at level " << sit->first << ": ";
+                     for (std::set<WD *>::const_iterator isit = sit->second.begin(); isit != sit->second.end(); isit++ ) {
+                        std::cerr << (*isit)->getId() << " ";
+                     }
+                     std::cerr << std::endl;
+                  }
+               } else if ( this_slot_memspace_usage[ idx ] > (num_wds_per_memspace+1) ) {
+                  std::cerr << "slot " << it->first << " should rebalance (REMOVE) for memspace " << idx << " current assign " << this_slot_memspace_usage[idx] << " max is " << max_wd_count << " target balance is " << num_wds_per_memspace << std::endl;
+                  for (std::map< unsigned int, std::set<WD *> >::reverse_iterator sit = this_slot_memspace_usage_sets[ idx ]->rbegin();
+                        sit != this_slot_memspace_usage_sets[ idx ]->rend(); sit++ ) {
+                     std::cerr << " WDs at level " << sit->first << ": ";
+                     for (std::set<WD *>::const_iterator isit = sit->second.begin(); isit != sit->second.end(); isit++ ) {
+                        std::cerr << (*isit)->getId() << " ";
+                     }
+                     std::cerr << std::endl;
+                  }
+                  int rebalance_wds = this_slot_memspace_usage[ idx ]- (num_wds_per_memspace+1);
+                  std::cerr << "Should rebalance " << rebalance_wds << " this: " << this_slot_memspace_usage[ idx ] << " target " << num_wds_per_memspace << std::endl;
+                  for (std::map< unsigned int, std::set<WD *> >::reverse_iterator sit = this_slot_memspace_usage_sets[ idx ]->rbegin();
+                        sit != this_slot_memspace_usage_sets[ idx ]->rend() && rebalance_wds > 0; sit++ ) {
+                     for (std::set<WD *>::const_iterator isit = sit->second.begin(); isit != sit->second.end() && rebalance_wds > 0; isit++ ) {
+                        unsigned int start_idx = (idx + 1) % (max_mem_id + 1);
+                        memory_space_id_t found_loc = (*isit)->_schedValues[0];
+                        memory_space_id_t initial_loc = (*isit)->_schedValues[0];
+
+                        for ( memory_space_id_t search_idx = start_idx; search_idx != initial_loc && found_loc == initial_loc; search_idx = (search_idx + 1) % (max_mem_id + 1)) {
+                           if ( this_slot_memspace_usage[ search_idx ] > -1 && this_slot_memspace_usage[ search_idx ] < num_wds_per_memspace + 1 ) {
+                              found_loc = search_idx;
+                           }
+                        }
+                        (*isit)->_schedValues[0] = found_loc;
+                        (*isit)->_schedValues[1] = 0;
+                        std::cerr << "SET SCHED LOC " << found_loc << " FOR WD " << (*isit)->getId() << " this idx " << idx << std::endl;
+                        rebalance_wds -= 1;
+                        this_slot_memspace_usage[ idx ] -= 1;
+                        this_slot_memspace_usage[ found_loc ] += 1;
+                     }
+                  }
+               }
+            }
+         }
+         for( std::set<memory_space_id_t>::const_iterator locit = getActiveMemorySpaces().begin();
+               locit != getActiveMemorySpaces().end(); locit++ ) {
+            memspace_usage_sets[*locit]->clear();
+         }
+         std::cerr << "=== end process slot " << it->first << std::endl;
+      }
+
+      /* propagate to predecessors */
+      for ( std::set< WD * >::const_iterator sit = it->second.begin();
+            sit != it->second.end(); sit++ ) {
+         WD *wd = *sit;
+         // for each predecessor
+         //    insert my loc to the predecessor
+         DOSubmit *d = (*sit)->getDOSubmit();
+         for (DependableObject::DependableObjectVector::const_iterator pit = d->getPredecessors().begin();
+               pit != d->getPredecessors().end(); pit++ ) {
+            WD *predecessor_wd = pit->second->getWD();
+            predecessor_wd->_schedPredecessorLocs[ wd->_schedValues[0] ] += 1;
+         }
+      }
+
+   }
+
+   for ( std::map<int, std::set< WD * > >::const_iterator it = _slots.begin();
+         it != _slots.end(); it++ ) {
+       std::cerr << "["<< it->first << "]: ";
+       for ( std::set< WD * >::const_iterator sit = it->second.begin();
+             sit != it->second.end(); sit++ ) {
+          std::cerr << "[" << (*sit)->getId() /* << ", " << (*sit)->getDOSubmit()->getNum() << ", " << (*sit)->getDOSubmit()->getLSS() << " /" */<< " " << (*sit)->_schedValues[0] << ( (*sit)->_schedValues[1] == 0 ? "*" : "" ) << " { ";
+          for (std::map<memory_space_id_t, unsigned int>::const_iterator it2 = (*sit)->_schedPredecessorLocs.begin(); it2 != (*sit)->_schedPredecessorLocs.end(); it2++)
+             std::cerr << it2->first << "," << it2->second << " ";
+          std::cerr << "}] ";
+       }
+       std::cerr << std::endl;
+   }
+
+   for ( std::map<int, std::set< WD * > >::const_iterator it = _slots.begin();
+         it != _slots.end(); it++ ) {
+      int this_level_prio = max_prio - it->second.size();
+      unsigned int this_level_count = 0;
+      for ( std::set< WD * >::const_iterator sit = it->second.begin();
+            sit != it->second.end(); sit++ ) {
+         WD *wd = *sit;
+         wd->setPriority( this_level_prio );
+         if ( sys.getNetwork()->getNodeNum() == 0 ) {
+            wd->tieToLocation( wd->_schedValues[0] );
+         }
+         this_level_count += 1;
+      }
+   }
+   _slots.clear();
+   }
 }

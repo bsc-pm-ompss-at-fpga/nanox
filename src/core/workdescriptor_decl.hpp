@@ -281,7 +281,11 @@ typedef std::set<const Device *>  DeviceList;
          void const                   *_remoteAddr;
          void                         *_callback;
          void                         *_arguments;
+         std::vector<WorkDescriptor *>*_submittedWDs;
+         bool                          _reachedTaskwait;
       public:
+         int                           _schedValues[8];
+         std::map<memory_space_id_t,unsigned int>   _schedPredecessorLocs;
          MemController                 _mcontrol;
       private: /* private methods */
          /*! \brief WorkDescriptor copy assignment operator (private)
@@ -721,7 +725,6 @@ typedef std::set<const Device *>  DeviceList;
                  size_t array_descriptor_size, void (*p_init)( void *, void * ),
                  void (*p_reducer)( void *, void * ), void (*p_reducer_orig_var)( void *, void * ) );
 
-         bool removeTaskReduction ( void *p_dep, bool del = false );
          void removeAllTaskReductions ( void );
 
          void * getTaskReductionThreadStorage( void *p_addr, size_t id );
@@ -736,7 +739,7 @@ typedef std::set<const Device *>  DeviceList;
 
          void setRemoteAddr( void const *addr );
          void const *getRemoteAddr() const;
-         
+
          /*! \brief Sets a WorkDescriptor to an invalid state or not depending on the flag value.
              If invalid (flag = true) it propagates upwards to the ancestors until
              no more ancestors exist or a recoverable task is found.
@@ -763,6 +766,7 @@ typedef std::set<const Device *>  DeviceList;
          //! \brief Returns the concurrency level of the WD considering
          //         the commutative access map that the caller provides.
          int getConcurrencyLevel( std::map<WD**, WD*> &comm_accesses ) const;
+         void addPresubmittedWDs( unsigned int numWDs, WD **wds );
    };
 
    typedef class WorkDescriptor WD;

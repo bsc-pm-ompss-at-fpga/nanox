@@ -99,8 +99,8 @@ devinclude_HEADERS = \
 	bitcounter.hpp \
 	regiondict_decl.hpp  \
 	regiondict.hpp  \
-	newregiondirectory.hpp  \
-	newregiondirectory_decl.hpp  \
+	regiondirectory.hpp  \
+	regiondirectory_decl.hpp  \
 	regioncache_fwd.hpp  \
 	regioncache_decl.hpp  \
 	regioncache.hpp  \
@@ -239,9 +239,9 @@ common_sources=\
 	regiondict_decl.hpp  \
 	regiondict.hpp  \
 	regiondict.cpp  \
-	newregiondirectory.cpp  \
-	newregiondirectory.hpp  \
-	newregiondirectory_decl.hpp  \
+	regiondirectory.cpp  \
+	regiondirectory.hpp  \
+	regiondirectory_decl.hpp  \
 	regioncache_fwd.hpp  \
 	regioncache_decl.hpp  \
 	regioncache.hpp  \
@@ -313,7 +313,7 @@ debug_LTLIBRARIES+=debug/libnanox.la
 
 debug_libnanox_la_CPPFLAGS=$(common_includes) $(common_debug_CPPFLAGS) @dlbinc@
 debug_libnanox_la_CXXFLAGS=$(common_includes) $(common_debug_CXXFLAGS)
-debug_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/debug
+debug_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) @dlblib@ -Wl,-rpath,$(libdir)/debug
 debug_libnanox_la_LIBADD=$(common_libadd) @dlb_dbg@ @nanos_config_libs_debug@
 debug_libnanox_la_SOURCES=$(common_sources)
 debug_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_debug@
@@ -324,7 +324,7 @@ instrumentation_debug_LTLIBRARIES+=instrumentation-debug/libnanox.la
 
 instrumentation_debug_libnanox_la_CPPFLAGS=$(common_includes) $(common_instrumentation_debug_CPPFLAGS) @dlbinc@
 instrumentation_debug_libnanox_la_CXXFLAGS=$(common_includes) $(common_instrumentation_debug_CXXFLAGS)
-instrumentation_debug_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation-debug
+instrumentation_debug_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation-debug
 instrumentation_debug_libnanox_la_LIBADD=$(common_libadd) @dlb_instr_dbg@ @nanos_config_libs_instrumentation_debug@
 instrumentation_debug_libnanox_la_SOURCES=$(common_sources) $(instr_sources)
 instrumentation_debug_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_instrumentation_debug@
@@ -335,7 +335,7 @@ instrumentation_LTLIBRARIES+=instrumentation/libnanox.la
 
 instrumentation_libnanox_la_CPPFLAGS=$(common_includes) $(common_instrumentation_CPPFLAGS) @dlbinc@
 instrumentation_libnanox_la_CXXFLAGS=$(common_includes) $(common_instrumentation_CXXFLAGS)
-instrumentation_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation
+instrumentation_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) @dlblib@ -Wl,-rpath,$(libdir)/instrumentation
 instrumentation_libnanox_la_LIBADD=$(common_libadd) @dlb_instr@ @nanos_config_libs_instrumentation@
 instrumentation_libnanox_la_SOURCES=$(common_sources) $(instr_sources)
 instrumentation_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_instrumentation@
@@ -346,7 +346,7 @@ performance_LTLIBRARIES+=performance/libnanox.la
 
 performance_libnanox_la_CPPFLAGS=$(common_includes) $(common_performance_CPPFLAGS) @dlbinc@
 performance_libnanox_la_CXXFLAGS=$(common_includes) $(common_performance_CXXFLAGS)
-performance_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) $(ignore_muldefs) @dlblib@ -Wl,-rpath,$(libdir)/performance
+performance_libnanox_la_LDFLAGS=$(AM_LDFLAGS) $(version_flags) @dlblib@ -Wl,-rpath,$(libdir)/performance
 performance_libnanox_la_LIBADD=$(common_libadd) @dlb@ @nanos_config_libs_performance@
 performance_libnanox_la_SOURCES=$(common_sources)
 performance_libnanox_la_DEPENDENCIES=$(common_libadd) @nanos_config_libs_performance@

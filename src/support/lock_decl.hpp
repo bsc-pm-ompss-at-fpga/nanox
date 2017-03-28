@@ -40,10 +40,22 @@ namespace nanos {
          // destructor
          ~Lock() {}
 
-         void acquire ( void );
-         void acquire_noinst ( void );
-         bool tryAcquire ( void );
-         void release ( void );
+         void acquire();
+
+         void acquire_noinst();
+
+         // compatibility
+         void lock();
+
+         bool tryAcquire();
+
+         // compatibility
+         bool try_lock();
+
+         void release();
+
+         // compatibility
+         void unlock();
 
          state_t operator* () const;
 
@@ -52,6 +64,10 @@ namespace nanos {
          void operator++ ( int val );
 
          void operator-- ( int val );
+
+         friend bool operator== ( const Lock& lhs, const Lock& rhs );
+
+         friend bool operator!= ( const Lock& lhs, const Lock& rhs );
    };
 
    class LockBlock
@@ -95,6 +111,20 @@ namespace nanos {
      public:
        SyncLockBlock ( Lock & lock );
        ~SyncLockBlock ( );
+   };
+
+   class DoubleLockBlock
+   {
+      private:
+         Lock & _lock1;
+         Lock & _lock2;
+
+         // disable copy-constructor
+         explicit DoubleLockBlock ( const DoubleLockBlock & );
+
+      public:
+         DoubleLockBlock ( Lock & lock1, Lock & lock2 );
+         ~DoubleLockBlock ( );
    };
 
 } // namespace nanos
