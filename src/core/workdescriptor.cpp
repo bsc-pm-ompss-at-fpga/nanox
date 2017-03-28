@@ -234,7 +234,7 @@ bool WorkDescriptor::canRunIn( const Device &device , const ProcessingElement * 
    unsigned int i;
    for ( i = 0; i < _numDevices; i++ ) {
        if (_devices[i]->isCompatible( device )){
-            return true;
+            return true;           
        }
    }
 

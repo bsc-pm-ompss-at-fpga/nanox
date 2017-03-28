@@ -240,14 +240,9 @@ void ClusterPlugin::startSupportThreads() {
    if ( _gasnetApi->getNumNodes() > 1 )
    {
       if ( _gasnetApi->getNodeNum() == 0 ) {
-         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker(
-                     _gasnetApi->getNumNodes() - 1,
-                     (ProcessingElement **) &(*_remoteNodes)[0],
-                     ( DD::work_fct ) ClusterThread::workerClusterLoop ) );
+         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker( _gasnetApi->getNumNodes() - 1, (ProcessingElement **) &(*_remoteNodes)[0] ) );
       } else {
-         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker(
-                     0, NULL,
-                     ( DD::work_fct )ClusterThread::workerClusterLoop ) );
+         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker( 0, NULL ) );
          if ( sys.getPMInterface().getInternalDataSize() > 0 )
             _clusterThread->getThreadWD().setInternalData(NEW char[sys.getPMInterface().getInternalDataSize()]);
          //_pmInterface->setupWD( smpRepThd->getThreadWD() );
@@ -307,7 +302,7 @@ void ClusterPlugin::finalize() {
 }
 
 
-void ClusterPlugin::addPEs( PEList &pes ) const {
+void ClusterPlugin::addPEs( PEMap &pes ) const {
    if ( _remoteNodes ) {
       std::vector<ClusterNode *>::const_iterator it = _remoteNodes->begin();
       //NOT ANYMORE: it++; //position 0 is null, node 0 does not have a ClusterNode object

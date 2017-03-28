@@ -29,7 +29,7 @@
 #include <iostream>
 
 namespace nanos {
-
+   
    /** \brief Base class for specific architecture plugins
     */
    class ArchPlugin : public Plugin
@@ -76,7 +76,7 @@ namespace nanos {
 
          virtual void initialize();
          virtual void finalize();
-         virtual void addPEs( PEList &pes ) const;
+         virtual void addPEs( PEMap &pes ) const;
          virtual void addDevices( DeviceList &devices ) const;
          virtual void startSupportThreads();
          virtual void startWorkerThreads( std::map<unsigned int, BaseThread *> &workers );

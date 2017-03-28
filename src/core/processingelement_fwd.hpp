@@ -26,7 +26,7 @@ namespace nanos {
 
    class ProcessingElement;
 
-   typedef TR1::unordered_map<unsigned int, ProcessingElement *> PEList;
+   typedef TR1::unordered_map<unsigned int, ProcessingElement *> PEMap;
 
 } // namespace nanos
 
