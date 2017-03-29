@@ -83,7 +83,7 @@ void FPGAWorker::FPGAWorkerLoop() {
 
             Scheduler::prePreOutlineWork(wd);
             if ( Scheduler::tryPreOutlineWork(wd) ) {
-               currentThread->preOutlineWorkDependent( *wd );
+               currentThread->runningOn()->preOutlineWorkDependent( *wd );
             }
             //TODO: may need to increment copies version number here
             if ( wd->isInputDataReady() ) {

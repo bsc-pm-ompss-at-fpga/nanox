@@ -74,6 +74,14 @@ namespace ext {
             unsigned int getNodeNum() const;
 
             static void clusterWorker();
+
+            virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
+            virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
+            virtual bool inlineWorkDependent (WD &work);
+            virtual void switchTo( WD *work, SchedulerHelper *helper ) {}
+            virtual void exitTo( WD *work, SchedulerHelper *helper ) {}
+            virtual void outlineWorkDependent (WD &work);
+            virtual void preOutlineWorkDependent (WD &work);
       };
 } // namespace ext
 } // namespace nanos

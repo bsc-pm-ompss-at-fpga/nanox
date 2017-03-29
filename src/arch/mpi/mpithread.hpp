@@ -77,8 +77,6 @@ namespace ext {
 
          bool switchToPE(int rank, int uuid);
 
-         virtual bool inlineWorkDependent( WD &work );
-
          virtual bool canBlock() { return false;}
 
          mpi::RemoteSpawn& getSpawnGroup() { return *_spawnGroup; }
@@ -93,4 +91,3 @@ namespace ext {
 } // namespace nanos
 
 #endif // _NANOS_MPI_THREAD
-

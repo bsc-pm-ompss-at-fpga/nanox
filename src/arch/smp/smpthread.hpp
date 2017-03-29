@@ -43,7 +43,7 @@ namespace ext {
          // disable copy constructor and assignment operator
          SMPThread( const SMPThread &th );
          const SMPThread & operator= ( const SMPThread &th );
-        
+
       public:
          // constructor
          SMPThread( WD &w, PE *pe, SMPProcessor *core ) :
@@ -60,15 +60,6 @@ namespace ext {
 
          virtual void initializeDependent( void ) {}
          virtual void runDependent ( void );
-
-         virtual bool inlineWorkDependent( WD &work );
-         virtual void preOutlineWorkDependent( WD &work ) { fatal( "SMPThread does not support preOutlineWorkDependent()" ); }
-         virtual void outlineWorkDependent( WD &work ) { fatal( "SMPThread does not support outlineWorkDependent()" ); }
-         virtual void switchTo( WD *work, SchedulerHelper *helper );
-         virtual void exitTo( WD *work, SchedulerHelper *helper );
-
-         virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
-         virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {};
 
          virtual void idle( bool debug = false );
 

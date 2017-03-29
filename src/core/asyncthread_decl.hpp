@@ -51,7 +51,7 @@ namespace nanos {
          unsigned int      _recursiveCounter;
 
          // Previous running WD, used for instrumentation only
-         WD *              _previousWD; 
+         WD *              _previousWD;
 
       private:
         /*! \brief AsyncThread default constructor

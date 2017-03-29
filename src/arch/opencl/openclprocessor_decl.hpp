@@ -44,7 +44,7 @@ namespace ext {
 
 class OpenCLAdapter
 {
-public: 
+public:
    typedef std::map<uint32_t, cl_program> ProgramCache;
    typedef std::map<std::pair<uint64_t,size_t>, cl_mem> BufferCache;
 
@@ -76,7 +76,7 @@ public:
    cl_mem createBuffer(cl_mem parentBuf, uint64_t offset, size_t size, void* hostPtr);
    void freeAddr(void* addr );
    cl_int copyInBuffer( cl_mem buf, cl_mem remoteBuffer, size_t offset_buff, size_t offset_remotebuff, size_t size, cl_event& ev );
-   
+
    // Low-level program builder. Lifetime of prog is under caller
    // responsability.
    cl_int buildProgram( const char *src,
@@ -96,15 +96,15 @@ public:
    // Get program from cache, increasing reference-counting.
    void* getProgram( const char *src,
                       const char *compilerOpts );
-   
-   void* createKernel(const char* kernel_name, const char* opencl_code, const char* compiler_opts);    
+
+   void* createKernel(const char* kernel_name, const char* opencl_code, const char* compiler_opts);
 
    // Return program to the cache, decreasing reference-counting.
    cl_int putProgram( cl_program &prog );
 
-   void execKernel( void* oclKernel, 
-                        int workDim, 
-                        size_t* ndrLocalSize, 
+   void execKernel( void* oclKernel,
+                        int workDim,
+                        size_t* ndrLocalSize,
                         size_t* ndrGlobalSize);
 
    /**
@@ -154,11 +154,11 @@ public:
 
    // TODO: replace with new APIs.
    size_t getGlobalSize();
-   
+
    std::string getDeviceName();
    std::string getDeviceVendor();
-   
-   bool outOfOrderSupport(); 
+
+   bool outOfOrderSupport();
 
 public:
    cl_int getDeviceType( cl_device_type &deviceType )
@@ -172,15 +172,15 @@ public:
    cl_int getSizeTypeMax( unsigned long long &sizeTypeMax );
 
    cl_int getPreferredWorkGroupSizeMultiple( size_t &preferredWorkGroupSizeMultiple );
-   
+
    bool getPreallocatesWholeMemory(){
        return _preallocateWholeMemory;
    }
-   
+
    bool getUseHostPtr(){
        return _useHostPtrs;
    }
-   
+
    void setPreallocatedWholeMemory(bool val){
       //_preallocateWholeMemory=val;
    }
@@ -188,7 +188,7 @@ public:
    ProgramCache& getProgCache() {
       return _progCache;
    }
-   
+
    cl_context& getContext() {
       return _ctx;
    }
@@ -278,20 +278,20 @@ private:
 
 class OpenCLProcessor : public ProcessingElement
 {
-public:        
+public:
    OpenCLProcessor( int devId, memory_space_id_t memId, SMPProcessor *core, SeparateMemoryAddressSpace &mem );
 
    OpenCLProcessor( const OpenCLProcessor &pe ); // Do not implement.
    OpenCLProcessor &operator=( const OpenCLProcessor &pe ); // Do not implement.
 
 public:
-    
+
    void initialize();
 
    WD &getWorkerWD() const;
 
    WD &getMasterWD() const;
-    
+
    virtual WD & getMultiWorkerWD () const
    {
       fatal( "getMultiWorkerWD: OpenCLProcessor is not allowed to create MultiThreads" );
@@ -301,7 +301,7 @@ public:
    {
       fatal( "OpenCLNode is not allowed to create MultiThreads" );
    }
-    
+
 
    bool supportsUserLevelThreads () const { return false; }
 
@@ -310,41 +310,41 @@ public:
    OpenCLAdapter::ProgramCache& getProgCache() {
        return _openclAdapter.getProgCache();
    }
-   
+
    // Get program from cache, increasing reference-counting.
    void* createKernel( const char* kernel_name,
-                       const char* opencl_code, 
+                       const char* opencl_code,
                        const char* compiler_opts){
        return _openclAdapter.createKernel(kernel_name,opencl_code, compiler_opts);
    }
-   
+
    void setKernelBufferArg(void* openclKernel, int argNum,const void* pointer);
-   
-   void execKernel(void* openclKernel, 
-                        int workDim, 
-                        size_t* ndrLocalSize, 
+
+   void execKernel(void* openclKernel,
+                        int workDim,
+                        size_t* ndrLocalSize,
                         size_t* ndrGlobalSize);
-   
+
    void profileKernel(void* openclKernel,
                         int workDim,
                         size_t* ndrGlobalSize);
 
    void setKernelArg(void* opencl_kernel, int arg_num, size_t size,const void* pointer);
-   
+
    void printStats();
 
    /**
     * @brief This shows the kernel profiling info and some kernel properties
     */
    void printProfiling();
-      
+
    void cleanUp();
-     
+
    void *allocate( size_t size, uint64_t tag, uint64_t offset )
    {
       return _cache.allocate( size, tag, offset );
    }
-   
+
    void *realloc( void *address, size_t size, size_t ceSize )
    {
       return _cache.reallocate( address, size, ceSize );
@@ -364,47 +364,54 @@ public:
    {
       return _cache.copyOut( hostAddr, devAddr, size, ops );
    }
-   
+
    cl_mem getBuffer( void *localSrc, size_t size )
    {
       return _cache.getBuffer( localSrc, size );
-   } 
-   
+   }
+
    bool copyInBuffer( void *localSrc, cl_mem remoteBuffer, size_t size, DeviceOps *ops)
    {
       return _cache.copyInBuffer( localSrc, remoteBuffer, size, ops );
    }
-   
-    cl_context& getContext() {    
+
+    cl_context& getContext() {
         return _openclAdapter.getContext();
     }
 
     cl_int getOpenCLDeviceType( cl_device_type &deviceType ){
        return _openclAdapter.getDeviceType(deviceType);
     }
-    
+
     static SharedMemAllocator& getSharedMemAllocator() {
        return _shmemAllocator;
     }
-   
-    void* allocateSharedMemory( size_t size );   
-   
+
+    void* allocateSharedMemory( size_t size );
+
     void freeSharedMemory( void* addr );
 
-    
+
     SimpleAllocator& getCacheAllocator(){
         return _cache.getAllocator();
     }
-    
+
     SimpleAllocator const &getConstCacheAllocator() const {
         return _cache.getConstAllocator();
     }
-    
+
     BaseThread * getOpenCLThread()
     {
        return _thread;
     }
 
+    virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
+    virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
+    virtual bool inlineWorkDependent (WD &work);
+    virtual void switchTo( WD *work, SchedulerHelper *helper );
+    virtual void exitTo( WD *work, SchedulerHelper *helper );
+    virtual void outlineWorkDependent( WD &work ) { fatal( "OpenCLProcessor does not support outlineWorkDependent()" ); }
+    virtual void preOutlineWorkDependent( WD &work ) { fatal( "OpenCLProcessor does not support preOutlineWorkDependent()" ); }
 
 private:
    SMPProcessor *_core;
@@ -413,7 +420,7 @@ private:
    OpenCLCache _cache;
    int _devId;
    static SharedMemAllocator _shmemAllocator;
-    
+
 
 };
 

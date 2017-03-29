@@ -32,7 +32,6 @@
 #include "basethread.hpp"
 #include "schedule.hpp"
 
-#include "smp_ult.hpp"
 #include "smpprocessor.hpp"
 
 #include "system.hpp"
@@ -154,61 +153,6 @@ void SMPThread::wakeup()
    _pthread.condSignal();
 }
 
-// This is executed in between switching stacks
-void SMPThread::switchHelperDependent ( WD *oldWD, WD *newWD, void *oldState  )
-{
-   SMPDD & dd = ( SMPDD & )oldWD->getActiveDevice();
-   dd.setState( (intptr_t *) oldState );
-}
-
-bool SMPThread::inlineWorkDependent ( WD &wd )
-{
-   // Now the WD will be inminently run
-   wd.start(WD::IsNotAUserLevelThread);
-
-   SMPDD &dd = ( SMPDD & )wd.getActiveDevice();
-
-   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("user-code") );
-   NANOS_INSTRUMENT ( nanos_event_value_t val = wd.getId() );
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenStateAndBurst ( NANOS_RUNNING, key, val ) );
-
-   //if ( sys.getNetwork()->getNodeNum() > 0 ) std::cerr << "Starting wd " << wd.getId() << std::endl;
-   
-   dd.execute( wd );
-
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseStateAndBurst ( key, val ) );
-   return true;
-}
-
-void SMPThread::switchTo ( WD *wd, SchedulerHelper *helper )
-{
-   // wd MUST have an active SMP Device when it gets here
-   ensure( wd->hasActiveDevice(),"WD has no active SMP device" );
-   SMPDD &dd = ( SMPDD & )wd->getActiveDevice();
-   ensure( dd.hasStack(), "DD has no stack for ULT");
-
-   ::switchStacks(
-       ( void * ) getCurrentWD(),
-       ( void * ) wd,
-       ( void * ) dd.getState(),
-       ( void * ) helper );
-}
-
-void SMPThread::exitTo ( WD *wd, SchedulerHelper *helper)
-{
-   // wd MUST have an active SMP Device when it gets here
-   ensure( wd->hasActiveDevice(),"WD has no active SMP device" );
-   SMPDD &dd = ( SMPDD & )wd->getActiveDevice();
-   ensure( dd.hasStack(), "DD has no stack for ULT");
-
-   //TODO: optimize... we don't really need to save a context in this case
-   ::switchStacks(
-      ( void * ) getCurrentWD(),
-      ( void * ) wd,
-      ( void * ) dd.getState(),
-      ( void * ) helper );
-}
-
 int SMPThread::getCpuId() const {
    return _pthread.getCpuId();
 }
@@ -224,7 +168,7 @@ SMPMultiThread::SMPMultiThread( WD &w, SMPProcessor *pe,
    }
 }
 
-void SMPMultiThread::addThreadsFromPEs(unsigned int representingPEsCount, PE **representingPEs) 
+void SMPMultiThread::addThreadsFromPEs(unsigned int representingPEsCount, PE **representingPEs)
 {
    _threads.reserve( representingPEsCount );
    for ( unsigned int i = 0; i < representingPEsCount; i++ )

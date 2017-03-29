@@ -113,20 +113,6 @@ void GPUThread::wakeup()
    // For convenience we may call wakeup for all threads, just ignore then
 }
 
-void GPUThread::switchTo( WD *work, SchedulerHelper *helper )
-{
-   fatal("A GPUThread cannot call switchTo function.");
-}
-void GPUThread::exitTo( WD *work, SchedulerHelper *helper )
-{
-   fatal("A GPUThread cannot call exitTo function.");
-}
-
-void GPUThread::switchHelperDependent( WD* oldWD, WD* newWD, void *arg )
-{
-   fatal("A GPUThread cannot call switchHelperDependent function.");
-}
-
 void GPUThread::initializeDependent ()
 {
 
@@ -553,4 +539,3 @@ void GPUThread::closeAsyncOutputEvent ( size_t size )
    //setCurrentWD( *oldwd );
 #endif
 }
-

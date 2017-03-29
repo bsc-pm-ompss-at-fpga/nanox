@@ -51,7 +51,7 @@ namespace ext {
              _pendingCopiesOut = NEW GPUMemoryTransferOutSyncList();
           }
 
-          ~GPUProcessorTransfers() 
+          ~GPUProcessorTransfers()
           {
              delete _pendingCopiesIn;
              delete _pendingCopiesOut;
@@ -212,6 +212,13 @@ namespace ext {
          BaseThread * getUnassignedThread();
 #endif
 
+         virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
+         virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
+         virtual bool inlineWorkDependent (WD &work);
+         virtual void switchTo( WD *work, SchedulerHelper *helper );
+         virtual void exitTo( WD *work, SchedulerHelper *helper );
+         virtual void outlineWorkDependent( WD &work ) { fatal( "GPUThread does not support outlineWorkDependent()" ); }
+         virtual void preOutlineWorkDependent( WD &work ) { fatal( "GPUThread does not support preOutlineWorkDependent()" ); }
    };
 
 } // namespace ext

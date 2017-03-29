@@ -114,7 +114,7 @@ void FPGAListener::callback( BaseThread* self )
       if ( wd ) {
          Scheduler::prePreOutlineWork(wd);
          if ( Scheduler::tryPreOutlineWork(wd) ) {
-            thread->preOutlineWorkDependent( *wd );
+            thread->runningOn()->preOutlineWorkDependent( *wd );
          }
          //TODO: may need to increment copies version number here
          if ( wd->isInputDataReady() ) {

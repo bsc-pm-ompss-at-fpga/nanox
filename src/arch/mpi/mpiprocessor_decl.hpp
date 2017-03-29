@@ -42,7 +42,7 @@ namespace ext {
             static size_t _threadsStackSize;
             static std::string _mpiNodeType;
             static size_t _workers_per_process;
-            
+
             //MPI Node data
             static size_t _cacheDefaultSize;
             static System::CachePolicyType _cachePolicy;
@@ -50,17 +50,17 @@ namespace ext {
             static std::string _mpiExecFile;
             static std::string _mpiLauncherFile;
             static std::string _mpiHosts;
-            static std::string _mpiHostsFile;    
-            static std::string _mpiControlFile;   
+            static std::string _mpiHostsFile;
+            static std::string _mpiControlFile;
             static bool _useMultiThread;
             static bool _allocWide;
             static int _numPrevPEs;
             static int _numFreeCores;
             static int _currPE;
-            static size_t _alignThreshold;          
-            static size_t _alignment;          
+            static size_t _alignThreshold;
+            static size_t _alignment;
             static size_t _maxWorkers;
-            
+
             MPI_Comm _communicator;
             int _rank;
             bool _owner; //if we are the owner (process in charge of freeing the remote process)
@@ -80,7 +80,7 @@ namespace ext {
 
             SMPProcessor* _core;
             Lock _peLock;
-            
+
 
             // disable copy constructor and assignment operator
             MPIProcessor(const MPIProcessor &pe);
@@ -88,7 +88,7 @@ namespace ext {
 
 
         public:
-            
+
             //MPIProcessor( int id ) : PE( id, &MPI ) {}
             MPIProcessor( MPI_Comm communicator, int rank, bool owned, MPI_Comm commOfParents, SMPProcessor* core, memory_space_id_t memId );
 
@@ -99,42 +99,42 @@ namespace ext {
 
             static System::CachePolicyType getCachePolicy();
             static std::string getMpiHosts();
-            
+
             static std::string getMpiHostsFile();
-            
+
             static std::string getMpiControlFile();
-            
+
             static std::string getMpiExecFile();
 
             static std::string getMpiLauncherFile();
-            
+
             static size_t getAlignment();
-            
-            static size_t getAlignThreshold();            
+
+            static size_t getAlignThreshold();
 
             static bool getAllocWide();
 
             static size_t getMaxWorkers();
 
             static bool isUseMultiThread();
-            /* End config options*/           
-            
+            /* End config options*/
+
             MPI_Comm getCommunicator() const;
 
             void setCommunicator( MPI_Comm comm );
-            
+
             MPI_Comm getCommOfParents() const;
- 
+
             int getRank() const;
-            
+
             bool isOwner() const;
-            
+
             void setOwner(bool owner);
-            
+
             bool getHasWorkerThread() const;
-            
+
             void setHasWorkerThread(bool hwt);
-            
+
             bool getShared() const;
 
             WD* getCurrExecutingWd() const;
@@ -144,22 +144,22 @@ namespace ext {
             WD* freeCurrExecutingWd();
 
             bool isBusy();
-            
+
             void setPphList(int* list);
-            
+
             int* getPphList();
-                      
+
             /**
              * Try to reserve this PE, if the one who reserves it is the same
             */
             bool acquire(int dduid);
 
             void release();
-            
+
             int getCurrExecutingDD() const;
 
             void setCurrExecutingDD(int currExecutingDD);
-            
+
             void appendToPendingRequests( mpi::request const& req );
 
             /**
@@ -190,7 +190,7 @@ namespace ext {
             mpi::persistent_request& getTaskEndRequest();
 
             MPIThread& startMPIThread(WD* work);
-            
+
             WD & getWorkerWD() const;
             WD & getMasterWD() const;
 
@@ -202,7 +202,7 @@ namespace ext {
                fatal( "getMultiWorkerWD: GPUProcessor is not allowed to create MultiThreads" );
             }
             BaseThread & createThread ( WorkDescriptor &wd, SMPMultiThread *parent );
-            
+
             virtual BaseThread & createMultiThread ( WorkDescriptor &wd, unsigned int numPEs, PE **repPEs )
             {
                fatal( "ClusterNode is not allowed to create MultiThreads" );
@@ -211,7 +211,15 @@ namespace ext {
             bool supportsUserLevelThreads() const {
                 return false;
             }
-        };   
+
+            virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
+            virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg );
+            virtual bool inlineWorkDependent (WD &work);
+            virtual void switchTo( WD *work, SchedulerHelper *helper );
+            virtual void exitTo( WD *work, SchedulerHelper *helper );
+            virtual void outlineWorkDependent (WD &work);
+            virtual void preOutlineWorkDependent (WD &work);
+        };
 
         // Macros to instrument the code and make it cleaner
         #define NANOS_MPI_CREATE_IN_MPI_RUNTIME_EVENT(x)   NANOS_INSTRUMENT( \

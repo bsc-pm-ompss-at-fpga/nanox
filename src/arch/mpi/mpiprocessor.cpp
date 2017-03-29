@@ -267,3 +267,28 @@ WD* MPIProcessor::freeCurrExecutingWd() {
     return wd;
 }
 
+bool MPIProcessor::inlineWorkDependent(WD &wd) {
+    // Now the WD will be inminently run
+    wd.start(WD::IsNotAUserLevelThread);
+
+    MPIDD &dd = (MPIDD &) wd.getActiveDevice();
+    NANOS_INSTRUMENT(static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("user-code"));
+    NANOS_INSTRUMENT(nanos_event_value_t val = wd.getId());
+    NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenStateAndBurst(NANOS_RUNNING, key, val));
+
+    // Set up MPIProcessor and issue taskEnd message
+    // reception.
+    MPIThread * thread = ( MPIThread * )( myThread );
+    ensure( thread->getSpawnGroup().getRemoteProcessors().at(_currentPE) == this, "Current MPI Processor of MPI Thread doesn't match" );
+    setCurrExecutingWd(&wd);
+    getTaskEndRequest().start();
+
+    (dd.getWorkFct())(wd.getData());
+
+    //Check if any task finished
+    thread->getSpawnGroup().registerTaskInit();
+    thread->getSpawnGroup().waitFinishedTasks();
+
+    NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseStateAndBurst(key, val));
+    return false;
+}

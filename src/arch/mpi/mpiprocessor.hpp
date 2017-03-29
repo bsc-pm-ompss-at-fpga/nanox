@@ -154,6 +154,30 @@ inline void MPIProcessor::appendToPendingRequests( mpi::request const& req ) {
     _pendingReqs.push_back(req);
 }
 
+void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {
+   _core->switchHelperDependent( oldWD, newWD, arg );
+}
+
+void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {
+   _core->exitHelperDependent( oldWD, newWD, arg );
+}
+
+void switchTo( WD *work, SchedulerHelper *helper ) {
+   _core->switchTo( work, helper );
+}
+
+void exitTo( WD *work, SchedulerHelper *helper ) {
+   _core->exitTo( work, helper );
+}
+
+void outlineWorkDependent (WD &work) {
+   _core->outlineWorkDependent( work );
+}
+
+void preOutlineWorkDependent (WD &work) {
+   _core->preOutlineWorkDependent( work );
+}
+
 } // namespace ext
 } // namespace nanos
 

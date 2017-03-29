@@ -58,34 +58,6 @@ void FPGAThread::runDependent()
    ( ( FPGAProcessor * ) this->runningOn() )->cleanUp();
 }
 
-bool FPGAThread::inlineWorkDependent( WD &wd )
-{
-   verbose( "fpga nlineWorkDependent" );
-
-   wd.start( WD::IsNotAUserLevelThread );
-   //FPGAProcessor* fpga = ( FPGAProcessor * ) this->runningOn();
-
-   FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
-   ( dd.getWorkFct() )( wd.getData() );
-
-   return true;
-}
-
-void FPGAThread::preOutlineWorkDependent ( WD &wd ) {
-   wd.preStart(WorkDescriptor::IsNotAUserLevelThread);
-}
-
-void FPGAThread::outlineWorkDependent ( WD &wd ) {
-   //wd.start( WD::IsNotAUserLevelThread );
-   FPGAProcessor* fpga = ( FPGAProcessor * ) this->runningOn();
-
-   fpga->createAndSubmitTask( wd );
-
-   //set flag to allow new opdate
-   FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
-   ( dd.getWorkFct() )( wd.getData() );
-}
-
 void FPGAThread::yield() {
    verbose("FPGA yield");
 
@@ -236,10 +208,6 @@ void FPGAThread::submitInstrSync( WD *wd ) {
    _instrSyncHandles[ wd ] = handle;
 }
 #endif
-void FPGAThread::switchTo( WD *work, SchedulerHelper *helper ) {}
-void FPGAThread::exitTo( WD *work, SchedulerHelper *helper ) {}
-void FPGAThread::switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
-void FPGAThread::exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
 void FPGAThread::switchToNextThread() {}
 
 BaseThread *FPGAThread::getNextThread() {

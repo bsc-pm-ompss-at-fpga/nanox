@@ -1523,12 +1523,12 @@ namespace nanos {
                      actualClusterThread->addRunningWD( 0, wd );
                      Scheduler::preOutlineWorkWithThread( actualClusterThread, wd );
 
-                     actualClusterThread->preOutlineWorkDependent( *wd );
+                     actualClusterThread->runningOn()->preOutlineWorkDependent( *wd );
                      //(*myThread->_file) << myThread->getId() << " helped SICOPYNOMASTERINIT ai LAUNCH with wd " << wd->getId() << " to node " << selectedNode << std::endl;
                      //actualClusterThread->runningOn()->waitInputs( *wd );
                      while( !wd->isInputDataReady() ) {
                      }
-                     actualClusterThread->outlineWorkDependent(*wd);
+                     actualClusterThread->runningOn()->outlineWorkDependent(*wd);
                      //(*myThread->_file) << myThread->getId() << " helped SICOPYNOMASTERINIT ai WDONE LAUNCH with wd " << wd->getId() << " to node " << selectedNode << std::endl;
 
                      data._helped++;
@@ -1556,12 +1556,12 @@ namespace nanos {
                      //(*myThread->_file) << "ore outline with thd "<<std::endl;
                      Scheduler::preOutlineWorkWithThread( actualClusterThread, wd );
                      //(*myThread->_file) << "start wd at "<< selectedNode <<std::endl;
-                     actualClusterThread->preOutlineWorkDependent( *wd );
+                     actualClusterThread->runningOn()->preOutlineWorkDependent( *wd );
                      //(*myThread->_file) << myThread->getId() << " helped SICOPYNOMASTERINIT REMOTE COPY AND LAUNCH with wd " << wd->getId() << " to node " << selectedNode << std::endl;
                      //actualClusterThread->runningOn()->waitInputs( *wd );
                      while( !wd->isInputDataReady() ) {
                      }
-                     actualClusterThread->outlineWorkDependent(*wd);
+                     actualClusterThread->runningOn()->outlineWorkDependent(*wd);
                      //(*myThread->_file) << "done start wd at "<< selectedNode <<std::endl;
                      //(*myThread->_file) << myThread->getId() << " helped SICOPYNOMASTERINIT WDONE REMOTE COPY AND LAUNCH with wd " << wd->getId() << " to node " << selectedNode << std::endl;
 

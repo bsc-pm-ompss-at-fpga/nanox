@@ -47,31 +47,6 @@ void MPIThread::runDependent() {
     dd.getWorkFct()(work.getData());
 }
 
-bool MPIThread::inlineWorkDependent(WD &wd) {
-    // Now the WD will be inminently run
-    wd.start(WD::IsNotAUserLevelThread);
-
-    MPIDD &dd = (MPIDD &) wd.getActiveDevice();
-    NANOS_INSTRUMENT(static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("user-code"));
-    NANOS_INSTRUMENT(nanos_event_value_t val = wd.getId());
-    NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenStateAndBurst(NANOS_RUNNING, key, val));
-
-    // Set up MPIProcessor and issue taskEnd message
-    // reception.
-    MPIProcessor& remote = *getSpawnGroup().getRemoteProcessors().at(_currentPE);
-    remote.setCurrExecutingWd(&wd);
-    remote.getTaskEndRequest().start();
-
-    (dd.getWorkFct())(wd.getData());
-
-    //Check if any task finished
-    getSpawnGroup().registerTaskInit();
-    getSpawnGroup().waitFinishedTasks();
-
-    NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseStateAndBurst(key, val));
-    return false;
-}
-
 //Switch to next PE (Round robin way of change PEs to query scheduler)
 bool MPIThread::switchToNextFreePE(int uuid){
    int startPE   = _currentPE;
@@ -108,4 +83,3 @@ void MPIThread::idle( bool debug ) {
 void MPIThread::finish() {
     SMPThread::finish();
 }
-

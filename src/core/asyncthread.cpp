@@ -69,15 +69,7 @@ AsyncThread::AsyncThread ( unsigned int osId, WD &wd, ProcessingElement *creator
 
 bool AsyncThread::inlineWorkDependent( WD &work )
 {
-   ASYNC_THREAD_CREATE_EVENT( ASYNC_THREAD_INLINE_WORK_DEP_EVENT );
-
-   debug( "[Async] At inlineWorkDependent, adding WD " << &work << " : " << work.getId() << " to running WDs list" );
-
-   // Add WD to the queue
-   addNextWD( &work );
-
-   ASYNC_THREAD_CLOSE_EVENT;
-
+   fatal("AsyncThread::inlineWorkDependent is deprecated:\nNew interface is PE::inlineWorkDependent");
    return false;
 }
 
@@ -333,7 +325,7 @@ void AsyncThread::runWD ( WD * wd )
    evt->setCreated();
 
    // Run WD
-   //this->inlineWorkDependent( *wd );
+   //this->runningOn()->inlineWorkDependent( *wd );
    this->runWDDependent( *wd, evt );
 
    evt->setPending();

@@ -26,6 +26,7 @@
 #include "basethread_fwd.hpp"
 #include "schedule_fwd.hpp"
 #include "location_decl.hpp"
+#include "schedulerhelper_decl.hpp"
 
 namespace nanos {
 
@@ -60,17 +61,17 @@ namespace ext {
 
          //! \brief ProcessingElement constructor
          ProcessingElement ( const Device *arch, unsigned int memSpaceId,
-            unsigned int clusterNode, unsigned int numaNode, bool inNumaNode, unsigned int socket, bool inSocket ); 
+            unsigned int clusterNode, unsigned int numaNode, bool inNumaNode, unsigned int socket, bool inSocket );
 
          ProcessingElement ( const Device **arch, unsigned int numArchs, unsigned int memSpaceId,
-            unsigned int clusterNode, unsigned int numaNode, bool inNumaNode, unsigned int socket, bool inSocket ); 
+            unsigned int clusterNode, unsigned int numaNode, bool inNumaNode, unsigned int socket, bool inSocket );
 
          //! \brief ProcessingElement destructor
          virtual ~ProcessingElement();
 
          //! \brief get identifier
          int getId() const;
-         
+
          std::vector<Device const *> const &getDeviceTypes () const;
          bool supports( Device const &dev ) const;
 
@@ -120,6 +121,14 @@ namespace ext {
          void setActiveDevice( unsigned int devIdx );
          void setActiveDevice( const Device *dev );
          unsigned int getActiveDevice() const;
+
+         virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) = 0;
+         virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) = 0;
+         virtual bool inlineWorkDependent (WD &work) = 0;
+         virtual void switchTo( WD *work, SchedulerHelper *helper ) = 0;
+         virtual void exitTo( WD *work, SchedulerHelper *helper ) = 0;
+         virtual void outlineWorkDependent (WD &work) = 0;
+         virtual void preOutlineWorkDependent (WD &work) = 0;
    };
 
    typedef class ProcessingElement PE;

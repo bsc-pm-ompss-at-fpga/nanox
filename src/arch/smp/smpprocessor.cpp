@@ -128,3 +128,59 @@ unsigned int SMPProcessor::getNumFutureThreads() const {
    return _futureThreads;
 }
 
+bool SMPProcessor::inlineWorkDependent ( WD &wd )
+{
+   // Now the WD will be inminently run
+   wd.start(WD::IsNotAUserLevelThread);
+
+   SMPDD &dd = ( SMPDD & )wd.getActiveDevice();
+
+   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("user-code") );
+   NANOS_INSTRUMENT ( nanos_event_value_t val = wd.getId() );
+   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenStateAndBurst ( NANOS_RUNNING, key, val ) );
+
+   //if ( sys.getNetwork()->getNodeNum() > 0 ) std::cerr << "Starting wd " << wd.getId() << std::endl;
+
+   dd.execute( wd );
+
+   NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseStateAndBurst ( key, val ) );
+   return true;
+}
+
+// This is executed in between switching stacks
+void SMPProcessor::switchHelperDependent ( WD *oldWD, WD *newWD, void *oldState  )
+{
+   SMPDD & dd = ( SMPDD & )oldWD->getActiveDevice();
+   dd.setState( (intptr_t *) oldState );
+}
+
+void SMPProcessor::switchTo ( WD *wd, SchedulerHelper *helper )
+{
+   // wd MUST have an active SMP Device when it gets here
+   ensure( wd->hasActiveDevice(),"WD has no active SMP device" );
+   SMPDD &dd = ( SMPDD & )wd->getActiveDevice();
+   ensure( dd.hasStack(), "DD has no stack for ULT");
+   WD * currentWD = myThread->getCurrentWD();
+
+   ::switchStacks(
+       ( void * ) currentWD,
+       ( void * ) wd,
+       ( void * ) dd.getState(),
+       ( void * ) helper );
+}
+
+void SMPProcessor::exitTo ( WD *wd, SchedulerHelper *helper)
+{
+   // wd MUST have an active SMP Device when it gets here
+   ensure( wd->hasActiveDevice(),"WD has no active SMP device" );
+   SMPDD &dd = ( SMPDD & )wd->getActiveDevice();
+   ensure( dd.hasStack(), "DD has no stack for ULT");
+   WD * currentWD = myThread->getCurrentWD();
+
+   //TODO: optimize... we don't really need to save a context in this case
+   ::switchStacks(
+      ( void * ) currentWD,
+      ( void * ) wd,
+      ( void * ) dd.getState(),
+      ( void * ) helper );
+}

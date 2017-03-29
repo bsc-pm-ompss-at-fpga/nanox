@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,46 +17,16 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef _NANOS_SPU_PROCESSOR
-#define _NANOS_SPU_PROCESSOR
+#ifndef _NANOS_SCHEDULE_HELPER_DECL_H
+#define _NANOS_SCHEDULE_HELPER_DECL_H
 
-#include "smpprocessor.hpp"
-#include "sputhread.hpp"
-#include "spudd.hpp"
+#include "workdescriptor_fwd.hpp"
 
 namespace nanos {
-namespace ext {
 
-   class SPUProcessor : public PE
-   {
-     private:
-        SMPProcessor &_ppu;
-        // disable copy constructor and assignment operator
-        SPUProcessor( const SPUProcessor &pe );
-        const SPUProcessor & operator= ( const SPUProcessor &pe );
+   // singleton class to encapsulate scheduling data and methods
+   typedef void SchedulerHelper ( WD *oldWD, WD *newWD, void *arg);
 
-     public:
-        // constructor
-        SPUProcessor( int id, SMPProcessor &ppu ) : PE( id, &SPU ), _ppu( ppu ) {}
-        ~SPUProcessor() {}
-
-        SMPProcessor & getPPU() const { return _ppu; }
-
-        WD & getWorkerWD () const;
-        WD & getMasterWD () const;
-        BaseThread & createThread ( WorkDescriptor &wd );
-
-        //virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
-        //virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg );
-        virtual bool inlineWorkDependent (WD &work) {}
-        virtual void switchTo( WD *work, SchedulerHelper *helper ) {}
-        virtual void exitTo( WD *work, SchedulerHelper *helper ) {}
-        //virtual void outlineWorkDependent (WD &work);
-        //virtual void preOutlineWorkDependent (WD &work);
-   };
-
-} // namespace ext
 } // namespace nanos
-
 
 #endif

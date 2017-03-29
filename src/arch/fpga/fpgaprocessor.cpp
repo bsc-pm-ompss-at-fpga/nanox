@@ -284,3 +284,30 @@ xdma_instr_times *FPGAProcessor::getInstrCounters( WD *wd ) {
    xdmaGetInstrumentData(task, &times);
    return times;
 }
+
+bool FPGAProcessor::inlineWorkDependent( WD &wd )
+{
+   verbose( "fpga inlineWorkDependent" );
+
+   wd.start( WD::IsNotAUserLevelThread );
+   //FPGAProcessor* fpga = ( FPGAProcessor * ) this->runningOn();
+
+   FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
+   ( dd.getWorkFct() )( wd.getData() );
+
+   return true;
+}
+
+void FPGAProcessor::preOutlineWorkDependent ( WD &wd ) {
+   wd.preStart(WorkDescriptor::IsNotAUserLevelThread);
+}
+
+void FPGAProcessor::outlineWorkDependent ( WD &wd ) {
+   //wd.start( WD::IsNotAUserLevelThread );
+
+   createAndSubmitTask( wd );
+
+   //set flag to allow new opdate
+   FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
+   ( dd.getWorkFct() )( wd.getData() );
+}

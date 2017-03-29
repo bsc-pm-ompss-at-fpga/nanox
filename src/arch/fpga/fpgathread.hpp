@@ -39,9 +39,6 @@ namespace ext {
 
          void initializeDependent( void );
          void runDependent ( void );
-         bool inlineWorkDependent( WD &work );
-         virtual void preOutlineWorkDependent ( WD &work );
-         virtual void outlineWorkDependent ( WD &work );
 
          void yield();
          void idle( bool debug );
@@ -51,12 +48,7 @@ namespace ext {
          void addPendingWD( WD *wd );
          void finishAllWD();
 
-         virtual void switchTo( WD *work, SchedulerHelper *helper );
-         virtual void exitTo( WD *work, SchedulerHelper *helper );
-         virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
-         virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg );
          virtual void switchToNextThread();
-
          virtual void start() {}
          virtual void join() { joined(); }
          virtual BaseThread *getNextThread();

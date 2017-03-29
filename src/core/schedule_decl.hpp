@@ -32,21 +32,18 @@
 #include "atomic_decl.hpp"
 #include "functors_decl.hpp"
 #include "basethread_decl.hpp"
-
+#include "schedule_fwd.hpp"
 
 namespace nanos {
 
    class Config; // FIXME: this should be on config_fwd
-
-// singleton class to encapsulate scheduling data and methods
-   typedef void SchedulerHelper ( WD *oldWD, WD *newWD, void *arg);
 
    class Scheduler
    {
       private:
          static void switchHelper (WD *oldWD, WD *newWD, void *arg);
          static void exitHelper (WD *oldWD, WD *newWD, void *arg);
-         
+
          template<class behaviour>
          static void idleLoop ( bool exit = false );
 
@@ -58,7 +55,7 @@ namespace nanos {
          static void postOutlineWork ( WD *work, bool schedule, BaseThread *owner );
          static bool inlineWork ( WD *work, bool schedule );
          static bool inlineWorkAsync ( WD *wd, bool schedule );
-         static void outlineWork( BaseThread *currentThread, WD *wd ); 
+         static void outlineWork( BaseThread *currentThread, WD *wd );
 
          static void submit ( WD &wd, bool force_queue = false );
          static void _submit ( WD &wd, bool force_queue = false );
@@ -112,7 +109,7 @@ namespace nanos {
         //! \brief SchedulerConf copy assignment operator (private)
         SchedulerConf & operator= ( SchedulerConf &sc );
       public: /* PUBLIC METHODS */
-         //! \brief SchedulerConf destructor 
+         //! \brief SchedulerConf destructor
          ~SchedulerConf() {}
 
          //! \brief Set if scheduler is enabled
@@ -124,15 +121,15 @@ namespace nanos {
          unsigned int getNumChecks ( void ) const;
          //! \brief Returns the number of spins before stealing
          unsigned int getNumStealAfterSpins ( void ) const;
-         //! \brief Returns if scheduler is enabled 
+         //! \brief Returns if scheduler is enabled
          bool getSchedulerEnabled () const;
-         //! \brief Returns if holding tasks is enabled 
+         //! \brief Returns if holding tasks is enabled
          bool getHoldTasksEnabled () const;
 
          //! \brief Configure scheduler runtime options
          void config ( Config &cfg );
    };
-   
+
    class SchedulerStats
    {
          friend class WDDeque;
@@ -208,7 +205,7 @@ namespace nanos {
          /*! \brief ScheduleThreadData copy constructor (private)
           */
          ScheduleThreadData( ScheduleThreadData &std );
-         /*! \brief ScheduleThreadData copy assignment operator (private) 
+         /*! \brief ScheduleThreadData copy assignment operator (private)
           */
          ScheduleThreadData& operator= ( ScheduleThreadData &std );
       public:
@@ -225,7 +222,7 @@ namespace nanos {
          /*! \brief ScheduleWDData copy constructor (private)
           */
          ScheduleWDData( ScheduleWDData &std );
-         /*! \brief ScheduleWDData copy assignment operator (private) 
+         /*! \brief ScheduleWDData copy assignment operator (private)
           */
          ScheduleWDData& operator= ( ScheduleWDData &std );
       public:
@@ -273,13 +270,13 @@ namespace nanos {
          virtual size_t getThreadDataSize() const = 0;
          virtual ScheduleTeamData * createTeamData () = 0;
          virtual ScheduleThreadData * createThreadData () = 0;
-         
+
          virtual size_t getWDDataSize () const { return 0; }
          virtual size_t getWDDataAlignment () const { return 0; }
          virtual void initWDData ( void * data ) const {}
-         
+
          virtual WD * atSubmit      ( BaseThread *thread, WD &wd ) = 0;
-         
+
          /*! \brief \param numSteal The core scheduler will set this parameter
           *  0 if no steal operation should be allowed.
           *  Otherwise, attempt a steal operation instead of a normal
@@ -308,19 +305,19 @@ namespace nanos {
           *  The default behaviour calls queue() individually.
           */
          virtual void queue ( BaseThread ** threads, WD ** wds, size_t numElems );
-         
+
          /*! \brief Checks if the WD can be batch processed by this policy.
           *  By default returns always false.
           */
          virtual bool isValidForBatch ( const WD * wd ) const { return false; }
-         
+
          /*! \brief Hook function called when a WD is submitted.
           \param wd [in] The WD to be submitted.
           \param from [in] A flag indicating where the method is called from.
           \sa SystemSubmitFlag.
           */
          virtual void onSystemSubmit( const WD &wd, SystemSubmitFlag from ) {}
-         
+
          /*! \brief This method will be called when a pair of preceeding and
           succeeding work descriptors is found.
           \param predecessor Preceeding Dependable Object pointer.
@@ -330,7 +327,7 @@ namespace nanos {
 
          /*! \brief Enables or disables stealing */
          virtual void setStealing( bool value ) {}
-         
+
          /*! \brief Returns the status of stealing */
          virtual bool getStealing()
          {
@@ -351,7 +348,7 @@ namespace nanos {
          {
             return false;
          }
-         
+
          /*! \brief Returns if priorities are enabled in this policy.
           * Note that some policies won't support priorities while others
           * will depending on a flag
@@ -371,13 +368,12 @@ namespace nanos {
    struct SchedulePolicySuccessorFunctor
    {
       SchedulePolicy& _obj;
-      
+
       SchedulePolicySuccessorFunctor( SchedulePolicy& obj ) : _obj( obj ) {}
-      
+
       void operator() ( DependableObject *predecessor, DependableObject *successor );
    };
-   
+
 } // namespace nanos
 
 #endif
-
