@@ -59,28 +59,7 @@ void SMPThread::runDependent ()
 
 void SMPThread::idle( bool debug )
 {
-   if ( sys.getNetwork()->getNumNodes() > 1 ) {
-      if ( this->_gasnetAllowAM ) {
-      sys.getNetwork()->poll(0);
-
-      if ( !_pendingRequests.empty() ) {
-         std::set<void *>::iterator it = _pendingRequests.begin();
-         while ( it != _pendingRequests.end() ) {
-            GetRequest *req = (GetRequest *) (*it);
-            if ( req->isCompleted() ) {
-               std::set<void *>::iterator toBeDeletedIt = it;
-               it++;
-               _pendingRequests.erase(toBeDeletedIt);
-               req->clear();
-               delete req;
-            } else {
-               it++;
-            }
-         }
-      }
-      }
-   }
-   getSMPDevice().tryExecuteTransfer();
+   processTransfers();
    sys.getEventDispatcher().atIdle();
 }
 
@@ -155,6 +134,12 @@ void SMPThread::wakeup()
 
 int SMPThread::getCpuId() const {
    return _pthread.getCpuId();
+}
+
+void SMPThread::processTransfers ()
+{
+   BaseThread::processTransfers();
+   getSMPDevice().tryExecuteTransfer();
 }
 
 SMPMultiThread::SMPMultiThread( WD &w, SMPProcessor *pe,

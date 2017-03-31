@@ -169,8 +169,6 @@ namespace nanos {
       sys.unpausedThread();
    }
 
-   inline void BaseThread::processTransfers () { this->idle(); }
-
    // set/get methods
    inline void BaseThread::setHeldWD ( WD *wd ) { _heldWD = wd; }
    inline WD * BaseThread::getHeldWD () const { return _heldWD; }
