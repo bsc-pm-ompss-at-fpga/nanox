@@ -26,7 +26,7 @@ namespace ext {
          FPGAMemoryRegion        _chunk;
 
       public:
-         FPGAPinnedAllocator( const size_t size );
+         FPGAPinnedAllocator( size_t size );
          ~FPGAPinnedAllocator();
 
          void *allocate( size_t size );

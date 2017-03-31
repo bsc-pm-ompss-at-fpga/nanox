@@ -5,13 +5,15 @@
 using namespace nanos;
 using namespace nanos::ext;
 
-FPGAPinnedAllocator::FPGAPinnedAllocator( const size_t size )
+FPGAPinnedAllocator::FPGAPinnedAllocator( size_t size )
 {
    void * addr;
    xdma_status status;
    status = xdmaAllocateKernelBuffer( &addr, &_chunk._handle, size );
    if ( status != XDMA_SUCCESS ) {
-      warning0( "Could not allocate pinned memory" );
+      warning0( "Could not allocate XDMA pinned memory for the FPGAPinnedAllocator" );
+      addr = NULL;
+      size = 0;
    }
    _chunk._allocator.init( (uint64_t)addr, size );
 }
