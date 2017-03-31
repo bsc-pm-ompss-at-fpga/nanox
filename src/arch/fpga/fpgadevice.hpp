@@ -43,6 +43,8 @@ namespace nanos {
 
          FPGADevice ( const char *n );
 
+         virtual ~FPGADevice () {}
+
          virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem,
                  WD const *wd, unsigned int copyIdx);
          virtual void memFree( uint64_t addr, SeparateMemoryAddressSpace &mem );
