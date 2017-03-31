@@ -44,7 +44,7 @@ class FPGAPlugin : public ArchPlugin
       std::vector< FPGAProcessor* > *_fpgas;
       std::vector< FPGAThread* >    *_fpgaThreads;
       std::vector< FPGAListener* >   _fpgaListeners;
-      std::vector< std::string >     _devNames;
+      FPGADevice                    *_device;
       SMPProcessor                  *_core;
       SMPMultiThread                *_fpgaHelper;
 
@@ -57,10 +57,10 @@ class FPGAPlugin : public ArchPlugin
       }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-      void registerDeviceInstrumentation( FPGAProcessor *fpga, int accNum ) {
+      void registerDeviceInstrumentation( FPGAProcessor *fpga, int i ) {
           unsigned int id;
           //FIXME: assign proper IDs to deviceinstrumentation
-          for (int i=0; i<accNum; i++) {
+          //for (int i=0; i<accNum; i++) {
              char devNum[NUM_STRING_LEN];
              sprintf(devNum, "%d", i);
              id = sys.getNumInstrumentAccelerators();
@@ -92,7 +92,7 @@ class FPGAPlugin : public ArchPlugin
              fpga->setDeviceInstrumentation( instr );
              fpga->setDmaInstrumentation( dmaInInstr, dmaOutInstr );
              fpga->setSubmitInstrumentation( submitInstr );
-          }
+          //}
       }
 #endif
 
@@ -154,25 +154,22 @@ class FPGAPlugin : public ArchPlugin
             // }
 
             //Accelerator setup
-            for ( unsigned int i=0; i < _fpgas->size(); i++) {
-               std::stringstream name;
-               name << "FPGA acc " << i;
-               _devNames.push_back( name.str() );
-               FPGADevice *device = NEW FPGADevice( _devNames.back().c_str() );
-               memory_space_id_t memSpaceId = sys.addSeparateMemoryAddressSpace(
-                     *device, true, 0 );
-               SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
-               fpgaAddressSpace.setAcceleratorNumber( sys.getNewAcceleratorId() );
-               fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
+            _device = NEW FPGADevice( "FPGA" );
+            memory_space_id_t memSpaceId = sys.addSeparateMemoryAddressSpace(*_device, true, 0 );
+            SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
+            fpgaAddressSpace.setAcceleratorNumber( sys.getNewAcceleratorId() );
+            fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
+            FPGADD::addAccDevice( _device );
 
-               FPGADD::addAccDevice( device );
-               FPGAProcessor *fpga = NEW FPGAProcessor( device, memSpaceId );
+            for ( unsigned int i = 0; i < _fpgas->size(); i++) {
+               FPGAProcessor *fpga = NEW FPGAProcessor( i, memSpaceId, _device );
                (*_fpgas)[i] = fpga;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
                //Register device in the instrumentation system
-               registerDeviceInstrumentation( fpga,
-                     _fpgas->size()/FPGAConfig::getNumFPGAThreads() );
+               registerDeviceInstrumentation( fpga, i );
 #endif
+               // Initialize device. Maybe it won't run any thread and must be initialized in any case
+               fpga->init();
             }
 
             if ( _fpgaThreads->size() > 0 ) {
@@ -212,14 +209,17 @@ class FPGAPlugin : public ArchPlugin
           */
          if ( !FPGAConfig::isDisabled() ) { //cleanup only if we have initialized
             int status;
+
+            delete _device;
+
+            for (size_t i = 0; i < _fpgaListeners.size(); ++i) {
+               delete _fpgaListeners[i];
+            }
+
             debug0( "Xilinx close dma" );
             status = xdmaClose();
             if ( status ) {
                warning( "Error de-initializing xdma core library: " << status );
-            }
-
-            for (size_t i = 0; i < _fpgaListeners.size(); ++i) {
-               delete _fpgaListeners[i];
             }
          }
       }
@@ -249,61 +249,50 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual void addDevices( DeviceList &devices ) const {
-         if ( !_fpgas->empty() ) {
-            //Insert device type.
-            //Any position in _fpgas will work as we only need the device type
-            std::vector<const Device*> const &pe_archs = ( *_fpgas->begin() )->getDeviceTypes();
-            for ( std::vector<const Device *>::const_iterator it = pe_archs.begin();
-                  it != pe_archs.end(); it++ ) {
-               devices.insert( *it );
-            }
+         if ( _device ) {
+            devices.insert( _device );
+            // //Insert device type.
+            // //Any position in _fpgas will work as we only need the device type
+            // std::vector<const Device*> const &pe_archs = ( *_fpgas->begin() )->getDeviceTypes();
+            // for ( std::vector<const Device *>::const_iterator it = pe_archs.begin();
+            //       it != pe_archs.end(); it++ ) {
+            //    devices.insert( *it );
+            // }
          }
       }
 
       virtual void startSupportThreads () {
-         if ( !_core || _fpgas->empty() ) return;
+         if ( !FPGAConfig::getIdleCallbackEnabled() ) return;
+         for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas->begin();
+               it != _fpgas->end(); it++ )
+         {
+            // Register Event Listener
+            FPGAListener* l = new FPGAListener( *it );
+            _fpgaListeners.push_back( l );
+            sys.getEventDispatcher().addListenerAtIdle( *l );
+         }
+      }
+
+      virtual void startWorkerThreads( std::map<unsigned int, BaseThread*> &workers ) {
+         if ( !_core ) return;
+         ensure( !_fpgas->empty(), "Starting one FPGA Support Thread but there are not accelerators" );
+
+         // Starting the SMP (multi)Thread
          _fpgaHelper = dynamic_cast< ext::SMPMultiThread * >(
             &_core->startMultiWorker( _fpgas->size(), (ProcessingElement **) &(*_fpgas)[0],
             ( DD::work_fct )FPGAWorker::FPGAWorkerLoop )
          );
-      }
 
-      virtual void startWorkerThreads( std::map<unsigned int, BaseThread*> &workers ) {
-         if ( _fpgaHelper ) {
-            for ( unsigned int i=0; i< _fpgaHelper->getNumThreads(); i++) {
-               BaseThread *thd = _fpgaHelper->getThreadVector()[ i ];
-               workers.insert( std::make_pair( thd->getId(), thd ) );
-
-               // Register Event Listener
-               if ( FPGAConfig::getIdleCallbackEnabled() ) {
-                  FPGAListener* l = new FPGAListener( (FPGAThread*)(thd) );
-                  _fpgaListeners.push_back( l );
-                  sys.getEventDispatcher().addListenerAtIdle( *l );
-               }
-            }
-            //Push multithread into the team to let ir steam tasks from other smp threads
-            workers.insert( std::make_pair( _fpgaHelper->getId(), _fpgaHelper ) );
-         } else if ( FPGAConfig::getIdleCallbackEnabled() ) {
-            //Not using helperThreads -> using the IDLE event callback
-            for ( std::vector<FPGAProcessor*>::iterator it = _fpgas->begin();
-               it != _fpgas->end(); it++ )
-            {
-               //TODO: Check where the WD will be deleted to avoid memory leaks
-               SMPDD * dd = NEW SMPDD( ( SMPDD::work_fct )FPGAListener::FPGAWorkerLoop );
-               WD * helper = NEW WD( dd );
-               BaseThread & thd = (*it)->createThread( *helper, NULL );
-               thd.initializeDependent();
-               workers.insert( std::make_pair( thd.getId(), &thd ) );
-
-               // Register Event Listener
-               FPGAListener* l = new FPGAListener( (FPGAThread*)(&thd), true /* ownsThread */ );
-               _fpgaListeners.push_back( l );
-               sys.getEventDispatcher().addListenerAtIdle( *l );
-            }
+         // Register each sub-thread of Multithread
+         for ( unsigned int i = 0; i< _fpgaHelper->getNumThreads(); i++) {
+            BaseThread *thd = _fpgaHelper->getThreadVector()[ i ];
+            workers.insert( std::make_pair( thd->getId(), thd ) );
          }
+         //Push multithread into the team to let it steam tasks from other smp threads
+         workers.insert( std::make_pair( _fpgaHelper->getId(), _fpgaHelper ) );
       }
 
-      virtual ProcessingElement * createPE( unsigned id , unsigned uid) {
+      virtual ProcessingElement * createPE( unsigned id , unsigned uid ) {
          return NULL;
       }
 };

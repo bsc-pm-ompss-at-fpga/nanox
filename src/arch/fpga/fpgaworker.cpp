@@ -24,6 +24,7 @@
 #include "instrumentation.hpp"
 #include "system.hpp"
 #include "os.hpp"
+#include "queue.hpp"
 
 using namespace nanos;
 using namespace ext;
@@ -61,57 +62,93 @@ void FPGAWorker::FPGAWorkerLoop() {
       //check if we have reached maximum pending WD
       //  finalize one (or some of them)
       //FPGAThread *myThread = (FPGAThread*)getMyThreadSafe();
-      if (currentThread->_lock.tryAcquire()) {
-         if ( currentThread->getPendingWDs() > maxPendingWD ) {
-             currentThread->finishPendingWD( finishBurst );
-         }
+      FPGAProcessor * fpga = ( FPGAProcessor * )( currentThread->runningOn() );
+      WD * wd;
+      bool wdExecuted = false;
 
-         if ( !parent->isRunning() ) {
-            currentThread->_lock.release();
-            break;
-         }
-         //get next WD
-         WD *wd = getFPGAWD(currentThread);
-         if ( wd ) {
-            //update instrumentation values & rise event
-            NANOS_INSTRUMENT ( nanos_event_value_t values[numEvents]; )
-            NANOS_INSTRUMENT ( total_spins+= (init_spins - spins); )
-            NANOS_INSTRUMENT ( values[0] = (nanos_event_value_t) total_yields; )
-            NANOS_INSTRUMENT ( values[1] = (nanos_event_value_t) time_yields; )
-            NANOS_INSTRUMENT ( values[2] = (nanos_event_value_t) total_spins; )
-            NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(numEvents, keys, values); )
+      if ( fpga->getPendingWDs() > maxPendingWD ) {
+          fpga->finishPendingWD( finishBurst );
+      }
 
-            Scheduler::prePreOutlineWork(wd);
-            if ( Scheduler::tryPreOutlineWork(wd) ) {
-               currentThread->runningOn()->preOutlineWorkDependent( *wd );
+      if ( !parent->isRunning() ) break;
+
+      // Check queue of tasks waiting for input copies
+      if ( !fpga->getWaitInTasks().empty() ) {
+         if ( fpga->getWaitInTasks().try_pop( wd ) ) {
+            if ( wd->isInputDataReady() ) {
+               Scheduler::outlineWork( currentThread, wd );
+               //wd->submitOutputCopies();
+               wdExecuted = true;
+            } else {
+               // Task does not have input data in the memory device yet
+               fpga->getWaitInTasks().push( wd );
             }
+         }
+      }
+      // Check queue of tasks waiting for memory allocation
+      else if ( !fpga->getReadyTasks().empty() ) {
+         if ( fpga->getReadyTasks().try_pop( wd ) ) {
+            if ( Scheduler::tryPreOutlineWork( wd ) ) {
+               fpga->preOutlineWorkDependent( *wd );
+
+               //TODO: may need to increment copies version number here
+               if ( wd->isInputDataReady() ) {
+                  Scheduler::outlineWork( currentThread, wd );
+                  //wd->submitOutputCopies();
+                  wdExecuted = true;
+               } else {
+                  // Task does not have input data in the memory device yet
+                  fpga->getWaitInTasks().push( wd );
+               }
+            } else {
+               // Task does not have memory allocated yet
+               fpga->getReadyTasks().push( wd );
+            }
+         }
+      }
+      // Check for tasks in the scheduler ready queue
+      else if ( (wd = FPGAWorker::getFPGAWD( currentThread )) != NULL ) {
+         Scheduler::prePreOutlineWork( wd );
+         if ( Scheduler::tryPreOutlineWork( wd ) ) {
+            fpga->preOutlineWorkDependent( *wd );
+
             //TODO: may need to increment copies version number here
             if ( wd->isInputDataReady() ) {
                Scheduler::outlineWork( currentThread, wd );
+               //wd->submitOutputCopies();
+               wdExecuted = true;
             } else {
-               //do whatever is needed if input is not ready
-               //wait or whatever, for instance, sync needed copies
+               // Task does not have input data in the memory device yet
+               fpga->getWaitInTasks().push( wd );
             }
-            //add to the list of pending WD
-            wd->submitOutputCopies();
-            currentThread->addPendingWD( wd );
-            spins = init_spins;
-
-            //Scheduler::postOutlineWork( wd, false, myThread ); <--moved to fpga thread
-
-            //Reset instrumentation values
-            NANOS_INSTRUMENT ( total_yields = 0; )
-            NANOS_INSTRUMENT ( time_yields = 0; )
-            NANOS_INSTRUMENT ( total_spins = 0; )
-
          } else {
-            spins--;
-            //we may be waiting for the last tasks to finalize or
-            //waiting for some dependence to be released
-            currentThread->finishAllWD();
-            //myThread->finishPendingWD(1);
+            // Task does not have memory allocated yet
+            fpga->getReadyTasks().push( wd );
          }
-         currentThread->_lock.release();
+      } else {
+         //we may be waiting for the last tasks to finalize or
+         //waiting for some dependence to be released
+         fpga->finishAllWD();
+         //myThread->finishPendingWD(1);
+      }
+
+      if ( wdExecuted ) {
+         //update instrumentation values & rise event
+         NANOS_INSTRUMENT ( nanos_event_value_t values[numEvents]; )
+         NANOS_INSTRUMENT ( total_spins+= (init_spins - spins); )
+         NANOS_INSTRUMENT ( values[0] = (nanos_event_value_t) total_yields; )
+         NANOS_INSTRUMENT ( values[1] = (nanos_event_value_t) time_yields; )
+         NANOS_INSTRUMENT ( values[2] = (nanos_event_value_t) total_spins; )
+         NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(numEvents, keys, values); )
+
+         spins = init_spins;
+
+         //Reset instrumentation values
+         NANOS_INSTRUMENT ( total_yields = 0; )
+         NANOS_INSTRUMENT ( time_yields = 0; )
+         NANOS_INSTRUMENT ( total_spins = 0; )
+      } else {
+         spins--;
       }
 
       if ( spins == 0 ) {

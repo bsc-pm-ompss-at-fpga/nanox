@@ -18,6 +18,7 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
+#include "queue.hpp"
 #include "fpgaprocessor.hpp"
 #include "fpgadd.hpp"
 #include "fpgathread.hpp"
@@ -35,32 +36,28 @@
 using namespace nanos;
 using namespace nanos::ext;
 
-int FPGAProcessor::_accelSeed = 0;
-Lock FPGAProcessor::_initLock;
+//Lock FPGAProcessor::_initLock;
 //TODO: We should have an FPGAPinnedAllocator for each FPGAProcessor and only have one FPGAProcessor
 //      with several FPGADevices
 FPGAPinnedAllocator FPGAProcessor::_allocator( 1024*1024*64 );
 /*
  * TODO: Support the case where each thread may manage a different number of accelerators
+ *       jbosch: This should be supported using different MultiThreads each one with a subset of accels
  */
-FPGAProcessor::FPGAProcessor( const Device *arch,  memory_space_id_t memSpaceId ) :
-   ProcessingElement( arch, memSpaceId, 0, 0, false, 0, false ),
-   _fpgaDevice(0)
+FPGAProcessor::FPGAProcessor( int const accId, memory_space_id_t memSpaceId, Device const * arch ) :
+   ProcessingElement( arch, memSpaceId, 0, 0, false, 0, false ), _accelId( accId ),
+   _pendingTasks( ), _readyTasks( ), _waitInTasks( )
 {
-   _initLock.acquire();
-   _accelBase = _accelSeed;
-   _accelSeed++;
-   _initLock.release();
-
    _fpgaProcessorInfo = NEW FPGAProcessorInfo;
    _inputTransfers = NEW FPGAMemoryInTransferList();
    _outputTransfers = NEW FPGAMemoryOutTransferList(*this);
 }
 
-FPGAProcessor::~FPGAProcessor(){
-    delete _fpgaProcessorInfo;
-    delete _outputTransfers;
-    delete _inputTransfers;
+FPGAProcessor::~FPGAProcessor()
+{
+   delete _fpgaProcessorInfo;
+   delete _inputTransfers;
+   delete _outputTransfers;
 }
 
 void FPGAProcessor::init()
@@ -70,30 +67,31 @@ void FPGAProcessor::init()
    xdma_status status;
    int copiedDevices = -1;
    status = xdmaGetDevices(fpgaCount,  devices, &copiedDevices);
-   ensure(copiedDevices > _accelBase, "Number of devices from the xdma library is smaller the used index");
+   ensure0(status == XDMA_SUCCESS, "Error getting FPGA devices information");
+   ensure0(copiedDevices > _accelId, "Number of devices from the xdma library is smaller the used index");
 
    xdma_channel iChan, oChan;
-   _fpgaProcessorInfo->setDeviceHandle( devices[_accelBase] );
+   _fpgaProcessorInfo->setDeviceHandle( devices[_accelId] );
 
    //open input channel
    NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_REQ_CHANNEL_EVENT);
-   status = xdmaOpenChannel(devices[_accelBase], XDMA_TO_DEVICE, XDMA_CH_NONE, &iChan);
+   status = xdmaOpenChannel(devices[_accelId], XDMA_TO_DEVICE, XDMA_CH_NONE, &iChan);
    NANOS_FPGA_CLOSE_RUNTIME_EVENT;
 
    if (status)
-       warning("Error opening DMA input channel: " << status);
+       warning0("Error opening DMA input channel: " << status);
 
-   debug("got input channel " << iChan );
+   debug0("got input channel " << iChan );
 
    _fpgaProcessorInfo->setInputChannel( iChan );
 
    NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_REQ_CHANNEL_EVENT );
-   status = xdmaOpenChannel(devices[_accelBase], XDMA_FROM_DEVICE, XDMA_CH_NONE, &oChan);
+   status = xdmaOpenChannel(devices[_accelId], XDMA_FROM_DEVICE, XDMA_CH_NONE, &oChan);
    NANOS_FPGA_CLOSE_RUNTIME_EVENT;
    if (status || !oChan)
-       warning ("Error opening DMA output channel");
+       warning0("Error opening DMA output channel");
 
-   debug("got output channel " << oChan );
+   debug0("got output channel " << oChan );
 
    _fpgaProcessorInfo->setOutputChannel( oChan );
    delete devices;
@@ -153,7 +151,7 @@ WD & FPGAProcessor::getMasterWD () const
 BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThread *parent )
 {
    ensure( helper.canRunIn( getSMPDevice() ), "Incompatible worker thread" );
-   FPGAThread  &th = *NEW FPGAThread( helper, this, parent, _fpgaDevice );
+   FPGAThread  &th = *NEW FPGAThread( helper, this, parent );
    return th;
 }
 
@@ -192,7 +190,7 @@ static void dmaSubmitEnd( FPGAProcessor *fpga, const WD *wd ) {
 }
 #endif  //NANOS_INSTRUMENTATION_ENABLED
 
-void FPGAProcessor::createAndSubmitTask( WD &wd ) {
+xdma_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
 #ifdef NANOS_DEBUG_ENABLED
    xdma_status status;
 #endif
@@ -214,12 +212,13 @@ void FPGAProcessor::createAndSubmitTask( WD &wd ) {
    }
 
 #ifndef NANOS_DEBUG_ENABLED
-   xdmaInitTask( _accelBase, numInputs, XDMA_COMPUTE_ENABLE, numOutputs, &task );
+   xdmaInitTask( _accelId, numInputs, XDMA_COMPUTE_ENABLE, numOutputs, &task );
 #else
-   status = xdmaInitTask( _accelBase, numInputs, XDMA_COMPUTE_ENABLE, numOutputs, &task );
+   status = xdmaInitTask( _accelId, numInputs, XDMA_COMPUTE_ENABLE, numOutputs, &task );
    if ( status != XDMA_SUCCESS ) {
       //TODO: If status == XDMA_ENOMEM, block and wait untill mem is available
-      fatal( "Cannot initialize FPGA task info." );
+      fatal( "Cannot initialize FPGA task info (accId: " << _accelId << ", #in: " << numInputs << ", #out: "
+             << numOutputs << "): " << ( status == XDMA_ENOMEM ? "XDMA_ENOMEM" : "XDMA_ERROR" ) );
    }
 #endif
    int inputIdx, outputIdx;
@@ -260,29 +259,128 @@ void FPGAProcessor::createAndSubmitTask( WD &wd ) {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    dmaSubmitEnd( this, &wd );
 #endif
-   _pendingTasks[&wd] = task;
+   return task;
 }
 
-void FPGAProcessor::waitTask( WD *wd ) {
-   xdma_task_handle task;
-
-   task = _pendingTasks[wd];
-   xdmaWaitTask(task);
-}
-
-void FPGAProcessor::deleteTask( WD *wd ) {
-   //XXX Delete task from task map?
-   xdma_task_handle task = _pendingTasks[wd];
-   xdmaDeleteTask(&task);
-
-}
-
-xdma_instr_times *FPGAProcessor::getInstrCounters( WD *wd ) {
-
-   xdma_task_handle task = _pendingTasks[wd];
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+xdma_instr_times *FPGAProcessor::getInstrCounters( FPGATaskInfo_t & task ) {
    xdma_instr_times *times;
-   xdmaGetInstrumentData(task, &times);
+   xdmaGetInstrumentData( task._handle, &times );
    return times;
+}
+
+void FPGAProcessor::readInstrCounters( FPGATaskInfo_t & task ) {
+   xdma_instr_times * counters = getInstrCounters( task );
+   Instrumentation * instr     = sys.getInstrumentation();
+   WD * const wd = task._wd;
+
+   //Task execution
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->start, TaskBegin, _devInstr, wd ) );
+   //Beginning kernel execution is represented as a task switch from NULL to a WD
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->inTransfer, TaskSwitch, _devInstr, NULL, wd ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->computation, TaskSwitch, _devInstr, wd, NULL ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, _devInstr, wd ) );
+
+  //DMA info
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->start, TaskBegin, _dmaInInstr, wd ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->start, TaskSwitch, _dmaInInstr, NULL, wd ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->inTransfer, TaskSwitch, _dmaInInstr, wd, NULL ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, _dmaInInstr, wd ) );
+
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->start, TaskBegin, _dmaOutInstr, wd ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->computation, TaskSwitch, _dmaOutInstr, NULL, wd ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->outTransfer, TaskSwitch, _dmaOutInstr, wd, NULL ) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, _dmaOutInstr, wd ) );
+
+   xdmaClearTaskTimes( (xdma_instr_times*) counters );
+   //_hwInstrCounters.erase( wd );
+
+}
+
+#if 0
+void FPGAThread::setupTaskInstrumentation( WD *wd ) {
+   //Set up HW instrumentation
+   FPGAProcessor *fpga = ( FPGAProcessor* ) this->runningOn();
+   const xdma_device deviceHandle =
+      fpga->getFPGAProcessorInfo()->getDeviceHandle();
+
+   //Instrument instrumentation setup
+   Instrumentation *instr = sys.getInstrumentation();
+   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation();
+   unsigned long long timestamp;
+   xdmaGetDeviceTime( &timestamp );
+   instr->addDeviceEvent(
+           Instrumentation::DeviceEvent( timestamp, TaskBegin, submitInstr, wd ) );
+   instr->addDeviceEvent(
+           Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, NULL, wd) );
+
+   xdma_instr_times * hwCounters;
+   xdmaSetupTaskInstrument(deviceHandle, &hwCounters);
+   hwCounters->outTransfer = 1;
+   //_hwInstrCounters[ wd ] = hwCounters;
+
+   timestamp = submitInstr->getDeviceTime();
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, wd, NULL) );
+   instr->addDeviceEvent(
+         Instrumentation::DeviceEvent( timestamp, TaskEnd, submitInstr, wd) );
+}
+
+void FPGAThread::submitInstrSync( WD *wd ) {
+   FPGAProcessor *fpga = ( FPGAProcessor* ) this->runningOn();
+   const xdma_device deviceHandle =
+      fpga->getFPGAProcessorInfo()->getDeviceHandle();
+   const xdma_channel oChan = fpga->getFPGAProcessorInfo()->getOutputChannel();
+   xdma_transfer_handle handle;
+   xdmaSubmitKBuffer( _syncHandle, sizeof( unsigned long long int ), 0, XDMA_ASYNC,
+         deviceHandle, oChan, &handle );
+   _instrSyncHandles[ wd ] = handle;
+}
+#endif
+#endif
+
+void FPGAProcessor::waitAndFinishTask( FPGATaskInfo_t & task ) {
+   //Scheduler::postOutlineWork( wd, false, this );
+   //Wait for the task to finish
+   xdmaWaitTask( task._handle );
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   readInstrCounters( task );
+#endif
+   xdmaDeleteTask( &(task._handle) );
+   //FPGAWorker::postOutlineWork( task._wd );
+   Scheduler::postOutlineWork( task._wd, false, myThread );
+}
+
+int FPGAProcessor::getPendingWDs() const {
+   return _pendingTasks.size();
+}
+
+void FPGAProcessor::finishPendingWD( int numWD ) {
+   FPGATaskInfo_t task;
+   int cnt = 0;
+   while ( cnt++ < numWD && _pendingTasks.try_pop( task ) ) {
+      waitAndFinishTask( task );
+   }
+}
+
+void FPGAProcessor::finishAllWD() {
+   FPGATaskInfo_t task;
+   while( _pendingTasks.try_pop( task ) ) {
+      waitAndFinishTask( task );
+   }
 }
 
 bool FPGAProcessor::inlineWorkDependent( WD &wd )
@@ -304,10 +402,16 @@ void FPGAProcessor::preOutlineWorkDependent ( WD &wd ) {
 
 void FPGAProcessor::outlineWorkDependent ( WD &wd ) {
    //wd.start( WD::IsNotAUserLevelThread );
-
-   createAndSubmitTask( wd );
+   xdma_task_handle handle = createAndSubmitTask( wd );
 
    //set flag to allow new opdate
    FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
    ( dd.getWorkFct() )( wd.getData() );
+
+   /*
+    * NOTE: We have to call submitOutputCopies before pushing the task in the queue
+    *       but matbe this is not the best place to do this acction.
+    */
+   //wd.submitOutputCopies();
+   _pendingTasks.push( FPGATaskInfo_t( &wd, handle ) );
 }

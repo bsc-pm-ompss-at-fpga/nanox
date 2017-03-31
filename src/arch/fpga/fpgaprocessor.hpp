@@ -24,6 +24,7 @@
 #include "atomic.hpp"
 #include "compatibility.hpp"
 #include "copydescriptor_decl.hpp"
+#include "queue_decl.hpp"
 
 #include "fpgadevice.hpp"
 #include "fpgaconfig.hpp"
@@ -41,20 +42,26 @@ namespace ext {
       {
          public:
             class FPGAProcessorInfo;
+            typedef Queue< WD * > FPGATasksQueue_t;
+
          private:
-            //! FPGA device ID
-            Atomic<int> _fpgaDevice;
-            static Lock _initLock;  ///Initialization lock (may only be needed if we dynamically spawn fpga helper threads)
-            FPGAProcessorInfo *_fpgaProcessorInfo;
-            static int _accelSeed;  ///Keeps track of the created accelerators
-            int _accelBase;         ///Base of the range of assigned accelerators
-            SMPProcessor *_core;
+            typedef struct FPGATaskInfo_t {
+               WD              *_wd;
+               xdma_task_handle _handle;
 
-            FPGAMemoryTransferList *_inputTransfers;
-            FPGAMemoryTransferList *_outputTransfers;
+               FPGATaskInfo_t( WD * const wd = NULL, xdma_task_handle h = 0 ) : _wd( wd ), _handle( h ) {}
+            } FPGATaskInfo_t;
 
-            static FPGAPinnedAllocator _allocator;
-            std::map <WD*, xdma_task_handle> _pendingTasks;
+            int                           _accelId;            //!< Unique FPGA Accelerator identifier
+            FPGAProcessorInfo            *_fpgaProcessorInfo;  //!< Accelerator information
+            Queue< FPGATaskInfo_t >       _pendingTasks;       //!< Tasks in the accelerator (running)
+            FPGATasksQueue_t              _readyTasks;         //!< Tasks that are ready but are waiting for device memory
+            FPGATasksQueue_t              _waitInTasks;        //!< Tasks that are ready but are waiting for input copies
+
+            FPGAMemoryTransferList       *_inputTransfers;     //< List of in stream transfers
+            FPGAMemoryTransferList       *_outputTransfers;    //< List of out stream transfers
+
+            static FPGAPinnedAllocator    _allocator;
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
             DeviceInstrumentation * _devInstr;
@@ -63,18 +70,26 @@ namespace ext {
             DeviceInstrumentation * _submitInstrumentation;
 #endif
 
+            // AUX functions
+            void waitAndFinishTask( FPGATaskInfo_t & task );
+            xdma_task_handle createAndSubmitTask( WD &wd );
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+            void readInstrCounters( FPGATaskInfo_t & task );
+            xdma_instr_times * getInstrCounters( FPGATaskInfo_t & task );
+#endif
+
          public:
 
-            FPGAProcessor(const Device *arch, memory_space_id_t memSpaceId);
+            FPGAProcessor( int const accId, memory_space_id_t memSpaceId, Device const * arch );
             ~FPGAProcessor();
 
-            FPGAProcessorInfo* getFPGAProcessorInfo() const {
+            inline FPGAProcessorInfo * getFPGAProcessorInfo() const {
                return _fpgaProcessorInfo;
             }
-            FPGAMemoryTransferList *getInTransferList() const {
+            inline FPGAMemoryTransferList * getInTransferList() const {
                return _inputTransfers;
             }
-            FPGAMemoryTransferList* getOutTransferList() const {
+            inline FPGAMemoryTransferList * getOutTransferList() const {
                return _outputTransfers;
             }
 
@@ -105,7 +120,7 @@ namespace ext {
             bool supportsUserLevelThreads () const { return false; }
             bool isGPU () const { return false; }
             //virtual void waitInputs(WorkDescriptor& wd);
-            int getAccelBase() const { return _accelBase; }
+            int getAccelId() const { return _accelId; }
 
             /// \brief Override (disable) getAddres as this device does not have a dedicated memory nor separated address space
             // This avoids accessing the cache to retrieve a (null) address
@@ -117,11 +132,12 @@ namespace ext {
             //BaseThread &startFPGAThread();
             static  FPGAPinnedAllocator& getPinnedAllocator() { return _allocator; }
 
-            void createAndSubmitTask( WD &wd );
-            void waitTask( WD *wd );
-            void deleteTask( WD *wd );
-            xdma_instr_times * getInstrCounters( WD *wd );
+            int getPendingWDs() const;
+            void finishPendingWD( int numWD );
+            void finishAllWD();
 
+            FPGATasksQueue_t & getReadyTasks() { return _readyTasks; }
+            FPGATasksQueue_t & getWaitInTasks() { return _waitInTasks; }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
             void setDeviceInstrumentation( DeviceInstrumentation * devInstr ) {
@@ -150,7 +166,9 @@ namespace ext {
             }
 #endif
 
-            virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
+            virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {
+               fatal("switchHelperDependent is not implemented in the FPGAProcessor");
+            }
             virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
             virtual bool inlineWorkDependent (WD &work);
             virtual void switchTo( WD *work, SchedulerHelper *helper ) {}

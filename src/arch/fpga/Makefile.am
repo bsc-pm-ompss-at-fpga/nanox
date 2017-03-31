@@ -66,6 +66,7 @@ fpga_sources = \
 	fpgainstrumentation.hpp \
 	fpgainstrumentation.cpp \
 	fpgalistener.hpp \
+	fpgalistener.cpp \
 	$(END)
 
 pe_fpga_sources = \
