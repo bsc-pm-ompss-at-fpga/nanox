@@ -5,14 +5,24 @@
 
 using namespace nanos::error;
 
-NANOS_API_DEF( void, nanos_inject_error, ( void *handle ) )
+void nanos_inject_error( void *handle )
 {
 	ErrorInjectionInterface::injectError( handle );
 }
 
-NANOS_API_DEF( void, nanos_declare_resource, ( void *handle, size_t *size ) )
+void nanos_inject_error_( void **handle )
 {
-	ErrorInjectionInterface::declareResource( handle, *size );
+	ErrorInjectionInterface::injectError( handle );
+}
+
+void nanos_declare_resource( void *handle, size_t size )
+{
+	ErrorInjectionInterface::declareResource( handle, size );
+}
+
+void nanos_declare_resource_( void **handle, size_t *size )
+{
+	ErrorInjectionInterface::declareResource( *handle, *size );
 }
 
 NANOS_API_DEF( void, nanos_injection_start, (void) )

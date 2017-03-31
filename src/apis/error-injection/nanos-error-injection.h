@@ -9,9 +9,13 @@
 extern "C" {
 #endif
 
-NANOS_API_DECL( void, nanos_inject_error, ( void *handle ));
+void nanos_inject_error( void *handle );
 
-NANOS_API_DECL( void, nanos_declare_resource, ( void *handle, size_t *size ));
+void nanos_inject_error_( void **handle );
+
+void nanos_declare_resource( void *handle, size_t size );
+
+void nanos_declare_resource_( void **handle, size_t *size );
 
 NANOS_API_DECL( void, nanos_injection_start, (void));
 
