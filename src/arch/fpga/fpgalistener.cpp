@@ -85,6 +85,7 @@ void FPGAListener::callback( BaseThread* self )
                      // Task does not have input data in the memory device yet
                      fpga->getWaitInTasks().push( wd );
                   }
+                  self->setCurrentWD( *selfWD );
                } else {
                   // Task does not have memory allocated yet
                   fpga->getReadyTasks().push( wd );
@@ -106,6 +107,8 @@ void FPGAListener::callback( BaseThread* self )
                   // Task does not have input data in the memory device yet
                   fpga->getWaitInTasks().push( wd );
                }
+               // NOTE: Restore the thread::currentWD value here?
+               self->setCurrentWD( *selfWD );
             } else {
                // Task does not have memory allocated yet
                fpga->getReadyTasks().push( wd );

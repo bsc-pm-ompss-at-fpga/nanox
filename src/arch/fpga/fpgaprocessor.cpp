@@ -364,7 +364,7 @@ void FPGAProcessor::waitAndFinishTask( FPGATaskInfo_t & task ) {
 #endif
    xdmaDeleteTask( &(task._handle) );
    //FPGAWorker::postOutlineWork( task._wd );
-   Scheduler::postOutlineWork( task._wd, false, myThread );
+   Scheduler::postOutlineWork( task._wd, false, myThread, myThread->getCurrentWD() );
 }
 
 int FPGAProcessor::getPendingWDs() const {
@@ -411,10 +411,5 @@ void FPGAProcessor::outlineWorkDependent ( WD &wd ) {
    FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
    ( dd.getWorkFct() )( wd.getData() );
 
-   /*
-    * NOTE: We have to call submitOutputCopies before pushing the task in the queue
-    *       but matbe this is not the best place to do this acction.
-    */
-   //wd.submitOutputCopies();
    _pendingTasks.push( FPGATaskInfo_t( &wd, handle ) );
 }

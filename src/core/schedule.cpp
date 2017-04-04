@@ -726,9 +726,10 @@ bool Scheduler::tryPreOutlineWork ( WD *wd )
    return result;
 }
 
-void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner )
+void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner, WD *previousWD )
 {
    BaseThread *thread = owner;
+   WD & next = previousWD ? *previousWD : thread->getThreadWD();
    //NANOS_INSTRUMENT( InstrumentState inst2(NANOS_POST_OUTLINE_WORK, true); );
 
    //std::cerr << "completing WD " << wd->getId() << " at thd " << owner->getId() << " thd addr " << owner << std::endl;
@@ -746,11 +747,14 @@ void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner )
 
    //std::cerr << "thd " << myThread->getId() << "exiting task(inlined) " << wd << ":" << wd->getId() <<
    //       " to " << oldwd << ":" << oldwd->getId() << std::endl;
-   debug( "exiting task(post outline) " << wd << ":" << std::dec << wd->getId() << " to " << &(thread->getThreadWD()) << ":" << std::dec << thread->getThreadWD().getId() );
+   debug( "exiting task(post outline) " << wd << ":" << std::dec << wd->getId() << " to " << &next << ":" << std::dec << next.getId() );
 
-   thread->setCurrentWD( thread->getThreadWD() );
-
-   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, NULL, true) );
+   /*
+    * NOTE: If the calling thread is not a helper thread, we have to restore the previous value that
+    *       may not be the implicit thread WD
+    */
+   thread->setCurrentWD( next );
+   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, &next, true) );
 
    //std::cerr << "completed WD " << wd->getId() << " at thd " << owner->getId() << " thd addr " << owner << std::endl;
    //NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( NULL, oldwd, false) );
@@ -769,8 +773,15 @@ void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner )
 }
 
 void Scheduler::outlineWork( BaseThread *currentThread, WD *wd ) {
-   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( NULL, wd, false) );
+   // TODO: Check if 'setCurrentWD' calls are redundant or if introduce some race/bug
+   WD * oldWD = currentThread->getCurrentWD();
+   currentThread->setCurrentWD( *wd );
+
+   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, wd, false) );
    currentThread->runningOn()->outlineWorkDependent( *wd );
+
+   currentThread->setCurrentWD( *oldWD );
+   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( wd, oldWD, false) );
 }
 
 void Scheduler::finishWork( WD * wd, bool schedule )
@@ -1018,7 +1029,8 @@ struct ExitBehaviour
    static void switchWD ( BaseThread *thread, WD *current, WD *next )
    {
       if (next->started()){
-        Scheduler::exitTo(next);
+         ensure( thread == myThread, "ExitBehaviour::switchWD is being called from an unexpected thread" );
+         Scheduler::exitTo(next);
       }
       else {
         if ( Scheduler::inlineWork ( next /*jb merge */, /*schedule*/ true ) ) {
