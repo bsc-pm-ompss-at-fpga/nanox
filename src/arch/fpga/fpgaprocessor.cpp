@@ -46,6 +46,9 @@ using namespace nanos::ext;
 FPGAProcessor::FPGAProcessor( int const accId, memory_space_id_t memSpaceId, Device const * arch ) :
    ProcessingElement( arch, memSpaceId, 0, 0, false, 0, false ), _accelId( accId ),
    _pendingTasks( ), _readyTasks( ), _waitInTasks( )
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   , _dmaSubmitWarnShown( false )
+#endif
 {
    _fpgaProcessorInfo = NEW FPGAProcessorInfo;
    _inputTransfers = NEW FPGAMemoryInTransferList();
@@ -73,7 +76,7 @@ void FPGAProcessor::init()
    _fpgaProcessorInfo->setDeviceHandle( devices[_accelId] );
 
    //open input channel
-   NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_REQ_CHANNEL_EVENT);
+   NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_REQ_CHANNEL_EVENT );
    status = xdmaOpenChannel(devices[_accelId], XDMA_TO_DEVICE, XDMA_CH_NONE, &iChan);
    NANOS_FPGA_CLOSE_RUNTIME_EVENT;
 
@@ -157,36 +160,44 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 static void dmaSubmitStart( FPGAProcessor *fpga, const WD *wd ) {
-   Instrumentation *instr = sys.getInstrumentation();
-   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation();
    unsigned long long timestamp;
    xdma_status status;
    status = xdmaGetDeviceTime( &timestamp );
    if ( status != XDMA_SUCCESS ) {
-      warning("Could not read accelerator clock (dma submit start)");
+      if ( !fpga->_dmaSubmitWarnShown ) {
+         warning("Could not read accelerator " << fpga->getAccelId() <<
+                 " clock (dma submit start). [Warning only shown once]");
+         fpga->_dmaSubmitWarnShown = true;
+      }
+   } else {
+      Instrumentation *instr = sys.getInstrumentation();
+      DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation();
+      instr->addDeviceEvent(
+              Instrumentation::DeviceEvent( timestamp, TaskBegin, submitInstr, wd ) );
+      instr->addDeviceEvent(
+              Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, NULL, wd) );
    }
-
-   instr->addDeviceEvent(
-           Instrumentation::DeviceEvent( timestamp, TaskBegin, submitInstr, wd ) );
-   instr->addDeviceEvent(
-           Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, NULL, wd) );
 }
 
 static void dmaSubmitEnd( FPGAProcessor *fpga, const WD *wd ) {
-   Instrumentation *instr = sys.getInstrumentation();
-   //FIXME: Emit the accelerator ID
-   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation();
    unsigned long long timestamp;
    xdma_status status;
    status = xdmaGetDeviceTime( &timestamp );
    if ( status != XDMA_SUCCESS ) {
-      warning("Could not read accelerator clock (dma submit end)");
+      if ( !fpga->_dmaSubmitWarnShown ) {
+         warning("Could not read accelerator " << fpga->getAccelId() <<
+                 " clock (dma submit end). [Warning only shown once]");
+         fpga->_dmaSubmitWarnShown = true;
+      }
+   } else {
+      Instrumentation *instr = sys.getInstrumentation();
+      //FIXME: Emit the accelerator ID
+      DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation();
+      instr->addDeviceEvent(
+            Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, wd, NULL) );
+      instr->addDeviceEvent(
+            Instrumentation::DeviceEvent( timestamp, TaskEnd, submitInstr, wd) );
    }
-
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, wd, NULL) );
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( timestamp, TaskEnd, submitInstr, wd) );
 }
 #endif  //NANOS_INSTRUMENTATION_ENABLED
 

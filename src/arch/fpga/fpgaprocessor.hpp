@@ -138,6 +138,10 @@ namespace ext {
             FPGATasksQueue_t & getWaitInTasks() { return _waitInTasks; }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
+            /*! Defines if the warning has already been shown
+             */
+            bool _dmaSubmitWarnShown;
+
             void setDeviceInstrumentation( DeviceInstrumentation * devInstr ) {
                _devInstr = devInstr;
             }

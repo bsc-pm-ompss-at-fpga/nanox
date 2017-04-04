@@ -171,8 +171,6 @@ class FPGAPlugin : public ArchPlugin
                //Register device in the instrumentation system
                registerDeviceInstrumentation( fpga, i );
 #endif
-               // Initialize device. Maybe it won't run any thread and must be initialized in any case
-               fpga->init();
             }
 
             if ( _fpgaThreads->size() > 0 ) {
@@ -254,6 +252,12 @@ class FPGAPlugin : public ArchPlugin
                it != _fpgas->end(); it++ )
          {
             pes.insert( std::make_pair( (*it)->getId(), *it) );
+            /*
+             * Initialize device. Maybe it won't run any thread and must be initialized in any case
+             * NOTE: This cannot be done during the FPGAPlugin init call because the instrumentation
+             *       is not available
+             */
+            ( *it )->init();
          }
       }
 
