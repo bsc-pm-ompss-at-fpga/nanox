@@ -99,6 +99,9 @@ void FPGAProcessor::init()
 
 void FPGAProcessor::cleanUp()
 {
+   ensure( _pendingTasks.empty(), "Queue of FPGA pending tasks is not empty in one FPGAProcessor" );
+   ensure( _readyTasks.empty(), "Queue of FPGA ready tasks is not empty in one FPGAProcessor" );
+   ensure( _waitInTasks.empty(),  "Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
 
     //release channels
     xdma_status status;

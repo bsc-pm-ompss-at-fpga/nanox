@@ -161,7 +161,7 @@ class FPGAPlugin : public ArchPlugin
             fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
             FPGADD::addAccDevice( _device );
 
-            for ( unsigned int i = 0; i < _fpgas->size(); i++) {
+            for ( unsigned int i = 0; i < _fpgas->size(); i++ ) {
                FPGAProcessor *fpga = NEW FPGAProcessor( i, memSpaceId, _device );
                (*_fpgas)[i] = fpga;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
@@ -209,6 +209,11 @@ class FPGAPlugin : public ArchPlugin
           */
          if ( !FPGAConfig::isDisabled() ) { //cleanup only if we have initialized
             int status;
+
+            // Run device cleanup. Maybe it won't run any thread and cleanup must be run in any case
+            for ( unsigned int i = 0; i < _fpgas->size(); i++ ) {
+               (*_fpgas)[i]->cleanUp();
+            }
 
             delete _device;
 

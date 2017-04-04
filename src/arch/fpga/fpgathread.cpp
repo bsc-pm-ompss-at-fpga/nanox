@@ -53,7 +53,8 @@ void FPGAThread::runDependent()
    setCurrentWD( work );
    SMPDD &dd = ( SMPDD & ) work.activateDevice( getSMPDevice() );
    dd.getWorkFct()( work.getData() );
-   ( ( FPGAProcessor * ) this->runningOn() )->cleanUp();
+   //NOTE: Cleanup is done in the FPGA plugin (maybe PE is not running any thread)
+   //( ( FPGAProcessor * ) this->runningOn() )->cleanUp();
 }
 
 void FPGAThread::yield() {
