@@ -30,6 +30,7 @@
 #include "smpprocessor.hpp"
 #include "fpgapinnedallocator.hpp"
 #include "fpgainstrumentation.hpp"
+#include "simpleallocator.hpp"
 
 #include "libxdma.h"
 
@@ -37,9 +38,7 @@ using namespace nanos;
 using namespace nanos::ext;
 
 //Lock FPGAProcessor::_initLock;
-//TODO: We should have an FPGAPinnedAllocator for each FPGAProcessor and only have one FPGAProcessor
-//      with several FPGADevices
-FPGAPinnedAllocator FPGAProcessor::_allocator( 1024*1024*64 );
+
 /*
  * TODO: Support the case where each thread may manage a different number of accelerators
  *       jbosch: This should be supported using different MultiThreads each one with a subset of accels
@@ -136,8 +135,6 @@ void FPGAProcessor::cleanUp()
         warning ( "Failed to release output dma channel" );
 }
 
-
-
 WorkDescriptor & FPGAProcessor::getWorkerWD () const
 {
    //SMPDD *dd = NEW SMPDD( ( SMPDD::work_fct )Scheduler::workerLoop );
@@ -224,21 +221,21 @@ xdma_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
              << numOutputs << "): " << ( status == XDMA_ENOMEM ? "XDMA_ENOMEM" : "XDMA_ERROR" ) );
    }
 #endif
+   FPGAPinnedAllocator * const allocator = getAllocator();
+   uint64_t const baseAddress = allocator->getBaseAddress();
+   ensure( baseAddress > 0, "The base address of FPGA Allocator is not valid and FPGA task cannot be sent" );
    int inputIdx, outputIdx;
    inputIdx = 0; outputIdx = 0;
    for ( int i=0; i<numCopies; i++ ) {
       //Get handle & offset based on copy address
       int size;
-      uint64_t srcAddress, baseAddress, offset;
+      uint64_t srcAddress, offset;
       xdma_buf_handle copyHandle;
 
       size = copies[i].getSize();
       srcAddress = wd._mcontrol.getAddress( i );
-      baseAddress = (uint64_t)_allocator.getBasePointer( (void *)srcAddress, size );
-      ensure( baseAddress > 0,
-         "Trying to register an invalid FPGA data copy. The memory region is not registered in the FPGA Allocator." );
       offset = srcAddress - baseAddress;
-      copyHandle = _allocator.getBufferHandle( (void *)baseAddress );
+      copyHandle = allocator->getBufferHandle( (void *)baseAddress );
 
       if ( copies[i].isInput() ) {
          xdmaAddDataCopy(&task, inputIdx, XDMA_GLOBAL, XDMA_TO_DEVICE,

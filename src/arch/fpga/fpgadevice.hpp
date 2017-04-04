@@ -50,13 +50,10 @@ namespace nanos {
          virtual void memFree( uint64_t addr, SeparateMemoryAddressSpace &mem );
 
          virtual void _canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *sizes,
-                 unsigned int numChunks, std::size_t *remainingSizes ) {}
+                 unsigned int numChunks, std::size_t *remainingSizes );
 
-         virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace &mem ) {
-            //return 1GB of memory available. There is no addressable memory on the device
-            //Just return 1GB as this is the total system memmory.
-            return 1024*1024*1024;
-         }
+         virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace &mem );
+
          virtual void _copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
                SeparateMemoryAddressSpace &mem, DeviceOps *ops,
                WD const *wd, void *hostObject, reg_t hostRegionId );
@@ -84,7 +81,7 @@ namespace nanos {
                reg_t hostRegionId ) { std::cerr << "wrong copyDevToDev" <<std::endl; return false; }
 
          virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem,
-               SimpleAllocator::ChunkList &list ) { std::cerr << "wrong _getFreeMemoryChunksList()" <<std::endl; }
+               SimpleAllocator::ChunkList &list );
 
          //not supported
          virtual void _copyInStrided1D( uint64_t devAddr, uint64_t hostAddr, std::size_t len,

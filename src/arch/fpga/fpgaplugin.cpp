@@ -47,6 +47,7 @@ class FPGAPlugin : public ArchPlugin
       FPGADevice                    *_device;
       SMPProcessor                  *_core;
       SMPMultiThread                *_fpgaHelper;
+      FPGAPinnedAllocator           *_allocator;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -155,10 +156,12 @@ class FPGAPlugin : public ArchPlugin
 
             //Accelerator setup
             _device = NEW FPGADevice( "FPGA" );
+            _allocator = NEW FPGAPinnedAllocator( FPGAConfig::getAllocatorPoolSize()*1024*1024 );
             memory_space_id_t memSpaceId = sys.addSeparateMemoryAddressSpace(*_device, true, 0 );
             SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
             fpgaAddressSpace.setAcceleratorNumber( sys.getNewAcceleratorId() );
             fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
+            fpgaAddressSpace.setSpecificData( _allocator );
             FPGADD::addAccDevice( _device );
 
             for ( unsigned int i = 0; i < _fpgas->size(); i++ ) {
@@ -216,6 +219,7 @@ class FPGAPlugin : public ArchPlugin
             }
 
             delete _device;
+            delete _allocator;
 
             for (size_t i = 0; i < _fpgaListeners.size(); ++i) {
                delete _fpgaListeners[i];

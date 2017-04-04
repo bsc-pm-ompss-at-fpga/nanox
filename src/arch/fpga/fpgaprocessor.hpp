@@ -61,8 +61,6 @@ namespace ext {
             FPGAMemoryTransferList       *_inputTransfers;     //< List of in stream transfers
             FPGAMemoryTransferList       *_outputTransfers;    //< List of out stream transfers
 
-            static FPGAPinnedAllocator    _allocator;
-
 #ifdef NANOS_INSTRUMENTATION_ENABLED
             DeviceInstrumentation * _devInstr;
             DeviceInstrumentation * _dmaInInstr;
@@ -117,6 +115,7 @@ namespace ext {
                fatal( "ClusterNode is not allowed to create FPGA MultiThreads" );
             }
 
+            virtual bool hasSeparatedMemorySpace() const { return true; }
             bool supportsUserLevelThreads () const { return false; }
             bool isGPU () const { return false; }
             //virtual void waitInputs(WorkDescriptor& wd);
@@ -129,8 +128,7 @@ namespace ext {
                return NULL;
             }
 
-            //BaseThread &startFPGAThread();
-            static  FPGAPinnedAllocator& getPinnedAllocator() { return _allocator; }
+            FPGAPinnedAllocator * getAllocator ( void );
 
             int getPendingWDs() const;
             void finishPendingWD( int numWD );
@@ -177,6 +175,10 @@ namespace ext {
             virtual void preOutlineWorkDependent (WD &work);
 
       };
+
+      inline FPGAPinnedAllocator * FPGAProcessor::getAllocator() {
+         return ( FPGAPinnedAllocator * )( sys.getSeparateMemory(getMemorySpaceId()).getSpecificData() );
+      }
 } // namespace ext
 } // namespace nanos
 

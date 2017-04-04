@@ -43,7 +43,7 @@ namespace nanos
       int FPGAConfig::_maxPendingWD = 8;
       int FPGAConfig::_finishWDBurst = 4;
       bool FPGAConfig::_idleCallback = true;
-
+      std::size_t FPGAConfig::_allocatorPoolSize = 64;
 
       void FPGAConfig::prepare( Config &config )
       {
@@ -109,6 +109,11 @@ namespace nanos
          config.registerConfigOption( "fpga_idle_callback", NEW Config::FlagOption( _idleCallback ),
                "Perform fpga operations using the IDLE event callback of Event Dispatcher (def: enabled)" );
          config.registerArgOption( "fpga_idle_callback", "fpga-idle-callback" );
+
+         config.registerConfigOption( "fpga_alloc_pool_size", NEW Config::SizeVar( _allocatorPoolSize ),
+               "Size (in MB) of the memory pool for the FPGA Tasks data copies (def: 64)" );
+         config.registerEnvOption( "fpga_alloc_pool_size", "NX_FPGA_ALLOC_POOL_SIZE" );
+         config.registerArgOption( "fpga_alloc_pool_size", "fpga-alloc-pool-size" );
       }
 
       void FPGAConfig::apply()

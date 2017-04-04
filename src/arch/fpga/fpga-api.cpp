@@ -37,10 +37,16 @@ NANOS_API_DEF( void *, nanos_fpga_factory, ( void *args ) )
 
 NANOS_API_DEF( void *, nanos_fpga_alloc_dma_mem, ( size_t len ) )
 {
-    return nanos::ext::FPGAProcessor::getPinnedAllocator().allocate( len );
+   warning( "API 'nanos_fpga_alloc_dma_mem( size_t )' is deprecated"
+            << " (Implementing using 'malloc')." );
+   return malloc( len );
+    //return nanos::ext::FPGAProcessor::getPinnedAllocator().allocate( len );
 }
 
 NANOS_API_DEF( void, nanos_fpga_free_dma_mem, ( void * buffer ) )
 {
-    nanos::ext::FPGAProcessor::getPinnedAllocator().free( buffer );
+   warning( "API 'nanos_fpga_free_dma_mem( size_t )' is deprecated."
+            << " (Implementing using 'free')" );
+   return free( buffer );
+    //nanos::ext::FPGAProcessor::getPinnedAllocator().free( buffer );
 }

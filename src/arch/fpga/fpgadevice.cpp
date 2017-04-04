@@ -45,8 +45,9 @@ void FPGADevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
 }
 
 void FPGADevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
-      SeparateMemoryAddressSpace &mem, DeviceOps *ops,
-      WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId ) {
+   SeparateMemoryAddressSpace &mem, DeviceOps *ops,
+   WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId )
+{
    //NOTE: Copies are synchronous so we don't need to register them in the DeviceOps
    copyData( (void *)hostAddr, (void *)devAddr, len );
 }
@@ -59,22 +60,46 @@ void FPGADevice::copyData( void* dst, void* src, size_t len )
 }
 
 void *FPGADevice::memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem,
-        WorkDescriptor const *wd, unsigned int copyIdx){
-   void * ptr = FPGAProcessor::getPinnedAllocator().allocate( size );
-   return ptr;
+   WorkDescriptor const *wd, unsigned int copyIdx )
+{
+   SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
+   verbose( "FPGADevice allocate memory:\t " << size << " bytes in allocator " << allocator );
+   return allocator->allocate( size );
 }
 
-void FPGADevice::memFree( uint64_t addr, SeparateMemoryAddressSpace &mem ){
+void FPGADevice::memFree( uint64_t addr, SeparateMemoryAddressSpace &mem )
+{
    void * ptr = ( void * )( addr );
-   FPGAProcessor::getPinnedAllocator().free( ptr );
+   SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
+   verbose( "FPGADevice free memory:\t " << ptr << " in allocator " << allocator );
+   allocator->free( ptr );
 }
 
 //this is used to priorize transfers (because someone needs the data)
 //In our case this causes this actually means "finish the transfer"
-void FPGADevice::syncTransfer( uint64_t hostAddress, ProcessingElement *pe)
+void FPGADevice::syncTransfer( uint64_t hostAddress, ProcessingElement *pe )
 {
     //TODO: At this point we only are going to sync output transfers
     // as input transfers do not need to be synchronized
     ((FPGAProcessor *)pe)->getOutTransferList()->syncTransfer(hostAddress);
     //((FPGAProcessor *)pe)->getInTransferList()->syncTransfer(hostAddress);
+}
+
+void FPGADevice::_canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *sizes,
+   unsigned int numChunks, std::size_t *remainingSizes )
+{
+   SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
+   allocator->canAllocate( sizes, numChunks, remainingSizes );
+}
+void FPGADevice::_getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem,
+   SimpleAllocator::ChunkList &list )
+{
+   SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
+   allocator->getFreeChunksList( list );
+}
+
+std::size_t FPGADevice::getMemCapacity( SeparateMemoryAddressSpace &mem )
+{
+   SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
+   return allocator->getCapacity();
 }

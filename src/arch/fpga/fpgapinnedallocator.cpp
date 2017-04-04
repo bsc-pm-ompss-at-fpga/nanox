@@ -9,38 +9,22 @@ FPGAPinnedAllocator::FPGAPinnedAllocator( size_t size )
 {
    void * addr;
    xdma_status status;
-   status = xdmaAllocateKernelBuffer( &addr, &_chunk._handle, size );
+   status = xdmaAllocateKernelBuffer( &addr, &_xdmaHandle, size );
    if ( status != XDMA_SUCCESS ) {
       warning0( "Could not allocate XDMA pinned memory for the FPGAPinnedAllocator" );
       addr = NULL;
       size = 0;
    }
-   _chunk._allocator.init( (uint64_t)addr, size );
+   init( ( uint64_t )( addr ), size );
 }
 
 FPGAPinnedAllocator::~FPGAPinnedAllocator()
 {
-   xdmaFreeKernelBuffer( (void *)_chunk._allocator.getBaseAddress(), _chunk._handle );
-}
-
-void * FPGAPinnedAllocator::allocate( size_t size )
-{
-   return _chunk._allocator.allocate( size );
-}
-
-void FPGAPinnedAllocator::free( void * address )
-{
-   _chunk._allocator.free( address );
-}
-
-//size should not be needed to determine the base address of a pointer
-void * FPGAPinnedAllocator::getBasePointer( void * address, size_t size )
-{
-   //return _chunk._allocator.getBasePointer( address, size );
-   return (void *)_chunk._allocator.getBaseAddress();
+   void * addr = ( void * )( getBaseAddress() );
+   xdmaFreeKernelBuffer( addr, _xdmaHandle );
 }
 
 xdma_buf_handle FPGAPinnedAllocator::getBufferHandle( void * address )
 {
-   return _chunk._handle;
+   return _xdmaHandle;
 }

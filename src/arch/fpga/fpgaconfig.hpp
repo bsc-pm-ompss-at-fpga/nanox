@@ -55,6 +55,7 @@ namespace ext {
             static int                       _maxPendingWD;
             static int                       _finishWDBurst;
             static bool                      _idleCallback;
+            static std::size_t               _allocatorPoolSize;
 
          public:
             static void printConfiguration( void );
@@ -83,6 +84,9 @@ namespace ext {
             static int getMaxPendingWD() { return  _maxPendingWD; }
             static int getFinishWDBurst() { return _finishWDBurst; }
             static bool getIdleCallbackEnabled() { return _idleCallback; }
+
+            // FPGA Allocator
+            static std::size_t getAllocatorPoolSize() { return _allocatorPoolSize; }
 
             //Set the number of FPGAs and return the old value
             static void setFPGASystemCount ( int numFPGAs );
