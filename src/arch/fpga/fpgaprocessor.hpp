@@ -117,7 +117,6 @@ namespace ext {
 
             virtual bool hasSeparatedMemorySpace() const { return true; }
             bool supportsUserLevelThreads () const { return false; }
-            bool isGPU () const { return false; }
             //virtual void waitInputs(WorkDescriptor& wd);
             int getAccelId() const { return _accelId; }
 
