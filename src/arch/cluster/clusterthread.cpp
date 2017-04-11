@@ -284,7 +284,7 @@ WD * ClusterThread::getClusterWD( BaseThread *thread )
    if ( thread->getTeam() != NULL ) {
       wd = thread->getNextWD();
       if ( wd ) {
-         if ( !wd->canRunIn( *thread->runningOn() ) )
+         if ( !thread->runningOn()->canRun( *wd ) )
          { // found a non compatible wd in "nextWD", ignore it
             wd = thread->getTeam()->getSchedulePolicy().atIdle ( thread, 0 );
             //if(wd!=NULL)std::cerr << "GN got a wd with depth " <<wd->getDepth() << std::endl;
