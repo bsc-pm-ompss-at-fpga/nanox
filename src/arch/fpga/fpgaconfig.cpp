@@ -31,8 +31,6 @@ namespace nanos
       int  FPGAConfig::_numAcceleratorsSystem = -1;
       int  FPGAConfig::_numFPGAThreads = -1;
       bool FPGAConfig::_disableFPGA = false;
-      Lock FPGAConfig::_dmaLock;
-      Atomic <int> FPGAConfig::_accelID(0);
       //TODO set sensible defaults (disabling transfers when necessary, etc.)
       unsigned int FPGAConfig::_burst = 8;
       int FPGAConfig::_maxTransfers = 32;

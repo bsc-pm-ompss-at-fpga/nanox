@@ -41,7 +41,6 @@ namespace ext {
 
             static unsigned int              _burst;
             static int                       _maxTransfers;
-            static Atomic<int>               _accelID; ///ID assigned to each individual accelerator
 
             /*! Parses the GPU user options */
             static void prepare ( Config &config );
@@ -60,18 +59,10 @@ namespace ext {
          public:
             static void printConfiguration( void );
             static int getFPGACount ( void ) { return _numAccelerators; }
-            static inline Lock& getDMALock() { return _dmaLock; }
-            static void acquireDMALock();
-            static void releaseDMALock();
             static inline unsigned int getBurst() { return _burst; }
             static inline unsigned int getMaxTransfers() { return _maxTransfers; }
             static inline int getAccPerThread() { return _numAccelerators/_numFPGAThreads; }
             static inline int getNumFPGAThreads() { return _numFPGAThreads; }
-            static int getAcceleratorID() {
-               int t = _accelID.value();
-               _accelID++;
-               return t;
-            }
             static inline bool isDisabled() { return _disableFPGA; }
             //should be areSyncTransfersDisabled() but is for consistency with other bool getters
             static inline int getIdleSyncBurst() { return _idleSyncBurst; }
