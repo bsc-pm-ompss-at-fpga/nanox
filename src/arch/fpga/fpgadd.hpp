@@ -29,23 +29,33 @@ namespace ext {
 
       class FPGADD : public DD
       {
+         friend class FPGAPlugin;
+         protected:
+            //! \breif Map with the available accelerators types in the system
+            static FPGADeviceMap     *_accDevices;
 
-         private:
-            int            _accNum; //! Accelerator that will run the task
-            static std::vector < FPGADevice * > *_accDevices;
+            /*! \brief Initializes the FPGADeviceMap to allow FPGADD creation
+             *         Must be called one time before the first FPGADD creation
+             */
+            static void init( FPGADeviceMap * map ) {
+               ensure ( _accDevices == NULL, "Double initialization of FPGADD static members" );
+               _accDevices = map;
+            }
+
+            /*! \breif Removes references to the FPGADeviceMap
+            */
+            static void fini() {
+               _accDevices = NULL;
+            }
 
          public:
             // constructors
-            FPGADD( work_fct w , int accNum ) :
-                DD( (accNum < 0) ? (*_accDevices)[ 0 ] : (*_accDevices)[accNum], w ),
-                _accNum( accNum )
-            {
-               ensure( getDevice() != NULL,
-                       "Trying to use an unexisting FPGA Accelerator." );
+            FPGADD( work_fct w , FPGADeviceType const t ) : DD( (*_accDevices)[t], w ) {
+               ensure( getDevice() != NULL, "Trying to use an unexisting FPGA Accelerator type." );
             }
 
             // copy constructors
-            FPGADD( const FPGADD &dd ) : DD( dd ), _accNum( dd._accNum ){}
+            FPGADD( const FPGADD &dd ) : DD( dd ) { }
 
             // assignment operator
             const FPGADD & operator= ( const FPGADD &wd );
@@ -53,21 +63,15 @@ namespace ext {
             // destructor
             virtual ~FPGADD() { }
 
-            static void init();
-
             virtual void lazyInit ( WD &wd, bool isUserLevelThread, WD *previous ) { }
             virtual size_t size ( void ) { return sizeof( FPGADD ); }
             virtual FPGADD *copyTo ( void *toAddr );
             virtual FPGADD *clone () const { return NEW FPGADD ( *this ); }
-            virtual bool isCompatible ( const Device &arch );
 
-            static void addAccDevice( FPGADevice *dev ) {
-                _accDevices->push_back( dev );
-            }
-            static std::vector< FPGADevice* > *getAccDevices() {
-               return _accDevices;
-            }
+            // NOTE: Using the default implementation. If 'onto(-1)' the task will use accelerators with type '0'
+            //virtual bool isCompatible ( const Device &arch );
       };
+
       inline const FPGADD & FPGADD::operator= ( const FPGADD &dd )
       {
          // self-assignment: ok
@@ -77,7 +81,6 @@ namespace ext {
 
          return *this;
       }
-
 
 } // namespace ext
 } // namespace nanos

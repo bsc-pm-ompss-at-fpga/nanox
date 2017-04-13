@@ -44,7 +44,7 @@ class FPGAPlugin : public ArchPlugin
       std::vector< FPGAProcessor* > *_fpgas;
       std::vector< FPGAThread* >    *_fpgaThreads;
       std::vector< FPGAListener* >   _fpgaListeners;
-      FPGADevice                    *_device;
+      FPGADeviceMap                  _fpgaDevices;
       SMPProcessor                  *_core;
       SMPMultiThread                *_fpgaHelper;
       FPGAPinnedAllocator           *_allocator;
@@ -130,7 +130,7 @@ class FPGAPlugin : public ArchPlugin
 
          //NOTE: Apply the config now because before FPGAConfig doesn't know the number of accelerators in the system
          FPGAConfig::apply();
-         FPGADD::init();
+         FPGADD::init( &_fpgaDevices );
          _fpgas = NEW std::vector< FPGAProcessor* >( FPGAConfig::getFPGACount(),( FPGAProcessor* )NULL) ;
          _fpgaThreads = NEW std::vector< FPGAThread* >( FPGAConfig::getNumFPGAThreads(),( FPGAThread* )NULL) ;
          _core = NULL;
@@ -144,28 +144,43 @@ class FPGAPlugin : public ArchPlugin
                fatal0("Error initializing the instrumentation support in the DMA library. Returned status: " << status);
             }
 
-            //Check the cache policy
-            // if ( sys.getRegionCachePolicyStr().compare( "fpga" ) != 0 ) {
-            //    if ( sys.getRegionCachePolicyStr().compare( "" ) != 0 ) {
-            //       warning0( "Switching the cache-policy from '" << sys.getRegionCachePolicyStr() << "' to 'fpga'" );
-            //    } else {
-            //       debug0( "Setting the cache-policy option to 'fpga'" );
-            //    }
-            //    sys.setRegionCachePolicyStr( "fpga" );
-            // }
+            // NOTE; At least one accelerator type will exist, init it before the loop to create the memSpaceId
+            int countTypes = 0; //!< Counter of accelerators types
+            FPGADeviceType fpgaType = FPGADeviceType( countTypes++ );
+            FPGADevice * fpgaDevice = NEW FPGADevice( fpgaType );
+            _fpgaDevices.insert( std::make_pair(fpgaType, fpgaDevice) );
 
-            //Accelerator setup
-            _device = NEW FPGADevice( "FPGA" );
+            /*!
+             * NOTE: All FPGADevices share the same allocator and memoryspace but the SeparateMemoryAddressSpace
+             *       wants only one Device to performe the copies operations (doesn't matter if there are more
+             *       than one).
+             *       In any case, the FPGADevice will delegate the copies, allocations, etc. to the
+             *       FPGAPinnedAllocator which is global for all the system.
+             */
             _allocator = NEW FPGAPinnedAllocator( FPGAConfig::getAllocatorPoolSize()*1024*1024 );
-            memory_space_id_t memSpaceId = sys.addSeparateMemoryAddressSpace(*_device, true, 0 );
+            memory_space_id_t memSpaceId = sys.addSeparateMemoryAddressSpace( *fpgaDevice, true, 0 );
             SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
             fpgaAddressSpace.setAcceleratorNumber( sys.getNewAcceleratorId() );
             fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
             fpgaAddressSpace.setSpecificData( _allocator );
-            FPGADD::addAccDevice( _device );
 
+            /*!
+             * NOTE: Last element of mask list is the number of accelerators in the system.
+             *       This ensure that at least one element in the list exists and that all FPGAs will
+             *       have a type.
+             */
+            std::list<unsigned int>::const_iterator maskIter = FPGAConfig::getAccTypesMask().begin();
+            unsigned int nextType = *( maskIter++ );
             for ( unsigned int i = 0; i < _fpgas->size(); i++ ) {
-               FPGAProcessor *fpga = NEW FPGAProcessor( i, memSpaceId, _device );
+               if ( i == nextType && maskIter != FPGAConfig::getAccTypesMask().end() ) {
+                  fpgaType = FPGADeviceType( countTypes++ );
+                  fpgaDevice = NEW FPGADevice( fpgaType );
+                  _fpgaDevices.insert( std::make_pair(fpgaType, fpgaDevice) );
+                  nextType += *( maskIter++ );
+               }
+
+               // Create the FPGA accelerator
+               FPGAProcessor *fpga = NEW FPGAProcessor( i, memSpaceId, fpgaDevice );
                (*_fpgas)[i] = fpga;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
                //Register device in the instrumentation system
@@ -186,9 +201,6 @@ class FPGAPlugin : public ArchPlugin
                }
             }
          } else { //!FPGAConfig::isDisabled()
-            //NOTE: Add a fake device to allow FPGADD instantiation
-            FPGADD::addAccDevice( NULL );
-
             if ( xdmaOpened ) {
                int status;
                debug0( "Xilinx close dma" );
@@ -204,25 +216,32 @@ class FPGAPlugin : public ArchPlugin
        * \brief Finalize plugin and close dma library.
        */
       void finalize() {
-         /*
-          * After the plugin is unloaded, no more operations regarding the DMA
-          * library nor the FPGA device will be performed so it's time to close the dma lib
-          */
          if ( !FPGAConfig::isDisabled() ) { //cleanup only if we have initialized
             int status;
 
-            // Run device cleanup. Maybe it won't run any thread and cleanup must be run in any case
+            // Run FPGAProcessor cleanup. Maybe it won't run any thread and cleanup must be run in any case
             for ( unsigned int i = 0; i < _fpgas->size(); i++ ) {
                (*_fpgas)[i]->cleanUp();
             }
 
-            delete _device;
+            // Delete FPGADevices
+            FPGADD::fini();
+            for ( FPGADeviceMap::const_iterator it = _fpgaDevices.begin();
+               it != _fpgaDevices.end(); ++it )
+            {
+               delete it->second;
+            }
+
             delete _allocator;
 
             for (size_t i = 0; i < _fpgaListeners.size(); ++i) {
                delete _fpgaListeners[i];
             }
 
+            /*
+             * After the plugin is unloaded, no more operations regarding the DMA
+             * library nor the FPGA device will be performed so it's time to close the dma lib
+             */
             debug0( "Xilinx close dma" );
             status = xdmaClose();
             if ( status ) {
@@ -262,15 +281,10 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual void addDevices( DeviceList &devices ) const {
-         if ( _device ) {
-            devices.insert( _device );
-            // //Insert device type.
-            // //Any position in _fpgas will work as we only need the device type
-            // std::vector<const Device*> const &pe_archs = ( *_fpgas->begin() )->getDeviceTypes();
-            // for ( std::vector<const Device *>::const_iterator it = pe_archs.begin();
-            //       it != pe_archs.end(); it++ ) {
-            //    devices.insert( *it );
-            // }
+         for ( FPGADeviceMap::const_iterator it = _fpgaDevices.begin();
+               it != _fpgaDevices.end(); ++it )
+         {
+            devices.insert( it->second );
          }
       }
 

@@ -28,6 +28,12 @@
 
 namespace nanos {
 
+   // Forward class declaration
+   class FPGADevice;
+
+   typedef int FPGADeviceType;
+   typedef TR1::unordered_map<FPGADeviceType, FPGADevice const *> FPGADeviceMap;
+
    /* \brief Device specialization for FPGA architecture
     * provides functions to allocate and copy data in the device
     */
@@ -41,7 +47,7 @@ namespace nanos {
 
       public:
 
-         FPGADevice ( const char *n );
+         FPGADevice ( FPGADeviceType const t );
 
          virtual ~FPGADevice () {}
 

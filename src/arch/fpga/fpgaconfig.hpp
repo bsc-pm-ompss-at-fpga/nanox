@@ -55,6 +55,7 @@ namespace ext {
             static int                       _finishWDBurst;
             static bool                      _idleCallback;
             static std::size_t               _allocatorPoolSize;
+            static std::list<unsigned int>  *_accTypesMask;
 
          public:
             static void printConfiguration( void );
@@ -78,6 +79,9 @@ namespace ext {
 
             // FPGA Allocator
             static std::size_t getAllocatorPoolSize() { return _allocatorPoolSize; }
+
+            // List with the mask of accelerators types
+            static std::list<unsigned int>& getAccTypesMask() { return *_accTypesMask; }
 
             //Set the number of FPGAs and return the old value
             static void setFPGASystemCount ( int numFPGAs );

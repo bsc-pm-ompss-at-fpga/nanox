@@ -32,7 +32,8 @@ using namespace nanos;
 NANOS_API_DEF( void *, nanos_fpga_factory, ( void *args ) )
 {
    nanos_fpga_args_t *fpga = ( nanos_fpga_args_t * ) args;
-   return ( void * ) NEW ext::FPGADD( fpga->outline, fpga->acc_num );
+   // FIXME: acc_num have to be converted into an string
+   return ( void * ) NEW ext::FPGADD( fpga->outline, FPGADeviceType( fpga->acc_num < 0 ? 0 : fpga->acc_num ) );
 }
 
 NANOS_API_DEF( void *, nanos_fpga_alloc_dma_mem, ( size_t len ) )

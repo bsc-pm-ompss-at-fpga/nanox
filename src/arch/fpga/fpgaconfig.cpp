@@ -42,6 +42,7 @@ namespace nanos
       int FPGAConfig::_finishWDBurst = 4;
       bool FPGAConfig::_idleCallback = true;
       std::size_t FPGAConfig::_allocatorPoolSize = 64;
+      std::list<unsigned int> * FPGAConfig::_accTypesMask = NULL;
 
       void FPGAConfig::prepare( Config &config )
       {
@@ -112,6 +113,11 @@ namespace nanos
                "Size (in MB) of the memory pool for the FPGA Tasks data copies (def: 64)" );
          config.registerEnvOption( "fpga_alloc_pool_size", "NX_FPGA_ALLOC_POOL_SIZE" );
          config.registerArgOption( "fpga_alloc_pool_size", "fpga-alloc-pool-size" );
+
+         _accTypesMask = new std::list<unsigned int>();
+         config.registerConfigOption( "fpga_acc_types_mask", NEW Config::UintVarList( *_accTypesMask ),
+               "List with the number of accelerators for each type. Default is [fpga_num] which means that all accelerators have the same type" );
+         config.registerEnvOption( "fpga_acc_types_mask", "NX_FPGA_ACC_TYPES_MASK" );
       }
 
       void FPGAConfig::apply()
@@ -147,6 +153,8 @@ namespace nanos
          }
          _idleSyncBurst = ( _idleSyncBurst < 0 ) ? _burst : _idleSyncBurst;
 
+         // Push at the end the number of FPGAs to ensure that all of them will have a type
+         _accTypesMask->push_back( _numAccelerators );
       }
 
       void FPGAConfig::setFPGASystemCount ( int numFPGAs )

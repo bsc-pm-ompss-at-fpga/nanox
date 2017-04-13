@@ -34,7 +34,10 @@ using namespace nanos::ext;
 
 #define DIRTY_SYNC
 
-FPGADevice::FPGADevice ( const char *n ): Device( n ) {}
+FPGADevice::FPGADevice ( FPGADeviceType const t ) :
+   Device( std::string( "FPGA " + toString(t) ).c_str() )
+{
+}
 
 void FPGADevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
    SeparateMemoryAddressSpace &mem, DeviceOps *ops, WD const *wd, void *hostObject,

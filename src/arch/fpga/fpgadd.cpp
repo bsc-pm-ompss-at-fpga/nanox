@@ -24,11 +24,7 @@
 using namespace nanos;
 using namespace nanos::ext;
 
-std::vector < FPGADevice * > *FPGADD::_accDevices;
-
-void FPGADD::init() {
-    _accDevices = NEW std::vector< FPGADevice * >;
-}
+FPGADeviceMap * FPGADD::_accDevices = NULL;
 
 FPGADD * FPGADD::copyTo ( void *toAddr )
 {
@@ -36,12 +32,4 @@ FPGADD * FPGADD::copyTo ( void *toAddr )
    //we are not allocating anithind, therefore, system allocator cannot be used here
    FPGADD *dd = new ( toAddr ) FPGADD( *this );
    return dd;
-}
-
-bool FPGADD::isCompatible ( const Device &arch ) {
-   if ( _accNum == -1 ) {
-      // Don't matter the accelerator type. Only check if Device is FPGAType
-      return ( dynamic_cast<const FPGADevice*>(&arch) != NULL );
-   }
-   return DeviceData::isCompatible( arch );
 }
