@@ -186,6 +186,8 @@ class FPGAPlugin : public ArchPlugin
                //Register device in the instrumentation system
                registerDeviceInstrumentation( fpga, i );
 #endif
+               debug0( "New FPGAProcessor created with id: " << i << ", memSpaceId: " <<
+                       memSpaceId << ", fpgaType: " << fpgaType );
             }
 
             if ( _fpgaThreads->size() > 0 ) {
