@@ -365,7 +365,9 @@ void FPGAThread::submitInstrSync( WD *wd ) {
 void FPGAProcessor::waitAndFinishTask( FPGATaskInfo_t & task ) {
    //Scheduler::postOutlineWork( wd, false, this );
    //Wait for the task to finish
-   xdmaWaitTask( task._handle );
+   if ( xdmaWaitTask( task._handle ) != XDMA_SUCCESS ) {
+      fatal( "Error waiting for a FPGA task" );
+   }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    readInstrCounters( task );
