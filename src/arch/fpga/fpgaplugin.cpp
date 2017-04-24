@@ -30,6 +30,7 @@
 #include "fpgainstrumentation.hpp"
 #include "fpgaworker.hpp"
 #include "fpgalistener.hpp"
+#include "fpgapinnedallocator.hpp"
 
 #include "libxdma.h"
 
@@ -47,7 +48,6 @@ class FPGAPlugin : public ArchPlugin
       FPGADeviceMap                  _fpgaDevices;
       SMPProcessor                  *_core;
       SMPMultiThread                *_fpgaHelper;
-      FPGAPinnedAllocator           *_allocator;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -157,12 +157,12 @@ class FPGAPlugin : public ArchPlugin
              *       In any case, the FPGADevice will delegate the copies, allocations, etc. to the
              *       FPGAPinnedAllocator which is global for all the system.
              */
-            _allocator = NEW FPGAPinnedAllocator( FPGAConfig::getAllocatorPoolSize()*1024*1024 );
+            fpgaAllocator = NEW FPGAPinnedAllocator( FPGAConfig::getAllocatorPoolSize()*1024*1024 /* MB -> bytes */ );
             memory_space_id_t memSpaceId = sys.addSeparateMemoryAddressSpace( *fpgaDevice, true, 0 );
             SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
             fpgaAddressSpace.setAcceleratorNumber( sys.getNewAcceleratorId() );
             fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
-            fpgaAddressSpace.setSpecificData( _allocator );
+            fpgaAddressSpace.setSpecificData( fpgaAllocator );
 
             /*!
              * NOTE: Last element of mask list is the number of accelerators in the system.
@@ -234,7 +234,8 @@ class FPGAPlugin : public ArchPlugin
                delete it->second;
             }
 
-            delete _allocator;
+            delete fpgaAllocator;
+            fpgaAllocator = NULL;
 
             for (size_t i = 0; i < _fpgaListeners.size(); ++i) {
                delete _fpgaListeners[i];

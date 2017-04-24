@@ -19,10 +19,7 @@
 /*************************************************************************************/
 
 #include "nanos-fpga.h"
-#include "basethread.hpp"
 #include "fpgadd.hpp"
-#include "debug.hpp"
-#include "fpgaprocessor.hpp"
 #include "fpgapinnedallocator.hpp"
 
 #include "libxdma.h"
@@ -38,16 +35,10 @@ NANOS_API_DEF( void *, nanos_fpga_factory, ( void *args ) )
 
 NANOS_API_DEF( void *, nanos_fpga_alloc_dma_mem, ( size_t len ) )
 {
-   warning( "API 'nanos_fpga_alloc_dma_mem( size_t )' is deprecated"
-            << " (Implementing using 'malloc')." );
-   return malloc( len );
-    //return nanos::ext::FPGAProcessor::getPinnedAllocator().allocate( len );
+    return nanos::ext::fpgaAllocator->allocate( len );
 }
 
 NANOS_API_DEF( void, nanos_fpga_free_dma_mem, ( void * buffer ) )
 {
-   warning( "API 'nanos_fpga_free_dma_mem( size_t )' is deprecated."
-            << " (Implementing using 'free')" );
-   return free( buffer );
-    //nanos::ext::FPGAProcessor::getPinnedAllocator().free( buffer );
+    nanos::ext::fpgaAllocator->free( buffer );
 }

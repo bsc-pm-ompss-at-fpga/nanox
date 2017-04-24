@@ -8,6 +8,7 @@
 namespace nanos {
 namespace ext {
 
+
    class FPGAPinnedAllocator : public SimpleAllocator
    {
       private:
@@ -18,6 +19,10 @@ namespace ext {
          ~FPGAPinnedAllocator();
          xdma_buf_handle getBufferHandle( void *address );
    };
+
+   //! |brief Pointer to the fpgaAllocator instance
+   extern FPGAPinnedAllocator    *fpgaAllocator;
+
 } // namespace ext
 } // namespace nanos
 

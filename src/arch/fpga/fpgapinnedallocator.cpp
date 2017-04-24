@@ -5,6 +5,8 @@
 using namespace nanos;
 using namespace nanos::ext;
 
+FPGAPinnedAllocator *nanos::ext::fpgaAllocator;
+
 FPGAPinnedAllocator::FPGAPinnedAllocator( size_t size )
 {
    void * addr;
