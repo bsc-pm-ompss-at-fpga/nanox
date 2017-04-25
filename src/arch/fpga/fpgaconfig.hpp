@@ -31,22 +31,14 @@ namespace ext {
       {
             friend class FPGAPlugin;
          private:
-            //! Defines the cache policy used by FPGA devices
-            //! Data transfer's mode (synchronous / asynchronous, ...)
-            //Basically determines where the waits will be placed for now we will only support sync
-            static int                       _numAccelerators;
-            static int                       _numAcceleratorsSystem;
-            static bool                      _disableFPGA;
-            static int                       _numFPGAThreads;
+            static bool                      _enableFPGA; //! Enable all CUDA support
+            static bool                      _forceDisableFPGA; //! Force disable all CUDA support
 
+            static int                       _numAccelerators; //! Number of accelerators used in the execution
+            static int                       _numAcceleratorsSystem; //! Number of accelerators detected in the system
+            static int                       _numFPGAThreads; //! Number of FPGA helper threads
             static unsigned int              _burst;
             static int                       _maxTransfers;
-
-            /*! Parses the GPU user options */
-            static void prepare ( Config &config );
-            /*! Applies the configuration options and retrieves the information of the GPUs of the system */
-            static void apply ( void );
-            static Lock                      _dmaLock;
             static int                       _idleSyncBurst;
             static bool                      _syncTransfers;
             static int                       _fpgaFreq;
@@ -57,6 +49,14 @@ namespace ext {
             static std::size_t               _allocatorPoolSize;
             static std::list<unsigned int>  *_accTypesMask;
 
+            /*! Parses the FPGA user options */
+            static void prepare ( Config &config );
+
+            /*! Applies the configuration options
+             *  NOTE: Should be called after call 'setFPGASystemCount'
+             */
+            static void apply ( void );
+
          public:
             static void printConfiguration( void );
             static int getFPGACount ( void ) { return _numAccelerators; }
@@ -64,11 +64,21 @@ namespace ext {
             static inline unsigned int getMaxTransfers() { return _maxTransfers; }
             static inline int getAccPerThread() { return _numAccelerators/_numFPGAThreads; }
             static inline int getNumFPGAThreads() { return _numFPGAThreads; }
-            static inline bool isDisabled() { return _disableFPGA; }
+
+            /* \brief Returns if the FPGA support is enabled */
+            static inline bool isEnabled() { return _enableFPGA; }
+
+            /* \brief Returns if the FPGA support may be enabled after call apply.
+             *        This method can be called before the apply (and setFPGASystemCount) to Check
+                      if the support is expected to be enabled or not.
+             */
+            static bool mayBeEnabled();
+
             //should be areSyncTransfersDisabled() but is for consistency with other bool getters
             static inline int getIdleSyncBurst() { return _idleSyncBurst; }
             static bool getSyncTransfersEnabled() { return _syncTransfers; }
-            //Returns cycle time in ns
+
+            /* \brief Returns cycle time in ns */
             static unsigned int getCycleTime() {
                 return 1000/_fpgaFreq; //_fpgaFreq is in MHz
             }
@@ -77,13 +87,15 @@ namespace ext {
             static int getFinishWDBurst() { return _finishWDBurst; }
             static bool getIdleCallbackEnabled() { return _idleCallback; }
 
-            // FPGA Allocator
+            /* \brief Returns FPGA Allocator size in MB */
             static std::size_t getAllocatorPoolSize() { return _allocatorPoolSize; }
 
-            // List with the mask of accelerators types
+            /* \brief Returns a list with the mask of accelerators types
+             *        Each list element defines the number of accelerators for each type.
+             */
             static std::list<unsigned int>& getAccTypesMask() { return *_accTypesMask; }
 
-            //Set the number of FPGAs and return the old value
+            /* \brief Sets the number of FPGAs and return the old value */
             static void setFPGASystemCount ( int numFPGAs );
       };
        //create instrumentation macros (as gpu) to make code cleaner

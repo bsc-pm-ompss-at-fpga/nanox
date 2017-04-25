@@ -104,11 +104,11 @@ class FPGAPlugin : public ArchPlugin
       void init()
       {
          /*
-          * Initialize dma library here if fpga device is not disabled
+          * Initialize dma library here if fpga support may be required
           * We must init the DMA lib before any operation using it is performed
           */
          int xdmaOpened = false;
-         if ( !FPGAConfig::isDisabled() ) {
+         if ( FPGAConfig::mayBeEnabled() ) {
             debug0( "xilinx dma initialization" );
             //Instrumentation has not been initialized yet so we cannot trace things yet
             int status = xdmaOpen();
@@ -136,7 +136,7 @@ class FPGAPlugin : public ArchPlugin
          _core = NULL;
          _fpgaHelper = NULL;
 
-         if ( !FPGAConfig::isDisabled() ) {
+         if ( FPGAConfig::isEnabled() ) {
             //NOTE: Do it only when NANOS_INSTRUMENTATION_ENABLED?
             //Init the instrumentation
             int status = xdmaInitHWInstrumentation();
@@ -202,7 +202,7 @@ class FPGAPlugin : public ArchPlugin
                   NANOS_INSTRUMENT( sys.getInstrumentation()->incrementMaxThreads(); );
                }
             }
-         } else { //!FPGAConfig::isDisabled()
+         } else { //!FPGAConfig::isEnabled()
             if ( xdmaOpened ) {
                int status;
                debug0( "Xilinx close dma" );
@@ -218,7 +218,7 @@ class FPGAPlugin : public ArchPlugin
        * \brief Finalize plugin and close dma library.
        */
       void finalize() {
-         if ( !FPGAConfig::isDisabled() ) { //cleanup only if we have initialized
+         if ( FPGAConfig::isEnabled() ) { //cleanup only if we have initialized
             int status;
 
             // Run FPGAProcessor cleanup. Maybe it won't run any thread and cleanup must be run in any case
