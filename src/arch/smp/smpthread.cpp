@@ -132,14 +132,14 @@ void SMPThread::wakeup()
    _pthread.condSignal();
 }
 
-int SMPThread::getCpuId() const {
-   return _pthread.getCpuId();
-}
-
 void SMPThread::processTransfers ()
 {
    BaseThread::processTransfers();
    getSMPDevice().tryExecuteTransfer();
+}
+
+int SMPThread::getCpuId() const {
+   return _pthread.getCpuId();
 }
 
 SMPMultiThread::SMPMultiThread( WD &w, SMPProcessor *pe,
@@ -163,6 +163,7 @@ void SMPMultiThread::addThreadsFromPEs(unsigned int representingPEsCount, PE **r
    _totalThreads = representingPEsCount;
 }
 
+//TODO: Check if the next function implementation can be removed
 void SMPMultiThread::initializeDependent( void ) {
 
    BaseThread *tmpMyThread = myThread;

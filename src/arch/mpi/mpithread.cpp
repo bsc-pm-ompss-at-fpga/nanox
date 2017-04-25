@@ -83,3 +83,4 @@ void MPIThread::idle( bool debug ) {
 void MPIThread::finish() {
     SMPThread::finish();
 }
+
