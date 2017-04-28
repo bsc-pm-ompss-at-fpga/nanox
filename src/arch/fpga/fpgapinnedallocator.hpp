@@ -17,7 +17,10 @@ namespace ext {
       public:
          FPGAPinnedAllocator( size_t size );
          ~FPGAPinnedAllocator();
-         xdma_buf_handle getBufferHandle( void *address );
+
+         /* |brief Returns the XDMA library buffer handle for the memory region that is being managed
+          */
+         xdma_buf_handle getBufferHandle();
    };
 
    //! |brief Pointer to the fpgaAllocator instance
