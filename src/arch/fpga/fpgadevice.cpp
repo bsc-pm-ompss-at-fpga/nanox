@@ -43,6 +43,7 @@ void FPGADevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
    SeparateMemoryAddressSpace &mem, DeviceOps *ops, WD const *wd, void *hostObject,
    reg_t hostRegionId )
 {
+   NANOS_INSTRUMENT( InstrumentBurst( "cache-copy-in", 2 ) );
    //NOTE: Copies are synchronous so we don't need to register them in the DeviceOps
    copyData( (void *)devAddr, (void *)hostAddr, len );
 }
@@ -51,8 +52,29 @@ void FPGADevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
    SeparateMemoryAddressSpace &mem, DeviceOps *ops,
    WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId )
 {
+   NANOS_INSTRUMENT( InstrumentBurst( "cache-copy-out", 2 ) );
    //NOTE: Copies are synchronous so we don't need to register them in the DeviceOps
    copyData( (void *)hostAddr, (void *)devAddr, len );
+}
+
+void FPGADevice::_copyInStrided1D( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
+   std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &mem,
+   DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId )
+{
+   NANOS_INSTRUMENT( InstrumentBurst( "cache-copy-in", 2 ) );
+   for ( std::size_t count = 0; count < numChunks; count += 1) {
+      copyData( ((char *) devAddr) + count * ld, ((char *) hostAddr) + count * ld, len );
+   }
+}
+
+void FPGADevice::_copyOutStrided1D( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
+   std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &mem,
+   DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId )
+{
+   NANOS_INSTRUMENT( InstrumentBurst( "cache-copy-out", 2 ) );
+   for ( std::size_t count = 0; count < numChunks; count += 1) {
+      copyData( ((char *) hostAddr) + count * ld, ((char *) devAddr) + count * ld, len );
+   }
 }
 
 void FPGADevice::copyData( void* dst, void* src, size_t len )

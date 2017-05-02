@@ -68,44 +68,26 @@ namespace nanos {
                SeparateMemoryAddressSpace &mem, DeviceOps *ops,
                WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId );
 
-         /*!
-          * Copy memory inside the same device.
-          */
-         // static void copyLocal( void *dst, void *src, size_t size, ProcessingElement *pe );
-
-         /*!
-          * Reallocate memory in the device.
-          */
-         // static void * realloc( void * address, size_t size, size_t ceSize, ProcessingElement *pe )
-         // {
-         //    return NULL;
-         // }
-
          virtual bool _copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len,
                SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig,
                DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
-               reg_t hostRegionId ) { std::cerr << "wrong copyDevToDev" <<std::endl; return false; }
+               reg_t hostRegionId )
+         {
+            std::cerr << "wrong copyDevToDev" <<std::endl; return false;
+         }
 
          virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem,
                SimpleAllocator::ChunkList &list );
 
-         //not supported
          virtual void _copyInStrided1D( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
                std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &mem,
                DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
-               reg_t hostRegionId )
-         {
-            warning( "Strided fpga copies not implemented" );
-         }
+               reg_t hostRegionId );
 
-         //not supported
          virtual void _copyOutStrided1D( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
                std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &mem,
                DeviceOps *ops, WD const *wd, void *hostObject,
-               reg_t hostRegionId )
-         {
-            warning( "Strided fpga copies not implemented" );
-         }
+               reg_t hostRegionId );
 
          //not supported
          virtual bool _copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigAddr,
@@ -114,10 +96,8 @@ namespace nanos {
                DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
                reg_t hostRegionId )
          {
-
-            warning( "Strided fpga copies not implemented" );
+            warning( "Strided fpga to fpga copies not implemented" );
             return true;
-
          }
 
          /*!
