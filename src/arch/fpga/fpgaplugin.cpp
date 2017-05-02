@@ -144,50 +144,47 @@ class FPGAPlugin : public ArchPlugin
                fatal0("Error initializing the instrumentation support in the DMA library. Returned status: " << status);
             }
 
-            // NOTE; At least one accelerator type will exist, init it before the loop to create the memSpaceId
-            int countTypes = 0; //!< Counter of accelerators types
-            FPGADeviceType fpgaType = FPGADeviceType( countTypes++ );
-            FPGADevice * fpgaDevice = NEW FPGADevice( fpgaType );
-            _fpgaDevices.insert( std::make_pair(fpgaType, fpgaDevice) );
-
-            /*!
-             * NOTE: All FPGADevices share the same allocator and memoryspace but the SeparateMemoryAddressSpace
-             *       wants only one Device to performe the copies operations (doesn't matter if there are more
-             *       than one).
-             *       In any case, the FPGADevice will delegate the copies, allocations, etc. to the
-             *       FPGAPinnedAllocator which is global for all the system.
-             */
+            // Create the FPGAPinnedAllocator and set the global shared variable that points to it
             fpgaAllocator = NEW FPGAPinnedAllocator( FPGAConfig::getAllocatorPoolSize()*1024*1024 /* MB -> bytes */ );
-            memory_space_id_t memSpaceId = sys.addSeparateMemoryAddressSpace( *fpgaDevice, true, 0 );
-            SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
-            fpgaAddressSpace.setAcceleratorNumber( sys.getNewAcceleratorId() );
-            fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
-            fpgaAddressSpace.setSpecificData( fpgaAllocator );
 
-            /*!
-             * NOTE: Last element of mask list is the number of accelerators in the system.
-             *       This ensure that at least one element in the list exists and that all FPGAs will
-             *       have a type.
-             */
-            std::list<unsigned int>::const_iterator maskIter = FPGAConfig::getAccTypesMask().begin();
-            unsigned int nextType = *( maskIter++ );
-            for ( unsigned int i = 0; i < _fpgas->size(); i++ ) {
-               if ( i == nextType && maskIter != FPGAConfig::getAccTypesMask().end() ) {
-                  fpgaType = FPGADeviceType( countTypes++ );
-                  fpgaDevice = NEW FPGADevice( fpgaType );
-                  _fpgaDevices.insert( std::make_pair(fpgaType, fpgaDevice) );
-                  nextType += *( maskIter++ );
+            memory_space_id_t memSpaceId = -1;
+            unsigned int fpgasCount = 0;
+            for ( FPGATypesMap::const_iterator typesIter = FPGAConfig::getAccTypesMap().begin();
+                  typesIter != FPGAConfig::getAccTypesMap().end(); ++typesIter )
+            {
+               // At least one iteration will be done because FPGAConfig ensures that the map is not empty
+               FPGADeviceType fpgaType = ( *typesIter ).first;
+               size_t numAccels = ( *typesIter ).second;
+
+               // Create the FPGA device
+               FPGADevice * fpgaDevice = NEW FPGADevice( fpgaType );
+               _fpgaDevices.insert( std::make_pair(fpgaType, fpgaDevice) );
+               if ( fpgasCount == 0 ) {
+                  /* NOTE: In order to create the FPGAProcessor the memSpaceId is needed and this one
+                   *       wants one Device to performe the copies operations.
+                   *       However, the FPGADevice will delegate the copies, allocations, etc. to the
+                   *       FPGAPinnedAllocator. So, the used FPGADevice doesn't matter.
+                   */
+                  memSpaceId = sys.addSeparateMemoryAddressSpace( *fpgaDevice, true, 0 );
+                  SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
+                  fpgaAddressSpace.setAcceleratorNumber( sys.getNewAcceleratorId() );
+                  fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
+                  fpgaAddressSpace.setSpecificData( fpgaAllocator );
                }
 
-               // Create the FPGA accelerator
-               FPGAProcessor *fpga = NEW FPGAProcessor( i, memSpaceId, fpgaDevice );
-               (*_fpgas)[i] = fpga;
+               // Create the FPGA accelerators for the current type
+               for ( size_t i = 0; i < numAccels && fpgasCount < _fpgas->size(); ++i ) {
+                  debug0( "New FPGAProcessor created with id: " << fpgasCount << ", memSpaceId: " <<
+                          memSpaceId << ", fpgaType: " << fpgaType );
+
+                  FPGAProcessor *fpga = NEW FPGAProcessor( fpgasCount, memSpaceId, fpgaDevice );
+                  (*_fpgas)[fpgasCount] = fpga;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-               //Register device in the instrumentation system
-               registerDeviceInstrumentation( fpga, i );
+                  //Register device in the instrumentation system
+                  registerDeviceInstrumentation( fpga, fpgasCount );
 #endif
-               debug0( "New FPGAProcessor created with id: " << i << ", memSpaceId: " <<
-                       memSpaceId << ", fpgaType: " << fpgaType );
+                  ++fpgasCount;
+               }
             }
 
             if ( _fpgaThreads->size() > 0 ) {

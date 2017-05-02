@@ -29,6 +29,7 @@ pkginclude_HEADERS=\
 devinclude_HEADERS = \
 	fpgaconfig.hpp \
 	fpgadd.hpp \
+	fpgadevice_fwd.hpp \
 	fpgadevice.hpp \
 	fpgalistener.hpp \
 	fpgaprocessor.hpp \
@@ -50,6 +51,7 @@ fpga_sources = \
 	fpgaconfig.cpp \
 	fpgadd.hpp \
 	fpgadd.cpp \
+	fpgadevice_fwd.hpp \
 	fpgadevice.hpp \
 	fpgadevice.cpp \
 	fpgaprocessor.hpp \

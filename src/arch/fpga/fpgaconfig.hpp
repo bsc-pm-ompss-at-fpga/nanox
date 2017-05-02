@@ -23,9 +23,14 @@
 #include "config.hpp"
 
 #include "system_decl.hpp"
+#include "fpgadevice_fwd.hpp"
+#include "compatibility.hpp"
 
 namespace nanos {
 namespace ext {
+
+      //! \brief Map with pairs {FPGADeviceType, num_instances}
+      typedef TR1::unordered_map<FPGADeviceType, size_t> FPGATypesMap;
 
       class FPGAConfig
       {
@@ -47,7 +52,8 @@ namespace ext {
             static int                       _finishWDBurst;
             static bool                      _idleCallback;
             static std::size_t               _allocatorPoolSize;
-            static std::list<unsigned int>  *_accTypesMask;
+            static std::string              *_configFile; //! Path of FPGA configuration file (used to generate _accTypesMap)
+            static FPGATypesMap             *_accTypesMap;
 
             /*! Parses the FPGA user options */
             static void prepare ( Config &config );
@@ -65,12 +71,12 @@ namespace ext {
             static inline int getAccPerThread() { return _numAccelerators/_numFPGAThreads; }
             static inline int getNumFPGAThreads() { return _numFPGAThreads; }
 
-            /* \brief Returns if the FPGA support is enabled */
+            //! \brief Returns if the FPGA support is enabled
             static inline bool isEnabled() { return _enableFPGA; }
 
-            /* \brief Returns if the FPGA support may be enabled after call apply.
-             *        This method can be called before the apply (and setFPGASystemCount) to Check
-                      if the support is expected to be enabled or not.
+            /*! \brief Returns if the FPGA support may be enabled after call apply.
+             *         This method can be called before the apply (and setFPGASystemCount) to Check
+                       if the support is expected to be enabled or not.
              */
             static bool mayBeEnabled();
 
@@ -78,7 +84,7 @@ namespace ext {
             static inline int getIdleSyncBurst() { return _idleSyncBurst; }
             static bool getSyncTransfersEnabled() { return _syncTransfers; }
 
-            /* \brief Returns cycle time in ns */
+            //! \brief Returns cycle time in ns
             static unsigned int getCycleTime() {
                 return 1000/_fpgaFreq; //_fpgaFreq is in MHz
             }
@@ -87,15 +93,13 @@ namespace ext {
             static int getFinishWDBurst() { return _finishWDBurst; }
             static bool getIdleCallbackEnabled() { return _idleCallback; }
 
-            /* \brief Returns FPGA Allocator size in MB */
+            //! \brief Returns FPGA Allocator size in MB
             static std::size_t getAllocatorPoolSize() { return _allocatorPoolSize; }
 
-            /* \brief Returns a list with the mask of accelerators types
-             *        Each list element defines the number of accelerators for each type.
-             */
-            static std::list<unsigned int>& getAccTypesMask() { return *_accTypesMask; }
+            //! \brief Returns a map with the accelerators types and number of instances
+            static FPGATypesMap& getAccTypesMap() { return *_accTypesMap; }
 
-            /* \brief Sets the number of FPGAs and return the old value */
+            //! \brief Sets the number of FPGAs and return the old value
             static void setFPGASystemCount ( int numFPGAs );
       };
        //create instrumentation macros (as gpu) to make code cleaner

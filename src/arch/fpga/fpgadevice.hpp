@@ -21,19 +21,13 @@
 #ifndef _FPGA_DEVICE_DECL
 #define _FPGA_DEVICE_DECL
 
+#include "fpgadevice_fwd.hpp"
 #include "workdescriptor_decl.hpp"
 #include "processingelement_fwd.hpp"
 #include "copydescriptor_decl.hpp"
 #include "basethread.hpp" //for getMyThreadSafe() in warning/verbose, etc.
 
 namespace nanos {
-
-   // Forward class declaration
-   class FPGADevice;
-
-   typedef int FPGADeviceType;
-   typedef TR1::unordered_map<FPGADeviceType, FPGADevice const *> FPGADeviceMap;
-
    /* \brief Device specialization for FPGA architecture
     * provides functions to allocate and copy data in the device
     */
