@@ -206,64 +206,37 @@ xdma_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
    xdma_status status;
 #endif
    xdma_task_handle task;
-   int numCopies;
-   CopyData *copies;
-   int numInputs, numOutputs;
-   numCopies = wd.getNumCopies();
-   copies = wd.getCopies();
-   numInputs = 0;
-   numOutputs = 0;
-   for ( int i=0; i<numCopies; i++ ) {
-      if ( copies[i].isInput() ) {
-         numInputs++;
-      }
-      if ( copies[i].isOutput() ) {
-         numOutputs++;
-      }
-   }
+
+   size_t numArgs = wd.getDataSize()/sizeof(uintptr_t);
+   ensure( wd.getDataSize()%sizeof(uintptr_t) == 0,
+           "WD's data size is not multiple of uintptr_t (All args must be pointers)" );
 
 #ifndef NANOS_DEBUG_ENABLED
-   xdmaInitTask( _accelId, numInputs, XDMA_COMPUTE_ENABLE, numOutputs, &task );
+   xdmaInitTask( _accelId, XDMA_COMPUTE_ENABLE, &task );
 #else
-   status = xdmaInitTask( _accelId, numInputs, XDMA_COMPUTE_ENABLE, numOutputs, &task );
+   status = xdmaInitTask( _accelId, XDMA_COMPUTE_ENABLE, &task );
    if ( status != XDMA_SUCCESS ) {
       //TODO: If status == XDMA_ENOMEM, block and wait untill mem is available
-      fatal( "Cannot initialize FPGA task info (accId: " << _accelId << ", #in: " << numInputs << ", #out: "
-             << numOutputs << "): " << ( status == XDMA_ENOMEM ? "XDMA_ENOMEM" : "XDMA_ERROR" ) );
+      fatal( "Cannot initialize FPGA task info (accId: " << _accelId << ", #args: " << numArgs <<
+             "): " << ( status == XDMA_ENOMEM ? "XDMA_ENOMEM" : "XDMA_ERROR" ) );
    }
 #endif
+
+   uintptr_t * args = ( uintptr_t * )( wd.getData() );
    FPGAPinnedAllocator * const allocator = getAllocator();
-   uint64_t const baseAddress = allocator->getBaseAddress();
-   ensure( baseAddress > 0, "The base address of FPGA Allocator is not valid and FPGA task cannot be sent" );
-   int inputIdx, outputIdx;
-   inputIdx = 0; outputIdx = 0;
-   for ( int i=0; i<numCopies; i++ ) {
-      //Get handle & offset based on copy address
-      int size;
-      uint64_t srcAddress, offset;
-      xdma_buf_handle copyHandle;
-
-      size = copies[i].getSize();
-      srcAddress = wd._mcontrol.getAddress( i );
-      offset = srcAddress - baseAddress;
-      copyHandle = allocator->getBufferHandle( (void *)baseAddress );
-
-      if ( copies[i].isInput() ) {
-         xdmaAddDataCopy(&task, inputIdx, XDMA_GLOBAL, XDMA_TO_DEVICE,
-            &copyHandle, size, offset);
-         inputIdx++;
-      }
-      if ( copies[i].isOutput() ) {
-         xdmaAddDataCopy(&task, outputIdx, XDMA_GLOBAL, XDMA_FROM_DEVICE, &copyHandle,
-               size, offset);
-         outputIdx++;
-      }
-
+   xdma_buf_handle handle = allocator->getBufferHandle();
+   uintptr_t const baseAddress = allocator->getBaseAddress();
+   ensure( baseAddress > 0,
+           "The base address of FPGA Allocator is not valid and FPGA task cannot be sent" );
+   for ( size_t argIdx = 0; argIdx < numArgs; ++argIdx ) {
+      uintptr_t addr = args[argIdx];
+      size_t  offset = addr - baseAddress;
+      xdmaAddArg( task, argIdx, XDMA_GLOBAL, handle, offset );
    }
 #ifdef NANOS_INSTRUMENTATION_ENABLED
     dmaSubmitStart( this, &wd );
 #endif
-   if (xdmaSendTask(_fpgaProcessorInfo->getDeviceHandle(), &task) != XDMA_SUCCESS) {
+   if ( xdmaSendTask(_fpgaProcessorInfo->getDeviceHandle(), task) != XDMA_SUCCESS ) {
       //TODO: If error is XDMA_ENOMEM we can retry after a while
       fatal("Error sending a task to the FPGA");
    }
@@ -366,7 +339,7 @@ void FPGAProcessor::waitAndFinishTask( FPGATaskInfo_t & task ) {
    //Scheduler::postOutlineWork( wd, false, this );
    //Wait for the task to finish
    if ( xdmaWaitTask( task._handle ) != XDMA_SUCCESS ) {
-      fatal( "Error waiting for a FPGA task" );
+      fatal( "Error waiting for an FPGA task" );
    }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
