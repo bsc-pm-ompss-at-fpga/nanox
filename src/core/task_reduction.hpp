@@ -35,9 +35,10 @@ inline void * TaskReduction::get( size_t id )
    return _storage[id].data;
 }
 
-inline void TaskReduction::allocate( size_t id )
+inline void * TaskReduction::allocate( size_t id )
 {
-	_storage[id].data = (void *) malloc (_size);
+   _storage[id].data = (void *) malloc (_size);
+   return _storage[id].data;
 }
 
 inline bool TaskReduction::isInitialized( size_t id )
@@ -50,75 +51,63 @@ inline unsigned TaskReduction::getDepth( void ) const
    return _depth;
 }
 
-inline void * TaskReduction::finalize( void )
+inline void TaskReduction::reduce()
 {
-	NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent ( sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey( "reduction" ), 2); )
-	void * result = _original;
+   NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent ( sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey( "reduction" ), 2) );
 
-	//find first private copy that was allocated during execution
-	size_t masterId = 0;
-	for ( size_t i=0; i<_num_threads; i++) {
-		if ( _storage[i].isInitialized ){
-			masterId = i;
-			break;
-		}
-	}
+   //find first private copy that was allocated during execution
+   size_t masterId = 0;
+   for ( size_t i=0; i<_num_threads; i++) {
+      if ( _storage[i].isInitialized ){
+         masterId = i;
+         break;
+      }
+   }
 
-	//reduce all to masterId
-	for ( size_t i = masterId + 1; i<_num_threads; i++) {
-	   if ( _storage[i].isInitialized ) {
+   //reduce all to masterId
+   for ( size_t i = masterId + 1; i<_num_threads; i++) {
+      if ( _storage[i].isInitialized ) {
 
-		  if( _isFortranReduction )
-		  {
-			  _reducer((char*)_storage[masterId].data ,(_storage[i].data));
-		  }else
-		  for( size_t j=0; j<_num_elements; j++ )
-		  {
-			 _reducer( &((char*)_storage[masterId].data)[j*_size_element] ,& ((char*)(_storage[i].data))[j*_size_element]);
-		  }
-		  if( _isLazyPriv )
-			  free(_storage[i].data);
-	   }
-	}
+         if( _isFortranArrayReduction ) {
+            _reducer((char*)_storage[masterId].data ,(_storage[i].data));
+         } else {
+            for( size_t j=0; j<_num_elements; j++ ) {
+               _reducer( &((char*)_storage[masterId].data)[j*_size_element] ,& ((char*)(_storage[i].data))[j*_size_element]);
+            }
+         }
+         _storage[i].isInitialized = false;
+      }
+   }
 
-	//reduce masterId to global
-	if( _storage[masterId].isInitialized )
-	{
-		if( _isFortranReduction )
-		{
-			 _reducer_orig_var(_original ,_storage[masterId].data);
-		}else
-		for( size_t j=0; j<_num_elements; j++ ){
-			_reducer_orig_var( &((char*)_original)[j*_size_element] ,& ((char*)(_storage[masterId].data))[j*_size_element]);
-		}
+   //reduce masterId to global
+   if( _storage[masterId].isInitialized ) {
+      if( _isFortranArrayReduction ) {
+         _reducer_orig_var(_original ,_storage[masterId].data);
+      } else {
+         for( size_t j=0; j<_num_elements; j++ ){
+            _reducer_orig_var( &((char*)_original)[j*_size_element] ,& ((char*)(_storage[masterId].data))[j*_size_element]);
+         }
+      }
+      _storage[masterId].isInitialized = false;
+   }
 
-		if( _isLazyPriv )
-			  free(_storage[masterId].data);
-	}
-
-	if( !_isLazyPriv )
-		free(_storage[0].data);
-
-   	NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent ( sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey( "reduction" ), 0 ); )
-	return result;
+   NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent ( sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey( "reduction" ), 0 ) );
 }
 
-inline  void * TaskReduction::initialize( size_t id )
+inline void TaskReduction::initialize( size_t id )
 {
-	NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent ( sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey( "reduction" ), 1 ); )
-	if( _isFortranReduction )
-	{
+	NANOS_INSTRUMENT( sys.getInstrumentation()->raiseOpenBurstEvent ( sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey( "reduction" ), 1 ) );
+	if( _isFortranArrayReduction ) {
 		_initializer(_storage[id].data, _original );
-	}else
-	{
-		for( size_t j=0; j<_num_elements; j++ ) {
+	} else {
+		for( size_t j=0; j < _num_elements; j++ ) {
 			_initializer( & ((char*)_storage[id].data)[j*_size_element], _original );
 		}
 	}
 
 	_storage[id].isInitialized = true;
+
 	NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent ( sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey( "reduction" ), 0 ); )
-	return _storage[id].data;
 }
 
 } // namespace nanos

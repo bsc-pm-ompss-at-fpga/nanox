@@ -47,6 +47,9 @@ memory::Address SMPDevice::memAllocate( std::size_t size, SeparateMemoryAddressS
    SimpleAllocator *sallocator = (SimpleAllocator *) mem.getSpecificData();
    sallocator->lock();
    retAddr = sallocator->allocate( size );
+   if ( retAddr != NULL ) {
+      bzero( retAddr, size );
+   }
    sallocator->unlock();
    return retAddr;
 }

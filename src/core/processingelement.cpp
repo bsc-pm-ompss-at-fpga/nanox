@@ -97,6 +97,7 @@ bool ProcessingElement::testInputs( WorkDescriptor &work ) {
 BaseThread& ProcessingElement::startWorker ( ext::SMPMultiThread *parent )
 {
    WD & worker = getWorkerWD();
+   worker._mcontrol.preInit();
 
    if ( parent == NULL ) {
    NANOS_INSTRUMENT (sys.getInstrumentation()->raiseOpenPtPEvent ( NANOS_WD_DOMAIN, (nanos_event_id_t) worker.getId(), 0, 0 ); )
@@ -181,7 +182,10 @@ void ProcessingElement::wakeUpThreads()
 
    ThreadList::iterator it;
    for ( it = _threads.begin(); it != _threads.end(); ++it ) {
-      (*it)->tryWakeUp( team );
+      BaseThread *thread = *it;
+      thread->lock();
+      thread->tryWakeUp( team );
+      thread->unlock();
    }
 }
 
@@ -189,7 +193,10 @@ void ProcessingElement::sleepThreads()
 {
    ThreadList::iterator it;
    for ( it = _threads.begin(); it != _threads.end(); ++it ) {
-      (*it)->sleep();
+      BaseThread *thread = *it;
+      thread->lock();
+      thread->sleep();
+      thread->unlock();
    }
 }
 

@@ -35,6 +35,7 @@
 #include "wddeque.hpp"
 #include "smpthread.hpp"
 #include "xstring.hpp"
+#include <stdio.h>
 
 #include "system.hpp"
 
@@ -122,6 +123,7 @@ namespace nanos {
                char tmpbuf[64];
                sprintf(tmpbuf, "thd_out.%04d.%04d.log", sys.getNetwork()->getNodeNum(), _id );
                _file = NEW std::ofstream(tmpbuf);
+               *_file << "This is thread " << _id << std::endl;
             }
          } else {
             _file = &std::cerr;
@@ -143,6 +145,8 @@ namespace nanos {
    inline void BaseThread::setMainThread ( bool v ) { _status.is_main_thread = v; }
 
    inline void BaseThread::joined ( void ) { _status.has_joined = true; }
+
+   inline bool BaseThread::hasJoined ( void ) const { return static_cast<bool>(_status.has_joined); }
 
    // atomic access
    inline void BaseThread::lock () { _mlock++; }

@@ -1,4 +1,4 @@
-AC_INIT([nanox], [0.10a], [pm-tools@bsc.es])
+AC_INIT([nanox], [0.13a], [pm-tools@bsc.es])
 AC_LANG([C++])
 AC_CONFIG_SRCDIR([src/core/system.cpp])
 AC_DEFINE_UNQUOTED([NANOX_CONFIGURE_ARGS], ["$0 $@"], [Configure line])
@@ -54,22 +54,6 @@ AC_DEFINE_UNQUOTED([NANOX_BUILD_VERSION], [$build_version], [Build version])
 # Debian release
 AC_CHECK_PROG([DEB_RELEASE], [lsb_release], [$(lsb_release -sc)], [])
 AC_SUBST([DEB_RELEASE])
-
-# Allocator support
-AC_MSG_CHECKING([if Nanos++ Allocator has been enabled])
-AC_ARG_ENABLE([allocator], [AS_HELP_STRING([--enable-allocator], [Enables Allocator module])])
-AC_MSG_RESULT([$enable_allocator])
-AS_IF([test "$enable_allocator" = yes],[
-	AC_DEFINE([NANOS_USE_ALLOCATOR],[1],[Specifies whether Nanos++ allocator has been enabled or not])
-])
-
-# Memtracker support
-AC_MSG_CHECKING([if Nanos++ Memtracker has been enabled])
-AC_ARG_ENABLE([memtracker],[AS_HELP_STRING([--enable-memtracker], [Enables Memtracker module])])
-AC_MSG_RESULT([$enable_memtracker])
-AS_IF([test "$enable_memtracker" = xyes],[
-	AC_DEFINE([NANOS_MEMTRACKER_ENABLED],[1],[Specifies whether Nanos++ memtracker module has been enabled or not])
-])
 
 # Set compiler default flags
 : ${CFLAGS=""}
@@ -279,6 +263,49 @@ AC_SUBST([MCXX])
 # Build versions
 AX_BUILD_VERSIONS
 
+# Allocator support
+AC_MSG_CHECKING([if Nanos++ Allocator has been enabled])
+AC_ARG_ENABLE([allocator], [AS_HELP_STRING([--enable-allocator], [Enables Allocator module])],
+      [], dnl Implicit: enable_allocator=$enableval
+      [enable_allocator="no"])
+AC_MSG_RESULT([$enable_allocator])
+AS_IF([test "$enable_allocator" = yes],[
+      AC_DEFINE([NANOS_USE_ALLOCATOR],[1],[Specifies whether Nanos++ allocator has been enabled])
+])
+
+# Memtracker support
+AC_MSG_CHECKING([if Nanos++ Memtracker has been enabled])
+AC_ARG_ENABLE([memtracker], [AS_HELP_STRING([--enable-memtracker], [Enables Memtracker module])],
+      [], dnl Implicit: enable_memtracker=$enableval
+      [enable_memtracker="no"])
+AC_MSG_RESULT([$enable_memtracker])
+AS_IF([test "$enable_memtracker" = xyes],[
+      AC_DEFINE([NANOS_MEMTRACKER_ENABLED],[1],[Specifies whether Nanos++ memtracker module has been enabled])
+      AC_SUBST([NANOS_MEMTRACKER_ENABLED], [NANOS_MEMTRACKER_ENABLED])
+], [
+      AC_SUBST([NANOS_MEMTRACKER_ENABLED], [NO_NANOS_MEMTRACKER_ENABLED])
+])
+
+# Task-level resiliency support
+AC_MSG_CHECKING([if task resiliency is enabled])
+AC_ARG_ENABLE([resiliency],[AS_HELP_STRING([--enable-resiliency], [Enables task-level resiliency])],
+              [enable_resiliency=$enableval],[enable_resiliency=no])
+AC_MSG_RESULT([$enable_resiliency])
+AS_IF([test $enable_resiliency = yes],[
+  AX_CHECK_COMPILE_FLAG([-fnon-call-exceptions],
+    [],
+    [AC_MSG_ERROR([resiliency mechanism depends on using compiler flag -fnon-call-exceptions])],
+    [-Werror])
+
+  AC_DEFINE([NANOS_RESILIENCY_ENABLED],[],[Indicates whether resiliency features should be used or not.])
+  AC_SUBST([NANOS_RESILIENCY_ENABLED],[NANOS_RESILIENCY_ENABLED])
+  resiliency_flags=-fnon-call-exceptions
+], [
+  AC_SUBST([NANOS_RESILIENCY_ENABLED],[NO_NANOS_RESILIENCY_ENABLED])
+])
+AC_SUBST([enable_resiliency])
+AC_SUBST([resiliency_flags])
+
 # Generate plugin list
 PLUGINS="plugins pms arch/$OS"
 for arch in $ARCHITECTURES; do
@@ -309,18 +336,20 @@ AC_CONFIG_FILES([
                  src/arch/gpu/Makefile
                  src/arch/opencl/Makefile
                  src/arch/mpi/Makefile
+                 src/arch/mpi/nanox_compiler
                  src/utils/Makefile
+                 scripts/offload_slave_launch.sh
                  tests/Makefile
-                 tests/gens/Makefile
-                 tests/gens/api-generator
-                 tests/gens/api-omp-generator
-                 tests/gens/core-generator
-                 tests/gens/gpu-generator
-                 tests/gens/mcc-openmp-generator
-                 tests/gens/mcc-ompss-generator
-                 tests/gens/opencl-generator
-                 tests/gens/resiliency-generator
+                 nanox-config.h
        ])
+
+AC_CONFIG_FILES([tests/gens/api-generator], [chmod +x tests/gens/api-generator])
+AC_CONFIG_FILES([tests/gens/api-omp-generator], [chmod +x tests/gens/api-omp-generator])
+AC_CONFIG_FILES([tests/gens/core-generator], [chmod +x tests/gens/core-generator])
+AC_CONFIG_FILES([tests/gens/mcc-openmp-generator], [chmod +x tests/gens/mcc-openmp-generator])
+AC_CONFIG_FILES([tests/gens/mcc-ompss-generator], [chmod +x tests/gens/mcc-ompss-generator])
+AC_CONFIG_FILES([tests/gens/opencl-generator], [chmod +x tests/gens/opencl-generator])
+AC_CONFIG_FILES([tests/gens/resiliency-generator], [chmod +x tests/gens/resiliency-generator])
 
 AC_OUTPUT
 
@@ -331,30 +360,30 @@ AS_IF([test "$new_gcc_builtins" = yes],[
   gcc_builtins_used="legacy gcc __sync builtins"
 ])
 
-#AC_DEFUN([ax_check_enabled],[
-#  AS_IF([test -n "$1"],[
-#    echo -n "enabled"
-#  ],[
-#    echo -n "disabled"
-#  ])  
-#])
-#
-#AS_ECHO(["
-#Configuration summary of Nanos++
-#================================
-#
-#Host arch:                $SMP_ARCH
-#User level threading:     $ult_support
-#Configured architectures: $ARCHITECTURES
-#Configured versions:      $VERSIONS
-#Extra options:            $OPTIONS
-#GCC atomics:              $gcc_builtins_used
-#Memory tracker:           $(ax_check_enabled $enable_memtracker)
-#Memory allocator:         $(ax_check_enabled $enable_allocator)
-#Task resiliency:          $(ax_check_enabled $enable_resiliency)"])
-#
-#AS_IF([test "$gasnet_available_conduits" != ""],[
-#   AS_ECHO(["\
-#Cluster/GASNet conduits:  $gasnet_available_conduits"])
-#])
+AC_DEFUN([ax_check_enabled],[
+  AS_IF([test x$1 == xyes],[
+    echo -n "enabled"
+  ],[
+    echo -n "disabled"
+  ])
+])
+
+AS_ECHO(["
+Configuration summary of Nanos++
+================================
+
+Host arch:                $SMP_ARCH
+User level threading:     $ult_support
+Configured architectures: $ARCHITECTURES
+Configured versions:      $VERSIONS
+Extra options:            $OPTIONS
+GCC atomics:              $gcc_builtins_used
+Memory tracker:           $(ax_check_enabled([$enable_memtracker]))
+Memory allocator:         $(ax_check_enabled([$enable_allocator]))
+Task resiliency:          $(ax_check_enabled([$enable_resiliency]))"])
+
+AS_IF([test "$gasnet_available_conduits" != ""],[
+   AS_ECHO(["\
+Cluster/GASNet conduits:  $gasnet_available_conduits"])
+])
 

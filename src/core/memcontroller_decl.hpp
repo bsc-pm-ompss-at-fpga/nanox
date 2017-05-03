@@ -27,7 +27,7 @@
 #include "backupcachecopy_decl.hpp"
 #include "backupprivatecopy_decl.hpp"
 #include "lock_decl.hpp"
-#include "newregiondirectory_decl.hpp"
+#include "regiondirectory_decl.hpp"
 #include "addressspace_decl.hpp"
 #include "memoryops_decl.hpp"
 #include "memcachecopy_decl.hpp"

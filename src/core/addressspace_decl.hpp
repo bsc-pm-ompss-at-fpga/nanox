@@ -20,7 +20,7 @@
 #ifndef ADDRESSSPACE_DECL
 #define ADDRESSSPACE_DECL
 
-#include "newregiondirectory_decl.hpp"
+#include "regiondirectory_decl.hpp"
 #include "regioncache_decl.hpp"
 
 #include "addressspace_fwd.hpp"
@@ -36,9 +36,10 @@ class TransferListEntry {
    DeviceOps      *_ops;
    AllocatedChunk *_destinationChunk;
    AllocatedChunk *_sourceChunk;
+   memory::Address _srcAddress;
    unsigned int    _copyIndex;
    public:
-   TransferListEntry( global_reg_t reg, unsigned int version, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, unsigned int copyIdx );
+   TransferListEntry( global_reg_t reg, unsigned int version, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, memory::Address srcAddr, unsigned int copyIdx );
    TransferListEntry( TransferListEntry const &t );
    TransferListEntry &operator=( TransferListEntry const &t );
    global_reg_t getRegion() const;
@@ -47,14 +48,15 @@ class TransferListEntry {
    AllocatedChunk *getDestinationChunk() const;
    AllocatedChunk *getSourceChunk() const;
    unsigned int getCopyIndex() const;
+   memory::Address getSrcAddress() const;
 };
 
-inline TransferListEntry::TransferListEntry( global_reg_t reg, unsigned int version, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, unsigned int copyIdx ) :
-   _reg( reg ), _version( version ), _ops( ops ), _destinationChunk( destinationChunk ), _sourceChunk( sourceChunk ), _copyIndex( copyIdx ) {
+inline TransferListEntry::TransferListEntry( global_reg_t reg, unsigned int version, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, memory::Address srcAddr, unsigned int copyIdx ) :
+   _reg( reg ), _version( version ), _ops( ops ), _destinationChunk( destinationChunk ), _sourceChunk( sourceChunk ), _srcAddress( srcAddr ), _copyIndex( copyIdx ) {
 }
 
 inline TransferListEntry::TransferListEntry( TransferListEntry const &t ) : 
-   _reg( t._reg ), _version( t._version ), _ops( t._ops ), _destinationChunk( t._destinationChunk ), _sourceChunk( t._sourceChunk ), _copyIndex( t._copyIndex ) {
+   _reg( t._reg ), _version( t._version ), _ops( t._ops ), _destinationChunk( t._destinationChunk ), _sourceChunk( t._sourceChunk ), _srcAddress( t._srcAddress ), _copyIndex( t._copyIndex ) {
 }
 
 inline TransferListEntry &TransferListEntry::operator=( TransferListEntry const &t ) {
@@ -63,6 +65,7 @@ inline TransferListEntry &TransferListEntry::operator=( TransferListEntry const 
    _ops = t._ops;
    _destinationChunk = t._destinationChunk;
    _sourceChunk = t._sourceChunk;
+   _srcAddress = t._srcAddress;
    _copyIndex = t._copyIndex;
    return *this;
 }
@@ -91,17 +94,21 @@ inline unsigned int TransferListEntry::getCopyIndex() const {
    return _copyIndex;
 }
 
+inline memory::Address TransferListEntry::getSrcAddress() const {
+   return _srcAddress;
+}
+
 typedef std::list< TransferListEntry > TransferList;
 
 class HostAddressSpace {
-   NewNewRegionDirectory _directory;
+   RegionDirectory _directory;
 
    public:
    HostAddressSpace( Device &arch );
 
    void doOp( MemSpace<SeparateAddressSpace> &from, global_reg_t const &reg, unsigned int version, WD const *wd, unsigned int copyIdx, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, bool inval );
    void getVersionInfo( global_reg_t const &reg, unsigned int &version, NewLocationInfoList &locations );
-   void getRegionId( CopyData const &cd, global_reg_t &reg, WD const &wd, unsigned int idx );
+   void getRegionId( CopyData const &cd, global_reg_t &reg, WD const *wd, unsigned int idx );
    void failToLock( MemSpace< SeparateAddressSpace > &from, global_reg_t const &reg, unsigned int version );
 
    void synchronize( WD &wd );
@@ -109,10 +116,10 @@ class HostAddressSpace {
    void synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data );
    memory_space_id_t getMemorySpaceId() const;
    reg_t getLocalRegionId( void *hostObject, reg_t hostRegionId );
-   NewNewRegionDirectory::RegionDirectoryKey getRegionDirectoryKey( memory::Address addr );
+   RegionDirectory::RegionDirectoryKey getRegionDirectoryKey( memory::Address addr );
    void registerObject( nanos_copy_data_internal_t *obj );
    void unregisterObject( void *baseAddr );
-   NewNewRegionDirectory const &getDirectory() const;
+   RegionDirectory const &getDirectory() const;
 };
 
 
@@ -161,6 +168,7 @@ class SeparateAddressSpace {
    bool canAllocateMemory( const MemCacheCopy* memCopies, size_t numCopies, bool considerInvalidations, WD const &wd );
    void registerOwnedMemory(global_reg_t reg);
    Device const &getDevice() const;
+   AllocatedChunk *getAndReferenceAllocatedChunk( global_reg_t reg, WD const *wd, unsigned int copyIdx );
 };
 
 template <class T>

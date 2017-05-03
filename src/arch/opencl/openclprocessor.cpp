@@ -20,7 +20,6 @@
 #include "openclprocessor.hpp"
 #include "openclthread.hpp"
 #include "smpprocessor.hpp"
-#include "system.hpp"
 #include "os.hpp"
 #include "openclevent.hpp"
 #include <iostream>
@@ -46,19 +45,19 @@ OpenCLAdapter::~OpenCLAdapter()
   for (int i=0; i<nanos::ext::OpenCLConfig::getPrefetchNum(); ++i) {
      errCode = clReleaseCommandQueue( _queues[i] ); 
      if( errCode != CL_SUCCESS )
-        warning( "Unable to release the command queue" );
+        warning0( "Unable to release the command queue" );
   }
   delete[] _queues;
   
   errCode = clReleaseCommandQueue( _copyInQueue );
   if( errCode != CL_SUCCESS )
-     warning( "Unable to release the in transfers command queue" );
+     warning0( "Unable to release the in transfers command queue" );
   errCode = clReleaseCommandQueue( _copyOutQueue );
   if( errCode != CL_SUCCESS )
-     warning( "Unable to release the out transfers command queue" );
+     warning0( "Unable to release the out transfers command queue" );
   errCode = clReleaseCommandQueue( _profilingQueue );
   if( errCode != CL_SUCCESS )
-     warning( "Unable to release the profiling command queue" );
+     warning0( "Unable to release the profiling command queue" );
   
   // Release the track memory of profiling executions
   for ( std::map<std::string, DimsBest>::iterator kernelIt = _bestExec.begin(); kernelIt != _bestExec.end(); kernelIt++ )
@@ -72,7 +71,7 @@ OpenCLAdapter::~OpenCLAdapter()
               getOpenClProfilerDbManager()->setKernelConfig(const_cast<Dims&>(dimsIt->first), bestExecution, const_cast<std::string&>(kernelIt->first));
            }
         } else {
-           fatal("OpenCL Profiler flag was not provided");
+           fatal0("OpenCL Profiler flag was not provided");
         }
      }
 
@@ -101,8 +100,14 @@ OpenCLAdapter::~OpenCLAdapter()
   
   //Invalid context means it was already released by another thread
   if( errCode != CL_SUCCESS && errCode != CL_INVALID_CONTEXT){
-     warning( "Unable to release the context" );
+     warning0( "Unable to release the context" );
   }
+}
+
+bool OpenCLAdapter::outOfOrderSupport(){
+   cl_command_queue_properties ccp;
+   clGetDeviceInfo(_dev, CL_DEVICE_QUEUE_PROPERTIES, sizeof(cl_command_queue_properties), &ccp, NULL);
+   return (ccp & CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE) > 0;
 }
 
 void OpenCLAdapter::initialize(cl_device_id dev)
@@ -134,18 +139,23 @@ void OpenCLAdapter::initialize(cl_device_id dev)
    for (int i=0; i<nanos::ext::OpenCLConfig::getPrefetchNum(); ++i) {
       _queues[i] = clCreateCommandQueue( _ctx, _dev, 0 , &errCode );
       if( errCode != CL_SUCCESS )
-         fatal( "Cannot create a command queue" );
+         fatal0( "Cannot create a command queue" );
    }
+ 
+
+   // Setting queue properties
+   cl_command_queue_properties queue_properties = outOfOrderSupport() ? CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE : 0;
+
    _currQueue=0;
-   _copyInQueue = clCreateCommandQueue( _ctx, _dev, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE , &errCode );
+   _copyInQueue = clCreateCommandQueue( _ctx, _dev, queue_properties , &errCode );
    if( errCode != CL_SUCCESS )
-     fatal( "Cannot create a command queue for in transfers" );
-   _copyOutQueue = clCreateCommandQueue( _ctx, _dev, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE , &errCode );
+     fatal0( "Cannot create a command queue for in transfers" );
+   _copyOutQueue = clCreateCommandQueue( _ctx, _dev, queue_properties, &errCode );
    if( errCode != CL_SUCCESS )
-     fatal( "Cannot create a command queue" );
-   _profilingQueue = clCreateCommandQueue( _ctx, _dev, CL_QUEUE_PROFILING_ENABLE , &errCode );
+     fatal0( "Cannot create a command queue" );
+   _profilingQueue = clCreateCommandQueue( _ctx, _dev, queue_properties | CL_QUEUE_PROFILING_ENABLE , &errCode );
    if( errCode != CL_SUCCESS )
-     fatal( "Cannot create a command queue for profiling" );
+     fatal0( "Cannot create a command queue for profiling" );
 
    std::string deviceVendor = getDeviceVendor();
    setSynchronization(deviceVendor);
@@ -165,6 +175,19 @@ void OpenCLAdapter::setSynchronization( std::string &vendor )
 		_synchronize = true;
 	} else 	if ( vendor.find("ARM") != std::string::npos ) {
 		_synchronize = true;
+	}
+
+	//Altera FPGA return werid things in the vendor string
+	//Insted, we check that we are using Altera OpenCL
+	char* value;
+	size_t valueSize;
+	clGetDeviceInfo(_dev, CL_DEVICE_VERSION, 0, NULL, &valueSize);
+	value = (char*) malloc(valueSize);
+	clGetDeviceInfo(_dev, CL_DEVICE_VERSION, valueSize, value, NULL);
+	std::string oclVersion(value);
+	free(value);
+	if( oclVersion.find("Altera") !=std::string::npos ){
+	   _synchronize = true;
 	}
 }
 
@@ -191,7 +214,7 @@ void* OpenCLAdapter::allocSharedMemBuffer( size_t size )
    NANOS_OPENCL_CREATE_IN_OCL_RUNTIME_EVENT( ext::NANOS_OPENCL_ALLOC_EVENT );
    cl_mem buff=clCreateBuffer(_ctx,  CL_MEM_READ_WRITE | CL_MEM_ALLOC_HOST_PTR,  size, NULL, &err);
    if (err!=CL_SUCCESS){
-       fatal("Failed to allocate OpenCL memory (nanos_malloc_opencl)");
+       fatal0("Failed to allocate OpenCL memory (nanos_malloc_opencl)");
    }
    NANOS_OPENCL_CLOSE_IN_OCL_RUNTIME_EVENT;   
    NANOS_OPENCL_CREATE_IN_OCL_RUNTIME_EVENT( ext::NANOS_OPENCL_MAP_BUFFER_SYNC_EVENT );
@@ -207,7 +230,7 @@ cl_int OpenCLAdapter::freeBuffer( cl_mem &buf )
    NANOS_OPENCL_CREATE_IN_OCL_RUNTIME_EVENT( ext::NANOS_OPENCL_FREE_EVENT );
    cl_int ret= clReleaseMemObject( buf );   
    if (ret!=CL_SUCCESS){
-       //warning("Failed to free OpenCL memory");
+       //warning0("Failed to free OpenCL memory");
        //std::cerr << "Error number: " << ret << "," << buf << "\n";
    }
    NANOS_OPENCL_CLOSE_IN_OCL_RUNTIME_EVENT;
@@ -307,7 +330,7 @@ cl_mem OpenCLAdapter::getBuffer(SimpleAllocator& allocator, cl_mem parentBuf,
 			 // CL_DEVICE_MEM_BASE_ADDR_ALIGN. However, sometimes work with
 			 // other values (depending on the vendor)
 		  }
-		  fatal("Error creating a subbuffer");
+		  fatal0("Error creating a subbuffer");
 	   }
 
        _bufCache[std::make_pair(devAddr+baseAddress,size)]=buf;
@@ -320,7 +343,7 @@ cl_mem OpenCLAdapter::getBuffer(SimpleAllocator& allocator, cl_mem parentBuf,
        //Buf is a pointer, so this should be safe
        return buf;
    } else {       
-       fatal("Error in OpenCL cache, tried to get a buffer which was not allocated before");
+       fatal0("Error in OpenCL cache, tried to get a buffer which was not allocated before");
    }
 }
 
@@ -495,7 +518,7 @@ cl_int OpenCLAdapter::unmapBuffer(cl_mem buf,
                 &ev
                 );
          if (errCode != CL_SUCCESS) {
-             fatal("Errror unmapping buffer");
+             fatal0("Errror unmapping buffer");
          }
     }
     
@@ -693,7 +716,7 @@ void* OpenCLAdapter::createKernel( const char* kernel_name, const char* ompss_co
                    size_t sizeret_kernels;
                    clGetProgramInfo(prog, CL_PROGRAM_KERNEL_NAMES, n_kernels*MAX_KERNEL_NAME_LENGTH*sizeof(char),kernel_ids, &sizeret_kernels);
                    if (sizeret_kernels>=n_kernels*MAX_KERNEL_NAME_LENGTH*sizeof(char))
-                       warning("Maximum kernel name length is 100 characters, you shouldn't use longer names");
+                       warning0("Maximum kernel name length is 100 characters, you shouldn't use longer names");            
 
                    //Tokenize with ';' as separator     
                    str=kernel_ids;
@@ -776,6 +799,15 @@ void OpenCLAdapter::execKernel(void* oclKernel,
       currQueue = curdd.getOpenCLStreamIdx();
    }
 
+   // We may need to adjust the local and global sizes
+   for ( int i = 0; i < workDim; ++i )
+   {
+      if ( ndrGlobalSize[i] < ndrLocalSize[i] )
+         ndrLocalSize[i] = ndrGlobalSize[i];
+      else if ( ndrGlobalSize[i] % ndrLocalSize[i] != 0 )
+         ndrGlobalSize[i] += ndrLocalSize[i] - (ndrGlobalSize[i] % ndrLocalSize[i]);
+   }
+
    debug( " [OpenCL] global size: x=" + toString(ndrGlobalSize[0]) + ", y=" + toString(ndrGlobalSize[1]) + ", z=" + toString(ndrGlobalSize[2]) );
    debug( " [OpenCL] local size: x=" + toString(ndrLocalSize[0]) + ", y=" + toString(ndrLocalSize[1]) + ", z=" + toString(ndrLocalSize[2]) );
 
@@ -790,14 +822,6 @@ void OpenCLAdapter::execKernel(void* oclKernel,
                                        NULL,
                                        &oclEvent->getCLEvent()
                                      );
-
-   if ( _synchronize )
-	   clWaitForEvents(1, &oclEvent->getCLEvent());
-
-   if ( currQueue == _currQueue ) {
-      _currQueue = ( _currQueue + 1 )  % nanos::ext::OpenCLConfig::getPrefetchNum();
-   }
-                                     
    if( errCode != CL_SUCCESS )
    {
       // Don't worry about exit code, we are cleaning an error.
@@ -806,6 +830,14 @@ void OpenCLAdapter::execKernel(void* oclKernel,
       oclEvent->setCLKernel(NULL);
       fatal0kernelNameErr(oclKernel,"Error launching OpenCL kernel",errCode);
    }
+
+   if ( _synchronize )
+	   clWaitForEvents(1, &oclEvent->getCLEvent());
+
+   if ( currQueue == _currQueue ) {
+      _currQueue = ( _currQueue + 1 )  % nanos::ext::OpenCLConfig::getPrefetchNum();
+   }
+                                     
 }
 
 void OpenCLAdapter::profileKernel(void* oclKernel,
@@ -839,7 +871,7 @@ void OpenCLAdapter::profileKernel(void* oclKernel,
    NANOS_OPENCL_CREATE_IN_OCL_RUNTIME_EVENT( ext::NANOS_OPENCL_PROFILE_DB_ACCESS );
    if ( bestExecution == NULL ) {
       if ( getOpenClProfilerDbManager() == NULL )
-         fatal("OpenCL Profiler flag was not provided");
+         fatal0("OpenCL Profiler flag was not provided")
       Execution dbBestExecution(workDim);
       if ( getOpenClProfilerDbManager()->getKernelConfig(dims, dbBestExecution, kernelName) == CLP_DBM_SUCCESS ) {
          updateProfStats(kernelName, dims, dbBestExecution);
@@ -1248,7 +1280,7 @@ size_t OpenCLAdapter::getGlobalSize()
                                 &size,
                                 NULL );
    if( errCode != CL_SUCCESS )
-      fatal( "Cannot get device global memory size" );
+      fatal0( "Cannot get device global memory size" );
 
    return size;
 }
@@ -1390,7 +1422,7 @@ cl_int OpenCLAdapter::getStandardSizeTypeMax( unsigned long long &sizeTypeMax )
       break;
 
    default:
-      fatal( "Cannot get device size type max value" );
+      fatal0( "Cannot get device size type max value" );
    }
 
    return errCode;
@@ -1525,7 +1557,7 @@ void OpenCLProcessor::setKernelBufferArg(void* openclKernel, int argNum, const v
     cl_int errCode= clSetKernelArg( (cl_kernel) openclKernel, argNum, sizeof(cl_mem), &buffer ); 
     if( errCode != CL_SUCCESS )
     {
-        fatalkernelNameErr(openclKernel,"Error in setKernelArg with copies/buffer ", errCode);    
+        fatal0kernelNameErr(openclKernel,"Error in setKernelArg with copies/buffer ", errCode);    
     }
 }
 

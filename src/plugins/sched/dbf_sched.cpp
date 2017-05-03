@@ -125,8 +125,18 @@ namespace nanos {
             */
             virtual void queue ( BaseThread *thread, WD &wd )
             {
-                ThreadData &data = ( ThreadData & ) *thread->getTeamData()->getScheduleData();
-                data._readyQueue->push_front ( &wd );
+               BaseThread *targetThread = wd.isTiedTo();
+               if ( targetThread ) targetThread->addNextWD(&wd);
+               else {
+                  ThreadData &data = ( ThreadData & ) *thread->getTeamData()->getScheduleData();
+                  data._readyQueue->push_front( &wd );
+                  sys.getThreadManager()->unblockThread(thread);
+               }
+            }
+
+            virtual void queue ( BaseThread ** threads, WD ** wds, size_t numElems )
+            {
+               fatal( "This method is not implemented yet" );
             }
 
             /*!
@@ -156,10 +166,16 @@ namespace nanos {
                   return true;
                }
             }
-            
+
             bool usingPriorities() const
             {
                return _usePriority || _useSmartPriority;
+            }
+
+            bool testDequeue()
+            {
+               ThreadData &data = ( ThreadData & ) *myThread->getTeamData()->getScheduleData();
+               return data._readyQueue->testDequeue();
             }
       };
 
@@ -172,7 +188,10 @@ namespace nanos {
        */
       WD * DistributedBFPolicy::atIdle ( BaseThread *thread, int numSteal )
       {
-         WorkDescriptor * wd;
+         WorkDescriptor * wd = thread->getNextWD();
+
+         if ( wd ) return wd;
+
          WorkDescriptor * next = NULL; 
 
          ThreadData &data = ( ThreadData & ) *thread->getTeamData()->getScheduleData();

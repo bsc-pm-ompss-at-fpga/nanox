@@ -101,6 +101,10 @@ namespace nanos {
          static void increaseTasksInQueues( int tasks, int increment = 1 );
          static void decreaseTasksInQueues( int tasks, int decrement = 1 );
 
+         /*! \brief Returns true if an element can be dequeued
+          */
+
+         virtual bool testDequeue() { return !empty(); }
    };
 
    class WDDeque : public WDPool
@@ -161,10 +165,7 @@ namespace nanos {
          void increaseTasksInQueues( int tasks, int increment = 1 );
          void decreaseTasksInQueues( int tasks, int decrement = 1 );
 
-         /*! \brief Returns the number of ready tasks that could be ran simultaneously
-          * Tied and commutative WDs in the queue could decrease this number.
-          */
-         int getPotentiallyParallelWDs( void );
+         bool testDequeue();
 
          void transferElemsFrom( WDDeque &dq );
          template <typename Test>
@@ -236,6 +237,8 @@ namespace nanos {
          void push_back( WorkDescriptor *wd );
          void push_back_node ( WDNode *node );
 
+         void push_front( WD** wds, size_t numElems );
+         void push_back( WD** wds, size_t numElems );
          WorkDescriptor * pop_front ( BaseThread *thread );
          WorkDescriptor * pop_back ( BaseThread *thread );
 
@@ -403,10 +406,7 @@ namespace nanos {
          void increaseTasksInQueues( int tasks, int increment = 1 );
          void decreaseTasksInQueues( int tasks, int decrement = 1 );
 
-         /*! \brief Returns the number of ready tasks that could be ran simultaneously
-          * Tied and commutative WDs in the queue could decrease this number.
-          */
-         int getPotentiallyParallelWDs( void );
+         bool testDequeue();
    };
 
 

@@ -103,7 +103,12 @@ devinclude_HEADERS = \
 	error.hpp \
 	frequency_traits.hpp \
 	frequency.hpp \
-	$(END)
+	smartpointer.hpp \
+	memory/memoryaddress.hpp \
+	concurrent_queue.hpp \
+	depsregion.hpp \
+	depsregion_decl.hpp \
+	$(END) 
 
 memorydir = $(devincludedir)/memory
 memory_HEADERS= \
@@ -233,6 +238,9 @@ support_sources = \
 	genericevent.cpp \
 	hwloc_decl.hpp \
 	hwloc.cpp \
+	memory/memoryaddress.hpp \
+	memory/memoryaddress.cpp \
+	concurrent_queue.hpp \
 	dbmanager.hpp \
 	error.hpp \
 	frequency_traits.hpp \
@@ -277,7 +285,7 @@ gpu_support_sources = \
 	pinnedallocator.cpp \
         $(END)
 endif
-	
+
 
 noinst_LTLIBRARIES =
 

@@ -59,52 +59,6 @@
 
 #include "addressspace.hpp"
 
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-#   include "mainfunction.hpp"
-#endif
-
-#include <mutex>
-#include <set>
-
-#include <climits>
-#include <cstring>
-
-// extern "C" {
-// 
-//    // MPI INTERCEPTION
-// 
-//    int MPI_Init(int *argc, char ***argv);
-//    int MPI_Init(int *argc, char ***argv) 
-//    {
-//       //fprintf(stderr ,"Calling MPI_Init\n");
-//       //int result = MPI_Init_C_Wrapper(argc, argv);
-//       //int result = PMPI_Init( argc, argv );
-//       printf("Just called MPI_Init\n");
-//       sys.initClusterMPI(argc, argv);
-//       return 0;
-//    }
-// 
-//    int MPI_Init_thread( int *argc, char ***argv, int required, int *provided );
-//    int MPI_Init_thread( int *argc, char ***argv, int required, int *provided )
-//    {
-//       //fprintf(stderr,"Calling MPI_Init_thread\n");
-//       //int result = MPI_Init_thread_C_Wrapper(argc, argv, required, provided);
-//       //int result = PMPI_Init_thread( argc, argv, required, provided );
-//       printf("Just called MPI_Init_thread\n");
-//       sys.initClusterMPI(argc, argv);
-//       return 0;
-//    }
-// 
-//    // int MPI_Finalize() 
-//    // {
-//    //    //printf("Calling MPI_Finalize\n");
-//    //    FTI_Finalize();
-//    //    int result = PMPI_Finalize();
-//    //    //printf("Just called MPI_Finalize\n");
-//    //    return result;
-//    // }
-// }
-
 using namespace nanos;
 
 System nanos::sys;
@@ -116,6 +70,15 @@ namespace PMInterfaceType
    extern void (*set_interface)( void * );
 }
 }
+
+
+// This symbol is used to detect that a specific feature of OmpSs is used in an application
+// (i.e. Mercurium explicitly defines this symbol if priorities are used)
+extern "C"
+{
+   __attribute__((weak)) void nanos_needs_priorities_fun(void);
+}
+
 
 // default system values go here
 System::System () :
@@ -156,12 +119,14 @@ System::System () :
       , _router()
       , _hwloc()
       , _immediateSuccessorDisabled( false )
-      , _predecessorCopyInfoDisabled( false )
+      , _predecessorCopyInfoDisabled( true )
       , _invalControl( false )
-      , _cgAlloc( false )
+      , _cgAlloc( true )
       , _inIdle( false )
-	  , _lazyPrivatizationEnabled (false)
-	  , _watchAddr(nullptr)
+	   , _lazyPrivatizationEnabled (false)
+	   , _preSchedule (false)
+      , _slots()
+	   , _watchAddr (nullptr)
 {
    verbose( "NANOS++ initializing... start" );
 
@@ -173,7 +138,6 @@ System::System () :
    _lockPool = NEW Lock[_lockPoolSize];
 
    if ( !_delayedStart ) {
-      //std::cerr << "NX_ARGS is:" << (char *)(OS::getEnvironmentVariable( "NX_ARGS" ) != NULL ? OS::getEnvironmentVariable( "NX_ARGS" ) : "NO NX_ARGS: GG!") << std::endl;
       start();
    }
    verbose( "NANOS++ initializing... end" );
@@ -196,7 +160,6 @@ void System::loadArchitectures()
    _pluginManager.init();
    verbose ( "Loading architectures" );
 
-   
    // load host processor module
    if ( _hostFactory == NULL ) {
      verbose( "loading Host support" );
@@ -246,7 +209,7 @@ void System::loadArchitectures()
 
    verbose( "Architectures loaded");
 
-#ifdef MPI_DEV
+#ifdef HAVE_MPI_H
    char* isOffloadSlave = getenv(const_cast<char*> ("OMPSS_OFFLOAD_SLAVE")); 
    //Plugin->init of MPI will initialize MPI when we are slaves so MPI spawn returns ASAP in the master
    //This plugin does not reserve any PE at initialization time, just perform MPI Init and other actions
@@ -312,10 +275,7 @@ void System::loadModules ()
 void System::unloadModules ()
 {   
    delete _throttlePolicy;
-   
    delete _defSchedulePolicy;
-   
-   //! \todo (#613): delete GPU plugin?
 }
 
 // Config Functor
@@ -346,9 +306,39 @@ void System::config ()
 
    cfg.setOptionsSection( "Core", "Core options of the core of Nanos++ runtime" );
 
-   cfg.registerConfigOption( "stack-size", NEW Config::SizeVar( _deviceStackSize ), "Default stack size (all devices)" );
+   //! Registering plugins options
+   registerPluginOption( "schedule", "sched", _defSchedule, "Defines the scheduling policy", cfg );
+   cfg.registerArgOption( "schedule", "schedule" );
+   cfg.registerEnvOption( "schedule", "NX_SCHEDULE" );
+
+   registerPluginOption( "throttle", "throttle", _defThrottlePolicy, "Defines the throttle policy", cfg );
+   cfg.registerArgOption( "throttle", "throttle" );
+   cfg.registerEnvOption( "throttle", "NX_THROTTLE" );
+
+   cfg.registerConfigOption( "barrier", NEW Config::StringVar ( _defBarr ), "Defines barrier algorithm" );
+   cfg.registerArgOption( "barrier", "barrier" );
+   cfg.registerEnvOption( "barrier", "NX_BARRIER" );
+
+   registerPluginOption( "instrumentation", "instrumentation", _defInstr, "Defines instrumentation format", cfg );
+   cfg.registerArgOption( "instrumentation", "instrumentation" );
+   cfg.registerEnvOption( "instrumentation", "NX_INSTRUMENTATION" );
+
+   registerPluginOption( "deps", "deps", _defDepsManager, "Defines the dependencies plugin", cfg );
+   cfg.registerArgOption( "deps", "deps" );
+   cfg.registerEnvOption( "deps", "NX_DEPS" );
+   
+   cfg.registerConfigOption( "architecture", NEW Config::StringVar ( _defArch ), "Defines the architecture to use (smp by default)" );
+   cfg.registerArgOption( "architecture", "architecture" );
+   cfg.registerEnvOption( "architecture", "NX_ARCHITECTURE" );
+
+   //! Registering common options
+   cfg.registerConfigOption( "no-sync-start", NEW Config::FlagOption( _synchronizedStart, false),
+                             "Disables synchronized start" );
+   cfg.registerArgOption( "no-sync-start", "disable-synchronized-start" );
+
+   cfg.registerConfigOption( "stack-size", NEW Config::SizeVar( _deviceStackSize ),
+                             "Default stack size (all devices)" );
    cfg.registerArgOption( "stack-size", "stack-size" );
-   cfg.registerEnvOption( "stack-size", "NX_STACK_SIZE" );
 
    cfg.registerConfigOption( "verbose", NEW Config::FlagOption( _verboseMode ),
                              "Activates verbose mode" );
@@ -358,50 +348,8 @@ void System::config ()
                              "Activates summary mode" );
    cfg.registerArgOption( "summary", "summary" );
 
-//! \bug implement execution modes (#146) */
-#if 0
-   cfg::MapVar<ExecutionMode> map( _executionMode );
-   map.addOption( "dedicated", DEDICATED).addOption( "shared", SHARED );
-   cfg.registerConfigOption ( "exec_mode", &map, "Execution mode" );
-   cfg.registerArgOption ( "exec_mode", "mode" );
-#endif
-
-   registerPluginOption( "schedule", "sched", _defSchedule,
-                         "Defines the scheduling policy", cfg );
-   cfg.registerArgOption( "schedule", "schedule" );
-   cfg.registerEnvOption( "schedule", "NX_SCHEDULE" );
-
-   registerPluginOption( "throttle", "throttle", _defThrottlePolicy,
-                         "Defines the throttle policy", cfg );
-   cfg.registerArgOption( "throttle", "throttle" );
-   cfg.registerEnvOption( "throttle", "NX_THROTTLE" );
-
-   cfg.registerConfigOption( "barrier", NEW Config::StringVar ( _defBarr ),
-                             "Defines barrier algorithm" );
-   cfg.registerArgOption( "barrier", "barrier" );
-   cfg.registerEnvOption( "barrier", "NX_BARRIER" );
-
-   registerPluginOption( "instrumentation", "instrumentation", _defInstr,
-                         "Defines instrumentation format", cfg );
-   cfg.registerArgOption( "instrumentation", "instrumentation" );
-   cfg.registerEnvOption( "instrumentation", "NX_INSTRUMENTATION" );
-
-   cfg.registerConfigOption( "no-sync-start", NEW Config::FlagOption( _synchronizedStart, false),
-                             "Disables synchronized start" );
-   cfg.registerArgOption( "no-sync-start", "disable-synchronized-start" );
-
-   cfg.registerConfigOption( "architecture", NEW Config::StringVar ( _defArch ),
-                             "Defines the architecture to use (smp by default)" );
-   cfg.registerArgOption( "architecture", "architecture" );
-   cfg.registerEnvOption( "architecture", "NX_ARCHITECTURE" );
-
-   registerPluginOption( "deps", "deps", _defDepsManager,
-                         "Defines the dependencies plugin", cfg );
-   cfg.registerArgOption( "deps", "deps" );
-   cfg.registerEnvOption( "deps", "NX_DEPS" );
-   
-
 #ifdef NANOS_INSTRUMENTATION_ENABLED
+   //! Registering instrumentation specific options
    cfg.registerConfigOption( "instrument-default", NEW Config::StringVar ( _instrumentDefault ),
                              "Set instrumentation event list default (none, all)" );
    cfg.registerArgOption( "instrument-default", "instrument-default" );
@@ -419,28 +367,27 @@ void System::config ()
    cfg.registerArgOption( "instrument-cpuid", "instrument-cpuid" );
 #endif
 
-   /* Cluster: load the cluster support */
-   cfg.registerConfigOption ( "enable-cluster", NEW Config::FlagOption ( _usingCluster, true ), "Enables the usage of Nanos++ Cluster" );
-   cfg.registerArgOption ( "enable-cluster", "cluster" );
-   //cfg.registerEnvOption ( "enable-cluster", "NX_ENABLE_CLUSTER" );
-   cfg.registerConfigOption ( "enable-cluster-mpi", NEW Config::FlagOption ( _usingClusterMPI, true ), "Enables the usage of Nanos++ Cluster with MPI applications" );
-   cfg.registerArgOption ( "enable-cluster-mpi", "cluster-mpi" );
+   // Registering cluster options: load the cluster support
+   cfg.registerConfigOption( "enable-cluster", NEW Config::FlagOption ( _usingCluster, true ), 
+                             "Enables the usage of Nanos++ Cluster" );
+   cfg.registerArgOption( "enable-cluster", "cluster" );
 
-   cfg.registerConfigOption ( "no-node2node", NEW Config::FlagOption ( _usingNode2Node, false ), "Disables the usage of Slave-to-Slave transfers" );
-   cfg.registerArgOption ( "no-node2node", "disable-node2node" );
-   cfg.registerConfigOption ( "no-pack", NEW Config::FlagOption ( _usingPacking, false ), "Disables the usage of packing and unpacking of strided transfers" );
-   cfg.registerArgOption ( "no-pack", "disable-packed-copies" );
+   cfg.registerConfigOption( "enable-cluster-mpi", NEW Config::FlagOption ( _usingClusterMPI, true ), 
+                             "Enables the usage of Nanos++ Cluster with MPI applications" );
+   cfg.registerArgOption( "enable-cluster-mpi", "cluster-mpi" );
 
-   /* Cluster: select wich module to load mpi or udp */
-   cfg.registerConfigOption ( "conduit", NEW Config::StringVar ( _conduit ), "Selects which GasNet conduit will be used" );
-   cfg.registerArgOption ( "conduit", "cluster-network" );
-   cfg.registerEnvOption ( "conduit", "NX_CLUSTER_NETWORK" );
+   cfg.registerConfigOption( "no-node2node", NEW Config::FlagOption ( _usingNode2Node, false ), 
+                             "Disables the usage of Slave-to-Slave transfers" );
+   cfg.registerArgOption( "no-node2node", "disable-node2node" );
 
-#if 0 /* _defDeviceName and _defDevice seem unused */
-   cfg.registerConfigOption ( "device-priority", NEW Config::StringVar ( _defDeviceName ), "Defines the default device to use");
-   cfg.registerArgOption ( "device-priority", "--use-device");
-   cfg.registerEnvOption ( "device-priority", "NX_USE_DEVICE");
-#endif
+   cfg.registerConfigOption( "no-pack", NEW Config::FlagOption ( _usingPacking, false ), 
+                             "Disables the usage of packing and unpacking of strided transfers" );
+   cfg.registerArgOption( "no-pack", "disable-packed-copies" );
+
+   cfg.registerConfigOption( "conduit", NEW Config::StringVar ( _conduit ), 
+                             "Selects which GasNet conduit will be used" );
+   cfg.registerArgOption( "conduit", "cluster-network" );
+
    cfg.registerConfigOption( "simulator", NEW Config::FlagOption ( _simulator ),
                              "Nanos++ will be executed by a simulator (disabled as default)" );
    cfg.registerArgOption( "simulator", "simulator" );
@@ -470,21 +417,21 @@ void System::config ()
    cfg.registerEnvOption("error_injection", "NX_ERROR_INJECTION");
 #endif
 
-   cfg.registerConfigOption ( "verbose-devops", NEW Config::FlagOption ( _verboseDevOps, true ), "Verbose cache ops" );
-   cfg.registerArgOption ( "verbose-devops", "verbose-devops" );
-   cfg.registerConfigOption ( "verbose-copies", NEW Config::FlagOption ( _verboseCopies, true ), "Verbose data copies" );
-   cfg.registerArgOption ( "verbose-copies", "verbose-copies" );
+   cfg.registerConfigOption( "verbose-copies", NEW Config::FlagOption ( _verboseCopies, true ), 
+                             "Verbose data copies" );
+   cfg.registerArgOption( "verbose-copies", "verbose-copies" );
 
-   cfg.registerConfigOption ( "thd-output", NEW Config::FlagOption ( _splitOutputForThreads, true ), "Create separate files for each thread" );
-   cfg.registerArgOption ( "thd-output", "thd-output" );
+   cfg.registerConfigOption( "thd-output", NEW Config::FlagOption ( _splitOutputForThreads, true ), 
+                             "Create separate files for each thread" );
+   cfg.registerArgOption( "thd-output", "thd-output" );
 
-   cfg.registerConfigOption ( "regioncache-policy", NEW Config::StringVar ( _regionCachePolicyStr ), "Region cache policy, accepted values are : nocache, writethrough, writeback, fpga. Default is writeback." );
-   cfg.registerArgOption ( "regioncache-policy", "cache-policy" );
-   cfg.registerEnvOption ( "regioncache-policy", "NX_CACHE_POLICY" );
+   cfg.registerConfigOption( "regioncache-policy", NEW Config::StringVar ( _regionCachePolicyStr ),
+                             "Region cache policy, accepted values are : nocache, writethrough, writeback, fpga. Default is writeback." );
+   cfg.registerArgOption( "regioncache-policy", "cache-policy" );
 
-   cfg.registerConfigOption ( "regioncache-slab-size", NEW Config::SizeVar ( _regionCacheSlabSize ), "Region slab size." );
-   cfg.registerArgOption ( "regioncache-slab-size", "cache-slab-size" );
-   cfg.registerEnvOption ( "regioncache-slab-size", "NX_CACHE_SLAB_SIZE" );
+   cfg.registerConfigOption( "regioncache-slab-size", NEW Config::SizeVar ( _regionCacheSlabSize ),
+                             "Region slab size." );
+   cfg.registerArgOption( "regioncache-slab-size", "cache-slab-size" );
 
    cfg.registerConfigOption( "disable-immediate-succ", NEW Config::FlagOption( _immediateSuccessorDisabled ),
                              "Disables the usage of getImmediateSuccessor" );
@@ -493,6 +440,7 @@ void System::config ()
    cfg.registerConfigOption( "disable-predecessor-info", NEW Config::FlagOption( _predecessorCopyInfoDisabled ),
                              "Disables sending the copy_data info to successor WDs." );
    cfg.registerArgOption( "disable-predecessor-info", "disable-predecessor-info" );
+
    cfg.registerConfigOption( "inval-control", NEW Config::FlagOption( _invalControl ),
                              "Inval control." );
    cfg.registerArgOption( "inval-control", "inval-control" );
@@ -501,12 +449,16 @@ void System::config ()
                              "CG alloc." );
    cfg.registerArgOption( "cg-alloc", "cg-alloc" );
 
-   cfg.registerConfigOption ( "enable-lazy-privatization", NEW Config::BoolVar ( _lazyPrivatizationEnabled ),
-		   "Enable lazy reduction privatization" );
-   cfg.registerArgOption ( "enable-lazy-privatization", "enable-lazy-privatization" );
+   cfg.registerConfigOption( "enable-lazy-privatization", NEW Config::BoolVar ( _lazyPrivatizationEnabled ),
+                             "Enable lazy reduction privatization" );
+   cfg.registerArgOption( "enable-lazy-privatization", "enable-lazy-privatization" );
 
+   cfg.registerConfigOption( "preschedule", NEW Config::FlagOption( _preSchedule ),
+                             "Enables pre scheduling" );
+   cfg.registerArgOption( "preschedule", "preschedule" );
+
+   // Other configure options 
    _schedConf.config( cfg );
-
    _hwloc.config( cfg );
    _threadManagerConf.config( cfg );
 
@@ -518,9 +470,13 @@ void System::config ()
    // Open the own executable
    void * myself = dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
 
-   // Check if the compiler marked myself as requiring priorities (#1041)
-   _compilerSuppliedFlags.prioritiesNeeded = dlsym(myself, "nanos_need_priorities_") != NULL;
-   
+   //For more information see  #1214
+   if ((_compilerSuppliedFlags.prioritiesNeeded = dlsym(myself, "nanos_need_priorities_"))) {
+      warning0("Old mechanism to enable optional features has been detected. This mechanism will be"
+            " deprecated soon, we recommend you to update your OmpSs installation.");
+   }
+   _compilerSuppliedFlags.prioritiesNeeded = _compilerSuppliedFlags.prioritiesNeeded || nanos_needs_priorities_fun;
+
    // Close handle to myself
    dlclose( myself );
 }
@@ -584,7 +540,7 @@ void System::start ()
       mainWD.setSchedulerData( reinterpret_cast<ScheduleWDData*>( data ), /* ownedByWD */ true );
    }
 
-   /* Renaming currend thread as Master */
+   // Renaming currend thread as Master
    myThread->rename("Master");
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseOpenStateEvent (NANOS_STARTUP) );
 
@@ -596,19 +552,15 @@ void System::start ()
       (*it)->addDevices( _devices );
    }
    
-   for ( ArchitecturePlugins::const_iterator it = _archs.begin();
-        it != _archs.end(); ++it )
-   {
+   for ( ArchitecturePlugins::const_iterator it = _archs.begin(); it != _archs.end(); ++it ) {
       (*it)->startSupportThreads();
    }   
    
-   for ( ArchitecturePlugins::const_iterator it = _archs.begin();
-        it != _archs.end(); ++it )
-   {
+   for ( ArchitecturePlugins::const_iterator it = _archs.begin(); it != _archs.end(); ++it ) {
       (*it)->startWorkerThreads( _workers );
    }   
 
-   for ( PEList::iterator it = _pes.begin(); it != _pes.end(); it++ ) {
+   for ( PEMap::iterator it = _pes.begin(); it != _pes.end(); it++ ) {
       if ( it->second->isActive() ) {
          _clusterNodes.insert( it->second->getClusterNode() );
          // If this PE is in a NUMA node and has workers
@@ -632,9 +584,7 @@ void System::start ()
    // as the schedulers might need the information.
    _numaNodeMap.resize( maxNUMANode + 1, INT_MIN );
    
-   for ( std::set<unsigned int>::const_iterator it = _numaNodes.begin();
-        it != _numaNodes.end(); ++it )
-   {
+   for ( std::set<unsigned int>::const_iterator it = _numaNodes.begin(); it != _numaNodes.end(); ++it ) {
       unsigned node = *it;
       // If that node has not been translated, yet
       if ( _numaNodeMap[ node ] == INT_MIN )
@@ -689,28 +639,13 @@ void System::start ()
 
    }
 
-#if 0 /* _defDeviceName and _defDevice seem unused */
-   if ( !_defDeviceName.empty() ) 
-   {
-       PEList::iterator it;
-       for ( it = _pes.begin() ; it != _pes.end(); it++ )
-       {
-           PE *pe = it->second;
-           if ( pe->getDeviceType()->getName() != NULL)
-              if ( _defDeviceName == pe->getDeviceType()->getName()  )
-                 _defDevice = pe->getDeviceType();
-       }
-   }
-#endif
-
 #ifdef NANOS_RESILIENCY_ENABLED
    error::SignalTranslator<error::OperationFailure> signalToExceptionTranslator;
 #endif
 
    if ( getSynchronizedStart() ) threadReady();
 
-   switch ( getInitialMode() )
-   {
+   switch ( getInitialMode() ) {
       case POOL:
          verbose("Pool model enabled (OmpSs)");
          _mainTeam = createTeam( _workers.size(), /*constraints*/ NULL, /*reuse*/ true, /*enter*/ true, /*parallel*/ false );
@@ -726,8 +661,8 @@ void System::start ()
 
    _router.initialize();
    _net.setParentWD( &mainWD );
-   if ( usingCluster() )
-   {
+
+   if ( usingCluster() ) {
       _net.nodeBarrier();
    }
 
@@ -784,6 +719,7 @@ void System::start ()
 System::~System ()
 {
    if ( !_delayedStart ) finish();
+   if( _instrumentation ) { delete _instrumentation; }
 }
 
 void System::finish ()
@@ -804,26 +740,26 @@ void System::finish ()
    //! \note waiting for remaining tasks
    myThread->getCurrentWD()->waitCompletion( true );
 
-   //! \note switching main work descriptor (current) to the main thread to shutdown the runtime 
-   if ( _workers[0]->isSleeping() ) {
-      if ( !_workers[0]->hasTeam() ) {
-         acquireWorker( myThread->getTeam(), _workers[0], true, false, false );
-      }
-      _workers[0]->wakeup();
-   }
-   getMyThreadSafe()->getCurrentWD()->tied().tieTo(*_workers[0]);
-   Scheduler::switchToThread(_workers[0]);
-   BaseThread *mythread = getMyThreadSafe();
-   mythread->getTeam()->getSchedulePolicy().atShutdown();
+   //! \note finalizing scheduler
+   myThread->getTeam()->getSchedulePolicy().atShutdown();
 
-   ensure( mythread->isMainThread(), "Main thread is not finishing the application!");
+   //! \note switching main work descriptor (current) to the main thread to shut down the runtime
+   BaseThread *master_thread = _workers[0];
+   master_thread->lock();
+   master_thread->tryWakeUp( _mainTeam );
+   master_thread->unlock();
+   myThread->getCurrentWD()->tied().tieTo( *master_thread );
+   Scheduler::switchToThread( master_thread );
+
+   BaseThread *mythread = getMyThreadSafe();
+   fatal_cond( !mythread->isMainThread(), "Main thread is not finishing the application!" );
 
    ThreadTeam* team = mythread->getTeam();
    while ( !(team->isStable()) ) memoryFence();
 
    //! \note stopping all threads
    verbose ( "Joining threads..." );
-   for ( PEList::iterator it = _pes.begin(); it != _pes.end(); it++ ) {
+   for ( PEMap::iterator it = _pes.begin(); it != _pes.end(); it++ ) {
       it->second->stopAllThreads();
    }
    verbose ( "...thread has been joined" );
@@ -849,34 +785,9 @@ void System::finish ()
 
    for ( unsigned int nodeCount = 0; nodeCount < _net.getNumNodes(); nodeCount += 1 ) {
       if ( _net.getNodeNum() == nodeCount ) {
-         for ( ArchitecturePlugins::const_iterator it = _archs.begin(); it != _archs.end(); ++it )
-         {
+         for ( ArchitecturePlugins::const_iterator it = _archs.begin(); it != _archs.end(); ++it ) {
             (*it)->finalize();
          }
-#ifdef CLUSTER_DEV
-         if ( _net.getNodeNum() == 0 && usingCluster() ) {
-            //message("Master: Created " << createdWds << " WDs.");
-            //message("Master: Failed to correctly schedule " << sys.getAffinityFailureCount() << " WDs.");
-            //int soft_inv = 0;
-            //int hard_inv = 0;
-
-            //#ifdef OpenCL_DEV
-            //      if ( _opencls ) {
-            //         soft_inv = 0;
-            //         hard_inv = 0;
-            //         for ( unsigned int idx = 1; idx < _opencls->size(); idx += 1 ) {
-            //            soft_inv += _separateAddressSpaces[(*_opencls)[idx]->getMemorySpaceId()]->getSoftInvalidationCount();
-            //            hard_inv += _separateAddressSpaces[(*_opencls)[idx]->getMemorySpaceId()]->getHardInvalidationCount();
-            //            //max_execd_wds = max_execd_wds >= (*_nodes)[idx]->getExecutedWDs() ? max_execd_wds : (*_nodes)[idx]->getExecutedWDs();
-            //            //message("Memory space " << idx <<  " has performed " << _separateAddressSpaces[idx]->getSoftInvalidationCount() << " soft invalidations." );
-            //            //message("Memory space " << idx <<  " has performed " << _separateAddressSpaces[idx]->getHardInvalidationCount() << " hard invalidations." );
-            //         }
-            //      }
-            //      message("OpenCLs Soft invalidations: " << soft_inv);
-            //      message("OpenCLs Hard invalidations: " << hard_inv);
-            //#endif
-         }
-#endif
       }
       if ( usingCluster() ) {
          _net.nodeBarrier();
@@ -921,7 +832,7 @@ void System::finish ()
    delete team;
 
    //! \note deleting processing elements (but main pe)
-   for ( PEList::iterator it = _pes.begin(); it != _pes.end(); it++ ) {
+   for ( PEMap::iterator it = _pes.begin(); it != _pes.end(); it++ ) {
       if ( it->first != (unsigned int)mythread->runningOn()->getId() ) {
          delete it->second;
       }
@@ -1083,9 +994,7 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    DD **dev_ptrs = ( DD ** ) (chunk + offset_DPtrs);
    for ( i = 0 ; i < num_devices ; i ++ ) dev_ptrs[i] = ( DD* ) devices[i].factory( devices[i].arg );
 
-   //std::cerr << "num_copies=" << num_copies <<" copies=" <<copies << " num_dimensions=" <<num_dimensions << " dimensions=" << dimensions<< std::endl;
-   //ensure ((num_copies==0 && copies==NULL && num_dimensions==0 && dimensions==NULL) || (num_copies!=0 && copies!=NULL && num_dimensions!=0 && dimensions!=NULL ), "Number of copies and copy data conflict" );
-   ensure ((num_copies==0 && copies==NULL && num_dimensions==0 /*&& dimensions==NULL*/ ) || (num_copies!=0 && copies!=NULL && num_dimensions!=0 && dimensions!=NULL ), "Number of copies and copy data conflict" );
+   ensure ((num_copies==0 && copies==NULL && num_dimensions==0 ) || (num_copies!=0 && copies!=NULL && num_dimensions!=0 && dimensions!=NULL ), "Number of copies and copy data conflict" );
    
 
    // allocating copy-ins/copy-outs
@@ -1149,15 +1058,6 @@ void System::createWD ( WD **uwd, size_t num_devices, nanos_device_t *devices, s
    }
 
    if ( dyn_props && dyn_props->tie_to ) wd->tieTo( *( BaseThread * )dyn_props->tie_to );
-   
-   /* DLB */
-   // In case the master have been busy crating tasks 
-   // every 10 tasks created I'll check if I must return claimed cpus
-   // or there are available cpus idle
-   if(_atomicWDSeed.value()%10==0){
-      _threadManager->returnClaimedCpus();
-      _threadManager->acquireResourcesIfNeeded();
-   }
 
    if (_createLocalTasks) {
       wd->tieToLocation( 0 );
@@ -1282,7 +1182,7 @@ void System::duplicateWD ( WD **uwd, WD *wd)
    }
 
    // creating new WD 
-   //FIXME jbueno (#758) should we have to take into account dimensions?
+   // FIXME jbueno (#758) should we have to take into account dimensions?
    new (*uwd) WD( *wd, dev_ptrs, wdCopies, data );
 
    // Set total size
@@ -1313,41 +1213,6 @@ void System::setupWD ( WD &work, WD *parent )
       work.setPriority( work.getPriority() + parent->getPriority() );
    }
 
-   /**************************************************/
-   /*********** selective node executuion ************/
-   /**************************************************/
-   //if (_net.getNodeNum() == 0) work.tieTo(*_workers[ 1 + nanos::ext::GPUConfig::getGPUCount() + ( work.getId() % ( _net.getNumNodes() - 1 ) ) ]);
-   /**************************************************/
-   /**************************************************/
-
-   //  ext::SMPDD * workDD = dynamic_cast<ext::SMPDD *>( &work.getActiveDevice());
-   //if (_net.getNodeNum() == 0)
-   //         std::cerr << "wd " << work.getId() << " depth is: " << work.getDepth() << " @func: " << (void *) workDD->getWorkFct() << std::endl;
-#if 0
-#ifdef CLUSTER_DEV
-   if (_net.getNodeNum() == 0)
-   {
-      //std::cerr << "tie wd " << work.getId() << " to my thread" << std::endl;
-      //ext::SMPDD * workDD = dynamic_cast<ext::SMPDD *>( &work.getActiveDevice());
-      switch ( work.getDepth() )
-      {
-         //case 1:
-         //   //std::cerr << "tie wd " << work.getId() << " to my thread, @func: " << (void *) workDD->getWorkFct() << std::endl;
-         //   work.tieTo( *myThread );
-         //   break;
-         //case 1:
-            //if (work.canRunIn( ext::GPU) )
-            //{
-            //   work.tieTo( *_masterGpuThd );
-            //}
-         //   break;
-         default:
-            break;
-            std::cerr << "wd " << work.getId() << " depth is: " << work.getDepth() << " @func: " << (void *) workDD->getWorkFct() << std::endl;
-      }
-   }
-#endif
-#endif
    // Prepare private copy structures to use relative addresses
    work.prepareCopies();
 
@@ -1357,34 +1222,26 @@ void System::setupWD ( WD &work, WD *parent )
    Scheduler::updateCreateStats(work);
 }
 
+//! \brief Submit WorkDescriptor with no dependencies 
 void System::submit ( WD &work )
 {
    SchedulePolicy* policy = getDefaultSchedulePolicy();
    policy->onSystemSubmit( work, SchedulePolicy::SYS_SUBMIT );
 
-/*
-   if (_net.getNodeNum() > 0 ) setupWD( work, getSlaveParentWD() );
-   else setupWD( work, myThread->getCurrentWD() );
-*/
-
    work.submit();
 }
 
-/*! \brief Submit WorkDescriptor to its parent's  dependencies domain
- */
+//! \brief Submit WorkDescriptor to its parent's  dependencies domain
 void System::submitWithDependencies (WD& work, size_t numDataAccesses, DataAccess* dataAccesses)
 {
    SchedulePolicy* policy = getDefaultSchedulePolicy();
    policy->onSystemSubmit( work, SchedulePolicy::SYS_SUBMIT_WITH_DEPENDENCIES );
-/*
-   setupWD( work, myThread->getCurrentWD() );
-*/
+
    WD *current = myThread->getCurrentWD(); 
    current->submitWithDependencies( work, numDataAccesses , dataAccesses);
 }
 
-/*! \brief Wait on the current WorkDescriptor's domain for some dependenices to be satisfied
- */
+//! \brief Wait on the current WorkDescriptor's domain for some dependenices to be satisfied
 void System::waitOn( size_t numDataAccesses, DataAccess* dataAccesses )
 {
    WD* current = myThread->getCurrentWD();
@@ -1395,6 +1252,7 @@ void System::inlineWork ( WD &work )
 {
    SchedulePolicy* policy = getDefaultSchedulePolicy();
    policy->onSystemSubmit( work, SchedulePolicy::SYS_INLINE_WORK );
+
    //! \todo choose actual (active) device...
    if ( Scheduler::checkBasicConstraints( work, *myThread ) ) {
       work._mcontrol.preInit();
@@ -1403,7 +1261,7 @@ void System::inlineWork ( WD &work )
       do {
          result = work._mcontrol.allocateTaskMemory();
          if ( !result ) {
-            myThread->idle();
+            myThread->processTransfers();
          }
       } while( result == false );
       Scheduler::inlineWork( &work, /*schedule*/ false );
@@ -1411,15 +1269,13 @@ void System::inlineWork ( WD &work )
    else fatal ("System: Trying to execute inline a task violating basic constraints");
 }
 
-/* \brief Returns an unocupied worker
- *
- * This function is called when creating a team. We must look for teamless workers and
- * meet the coditions:
- *    - If binding is enabled, the thread must be running on an Active PE
- *    - The thread must not have team, nor nextTeam
- *    - The thread must be either running and idling, or blocked.
- *
- */
+//! \brief Returns an unocupied worker
+//!
+//! This function is called when creating a team. We must look for teamless workers and
+//! meet the coditions:
+//!   - If binding is enabled, the thread must be running on an Active PE
+//!   - The thread must not have team, nor nextTeam
+//!   - The thread must be either running and idling, or blocked.
 BaseThread * System::getUnassignedWorker ( void )
 {
    BaseThread *thread;
@@ -1435,7 +1291,6 @@ BaseThread * System::getUnassignedWorker ( void )
 
       thread->lock();
       if ( !thread->hasTeam() && !thread->getNextTeam() ) {
-
          // Thread may be idle and running or blocked but its CPU is active
          if ( !thread->isSleeping() || thread->runningOn()->isActive() ) {
             thread->reserve(); // set team flag only
@@ -1470,14 +1325,16 @@ void System::acquireWorker ( ThreadTeam * team, BaseThread * thread, bool enter,
 
    SchedulePolicy &sched = team->getSchedulePolicy();
    ScheduleThreadData *sthdata = 0;
-   if ( sched.getThreadDataSize() > 0 )
+   if ( sched.getThreadDataSize() > 0 ) {
       sthdata = sched.createThreadData();
+   }
 
    data->setId(thId);
    data->setTeam(team);
    data->setScheduleData(sthdata);
-   if ( creator )
+   if ( creator ) {
       data->setParentTeamData(thread->getTeamData());
+   }
 
    if ( enter ) thread->enterTeam( data );
    else thread->setNextTeamData( data );
@@ -1562,37 +1419,44 @@ void System::endTeam ( ThreadTeam *team )
          " with size ", team->size()
         );
 
-   /* For OpenMP applications
-      At the end of the parallel return the claimed cpus
-   */
-   _threadManager->returnClaimedCpus();
    while ( team->size ( ) > 0 ) {
-      // FIXME: Is it really necessary?
-      memoryFence();
+      memoryFence(); // FIXME: Is this really necessary?
    }
    while ( team->getFinalSize ( ) > 0 ) {
-      // FIXME: Is it really necessary?
-      memoryFence();
+      memoryFence(); // FIXME: Is this really necessary?
    }
    
    fatal_cond( team->size() > 0, "Trying to end a team with running threads");
+
+   // For OpenMP applications at the end of the parallel return the claimed cpus
+   _threadManager->returnClaimedCpus();
    
    delete team;
 }
 
 void System::waitUntilThreadsPaused ()
 {
+   // Wake up all workers to avoid deadlock
+   for ( ThreadList::const_iterator it = _workers.begin(); it != _workers.end(); it++ ) {
+      it->second->tryWakeUp(NULL);
+   }
+
    // Wait until all threads are paused
    _pausedThreadsCond.wait();
 }
 
 void System::waitUntilThreadsUnpaused ()
 {
+   // Wake up all workers to avoid deadlock
+   for ( ThreadList::const_iterator it = _workers.begin(); it != _workers.end(); it++ ) {
+      it->second->tryWakeUp(NULL);
+   }
    // Wait until all threads are paused
    _unpausedThreadsCond.wait();
 }
  
-void System::addPEsAndThreadsToTeam(PE **pes, int num_pes, BaseThread** threads, int num_threads) {  
+void System::addPEsAndThreadsToTeam(PE **pes, int num_pes, BaseThread** threads, int num_threads) 
+{
     //Insert PEs to the team
     for (int i=0; i<num_pes; i++){
         _pes.insert( std::make_pair( pes[i]->getId(), pes[i] ) );
@@ -1604,12 +1468,11 @@ void System::addPEsAndThreadsToTeam(PE **pes, int num_pes, BaseThread** threads,
     }
 }
 
-void System::environmentSummary( void )
+void System::environmentSummary()
 {
-   /* Get Prog. Model string */
+   // Get programming model string
    std::string prog_model;
-   switch ( getInitialMode() )
-   {
+   switch ( getInitialMode() ) {
       case POOL:
          prog_model = "OmpSs";
          break;
@@ -1649,7 +1512,7 @@ void System::environmentSummary( void )
    _summaryStartTime = time(NULL);
 }
 
-void System::executionSummary( void )
+void System::executionSummary()
 {
    time_t seconds = time(NULL) -_summaryStartTime;
    message( "============ Nanos++ Final Execution Summary ==================" );
@@ -1665,10 +1528,11 @@ void System::executionSummary( void )
    message( "===============================================================" );
 }
 
-//If someone needs argc and argv, it may be possible, but then a fortran 
-//main should be done too
-void System::ompss_nanox_main(void *addr, const char* file, int line){
-    #ifdef MPI_DEV
+//! TODO If someone needs argc and argv, it may be possible, but then a
+//! fortran main should be done too
+void System::ompss_nanox_main(void *addr, const char* file, int line)
+{
+    #ifdef HAVE_MPI_H
     if (getenv("OMPSS_OFFLOAD_SLAVE")){
         //Plugin->init of MPI will do everything and then exit(0)
         sys.loadPlugin("arch-mpi");
@@ -1701,7 +1565,8 @@ void System::ompss_nanox_main_end()
 #endif
 }
 
-global_reg_t System::_registerMemoryChunk(void *addr, std::size_t len) {
+global_reg_t System::_registerMemoryChunk(void *addr, std::size_t len) 
+{
    CopyData cd;
    nanos_region_dimension_internal_t dim;
    dim.lower_bound = 0;
@@ -1711,11 +1576,12 @@ global_reg_t System::_registerMemoryChunk(void *addr, std::size_t len) {
    cd.setDimensions( &dim );
    cd.setNumDimensions( 1 );
    global_reg_t reg;
-   getHostMemory().getRegionId( cd, reg, *((WD *) 0), 0 );
+   getHostMemory().getRegionId( cd, reg, NULL, 0 );
    return reg;
 }
 
-global_reg_t System::_registerMemoryChunk_2dim(void *addr, std::size_t rows, std::size_t cols, std::size_t elem_size) {
+global_reg_t System::_registerMemoryChunk_2dim(void *addr, std::size_t rows, std::size_t cols, std::size_t elem_size) 
+{
    CopyData cd;
    nanos_region_dimension_internal_t dim[2];
    dim[0].lower_bound = 0;
@@ -1728,11 +1594,12 @@ global_reg_t System::_registerMemoryChunk_2dim(void *addr, std::size_t rows, std
    cd.setDimensions( &dim[0] );
    cd.setNumDimensions( 2 );
    global_reg_t reg;
-   getHostMemory().getRegionId( cd, reg, *((WD *) 0), 0 );
+   getHostMemory().getRegionId( cd, reg, NULL, 0 );
    return reg;
 }
 
-void System::_distributeObject( global_reg_t &reg, unsigned int start_node, std::size_t num_nodes ) {
+void System::_distributeObject( global_reg_t &reg, unsigned int start_node, std::size_t num_nodes ) 
+{
    CopyData cd;
    std::size_t num_dims = reg.getNumDimensions();
    nanos_region_dimension_internal_t dims[num_dims];
@@ -1749,12 +1616,12 @@ void System::_distributeObject( global_reg_t &reg, unsigned int start_node, std:
       dims[ num_dims-1 ].accessed_length = size_per_node + (node_idx < rest_size);
       assigned_size += size_per_node + (node_idx < rest_size);
       global_reg_t fragmented_reg;
-      getHostMemory().getRegionId( cd, fragmented_reg, *((WD *) 0), 0 );
+      getHostMemory().getRegionId( cd, fragmented_reg, NULL, 0 );
       std::cerr << "fragment " << node_idx << " is "; fragmented_reg.key->printRegion(std::cerr, fragmented_reg.id); std::cerr << std::endl;
       fragmented_reg.key->addFixedRegion( fragmented_reg.id );
       unsigned int version = 0;
       NewLocationInfoList missing_parts;
-      NewNewRegionDirectory::__getLocation( fragmented_reg.key, fragmented_reg.id, missing_parts, version, *((WD *) 0) );
+      RegionDirectory::__getLocation( fragmented_reg.key, fragmented_reg.id, missing_parts, version );
       memory_space_id_t loc = 0;
       for ( std::vector<SeparateMemoryAddressSpace *>::iterator it = _separateAddressSpaces.begin(); it != _separateAddressSpaces.end(); it++ ) {
          if ( *it != NULL ) {
@@ -1767,13 +1634,13 @@ void System::_distributeObject( global_reg_t &reg, unsigned int start_node, std:
    }
 }
 
-void System::registerNodeOwnedMemory(unsigned int node, void *addr, std::size_t len) {
+void System::registerNodeOwnedMemory(unsigned int node, void *addr, std::size_t len) 
+{
    memory_space_id_t loc = 0;
    if ( node == 0 ) {
       global_reg_t reg = _registerMemoryChunk( addr, len );
       reg.setOwnedMemory(loc);
    } else {
-      //_separateAddressSpaces[0] is always NULL (because loc = 0 is the local node memory)
       for ( std::vector<SeparateMemoryAddressSpace *>::iterator it = _separateAddressSpaces.begin(); it != _separateAddressSpaces.end(); it++ ) {
          if ( *it != NULL ) {
             if ((*it)->getNodeNumber() == node) {
@@ -1786,7 +1653,8 @@ void System::registerNodeOwnedMemory(unsigned int node, void *addr, std::size_t 
    }
 }
 
-void System::stickToProducer(void *addr, std::size_t len) {
+void System::stickToProducer(void *addr, std::size_t len) 
+{
    if ( _net.getNodeNum() == Network::MASTER_NODE_NUM ) {
       CopyData cd;
       nanos_region_dimension_internal_t dim;
@@ -1797,23 +1665,26 @@ void System::stickToProducer(void *addr, std::size_t len) {
       cd.setDimensions( &dim );
       cd.setNumDimensions( 1 );
       global_reg_t reg;
-      getHostMemory().getRegionId( cd, reg, *((WD *) 0), 0 );
+      getHostMemory().getRegionId( cd, reg, NULL, 0 );
       reg.key->setKeepAtOrigin( true );
    }
 }
 
-void System::setCreateLocalTasks( bool value ) {
+void System::setCreateLocalTasks( bool value ) 
+{
    _createLocalTasks = value;
 }
 
-memory_space_id_t System::addSeparateMemoryAddressSpace( Device &arch, bool allocWide, std::size_t slabSize ) {
+memory_space_id_t System::addSeparateMemoryAddressSpace( Device &arch, bool allocWide, std::size_t slabSize ) 
+{
    memory_space_id_t id = getNewSeparateMemoryAddressSpaceId();
    SeparateMemoryAddressSpace *mem = NEW SeparateMemoryAddressSpace( id, arch, allocWide, slabSize );
    _separateAddressSpaces[ id ] = mem;
    return id;
 }
 
-void System::registerObject( int numObjects, nanos_copy_data_internal_t *obj ) {
+void System::registerObject( int numObjects, nanos_copy_data_internal_t *obj ) 
+{
    for ( int i = 0; i < numObjects; i += 1 ) {
       _hostMemory.registerObject( &obj[i] );
    }
@@ -1822,7 +1693,7 @@ void System::registerObject( int numObjects, nanos_copy_data_internal_t *obj ) {
 void System::unregisterObject( int numObjects, void *base_addresses ) {
    memory::Address* addrs = reinterpret_cast<memory::Address*>(base_addresses);
    for ( int i = 0; i < numObjects; i += 1 ) {
-      _hostMemory.unregisterObject((void*)(addrs[i]));
+      _hostMemory.unregisterObject((void *)(addrs[i]));
    }
 }
 
@@ -1833,18 +1704,19 @@ void System::switchToThread( unsigned int thid )
    Scheduler::switchToThread(_workers[thid]);
 }
 
-int System::initClusterMPI(int *argc, char ***argv) {
+int System::initClusterMPI(int *argc, char ***argv) 
+{
    return _clusterMPIPlugin->initNetwork(argc, argv);
 }
 
-void System::finalizeClusterMPI() {
+void System::finalizeClusterMPI() 
+{
    _clusterMPIPlugin->getClusterThread()->stop();
    _clusterMPIPlugin->getClusterThread()->join();
+
    //! \note finalizing instrumentation (if active)
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raiseCloseStateEvent() );
    NANOS_INSTRUMENT ( sys.getInstrumentation()->finalize() );
-   //_net.finalizeNoBarrier();
-   //std::cerr << "AFTER _net.finalizeNoBarrier()" << std::endl;
 }
 
 void System::stopFirstThread( void ) {
@@ -1853,28 +1725,23 @@ void System::stopFirstThread( void ) {
 }
 
 void System::notifyIntoBlockingMPICall() {
-   NANOS_INSTRUMENT(static nanos_event_key_t ikey = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("debug");)
    static int created = 0;
    if ( _schedStats._createdTasks.value() > created ) {
       _inIdle = true;
-      NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 4444 );)
       *myThread->_file << "created " << ( _schedStats._createdTasks.value() - created ) << " tasks. Send msg." << std::endl;
       created = _schedStats._createdTasks.value();
-      //*myThread->_file << "Into blocking mpi call: " << "[Created: " << _schedStats._createdTasks.value() << " Ready: " << _schedStats._readyTasks.value() << " Total: " << _schedStats._totalTasks.value() << "]" << std::endl;
       _net.broadcastIdle();
    }
 }
 
 void System::notifyOutOfBlockingMPICall() {
-   NANOS_INSTRUMENT(static nanos_event_key_t ikey = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("debug");)
    if ( _inIdle ) {
-      NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 0 );)
       _inIdle = false;
    }
-   //*myThread->_file << "Out of blocking mpi call: " << "[Created: " << _schedStats._createdTasks.value() << " Ready: " << _schedStats._readyTasks.value() << " Total: " << _schedStats._totalTasks.value() << "]" << std::endl;
 }
 
-void System::notifyIdle( unsigned int node ) {
+void System::notifyIdle( unsigned int node ) 
+{
 #ifdef CLUSTER_DEV
    if ( !_inIdle ) {
       unsigned int friend_node = (_net.getNodeNum() + 1) % _net.getNumNodes();
@@ -1891,5 +1758,195 @@ void System::notifyIdle( unsigned int node ) {
 #endif
 }
 
-void System::disableHelperNodes() {
+void System::disableHelperNodes() 
+{
+}
+
+void System::preSchedule() {
+   if ( _preSchedule ) {
+      unsigned int max_wd_per_level = 0;
+      for ( std::map<int, std::set< WD * > >::const_iterator it = _slots.begin(); it != _slots.end(); it++ ) {
+         max_wd_per_level = it->second.size() > max_wd_per_level ? it->second.size() : max_wd_per_level;
+      }
+      std::cerr << "Computed max_wd_per_level " << max_wd_per_level << std::endl;
+
+      int max_prio = max_wd_per_level + 1;
+      for ( std::map<int, std::set< WD * > >::const_iterator it = _slots.begin();
+            it != _slots.end(); it++ ) {
+         int this_level_prio = max_prio - it->second.size();
+         unsigned int this_level_count = 0;
+         for ( std::set< WD * >::const_iterator sit = it->second.begin();
+               sit != it->second.end(); sit++ ) {
+            WD *wd = *sit;
+            wd->setPriority( this_level_prio );
+            if ( sys.getNetwork()->getNodeNum() == 0 ) {
+               wd->tieToLocation( this_level_count % sys.getNumClusterNodes() );
+            }
+            this_level_count += 1;
+         }
+      }
+
+      memory_space_id_t max_mem_id = 0;
+      for( std::set<memory_space_id_t>::const_iterator locit = getActiveMemorySpaces().begin();
+            locit != getActiveMemorySpaces().end(); locit++ ) {
+         std::cerr << "this loc " << *locit << std::endl;
+         max_mem_id = max_mem_id < *locit ? *locit : max_mem_id;
+      }
+      std::vector< std::map< unsigned int, std::set< WD * > > * > memspace_usage_sets( max_mem_id+1, NULL );
+      for( std::set<memory_space_id_t>::const_iterator locit = getActiveMemorySpaces().begin();
+            locit != getActiveMemorySpaces().end(); locit++ ) {
+         memspace_usage_sets[*locit] = NEW std::map< unsigned int, std::set< WD * > >();
+      }
+      std::vector< int > memspace_usage( max_mem_id+1, -1 );
+      for( std::set<memory_space_id_t>::const_iterator locit = getActiveMemorySpaces().begin();
+            locit != getActiveMemorySpaces().end(); locit++ ) {
+         memspace_usage[*locit] = 0;
+      }
+
+
+      for ( std::map<int, std::set< WD * > >::const_reverse_iterator it = _slots.rbegin();
+            it != _slots.rend(); it++ ) {
+
+         {
+            std::cerr << "=== start process slot " << it->first << std::endl;
+
+            /* assign */
+            unsigned int max_wd_count = 0;
+            std::vector< int > this_slot_memspace_usage( memspace_usage );
+            std::vector< std::map< unsigned int, std::set< WD * > > * > this_slot_memspace_usage_sets( memspace_usage_sets );
+            std::set<memory_space_id_t>::const_iterator locs = getActiveMemorySpaces().begin();
+            for ( std::set< WD * >::const_iterator sit = it->second.begin();
+                  sit != it->second.end(); sit++ ) {
+               WD *wd = *sit;
+               memory_space_id_t target_loc = (memory_space_id_t) -1;
+               if ( !wd->_schedPredecessorLocs.empty() ) {
+                  //FIXME: elaborate
+                  std::map<memory_space_id_t, unsigned int>::const_iterator it2 = (*sit)->_schedPredecessorLocs.begin();
+                  memory_space_id_t selected = it2->first;
+                  unsigned int max_count = it2->second;
+                  it2++;
+                  while ( it2 != (*sit)->_schedPredecessorLocs.end() ) {
+                     if ( it2->second > max_count ) {
+                        selected = it2->first;
+                     }
+                     it2++;
+                  }
+                  target_loc = selected;
+               } else {
+                  target_loc = *locs;
+                  locs++;
+                  if ( locs == getActiveMemorySpaces().end() ) {
+                     locs = getActiveMemorySpaces().begin();
+                  }
+               }
+               int criticality = wd->getDOSubmit()->getLSS() < 0 ? 0 : wd->getDOSubmit()->getLSS() - wd->getDOSubmit()->getNum() ;
+
+               (*this_slot_memspace_usage_sets[ target_loc ])[criticality].insert( wd );
+               this_slot_memspace_usage[ target_loc ] += 1;
+               max_wd_count = this_slot_memspace_usage[ target_loc ] > (int)max_wd_count ? this_slot_memspace_usage[ target_loc ] : max_wd_count;
+               wd->_schedValues[0] = target_loc;
+            }
+
+            /* balance */
+            int num_wds_per_memspace = it->second.size() / getActiveMemorySpaces().size();
+
+            for ( unsigned int idx = 0; idx < max_mem_id + 1; idx += 1 ) {
+               if ( this_slot_memspace_usage[ idx ] != -1 ) {
+                  if ( this_slot_memspace_usage[ idx ] < (num_wds_per_memspace-1) ) {
+                     std::cerr << "slot " << it->first << " should rebalance (ADD) for memspace " << idx << " current assign " << this_slot_memspace_usage[idx] << " max is " << max_wd_count << " target balance is " << num_wds_per_memspace << std::endl;
+                     for (std::map< unsigned int, std::set<WD *> >::reverse_iterator sit = this_slot_memspace_usage_sets[ idx ]->rbegin();
+                           sit != this_slot_memspace_usage_sets[ idx ]->rend(); sit++ ) {
+                        std::cerr << " WDs at level " << sit->first << ": ";
+                        for (std::set<WD *>::const_iterator isit = sit->second.begin(); isit != sit->second.end(); isit++ ) {
+                           std::cerr << (*isit)->getId() << " ";
+                        }
+                        std::cerr << std::endl;
+                     }
+                  } else if ( this_slot_memspace_usage[ idx ] > (num_wds_per_memspace+1) ) {
+                     std::cerr << "slot " << it->first << " should rebalance (REMOVE) for memspace " << idx << " current assign " << this_slot_memspace_usage[idx] << " max is " << max_wd_count << " target balance is " << num_wds_per_memspace << std::endl;
+                     for (std::map< unsigned int, std::set<WD *> >::reverse_iterator sit = this_slot_memspace_usage_sets[ idx ]->rbegin();
+                           sit != this_slot_memspace_usage_sets[ idx ]->rend(); sit++ ) {
+                        std::cerr << " WDs at level " << sit->first << ": ";
+                        for (std::set<WD *>::const_iterator isit = sit->second.begin(); isit != sit->second.end(); isit++ ) {
+                           std::cerr << (*isit)->getId() << " ";
+                        }
+                        std::cerr << std::endl;
+                     }
+                     int rebalance_wds = this_slot_memspace_usage[ idx ]- (num_wds_per_memspace+1);
+                     std::cerr << "Should rebalance " << rebalance_wds << " this: " << this_slot_memspace_usage[ idx ] << " target " << num_wds_per_memspace << std::endl;
+                     for (std::map< unsigned int, std::set<WD *> >::reverse_iterator sit = this_slot_memspace_usage_sets[ idx ]->rbegin();
+                           sit != this_slot_memspace_usage_sets[ idx ]->rend() && rebalance_wds > 0; sit++ ) {
+                        for (std::set<WD *>::const_iterator isit = sit->second.begin(); isit != sit->second.end() && rebalance_wds > 0; isit++ ) {
+                           unsigned int start_idx = (idx + 1) % (max_mem_id + 1);
+                           memory_space_id_t found_loc = (*isit)->_schedValues[0];
+                           memory_space_id_t initial_loc = (*isit)->_schedValues[0];
+
+                           for ( memory_space_id_t search_idx = start_idx; search_idx != initial_loc && found_loc == initial_loc; search_idx = (search_idx + 1) % (max_mem_id + 1)) {
+                              if ( this_slot_memspace_usage[ search_idx ] > -1 && this_slot_memspace_usage[ search_idx ] < num_wds_per_memspace + 1 ) {
+                                 found_loc = search_idx;
+                              }
+                           }
+                           (*isit)->_schedValues[0] = found_loc;
+                           (*isit)->_schedValues[1] = 0;
+                           std::cerr << "SET SCHED LOC " << found_loc << " FOR WD " << (*isit)->getId() << " this idx " << idx << std::endl;
+                           rebalance_wds -= 1;
+                           this_slot_memspace_usage[ idx ] -= 1;
+                           this_slot_memspace_usage[ found_loc ] += 1;
+                        }
+                     }
+                  }
+               }
+            }
+            for( std::set<memory_space_id_t>::const_iterator locit = getActiveMemorySpaces().begin();
+                  locit != getActiveMemorySpaces().end(); locit++ ) {
+               memspace_usage_sets[*locit]->clear();
+            }
+            std::cerr << "=== end process slot " << it->first << std::endl;
+         }
+
+         /* propagate to predecessors */
+         for ( std::set< WD * >::const_iterator sit = it->second.begin();
+               sit != it->second.end(); sit++ ) {
+            WD *wd = *sit;
+            // for each predecessor
+            //    insert my loc to the predecessor
+            DOSubmit *d = (*sit)->getDOSubmit();
+            for (DependableObject::DependableObjectVector::const_iterator pit = d->getPredecessors().begin();
+                  pit != d->getPredecessors().end(); pit++ ) {
+               WD *predecessor_wd = pit->second->getWD();
+               predecessor_wd->_schedPredecessorLocs[ wd->_schedValues[0] ] += 1;
+            }
+         }
+
+      }
+
+      for ( std::map<int, std::set< WD * > >::const_iterator it = _slots.begin();
+            it != _slots.end(); it++ ) {
+         std::cerr << "["<< it->first << "]: ";
+         for ( std::set< WD * >::const_iterator sit = it->second.begin();
+               sit != it->second.end(); sit++ ) {
+            std::cerr << "[" << (*sit)->getId() /* << ", " << (*sit)->getDOSubmit()->getNum() << ", " << (*sit)->getDOSubmit()->getLSS() << " /" */<< " " << (*sit)->_schedValues[0] << ( (*sit)->_schedValues[1] == 0 ? "*" : "" ) << " { ";
+            for (std::map<memory_space_id_t, unsigned int>::const_iterator it2 = (*sit)->_schedPredecessorLocs.begin(); it2 != (*sit)->_schedPredecessorLocs.end(); it2++)
+               std::cerr << it2->first << "," << it2->second << " ";
+            std::cerr << "}] ";
+         }
+         std::cerr << std::endl;
+      }
+
+      for ( std::map<int, std::set< WD * > >::const_iterator it = _slots.begin();
+            it != _slots.end(); it++ ) {
+         int this_level_prio = max_prio - it->second.size();
+         unsigned int this_level_count = 0;
+         for ( std::set< WD * >::const_iterator sit = it->second.begin();
+               sit != it->second.end(); sit++ ) {
+            WD *wd = *sit;
+            wd->setPriority( this_level_prio );
+            if ( sys.getNetwork()->getNodeNum() == 0 ) {
+               wd->tieToLocation( wd->_schedValues[0] );
+            }
+            this_level_count += 1;
+         }
+      }
+      _slots.clear();
+   }
 }

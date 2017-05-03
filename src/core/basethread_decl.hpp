@@ -229,9 +229,8 @@ namespace nanos {
          virtual ~BaseThread();
 
          // atomic access
-         void lock ();
-
-         void unlock ();
+         virtual void lock ();
+         virtual void unlock ();
 
          virtual void start () = 0;
          virtual void finish ();
@@ -247,10 +246,18 @@ namespace nanos {
          virtual void processTransfers();
          virtual void yield() {};
 
+         /*! \brief Called when the thread becomes blocked inside a SynchronizedCondition and it
+                    cannot execute any task (neither implicit thread task)
+          */
+         virtual void atBlock() { idle(); };
+
          /*! \brief Must be called by children classes after the join operation (protected)
           */ 
          void joined ( void ); 
          virtual void join() = 0;
+
+         bool hasJoined() const;
+
          virtual void bind() {};
          virtual void outlineWorkDependent (WD &work) = 0;
          virtual void preOutlineWorkDependent (WD &work) = 0;

@@ -59,8 +59,9 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
                                  _translateArgs( translate_args ),
                                  _priority( 0 ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
                                  _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL),
-                                 _taskReductions(),_numFailedExecutions( 0 ),
-                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( nullptr ), _callback(0), _arguments(0),
+                                 _taskReductions(),
+                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( nullptr), _callback(0), _arguments(0),
+                                 _submittedWDs( NULL ), _reachedTaskwait( false ), _schedPredecessorLocs(),
                                  _mcontrol( this, numCopies )
                                  {
                                     _flags.is_final = 0;
@@ -72,6 +73,9 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
                                           copies[i].setHostBaseAddress( nullptr );
                                           copies[i].setRemoteHost( false );
                                        }
+                                    }
+                                    for (unsigned int __i=0; __i<8;__i+=1) {
+                                       _schedValues[__i]=-1;
                                     }
                                  }
 
@@ -92,8 +96,10 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                  _doSubmit(NULL), _doWait(), _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ),
                                  _translateArgs( translate_args ),
                                  _priority( 0 ),  _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
-                                 _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL), _taskReductions(),_numFailedExecutions( 0 ),
-                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( nullptr ), _callback(0), _arguments(0), _mcontrol( this, numCopies )
+                                 _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL), _taskReductions(),
+                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr(nullptr), _callback(0), _arguments(0),
+                                 _submittedWDs( NULL ), _reachedTaskwait( false ), _schedPredecessorLocs(),
+                                 _mcontrol( this, numCopies )
                                  {
                                      _devices = new DeviceData*[1];
                                      _devices[0] = device;
@@ -106,6 +112,9 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                           copies[i].setHostBaseAddress( nullptr );
                                           copies[i].setRemoteHost( false );
                                        }
+                                    }
+                                    for (unsigned int __i=0; __i<8;__i+=1) {
+                                       _schedValues[__i]=-1;
                                     }
                                  }
 
@@ -127,8 +136,10 @@ inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **d
                                  _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ),
                                  _translateArgs( wd._translateArgs ),
                                  _priority( wd._priority ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
-                                 _copiesNotInChunk( wd._copiesNotInChunk), _description(description), _instrumentationContextData(), _slicer(wd._slicer), _taskReductions(),_numFailedExecutions( 0 ),
-                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( nullptr ), _callback(0), _arguments(0), _mcontrol( this, wd._numCopies )
+                                 _copiesNotInChunk( wd._copiesNotInChunk), _description(description), _instrumentationContextData(), _slicer(wd._slicer), _taskReductions(),
+                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr(nullptr), _callback(0), _arguments(0),
+                                 _submittedWDs( NULL ), _reachedTaskwait( false ), _schedPredecessorLocs(),
+                                 _mcontrol( this, wd._numCopies )
                                  {
                                     if ( wd._parent != NULL ) wd._parent->addWork(*this);
                                     _flags.is_final = wd._flags.is_final;
@@ -138,8 +149,12 @@ inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **d
                                     _flags.is_implicit = wd._flags.is_implicit;
                                     _flags.is_recoverable = wd._flags.is_recoverable;
                                     _flags.is_invalid = false;
+                                    _flags.is_runtime_task = wd._flags.is_runtime_task;
 
                                     _mcontrol.preInit();
+                                    for (unsigned int __i=0; __i<8;__i+=1) {
+                                       _schedValues[__i]=-1;
+                                    }
                                  }
 
 inline WorkDescriptor::~WorkDescriptor()
@@ -371,6 +386,10 @@ inline void WorkDescriptor::submitWithDependencies( WorkDescriptor &wd, size_t n
    initCommutativeAccesses( wd, numDeps, deps );
    
    _depsDomain->submitDependableObject( *(wd._doSubmit), numDeps, deps, &cb );
+   if ( sys._preSchedule ) {
+      sys._slots[wd._doSubmit->getNum()].insert(&wd);
+   }
+   
 }
 
 inline void WorkDescriptor::waitOn( size_t numDeps, DataAccess* deps )
@@ -471,7 +490,14 @@ inline void WorkDescriptor::setImplicit( bool b )
    }
 }
 
-inline bool WorkDescriptor::isImplicit( void ) { return _flags.is_implicit; } 
+inline bool WorkDescriptor::isImplicit( void ) { return _flags.is_implicit; }
+
+inline void WorkDescriptor::setRuntimeTask( bool b )
+{
+  _flags.is_runtime_task = b;
+}
+
+inline bool WorkDescriptor::isRuntimeTask( void ) const { return _flags.is_runtime_task; }
 
 inline const char * WorkDescriptor::getDescription ( void ) const  { return _description; }
 

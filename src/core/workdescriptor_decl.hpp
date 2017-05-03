@@ -221,6 +221,7 @@ typedef std::set<const Device *>  DeviceList;
             bool is_implicit;        //!< Is the WD an implicit task (in a team)?
             bool is_recoverable;   //!< Flags a task as recoverable, that is, it can be re-executed if it finished with errors.
             bool is_invalid;       //!< Flags an invalid workdescriptor. Used in resiliency when a task fails.
+            bool is_runtime_task;  //!< Is the WD a task for doing runtime jobs?
          } WDFlags;
          typedef enum { INIT, START, READY, BLOCKED } State;
          typedef int PriorityType;
@@ -282,7 +283,11 @@ typedef std::set<const Device *>  DeviceList;
          memory::Address               _remoteAddr;
          void                         *_callback;
          void                         *_arguments;
+         std::vector<WorkDescriptor *>*_submittedWDs;
+         bool                          _reachedTaskwait;
       public:
+         int                           _schedValues[8];
+         std::map<memory_space_id_t,unsigned int>   _schedPredecessorLocs;
          MemController                 _mcontrol;
       private: /* private methods */
          /*! \brief WorkDescriptor copy assignment operator (private)
@@ -679,6 +684,9 @@ typedef std::set<const Device *>  DeviceList;
          void setImplicit( bool b = true );
          bool isImplicit( void );
 
+         void setRuntimeTask( bool b = true );
+         bool isRuntimeTask( void ) const;
+
          /*! \brief Set copies for a given WD
           * We call this when copies cannot be set at creation time of the work descriptor
           * Note that this should only be done between creation and submit.
@@ -721,7 +729,7 @@ typedef std::set<const Device *>  DeviceList;
                  size_t array_descriptor_size, void (*p_init)( void *, void * ),
                  void (*p_reducer)( void *, void * ), void (*p_reducer_orig_var)( void *, void * ) );
 
-         bool removeTaskReduction( void *p_dep, bool del = false );
+         void removeAllTaskReductions ( void );
 
          void * getTaskReductionThreadStorage( void *p_addr, size_t id );
 
@@ -784,6 +792,11 @@ typedef std::set<const Device *>  DeviceList;
 
          void setCallback ( void *cb );
          void setArguments ( void *a );
+
+         //! \brief Returns the concurrency level of the WD considering
+         //         the commutative access map that the caller provides.
+         int getConcurrencyLevel( std::map<WD**, WD*> &comm_accesses ) const;
+         void addPresubmittedWDs( unsigned int numWDs, WD **wds );
    };
 
    typedef class WorkDescriptor WD;

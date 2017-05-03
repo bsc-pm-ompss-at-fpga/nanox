@@ -56,7 +56,6 @@ int main(int argc, char *argv[])
    assert((set1 + set2).size()==4);    /* 1111 */
    assert((set1 & set2).size()==1);    /* 0001 */
    assert((set1 * set2).size()==1);    /* 0001 */
-   assert(set1.countCommon(set2)==1);
 
    // Compound assignment operators
    set2 = set1;   /* 0111 */
@@ -65,6 +64,41 @@ int main(int argc, char *argv[])
    assert(set2.size()==3);
    set2 |= set1;  /* 1111 */
    assert(set2.size()==4);
+
+   // First and last methods
+   CpuSet set3;   /* 0000 */
+   assert(set3.first()==0);
+   assert(set3.last()==0);
+   set3.set(0);   /* 0001 */
+   assert(set3.first()==0);
+   assert(set3.last()==1);
+   set3.set(1);   /* 0011 */
+   assert(set3.first()==0);
+   assert(set3.last()==2);
+   set3.set(3);   /* 1011 */
+   assert(set3.first()==0);
+   assert(set3.last()==4);
+   set3.clear(0); /* 1010 */
+   assert(set3.first()==1);
+   assert(set3.last()==4);
+
+   // Iterators
+   CpuSet::const_iterator it = set3.begin();
+   assert( *it == 1 );
+   ++it;
+   assert( *it == 3 );
+   ++it;
+   assert( it == set3.end() );
+   ++it;
+   assert( it == set3.end() );
+   --it;
+   assert( *it == 3 );
+   --it;
+   assert( *it == 1 );
+   assert( it == set3.begin() );
+   --it;
+   assert( *it == 1 );
+   assert( it == set3.begin() );
 
    return EXIT_SUCCESS;
 }

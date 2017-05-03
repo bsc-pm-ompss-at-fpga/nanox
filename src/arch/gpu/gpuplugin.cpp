@@ -262,7 +262,7 @@ class GPUPlugin : public ArchPlugin
 //         
 //      }
 
-      virtual void addPEs( std::map<unsigned int, ProcessingElement *> &pes ) const
+      virtual void addPEs( PEMap &pes ) const
       {
          for ( std::vector<GPUProcessor *>::const_iterator it = _gpus->begin(); it != _gpus->end(); it++ ) {
             pes.insert( std::make_pair( (*it)->getId(), *it ) );

@@ -67,6 +67,11 @@ spin:
 #endif
 }
 
+inline void Lock::lock()
+{
+   acquire();
+}
+
 inline void Lock::acquire_noinst ( void )
 {
 #ifdef HAVE_NEW_GCC_ATOMIC_OPS
@@ -100,6 +105,11 @@ inline bool Lock::tryAcquire ( void )
 #endif
 }
 
+inline bool Lock::try_lock()
+{
+   return tryAcquire();
+}
+
 inline void Lock::release ( void )
 {
 #ifdef HAVE_NEW_GCC_ATOMIC_OPS
@@ -108,6 +118,22 @@ inline void Lock::release ( void )
    __sync_lock_release( &state_ );
 #endif
 }
+
+inline void Lock::unlock()
+{
+   release();
+}
+
+inline bool operator== ( const Lock& lhs, const Lock& rhs )
+{
+   return &lhs.state_ == &rhs.state_;
+}
+
+inline bool operator!= ( const Lock& lhs, const Lock& rhs )
+{
+   return &lhs.state_ != &rhs.state_;
+}
+
 
 inline LockBlock::LockBlock ( Lock & lock ) : _lock(lock)
 {
@@ -157,6 +183,41 @@ inline SyncLockBlock::SyncLockBlock ( Lock & lock ) : LockBlock(lock)
 inline SyncLockBlock::~SyncLockBlock ( )
 {
    memoryFence();
+}
+
+inline DoubleLockBlock::DoubleLockBlock ( Lock & lock1, Lock & lock2 )
+   : _lock1(lock1), _lock2(lock2)
+{
+   if ( _lock1 == _lock2 ) {
+      _lock1.acquire();
+   } else {
+      while ( true ) {
+         // We alternate lock ordering to avoid excessive
+         // locking and unlocking if only one Lock is available
+
+         _lock1.acquire();
+         if ( _lock2.tryAcquire() ) {
+            break;
+         }
+         _lock1.release();
+
+         _lock2.acquire();
+         if ( _lock1.tryAcquire() ) {
+            break;
+         }
+         _lock2.release();
+      }
+   }
+}
+
+inline DoubleLockBlock::~DoubleLockBlock ( )
+{
+   if ( _lock1 == _lock2 ) {
+      _lock1.release();
+   } else {
+      _lock1.release();
+      _lock2.release();
+   }
 }
 
 } // namespace nanos

@@ -45,15 +45,15 @@ private:
    static std::string _devTy;
   // All found devices.
    static std::map<cl_device_id, cl_context> _devices;
-   std::vector<ext::OpenCLProcessor *> *_opencls;
-   std::vector<OpenCLThread *>    *_openclThreads;
+   std::vector<ext::OpenCLProcessor *> _opencls;
+   std::vector<OpenCLThread *>  _openclThreads;
 
    friend class OpenCLConfig;
    
 public:
    OpenCLPlugin() : ArchPlugin( "OpenCL PE Plugin", 1 )
-      , _opencls( NULL )
-      , _openclThreads( NULL )
+      , _opencls()
+      , _openclThreads()
    { }
 
    ~OpenCLPlugin() { }
@@ -66,7 +66,7 @@ public:
    virtual unsigned getNumThreads() const;
    virtual void createBindingList();
    virtual PE* createPE( unsigned id, unsigned uid );
-   virtual void addPEs( std::map<unsigned int, ProcessingElement *> &pes ) const;
+   virtual void addPEs( PEMap &pes ) const;
    virtual void addDevices( DeviceList &devices ) const;
    virtual void startSupportThreads();
    virtual void startWorkerThreads( std::map<unsigned int, BaseThread *> &workers );
@@ -77,19 +77,19 @@ public:
    }
 
    virtual unsigned int getNumPEs() const {
-      return _opencls->size();
+      return _opencls.size();
    }
    
    virtual unsigned int getMaxPEs() const {
-      return _opencls->size();
+      return _opencls.size();
    }
    
    virtual unsigned int getNumWorkers() const {
-      return _opencls->size();
+      return _opencls.size();
    }
    
    virtual unsigned int getMaxWorkers() const {
-      return _opencls->size();
+      return _opencls.size();
    }
 
 }; // class OpenCLPlugin

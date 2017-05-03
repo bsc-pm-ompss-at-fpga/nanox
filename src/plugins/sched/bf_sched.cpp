@@ -100,11 +100,13 @@ namespace nanos {
                
                // If they have the same team, we can insert in batch
                TeamData &tdata = (TeamData &) *team->getScheduleData();
-               
-               LockBlock lock( tdata._readyQueue->getLock() );
-               
-               if ( _useStack ) return tdata._readyQueue->push_front( wds, numElems );
+               if ( _useStack ) tdata._readyQueue->push_front( wds, numElems );
                else tdata._readyQueue->push_back( wds, numElems );
+
+               // Unblock all participant threads
+               for ( size_t i = 1; i < numElems; ++i ) {
+                  sys.getThreadManager()->unblockThread(threads[i]);
+               }
             }
             
             /*! This scheduling policy supports all WDs, no restrictions. */
@@ -166,9 +168,12 @@ namespace nanos {
 
            WD * atIdle ( BaseThread *thread, int numSteal )
            {
-              TeamData &tdata = (TeamData &) *thread->getTeam()->getScheduleData();
-              
-              return tdata._readyQueue->pop_front( thread );
+              WD * next = thread->getNextWD();
+              if (!next) {
+                 TeamData &tdata = (TeamData &) *thread->getTeam()->getScheduleData();
+                 next = tdata._readyQueue->pop_front( thread );
+              }
+              return next;
            }
 
            WD * atPrefetch ( BaseThread *thread, WD &current )
@@ -208,18 +213,12 @@ namespace nanos {
                }
             }
 
-            int getPotentiallyParallelWDs( void )
+            bool testDequeue()
             {
                TeamData &tdata = (TeamData &) *myThread->getTeam()->getScheduleData();
-               if ( _usePriority || _useSmartPriority ) {
-                  WDPriorityQueue<> &q = (WDPriorityQueue<> &) *(tdata._readyQueue);
-                  return q.getPotentiallyParallelWDs();
-               } else {
-                  WDDeque &q = (WDDeque &) *(tdata._readyQueue);
-                  return q.getPotentiallyParallelWDs();
-               }
+               return tdata._readyQueue->testDequeue();
             }
-            
+
             bool usingPriorities() const
             {
                return _usePriority || _useSmartPriority;

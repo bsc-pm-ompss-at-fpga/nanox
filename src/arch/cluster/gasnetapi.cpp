@@ -111,11 +111,25 @@ GASNetAPI *GASNetAPI::getInstance() {
    return _instance;
 }
 
-GASNetAPI::GASNetAPI() : _net( 0 ), _packSegment( 0 ),
-   _pinnedAllocators(), _pinnedAllocatorsLocks(),
-   _seqN( 0 ), _dataSendRequests(), _freeBufferReqs(), _workDoneReqs(), _rxBytes( 0 ), _txBytes( 0 ), _totalBytes( 0 ),
-   _incomingWorkBuffers(), _nodeBarrierCounter( 0 ),
-   _GASNetSegmentSize( 0 ), _unalignedNodeMemory( false ), _rwgs( 0 ) {
+GASNetAPI::GASNetAPI() : _net( 0 ), 
+#ifndef GASNET_SEGMENT_EVERYTHING
+   _thisNodeSegment( NULL ),
+#endif
+   _packSegment( 0 ),
+   _pinnedAllocators(),
+   _pinnedAllocatorsLocks(),
+   _seqN( 0 ),
+   _dataSendRequests(),
+   _freeBufferReqs(),
+   _workDoneReqs(),
+   _rxBytes( 0 ),
+   _txBytes( 0 ),
+   _totalBytes( 0 ),
+   _incomingWorkBuffers(),
+   _nodeBarrierCounter( 0 ),
+   _GASNetSegmentSize( 0 ),
+   _unalignedNodeMemory( false ),
+   _rwgs( 0 ) {
    _instance = this;
 }
 
@@ -434,8 +448,6 @@ void GASNetAPI::amWork(gasnet_token_t token, void *arg, std::size_t argSize,
    getInstance()->_net->notifyWork(expectedData, nwd.getWD(), seq);
 
    delete[] work_data;
-   //work_data = NULL;
-   //work_data_len = 0;
    VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " done." << std::endl; );
 }
 
@@ -639,9 +651,6 @@ void GASNetAPI::amPut( gasnet_token_t token,
    if ( lastMsg )
    {
       uintptr_t localAddr =  ( ( uintptr_t ) buf ) - ( ( uintptr_t ) realAddr - ( uintptr_t ) realTag );
-      //char* realAddrPtr = (char *) realTag;
-      //char* localAddrPtr = ( (char *) ( ( ( uintptr_t ) buf ) + ( ( uintptr_t ) len ) - ( uintptr_t ) totalLen ) );
-      //fprintf(stderr, "[%d] amPut from %d: dst[%p]=%f buff[%p]=%f\n", gasnet_mynode(), src_node, &realAddrPtr[ 0 ], *((double*)&realAddrPtr[0]), &localAddrPtr[0], *((double*)&localAddrPtr[0]) );
       getInstance()->enqueueFreeBufferNotify( issueNode, ( void * ) localAddr, wd );
       void *hostObject = ( void * ) MERGE_ARG( hostObjectHi, hostObjectLo );
       getInstance()->_net->notifyPut( src_node, wdId, totalLen, 1, 0, (uint64_t) realTag, hostObject, hostRegId, (unsigned int) seq );
@@ -913,9 +922,6 @@ void GASNetAPI::amFreeTmpBuffer( gasnet_token_t token,
    getInstance()->_pinnedAllocatorsLocks[ src_node ]->acquire();
    getInstance()->_pinnedAllocators[ src_node ]->free( addr );
    getInstance()->_pinnedAllocatorsLocks[ src_node ]->release();
-   //fprintf(stderr, "I CALL NOTIFY SCHED for wd %d\n", wd->getId() );
-   // TODO i think this segfaults even when notify func has not been set
-   // wd->notifyCopy();
    
    // XXX call notify copy wd->
    VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " done." << std::endl; );
@@ -1230,6 +1236,11 @@ void GASNetAPI::_put ( unsigned int issueNode, unsigned int remoteNode, uint64_t
    _txBytes += size;
    _totalBytes += size;
    {
+      //Extra copy as the Firehose mechanism by gasnet seems buggy in MN3 (data is corrupted, apparently an invalid frame is sent)
+      _packSegment->lock();
+      void *sndBuff = _packSegment->allocate( size );
+      _packSegment->unlock();
+      ::memcpy( sndBuff, localAddr, size );
    NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); )
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = instr->getInstrumentationDictionary(); )
    NANOS_INSTRUMENT ( static nanos_event_key_t network_transfer_key = ID->getEventKey("network-transfer"); )
@@ -1250,7 +1261,8 @@ void GASNetAPI::_put ( unsigned int issueNode, unsigned int remoteNode, uint64_t
             //fprintf(stderr, "try to send [%d:%p=>%d:%p,%ld < %f >].\n", gasnet_mynode(), (void*)localAddr, remoteNode, (void*)remoteAddr, size, *((double *)localAddr));
    VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " send amPut" << std::endl; );
             if ( gasnet_AMRequestLong15( remoteNode, 210,
-                     &( ( char *) localAddr )[ sent ],
+                     //&( ( char *) localAddr )[ sent ],
+                     &( ( char *) sndBuff )[ sent ],
                      thisReqSize,
                      ( char *) ( ( (char *) remoteTmpBuffer ) + sent ),
                      ARG_LO( ( ( uintptr_t ) ( ( uintptr_t ) remoteAddr ) + sent )),
@@ -1279,6 +1291,10 @@ void GASNetAPI::_put ( unsigned int issueNode, unsigned int remoteNode, uint64_t
          sent += thisReqSize;
       }
    NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( network_transfer_key, 0 ); )
+      //this->freeReceiveMemory( sndBuff );
+      _packSegment->lock();
+      _packSegment->free( sndBuff );
+      _packSegment->unlock();
    }
 }
 
@@ -1679,7 +1695,7 @@ void *GASNetAPI::allocateReceiveMemory( std::size_t len ) {
       getLockGlobal.acquire();
       addr = _thisNodeSegment->allocate( len );
       getLockGlobal.release();
-      if ( addr == NULL ) myThread->idle();
+      if ( addr == NULL ) myThread->processTransfers();
    } while (addr == NULL);
    return addr;
 }

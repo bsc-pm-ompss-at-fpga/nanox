@@ -105,13 +105,15 @@ class BaseAddressSpaceInOps : public BaseOps {
    BaseAddressSpaceInOps( ProcessingElement *pe, bool delayedCommit, bool commitMetadata = true );
    virtual ~BaseAddressSpaceInOps();
 
-   void addOp( SeparateMemoryAddressSpace *from, global_reg_t const &reg, unsigned int version, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const &wd,  unsigned int copyIdx );
+   void addOp( SeparateMemoryAddressSpace *from,
+	   global_reg_t const &reg, 
+	   unsigned int version, 
+	   AllocatedChunk *destinationChunk, 
+	   AllocatedChunk *sourceChunk,
+	   memory::Address srcDeviceAddress,
+	   WD const &wd,  
+	   unsigned int copyIdx );
 
-   // Bloquea los AllocatedChunks de origen para evitar invalidaciones.
-   // "Añade una operacion como pendiente" en el objeto de sincronizacion DeviceOps
-   // Busca en el directorio las regiones que serviran de origen
-   // [...]
-   // Nota: tanto WD como copyIdx se utilizan para debug
    void copyInputData( MemCacheCopy const &memCopy, WD const &wd, unsigned int copyIdx );
 
    // por que se usa esto aqui? host to host tiene sentido???

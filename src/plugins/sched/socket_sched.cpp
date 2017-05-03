@@ -21,7 +21,6 @@
 #include "wddeque.hpp"
 #include "plugin.hpp"
 #include "system.hpp"
-#include "memtracker.hpp"
 #include <cmath>
 #include <fstream>
 #include <sstream>
@@ -32,10 +31,14 @@
 #ifdef HWLOC
 #include <hwloc.h>
 #endif
+
 #ifdef GPU_DEV
 #include "gpudd.hpp"
 #endif
-#include "location.hpp"
+
+#include "memcachecopy.hpp"
+#include "globalregt.hpp"
+
 
 namespace nanos {
    namespace ext {
@@ -45,41 +48,29 @@ namespace nanos {
          //! \brief Limit stealing to adjacent nodes (1 hop away)
          bool stealFromAdjacent;
          
-         SocketSchedConfig() : stealFromAdjacent( true )
-         {}
+         SocketSchedConfig() : stealFromAdjacent( true ) {}
       };
 
       class SocketSchedPolicy : public SchedulePolicy
       {
          public:
-            /*! \brief Value returned by getNode() when it does not find a suitable nod. */
-            const static int UnassignedNode = -1;
+            const static int UnassignedNode =-1; //!< Value returned by getNode() when it does not find a suitable nod
          
          private:
-            /*! \brief Steal work from other sockets? */
-            bool _steal;
-            /*! \brief Steal top level tasks (true) or children (false) */
-            bool _stealParents;
-            /*! \brief Steal low priority tasks (true) or high (false) */
-            bool _stealLowPriority;
-            /*! \brief Use immediate successor when prefecting. */
-            bool _useSuccessor;
-            /*! \brief Use smart priority (propagate priority) */
-            bool _smartPriority;
-            /*! \brief Number of loops to spin before attempting stealing */
-            unsigned _spins;
-            /*! \brief If enabled, steal from random queues, otherwise round robin */
-            bool _randomSteal;
-            /*! \brief Uses copy information to detect the NUMA nodes */
-            bool _useCopies;
+            bool _steal;                         //!< Steal work from other sockets?
+            bool _stealParents;                  //!< Steal top level tasks (true) or children (false)
+            bool _stealLowPriority;              //!< Steal low priority tasks (true) or high (false)
+            bool _useSuccessor;                  //!< Use immediate successor when prefecting
+            bool _smartPriority;                 //!< Use smart priority (propagate priority)
+            unsigned _spins;                     //!< Number of loops to spin before attempting stealing
+            bool _randomSteal;                   //!< If enabled, steal from random queues, otherwise round robin
+            bool _useCopies;                     //!< Uses copy information to detect the NUMA nodes
+
+            SocketSchedConfig _config;           //!< Configuration for the policy
             
-            /*! \brief Configuration for the policy */
-            SocketSchedConfig _config;
+            typedef std::vector<unsigned> NearSocketsList; //!< For a given socket, a list of near sockets.
             
-            /*! \brief For a given socket, a list of near sockets. */
-            typedef std::vector<unsigned> NearSocketsList;
-            
-            /*! \brief Info related to socket distance and stealing */
+            //! \brief Info related to socket distance and stealing 
             struct SocketDistanceInfo {
                NearSocketsList list;
                
@@ -100,36 +91,20 @@ namespace nanos {
                }
             };
             
-            /*! \brief For each socket, an array of close sockets. */
-            typedef std::vector<SocketDistanceInfo> NearSocketsMatrix;
-            
-            /*! \brief Keep a vector with all the close sockets for every socket */
-            NearSocketsMatrix _nearSockets;
-            
-            /*! \brief A set of all the nodes with GPUs */
-            std::set<int> _gpuNodes;
-            
-            /*! \brief List of gpu nodes that will be used to give away work
-             * descriptors in round robin.
-             */
-            SocketDistanceInfo _gpuNodesToGive;
+            typedef std::vector<SocketDistanceInfo> NearSocketsMatrix; //!< For each socket, an array of close sockets
+            NearSocketsMatrix _nearSockets;      //!< Keep a vector with all the close sockets for every socket
+            std::set<int> _gpuNodes;             //!< A set of all the nodes with GPUs
+            SocketDistanceInfo _gpuNodesToGive;  //!< List of gpu nodes that will be used to give away work descriptors in round robin
 
             struct TeamData : public ScheduleTeamData
             {
                WDPriorityQueue<>*         _readyQueues;
-               //! Next queue to insert to (round robin scheduling)
-               // TODO(gmiranda): remove this since we don't use it
-               Atomic<unsigned>           _next;
-               //! If there is an active "master" thread, for every socket
-               Atomic<bool>*              _activeMasters;
+               Atomic<unsigned>           _next; //!< Next queue to insert to (round robin scheduling) TODO remove this since we don't use it
+               Atomic<bool>*              _activeMasters; //!< If there is an active "master" thread, for every socket
  
                TeamData ( unsigned int sockets ) : ScheduleTeamData(), _next( 0 )
                {
-                  //fprintf( stderr, "Reserving %d queues\n", sockets*2 + 1 );
                   _readyQueues = NEW WDPriorityQueue<>[ sockets*2 + 1 ];
-                  // Print how many things are in here.
-                  //for( unsigned i = 0; i < ( sockets*2 + 1 ); ++i )
-                     //fprintf( stderr, "%u tasks in the queue %i\n", (unsigned) _readyQueues[i].size(), i );
                   _activeMasters = NEW Atomic<bool>[ sockets ];
                }
 
@@ -139,18 +114,14 @@ namespace nanos {
                }
             };
 
-            /** \brief Socket Scheduler data associated to each thread
-              *
-              */
+            //! \brief Socket Scheduler data associated to each thread
             struct ThreadData : public ScheduleThreadData
             {
-               /*! queue of ready tasks to be executed */
                unsigned int _cacheId;
                bool _init;
 
                ThreadData () : _cacheId(0), _init(false) {}
-               virtual ~ThreadData () {
-               }
+               virtual ~ThreadData () {}
             };
             
             struct WDData : public ScheduleWDData
@@ -162,13 +133,11 @@ namespace nanos {
                virtual ~WDData() {}
             };
          
-            /** \brief Comparison functor used in distance computations.
-             */
-            struct DistanceCmp{
+            //! \brief Comparison functor used in distance computations
+            struct DistanceCmp {
                unsigned* _distances;
                
-               DistanceCmp( unsigned* distances )
-                  : _distances( distances ){}
+               DistanceCmp( unsigned* distances ) : _distances( distances ) {}
                
                bool operator()( unsigned socket1, unsigned socket2 )
                {
@@ -176,13 +145,12 @@ namespace nanos {
                }
             };
 
-            /* disable copy and assigment */
+            // disable copy and assigment
             explicit SocketSchedPolicy ( const SocketSchedPolicy & );
             const SocketSchedPolicy & operator= ( const SocketSchedPolicy & );
          
          private:
-            /** \brief Creates lists of close sockets.
-             */
+            //! \brief Creates lists of close sockets.
             void computeDistanceInfo() {
                // Fill the distance info matrix
                _nearSockets.resize( sys.getSMPPlugin()->getNumSockets() );
@@ -209,13 +177,8 @@ namespace nanos {
                   
                   fDistances.close();
                   
-                  for ( unsigned to = 0; to < (unsigned) sys.getSMPPlugin()->getNumSockets(); ++to )
-                  {
-                     //fprintf( stderr, "Distance from %d to %d: %d\n", from, to, distances[to] );
-                     // If the target node is different than the origin
-                     // or it's not in the valid list, jump
-                     if ( to == from || sys.getVirtualNUMANode( to ) == INT_MIN )
-                        continue;
+                  for ( unsigned to = 0; to < (unsigned) sys.getSMPPlugin()->getNumSockets(); ++to ) {
+                     if ( to == from || sys.getVirtualNUMANode( to ) == INT_MIN ) continue;
                      row.push_back( to );
                   }
                   if ( !row.empty() ) {
@@ -233,10 +196,7 @@ namespace nanos {
                }
             }
             
-            /*!
-             *  \brief Finds all the nodes with GPUs. Constructs a set of nodes
-             *  that do have GPUs, so it can be queried later on.
-             */
+            //! \brief Finds all the nodes with GPUs. Constructs a set of nodes that do have GPUs, so it can be queried later on.
             void findGPUNodes()
             {
                // Look for GPUs in all the nodes
@@ -244,35 +204,27 @@ namespace nanos {
                   it!=sys.getWorkersEnd(); it++) {
                   BaseThread *worker = it->second;
 #ifdef GPU_DEV
-                  //if ( dynamic_cast<GPUDevice*>( worker->runningOn()->getDeviceType() ) == 0 )
                   if ( worker->runningOn()->supports( nanos::ext::GPU ) )
                   {
                      int node = worker->runningOn()->getNumaNode();
                      // Convert to virtual
                      int vNode = sys.getVirtualNUMANode( node );
                      _gpuNodes.insert( vNode );
-                     verbose( "[NUMA] Found GPU Worker in node ", node,
-                               " (virtual ", vNode, ")"
-                             );
+                     verbose0( "[NUMA] Found GPU Worker in node " << node << " (virtual " << vNode << ")" );
                   }
 #endif
                   // Avoid unused variable warning.
                   worker = worker;
                }
-               // Initialise the structure that will cycle through gpu nodes
-               // when giving away GPU tasks
+               // Initialise the structure that will cycle through gpu nodes when giving away GPU tasks
                _gpuNodesToGive.stealNext = 0;
-               // Copy the set elements to a list (since it is easier to cycle
-               // through)
+               // Copy the set elements to a list (since it is easier to cycle through)
                std::copy( _gpuNodes.begin(), _gpuNodes.end(),
                   std::back_inserter( _gpuNodesToGive.list ) );
             }
             
-            /*!
-             *  \brief Checks if a wd can be run in a node.
-             *  If a GPU task is being scheduled in a node with no GPU threads,
-             *  it will return false.
-             */
+            //! \brief Checks if a wd can be run in a node.
+            //! If a GPU task is being scheduled in a node with no GPU threads, it will return false.
             inline bool canRunInNode( WD& wd, int node )
             {
 #ifdef GPU_DEV
@@ -282,28 +234,19 @@ namespace nanos {
                   return _gpuNodes.count( node ) != 0;
                }
 #endif
-               // FIXME: Otherwise assume it's SMP and can always run in this node.
-               // This might not be always true.
+               // FIXME: Assume it's SMP and can always run in this node. This might not be always true.
                return true;
             }
             
             inline int findBetterNode( WD& wd, int node )
             {
-               //return node;
-            //#if 0
-               /* We do not use round robbin here, we just send it to the
-                * closest node */
-               //int newNode = _nearSockets[ node ].list.front();
+               // We do not use round robbin here, we just send it to the closest node
                int newNode = _gpuNodesToGive.getStealNext();
                fatal_cond( _gpuNodes.count( newNode ) == 0, "Cannot find a node with GPUs to move the task to." );
                
                
-               verbose( "WD ", wd.getId(), " cannot run "
-                        "in node ", node, ", "
-                        "moved to ", newNode
-                      );
+               verbose( "[NUMA] WD " << wd.getId() << " cannot run in node " << node << ", moved to " << newNode );
                return newNode;
-            //#endif
             }
             
             /*!
@@ -396,8 +339,8 @@ namespace nanos {
                   wdata._initTask = true;
                   winner = tdata._next++ % sys.getNumNumaNodes();
                   
-                  verbose( "[NUMA] wd ", wd.getId(), "(", wd.getDescription(), ") "
-                            "is init task, assigned to NUMA node ", winner );
+                  verbose0( toString( "[NUMA] wd ") + toString( wd.getId() ) + toString( "(" ) + toString( wd.getDescription() )
+                     + toString(")") + toString( " is init task, assigned to NUMA node " ) + toString( winner ) );
                   //fprintf( stderr, "[socket] Round.robbin next = %d\n", tdata._next.value() );
                }
                else
@@ -488,7 +431,7 @@ namespace nanos {
                      // Move the iterator to the random position
                      advance( it, pos );
                      winner = *it;
-                     verbose( "[NUMA] Tie resolved, candidate is pos: ", pos, " (node ", winner, ")" );
+                     verbose0( toString( "[NUMA] Tie resolved, candidate is pos: " ) + toString( pos ) + toString( " (node " ) + toString( winner ) );
                   }
                   // If there's only one element
                   else if ( candidateRanks.size() == 1 ) {
@@ -500,7 +443,7 @@ namespace nanos {
                   }
                }
 
-               verbose( "[NUMA] Winner is ", winner );
+               verbose0( "[NUMA] Winner is " + toString( winner ) );
 
                wd.setNUMANode( winner );
 
@@ -518,9 +461,7 @@ namespace nanos {
                _useSuccessor( useSuccessor ), _smartPriority( smartPriority ),
                _spins ( spins ), _randomSteal( randomSteal ), _useCopies( useCopies ),
                _config( config )
-            {
-               message("Steal: " + toString(steal) + ", _steal" + toString(_steal) );
-            }
+            {}
 
             // destructor
             virtual ~SocketSchedPolicy() {}
@@ -532,50 +473,51 @@ namespace nanos {
             {
                if ( _steal && sys.getNumNumaNodes() == 1 )
                {
-                  message( "[NUMA] Stealing can not be enabled with just one NUMA node available, disabling it" );
+                  message0( "[NUMA] Stealing can not be enabled with just one NUMA node available, disabling it" );
                   _steal = false;
                }
-               
+
                // Now we can find GPU nodes since the workers will have been created
                findGPUNodes();
-               
-               computeDistanceInfo();
-               
-               if ( sys.isSummaryEnabled() ){
-                  message( "====================== NUMA Summary ======================" );
-                  message( "=== Worker binding:" );
-                  for (System::ThreadList::iterator it=sys.getWorkersBegin();
-                      it!=sys.getWorkersEnd(); it++) {
-                     const BaseThread * w = it->second;
-                     
-                     message( "===  | Worker ", w->getId(), ", cpu id: ", w->getCpuId(), ", NUMA node ", w->runningOn()->getNumaNode() );
-                  }
-                  
-                  std::stringstream ss;
-                  std::ostream_iterator<int> outIt (ss ,", ");
-                  std::copy( _gpuNodes.begin(), _gpuNodes.end(), outIt );
-                  message( "=== CUDA devices in:     ", ss.str() );
-                  
-                  // Clear stringstream to reuse it
-                  ss.str( std::string() );
-                  
-                  ss     << "=== NUMA node mapping (virtual -> physical):   ";
 
-                  const std::vector<int> &numaNodeMap = sys.getNumaNodeMap();
-                  for ( int pNode = 0; pNode < (int)numaNodeMap.size(); ++pNode )
-                  {
-                     int vNode = numaNodeMap[pNode];
-                     // If this real node has a valid virtual mapping
-                     if ( vNode != INT_MIN )
-                        ss << vNode << "->" << pNode << ", ";
-                  }
-                  message( ss.str() );
-                  
-                  message( "=========================================================" );
-               }
-               
+               computeDistanceInfo();
+
                // Create 2 queues per socket plus one for the global queue.
                return NEW TeamData( sys.getNumNumaNodes() );
+            }
+
+            virtual std::string getSummary() const
+            {
+               std::ostringstream s;
+               s << "====================== NUMA Summary ======================" << std::endl;
+               s << "=== Worker binding:" << std::endl;
+               for (System::ThreadList::iterator it=sys.getWorkersBegin();
+                     it!=sys.getWorkersEnd(); it++) {
+                  const BaseThread *w = it->second;
+
+                  s << "===  | Worker " << w->getId() << ", cpu id: " << w->getCpuId()
+                     << ", NUMA node " << w->runningOn()->getNumaNode() << std::endl;
+               }
+
+               std::stringstream ss;
+               std::ostream_iterator<int> outIt (ss ,", ");
+               std::copy( _gpuNodes.begin(), _gpuNodes.end(), outIt );
+               s << "=== CUDA devices in:     " << ss.str() << std::endl;
+
+               //// Clear stringstream to reuse it
+               //ss.str( std::string() );
+
+               s << "=== NUMA node mapping (virtual -> physical):   ";
+               const std::vector<int> &numaNodeMap = sys.getNumaNodeMap();
+               for ( int pNode = 0; pNode < (int)numaNodeMap.size(); ++pNode )
+               {
+                  int vNode = numaNodeMap[pNode];
+                  // If this real node has a valid virtual mapping
+                  if ( vNode != INT_MIN )
+                     s << vNode << "->" << pNode << ", ";
+               }
+               s << std::endl;
+               return s.str();
             }
 
             virtual ScheduleThreadData * createThreadData ()
@@ -593,6 +535,11 @@ namespace nanos {
             virtual void queue ( BaseThread *thread, WD &wd )
             {
                socketQueue( thread, wd, false );
+            }
+
+            virtual void queue ( BaseThread ** threads, WD ** wds, size_t numElems )
+            {
+               fatal( "This method is not implemented yet" );
             }
             
             /*!
@@ -625,16 +572,10 @@ namespace nanos {
                   // Keep other tasks in the same socket as they were
                   // Note: we might want to insert the ones with depth 1 in the front
                   case 1:
-                     //fprintf( stderr, "Wake up Depth 1, inserting WD %d in queue number %d\n", wd.getId(), index );
-                     
-                     if ( wakeUp )
-                        tdata._readyQueues[index].push_front ( &wd );
-                     else
-                        tdata._readyQueues[index].push_back ( &wd );
+                     if ( wakeUp ) tdata._readyQueues[index].push_front ( &wd );
+                     else tdata._readyQueues[index].push_back ( &wd );
                      break;
                   default:
-                     //fprintf( stderr, "Wake up Depth >1, inserting WD %d in queue number %d\n", wd.getId(), index );
-                     
                      // Insert at the back
                      tdata._readyQueues[index].push_back ( &wd );
                      break;
@@ -659,14 +600,13 @@ namespace nanos {
                TeamData &tdata = (TeamData &) *thread->getTeam()->getScheduleData();
                
                if( wdata._wakeUpQueue != std::numeric_limits<unsigned>::max() )
-                  warning( "WD already has a queue (", wdata._wakeUpQueue, ")" );
+                  warning0( "WD already has a queue (" << wdata._wakeUpQueue << ")" );
                
                unsigned index;
                unsigned node;
                
                switch( wd.getDepth() ) {
                   case 0:
-                     //fprintf( stderr, "Depth 0, inserting WD %d in queue number 0\n", wd.getId() );
                      // Implicit WDs, insert them in the general queue.
                      tdata._readyQueues[0].push_back ( &wd );
                      break;
@@ -683,25 +623,16 @@ namespace nanos {
                         // If the node cannot execute this WD
                         if ( !canRunInNode( wd, node ) ){
                            node = findBetterNode( wd, node );
-                           //fprintf( stderr, "Had to find a better node: %d\n", node );
                         }
                         
-                        //index = (tdata._next++ ) % sys.getNumSockets() + 1;
                         // 2 queues per socket, the first one is for level 1 tasks
                         fatal_cond( node >= sys.getNumNumaNodes(), "Invalid node selected" );
-                        //index = (node % sys.getNumSockets())*2 + 1;
                         index = nodeToQueue( node, true );
                         wdata._wakeUpQueue = index;
                      }
                      
-                     //fprintf( stderr, "[NUMA] Depth 1, inserting WD %d in queue number %d (curr socket %d)\n", wd.getId(), index, wd.getNUMANode() );
-                     
                      // Insert at the front (these will have higher priority)
                      tdata._readyQueues[index].push_back ( &wd );
-                     
-                     // Round robin
-                     //tdata._next = ( socket+1 ) % sys.getNumSockets();
-                     //fprintf( stderr, "Next = %d\n", tdata._next.value() );
                      break;
                   default:
                      // Insert this in its parent's node
@@ -725,19 +656,16 @@ namespace nanos {
                      }
                      wdata._wakeUpQueue = index;
                      
-                     //fprintf( stderr, "Depth %d>1, inserting WD %d in queue number %d\n", wd.getDepth(), wd.getId(), index );
                      // Insert at the back
                      tdata._readyQueues[index].push_back ( &wd );
                      break;
                }
             }
 
-            /*!
-             *  \brief Function called when a new task must be created.
-             *  \param thread pointer to the thread to which belongs the new task
-             *  \param wd a reference to the work descriptor of the new task
-             *  \sa WD and BaseThread
-             */
+            //! \brief Function called when a new task must be created.
+            //! \param thread pointer to the thread to which belongs the new task
+            //! \param wd a reference to the work descriptor of the new task
+            //! \sa WD and BaseThread
             virtual WD * atSubmit ( BaseThread *thread, WD &newWD )
             {
                distribute( thread, newWD );
@@ -747,13 +675,13 @@ namespace nanos {
 
             virtual WD * atIdle ( BaseThread *thread, int numSteal )
             {
+               WorkDescriptor * wd = thread->getNextWD();
+               if ( wd ) return wd;
+
                // If stealing has been enabled and its time to steal
                if ( numSteal && _steal )
                   // Try...
                   return stealWork( thread );
-               
-               // Otherwise, normal at idle operation
-               WD* wd = NULL;
                
                // Get the physical node of this thread
                unsigned node = thread->runningOn()->getNumaNode();
@@ -774,26 +702,16 @@ namespace nanos {
                 */
                int deepTasksN = tdata._readyQueues[ nodeToQueue( vNode, false ) ].size();
                bool emptyBigTasks = tdata._readyQueues[ nodeToQueue( vNode, true )].empty();
-               //fprintf( stderr, "[sockets] %d tasks at the small's queue\n", deepTasksN );
-               //fprintf( stderr, "[sockets] %u tasks at the big's queue\n", (unsigned)tdata._readyQueues[ nodeToQueue( vNode, true )].size() );
-               
-               //unsigned thId = thread->getId();
-               
                
                // TODO Improve atomic condition
-               /* Note (gmiranda):
-                * For true nested operation, */
+               // Note (gmiranda): For true nested operation
                bool parentQueue = deepTasksN < 1*sys.getSMPPlugin()->getCPUsPerSocket() && !emptyBigTasks;
                
-                   /*&& ( tdata._activeMasters[socket].value() == 0 || tdata._activeMasters[socket].value() == thId )*/
                unsigned queueNumber = nodeToQueue( vNode, parentQueue );
                
                wd = tdata._readyQueues[queueNumber].pop_front( thread );
                
-               if ( wd != NULL )
-                  return wd;
-               
-               
+               if ( wd != NULL ) return wd;
                
                // If this queue is empty, try the global queue
                return tdata._readyQueues[0].pop_front( thread );
@@ -801,46 +719,21 @@ namespace nanos {
             
             WD * stealWork ( BaseThread *thread )
             {
-               message("Steal: ", _steal );
-               // WD to return
-               WD* wd = NULL;
+               unsigned index; //!< Index of the queue where we stole the WD
+               WD* wd = NULL;  //!< WD to return
                
-               message( "Steal is true" );
+               // Get schedule data
                TeamData &tdata = (TeamData &) *thread->getTeam()->getScheduleData();
+
                // Get the physical node of this thread
                unsigned node = thread->runningOn()->getNumaNode();
                
-               // Index of the queue where we stole the WD
-               unsigned index;
                
-               if ( false /* steal from the biggest */ )
-               {
-                  // Find the queue with the most small tasks
-                  WDPriorityQueue<> *largest = &tdata._readyQueues[2];
-                  //int largestSocket = 0;
-                  for ( int i = 1; i < sys.getSMPPlugin()->getNumSockets(); ++i )
-                  {
-                     WDPriorityQueue<> *current = &tdata._readyQueues[ (i+1)*2 ];
-                     if ( largest->size() < current->size() ){
-                        largest = current;
-                        //largestSocket = i;
-                        index = (i+1)*2;
-                     }
-                  }
-                  //fprintf( stderr, "Stealing from socket #%d that has %lu tasks\n", largestSocket, largest->size() );
-                  /*if( _stealLowPriority )
-                     wd = largest->pop_back( thread );
-                  else
-                     wd = largest->pop_front( thread );*/
-               }
-               else if ( _randomSteal )
-               {
+               if ( _randomSteal ) {
                   unsigned random = std::rand() % sys.getNumNumaNodes();
-                  //index = random * 2 + offset;
+                  // index = random * 2 + offset;
                   index = nodeToQueue( random, _stealParents );
-               }
-               // Round robbin steal
-               else {
+               } else {
                   // getStealNext returns a physical node, we must convert it
                   int close = _nearSockets[node].getStealNext();
                   int vClose = sys.getVirtualNUMANode( close );
@@ -849,19 +742,16 @@ namespace nanos {
                   index = nodeToQueue( vClose, _stealParents );
                }
                
-               if( _stealLowPriority )
-                  wd = tdata._readyQueues[index].pop_back( thread );
-               else
-                  wd = tdata._readyQueues[index].pop_front( thread );
+               if ( _stealLowPriority ) wd = tdata._readyQueues[index].pop_back( thread );
+               else wd = tdata._readyQueues[index].pop_front( thread );
                
-               if ( wd != NULL ){
+               if ( wd != NULL ) {
                   WDData & wdata = *dynamic_cast<WDData*>( wd->getSchedulerData() );
                   // Change queue
                   wdata._wakeUpQueue = index;
                   return wd;
                }
                
-               // Reached this point, return NULL
                return NULL;
             }
             
@@ -873,15 +763,14 @@ namespace nanos {
                   // Check constraints since they won't be checked in Schedule::wakeUp
                   if ( Scheduler::checkBasicConstraints ( wd, *thread ) ) {
                      prefetchThread = thread;
-                  }
-                  else
+                  } else {
                      prefetchThread = wd.isTiedTo();
+                  }
                   
                   // Returning the wd here makes the application to hang
                   // Use prefetching instead.
                   if ( prefetchThread != NULL ) {
                      prefetchThread->addNextWD( &wd );
-                     
                      return NULL;
                   }
                }
@@ -895,31 +784,16 @@ namespace nanos {
             WD * atPrefetch ( BaseThread *thread, WD &current )
             {
                // If the use of getImmediateSuccessor is not enabled
-               if ( !_useSuccessor )
+               if ( !_useSuccessor ) {
                   // Revert to the base behaviour
                   return SchedulePolicy::atPrefetch( thread, current );
+               }
                
                WD * found = current.getImmediateSuccessor(*thread);
             
                return found != NULL ? found : atIdle(thread,false);
             }
          
-            //WD * atBeforeExit ( BaseThread *thread, WD &current )
-            //{
-            //   // If the use of getImmediateSuccessor is not enabled
-            //   if ( !_useSuccessor )
-            //      // Revert to the base behaviour
-            //      return SchedulePolicy::atBeforeExit( thread, current );
-            //   
-            //   return current.getImmediateSuccessor(*thread);
-            //}
-
-            
-            /*virtual WD * atBlock( BaseThread *thread, WD *current )
-            {
-               return atWakeUp( thread, *current );
-            }*/
-            
             /*!
              * \brief This method performs the main task of the smart priority
              * scheduler, which is to propagate the priority of a WD to its
@@ -939,14 +813,10 @@ namespace nanos {
                   debug( "SmartPriority::successorFound predecessor is NULL" );
                   return;
                }
-               //if ( successor == NULL ) {
-               //   debug( "SmartPriority::successorFound successor is NULL" );
-               //   return;
-               //}
                
                WD *pred = ( WD* ) predecessor->getRelatedObject();
                if ( pred == NULL ) {
-                  debug( "SmartPriority::successorFound predecessor->getRelatedObject() is NULL" );
+                  debug( "SmartPriority::successorFound predecessor->getRelatedObject() is NULL" )
                   return;
                }
                
@@ -955,14 +825,13 @@ namespace nanos {
                   fatal( "SmartPriority::successorFound  successor->getRelatedObject() is NULL" );
                }
                
-               //debug( "Predecessor[", pred->getId(), "]", pred, ", Successor[", succ->getId(), "]" );
-               
-               debug ( "Propagating priority "
-                       "from " , (void*)succ, ":", succ->getId(), 
-                       " to " , (void*)pred, ":", pred->getId(), ", "
-                       "old priority: ", pred->getPriority(), ", "
-                       "new priority: ", std::max( pred->getPriority(), succ->getPriority() )
-                     );
+               debug ( "Propagating priority from "
+                  << (void*)succ << ":" << succ->getId() << " to "
+                  << (void*)pred << ":"<< pred->getId()
+                  << ", old priority: " << pred->getPriority()
+                  << ", new priority: " << std::max( pred->getPriority(),
+                  succ->getPriority() )
+               );
                
                // Propagate priority
                if ( pred->getPriority() < succ->getPriority() ) {
@@ -972,27 +841,35 @@ namespace nanos {
                   TeamData &tdata = ( TeamData & ) *nanos::myThread->getTeam()->getScheduleData();
                   WDData & wdata = *dynamic_cast<WDData*>( pred->getSchedulerData() );
                   unsigned index = wdata._wakeUpQueue;
+
                   // What happens if pred is not in any queue? Fatal.
-                  if ( index < static_cast<unsigned>( sys.getSMPPlugin()->getNumSockets() ) )
+                  if ( index < static_cast<unsigned>( sys.getSMPPlugin()->getNumSockets() ) ) {
                      tdata._readyQueues[ index ].reorderWD( pred );
+                  }
                }
             }
             
-            /*! \brief Enables or disables stealing */
-            virtual void setStealing( bool value )
-            {
-               _steal = value;
+            virtual void successorFound( DependableObject *predecessor, DependableObject *successor ) {
+                fatal( "This method is not implemented yet" );
             }
+
+            //! \brief Enables or disables stealing
+            virtual void setStealing( bool value ) { _steal = value; }
             
-            /*! \brief Returns the status of stealing */
-            virtual bool getStealing()
-            {
-               return _steal;
-            }
+            //! \brief Returns the status of stealing
+            virtual bool getStealing() { return _steal; }
             
-            bool usingPriorities() const
+            //! \brief Returns if scheduler uses priorities 
+            bool usingPriorities() const { return true; }
+
+            bool testDequeue()
             {
-               return true;
+               TeamData &tdata = (TeamData &) *myThread->getTeam()->getScheduleData();
+               int num_queues = sys.getSMPPlugin()->getNumSockets()*2 + 1;
+               for ( int i=0; i<num_queues; ++i ) {
+                  if ( tdata._readyQueues[i].testDequeue() ) return true;
+               }
+               return false;
             }
       };
 
@@ -1013,9 +890,7 @@ namespace nanos {
             bool _useCopies;
             
             SocketSchedConfig _schedConfig;
-            void loadDefaultValues()
-            {
-            }
+            void loadDefaultValues() { }
          public:
             SocketSchedPlugin() : Plugin( "Socket-aware scheduling Plugin",1 ),
                _steal( true ), _stealParents( false ), _stealLowPriority( false),

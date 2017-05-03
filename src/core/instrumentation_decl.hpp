@@ -647,7 +647,7 @@ namespace nanos {
             /* 60 */ registerEventKey("copy-dir-devices", "Asynchronous memory copy between host and devices", true , EVENT_DEVELOPER );
             registerEventValue("copy-dir-devices", "NANOS_DEVS_CPDIR_H2D_GPU_EVENT", "Host to GPU device transfer (CUDA)" );                     /* 1 */
             registerEventValue("copy-dir-devices", "NANOS_DEVS_CPDIR_D2H_GPU_EVENT", "GPU device to host transfer (CUDA)" );                     /* 2 */
-            /* 61 */ registerEventKey("concurrent-tasks", "Number of concurrent tasks in the ready queue", false, EVENT_DEVELOPER );
+            /* 61 */ registerEventKey("concurrent-tasks", "Number of concurrent tasks in the ready queue", false, EVENT_DISABLED );
             /* 62 */ registerEventKey("network-transfer", "Network transfer to node ", false, EVENT_DEVELOPER);
             /* 63 */ registerEventKey("team-ptr", "Team info", false, EVENT_DEVELOPER);
 
@@ -663,7 +663,7 @@ namespace nanos {
             registerEventValue("in-xdma", "NANOS_FPGA_SUBMIT_OUT_DMA_EVENT", "xdma submit out");    /* 5 */
             registerEventValue("in-xdma", "NANOS_FPGA_WAIT_INPUT_DMA_EVENT", "xdma wait in");                /* 6 */
             registerEventValue("in-xdma", "NANOS_FPGA_WAIT_OUTPUT_DMA_EVENT", "xdma wait out");                /* 7 */
-            /* 68 */ registerEventKey("accelerator#", "Accelerator on which task is being executed", EVENT_ADVANCED);
+            /* 68 */ registerEventKey("accelerator#", "Accelerator on which task is being executed", true, EVENT_ADVANCED);
 
             /* 69 */ registerEventKey("reduction", "Reduction support", true, EVENT_DEVELOPER);
             registerEventValue("reduction", "RED_REQUEST_NEW_STORAGE", "Allocating private storage" ); /* 1 */
@@ -738,7 +738,9 @@ namespace nanos {
           */
          void setDefaultLevel ( nanos_event_level_t level );
 
-         void printEventVerbosity ( void );
+         /*! \brief Get the list of enabled and disabled events
+          */
+         std::string getSummary();
 
          /*! \brief Enable/disable all events prefixed with prefix
           */

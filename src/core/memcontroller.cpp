@@ -21,7 +21,7 @@
 #include "memcontroller.hpp"
 #include "workdescriptor.hpp"
 #include "regiondict.hpp"
-#include "newregiondirectory.hpp"
+#include "regiondirectory.hpp"
 #include "memcachecopy.hpp"
 #include "globalregt.hpp"
 
@@ -93,14 +93,24 @@ void MemController::preInit( ) {
    for ( index = 0; index < _wd->getNumCopies(); index++ ) {
       _memCacheCopies.emplace_back( *_wd, index );
    }
-
-   WorkDescriptor* parent = _wd->getParent();
-   for ( index = 0; index < _wd->getNumCopies(); index++ ) {
-      memory::Address host_copy_addr = nullptr;
-      if ( parent != NULL /* && !parent->_mcontrol._mainWd */ ) {
-         for ( parent_index = 0; parent_index < parent->getNumCopies(); parent_index++ ) {
-            if ( parent->_mcontrol.getAddress( parent_index ) == _wd->getCopies()[ index ].getBaseAddress() ) {
-               host_copy_addr = parent->getCopies()[ parent_index ].getHostBaseAddress();
+             NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 0 );)
+             NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 132 );)
+             for ( index = 0; index < _wd->getNumCopies(); index += 1 ) {
+                _memCacheCopies[ index ]._reg.id = _memCacheCopies[ index ]._reg.key->obtainRegionId( _wd->getCopies()[index], *_wd, index );
+                NewNewDirectoryEntryData *entry = ( NewNewDirectoryEntryData * ) _memCacheCopies[ index ]._reg.key->getRegionData( _memCacheCopies[ index ]._reg.id );
+                if ( entry == NULL ) {
+                   entry = NEW NewNewDirectoryEntryData();
+                   _memCacheCopies[ index ]._reg.key->setRegionData( _memCacheCopies[ index ]._reg.id, entry ); //preInit memCacheCopy._reg
+                }
+             }
+             NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 0 );)
+             NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 133 );)
+   for ( index = 0; index < _wd->getNumCopies(); index += 1 ) {
+      uint64_t host_copy_addr = 0;
+      if ( _wd->getParent() != NULL /* && !_wd->getParent()->_mcontrol._mainWd */ ) {
+         for ( unsigned int parent_idx = 0; parent_idx < _wd->getParent()->getNumCopies(); parent_idx += 1 ) {
+            if ( _wd->getParent()->_mcontrol.getAddress( parent_idx ) == (uint64_t) _wd->getCopies()[ index ].getBaseAddress() ) {
+               host_copy_addr = (uint64_t) _wd->getParent()->getCopies()[ parent_idx ].getHostBaseAddress();
                _wd->getCopies()[ index ].setHostBaseAddress( host_copy_addr );
             }
          }
@@ -119,17 +129,17 @@ void MemController::preInit( ) {
 
       if ( cacheCopy.getVersion() != 0 ) {
          verbose_cache( "WD:", *_wd, "; copy ", index, "got location info from predecessor, "
-                        "reg[", _memCacheCopies[index]._reg.key, ",", _memCacheCopies[index]._reg.id, "] "
-                        "got version ", _memCacheCopies[index].getVersion() );
+                        "reg[", cacheCopy._reg.key, ",", cacheCopy._reg.id, "] "
+                        "got version ", cacheCopy.getVersion() );
 
          cacheCopy._locationDataReady = true;
       } else {
          verbose_cache( "WD:", *_wd, "; copy ", index, "got location info from global directory, "
-                        "reg[", _memCacheCopies[index]._reg.key, ",", _memCacheCopies[index]._reg.id, "]" );
+                        "reg[", cacheCopy._reg.key, ",", cacheCopy._reg.id, "]" );
 
          cacheCopy.getVersionInfo();
       }
-      verbose_cache( _memCacheCopies[index] );
+      verbose_cache( cacheCopy );
 
       if( parent != NULL ) {
          if ( parent->_mcontrol.ownsRegion( cacheCopy._reg ) ) {
@@ -162,15 +172,15 @@ void MemController::preInit( ) {
           reg_key_t dict = _memCacheCopies[index]._reg.key;
           for ( std::list< std::pair< reg_t, reg_t > >::iterator it = missingParts.begin(); it != missingParts.end(); it++ ) {
              if ( it->first != it->second ) {
-                NewNewDirectoryEntryData *firstEntry = ( NewNewDirectoryEntryData * ) dict->getRegionData( it->first );
-                NewNewDirectoryEntryData *secondEntry = ( NewNewDirectoryEntryData * ) dict->getRegionData( it->second );
+                DirectoryEntryData *firstEntry = ( DirectoryEntryData * ) dict->getRegionData( it->first );
+                DirectoryEntryData *secondEntry = ( DirectoryEntryData * ) dict->getRegionData( it->second );
                 if ( firstEntry == NULL ) {
                    if ( secondEntry != NULL ) {
-                      firstEntry = NEW NewNewDirectoryEntryData();
+                      firstEntry = NEW DirectoryEntryData();
                       *firstEntry = *secondEntry;
                    } else {
-                      firstEntry = NEW NewNewDirectoryEntryData();
-                      secondEntry = NEW NewNewDirectoryEntryData();
+                      firstEntry = NEW DirectoryEntryData();
+                      secondEntry = NEW DirectoryEntryData();
                       dict->setRegionData( it->second, secondEntry ); // preInit fragment
                    }
                    dict->setRegionData( it->first, firstEntry ); //preInit fragment
@@ -182,9 +192,9 @@ void MemController::preInit( ) {
                    }
                 }
              } else {
-                NewNewDirectoryEntryData *entry = ( NewNewDirectoryEntryData * ) dict->getRegionData( it->first );
+                DirectoryEntryData *entry = ( DirectoryEntryData * ) dict->getRegionData( it->first );
                 if ( entry == NULL ) {
-                   entry = NEW NewNewDirectoryEntryData();
+                   entry = NEW DirectoryEntryData();
                    dict->setRegionData( it->first, entry ); //preInit fragment
                 } else {
                 }
@@ -211,9 +221,9 @@ void MemController::initialize( ProcessingElement &pe ) {
       _pe = &pe;
 
       if ( _pe->getMemorySpaceId() == 0 /* HOST_MEMSPACE_ID */) {
-         _inOps = NEW HostAddressSpaceInOps( _pe, false );
+         _inOps = NEW HostAddressSpaceInOps( _pe, true );
       } else {
-         _inOps = NEW SeparateAddressSpaceInOps( _pe, false, sys.getSeparateMemory( _pe->getMemorySpaceId() ) );
+         _inOps = NEW SeparateAddressSpaceInOps( _pe, true, sys.getSeparateMemory( _pe->getMemorySpaceId() ) );
       }
 #ifdef NANOS_RESILIENCY_ENABLED
       if( sys.isResiliencyEnabled() && _wd->isRecoverable() ) {
@@ -257,16 +267,17 @@ bool MemController::allocateTaskMemory() {
 
       } else if ( _invalidating ) {
          for ( unsigned int idx = 0; idx < _wd->getNumCopies(); idx += 1 ) {
-            if ( _memCacheCopies[idx]._invalControl._invalOps != NULL ) {
-               _memCacheCopies[idx]._invalControl.waitOps( _pe->getMemorySpaceId(), *_wd );
+			 MemCacheCopy& cacheCopy = _memCacheCopies[index];
+            if (cacheCopy._invalControl._invalOps != NULL ) {
+				cacheCopy._invalControl.waitOps( _pe->getMemorySpaceId(), *_wd );
 
-               if ( _memCacheCopies[idx]._invalControl._invalChunk != NULL ) {
-                  _memCacheCopies[idx]._chunk = _memCacheCopies[idx]._invalControl._invalChunk;
-                  *(_memCacheCopies[idx]._invalControl._invalChunkPtr) = _memCacheCopies[idx]._invalControl._invalChunk;
+               if (cacheCopy._invalControl._invalChunk != NULL ) {
+				   cacheCopy._chunk = cacheCopy._invalControl._invalChunk;
+                  *(cacheCopy._invalControl._invalChunkPtr) = cacheCopy._invalControl._invalChunk;
                }
 
-               _memCacheCopies[idx]._invalControl.abort( *_wd );
-               _memCacheCopies[idx]._invalControl._invalOps = NULL;
+			   cacheCopy._invalControl.abort( *_wd );
+			   cacheCopy._invalControl._invalOps = NULL;
             }
          }
          _invalidating = false;
@@ -723,15 +734,6 @@ void MemController::synchronize( std::size_t numDataAccesses, DataAccess *data )
 
 void MemController::synchronize() {
    sys.getHostMemory().synchronize( *_wd );
-/*
-   for ( unsigned int index = 0; index < _wd->getNumCopies(); index++ ) {
-      if ( _wd->getCopies()[index].isOutput() ) {
-         unsigned int newVersion = _memCacheCopies[index].getChildrenProducedVersion() +1;
-         _memCacheCopies[index]._reg.setLocationAndVersion( _pe, _pe->getMemorySpaceId(), newVersion ); // update directory
-         _memCacheCopies[index].setChildrenProducedVersion( newVersion );
-      }
-   }
-*/
 }
 
 bool MemController::isMemoryAllocated() const {
