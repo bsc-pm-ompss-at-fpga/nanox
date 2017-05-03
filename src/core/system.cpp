@@ -59,6 +59,8 @@
 
 #include "addressspace.hpp"
 
+#include <mutex>
+
 using namespace nanos;
 
 System nanos::sys;
@@ -472,7 +474,7 @@ void System::config ()
 
    //For more information see  #1214
    if ((_compilerSuppliedFlags.prioritiesNeeded = dlsym(myself, "nanos_need_priorities_"))) {
-      warning0("Old mechanism to enable optional features has been detected. This mechanism will be"
+      warning("Old mechanism to enable optional features has been detected. This mechanism will be"
             " deprecated soon, we recommend you to update your OmpSs installation.");
    }
    _compilerSuppliedFlags.prioritiesNeeded = _compilerSuppliedFlags.prioritiesNeeded || nanos_needs_priorities_fun;
@@ -1504,7 +1506,6 @@ void System::environmentSummary()
 #else
    message( "=== Runtime resiliency:  Disabled" );
 #endif
-   NANOS_INSTRUMENT ( sys.getInstrumentation()->getInstrumentationDictionary()->printEventVerbosity(); )
 
    message( "=========================================================" );
 
@@ -1552,17 +1553,10 @@ void System::ompss_nanox_main(void *addr, const char* file, int line)
     }
     #endif
 
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-   _mainFunctionEvent = new instrumentation::MainFunctionEvent( addr, file, line );
-#endif
 }
 
 void System::ompss_nanox_main_end()
 {
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-   ensure( _mainFunctionEvent != NULL, "Calling ompss_nanox_main_end() before ompss_nanox_main()" );
-   delete _mainFunctionEvent;
-#endif
 }
 
 global_reg_t System::_registerMemoryChunk(void *addr, std::size_t len) 

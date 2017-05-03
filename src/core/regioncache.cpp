@@ -38,6 +38,7 @@
 #include "regiondict.hpp"
 #include "memoryops_decl.hpp"
 #include "globalregt.hpp"
+#include "memcachecopy_decl.hpp"
 
 #define VERBOSE_DEV_OPS ( sys.getVerboseDevOps() )
 #define VERBOSE_INVAL 0
@@ -179,7 +180,7 @@ void AllocatedChunk::copyRegionToHost( SeparateAddressSpaceOutOps &ops, reg_t re
 }
 
 void AllocatedChunk::copyRegionToHostForced( SeparateAddressSpaceOutOps &ops, reg_t reg, unsigned int version, WD const &wd, unsigned int copyIdx ) {
-   NewNewRegionDirectory::RegionDirectoryKey key = _newRegions->getGlobalDirectoryKey();
+   RegionDirectory::RegionDirectoryKey key = _newRegions->getGlobalDirectoryKey();
    CachedRegionStatus *entry = ( CachedRegionStatus * ) _newRegions->getRegionData( reg );
 
    if( entry && !entry->isValid() ) {
@@ -383,7 +384,7 @@ bool AllocatedChunk::NEWaddReadRegion2( BaseAddressSpaceInOps &ops, reg_t reg, u
                               } else if ( location != _owner.getMemorySpaceId() ) {
                                  sys.getSeparateMemory( location ).getCache().lock();
                                  AllocatedChunk *orig_chunk = sys.getSeparateMemory( location ).getCache().getAllocatedChunk( region_shape, wd, copyIdx );
-                                 uint64_t orig_dev_addr = orig_chunk->getAddress() + ( region_shape.getRealFirstAddress() - orig_chunk->getHostAddress() );
+                                 memory::Address orig_dev_addr = orig_chunk->getDeviceAddress() + ( region_shape.getRealFirstAddress() - orig_chunk->getHostAddress() );
                                  sys.getSeparateMemory( location ).getCache().unlock();
                                  orig_chunk->unlock();
                                  ops.addOp( &sys.getSeparateMemory( location ) , region_shape, version, this, orig_chunk, orig_dev_addr, wd, copyIdx );
@@ -397,7 +398,7 @@ bool AllocatedChunk::NEWaddReadRegion2( BaseAddressSpaceInOps &ops, reg_t reg, u
                            } else if ( location != _owner.getMemorySpaceId() ) {
                               sys.getSeparateMemory( location ).getCache().lock();
                               AllocatedChunk *orig_chunk = sys.getSeparateMemory( location ).getCache().getAllocatedChunk( region_shape, wd, copyIdx );
-                              uint64_t orig_dev_addr = orig_chunk->getAddress() + ( region_shape.getRealFirstAddress() - orig_chunk->getHostAddress() );
+                              memory::Address orig_dev_addr = orig_chunk->getDeviceAddress() + ( region_shape.getRealFirstAddress() - orig_chunk->getHostAddress() );
                               sys.getSeparateMemory( location ).getCache().unlock();
                               orig_chunk->unlock();
                               ops.addOp( &sys.getSeparateMemory( location ) , region_shape, version, this, orig_chunk, orig_dev_addr, wd, copyIdx );

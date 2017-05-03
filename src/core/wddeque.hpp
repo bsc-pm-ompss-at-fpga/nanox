@@ -412,7 +412,7 @@ inline void WDLFQueue::push_front ( WorkDescriptor *wd )
 
 inline void WDLFQueue::push_front ( WorkDescriptor **wd, size_t numElems )
 {
-   fatal0("Calling push_front method is not allowed using WDLFQueue's"); /*XXX*/
+   fatal("Calling push_front method is not allowed using WDLFQueue's"); /*XXX*/
 }
 
 inline void WDLFQueue::push_back( WorkDescriptor *wd )
@@ -440,7 +440,7 @@ inline void WDLFQueue::push_back( WorkDescriptor *wd )
 
 inline void WDLFQueue::push_back ( WorkDescriptor **wd, size_t numElems )
 {
-   fatal0("Calling push_back method is not implemented yet but it should"); /*XXX*/
+   fatal("Calling push_back method is not implemented yet but it should"); /*XXX*/
 }
 
 inline void WDLFQueue::push_back_node ( WDNode *node )

@@ -74,7 +74,6 @@ void SMPDD::workWrapper ( WD &wd )
    NANOS_INSTRUMENT ( } else { );
    NANOS_INSTRUMENT (    sys.getInstrumentation()->raiseOpenStateAndBurst ( NANOS_RUNNING, key, val ) );
    NANOS_INSTRUMENT ( } );
-#endif
 
    dd.execute(wd);
 
@@ -84,7 +83,6 @@ void SMPDD::workWrapper ( WD &wd )
    NANOS_INSTRUMENT ( } else { );
    NANOS_INSTRUMENT (    sys.getInstrumentation()->raiseCloseStateAndBurst ( key, val ) );
    NANOS_INSTRUMENT ( } );
-#endif
 }
 
 void SMPDD::lazyInit ( WD &wd, bool isUserLevelThread, WD *previous )

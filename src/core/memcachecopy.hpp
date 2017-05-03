@@ -121,7 +121,7 @@ inline unsigned int MemCacheCopy::getChildrenProducedVersion() const {
 
 inline void MemCacheCopy::printLocations( std::ostream& os ) const {
    typedef DirectoryEntryData DirData;
-   typedef LocationInfoList      LocationList;
+   typedef NewLocationInfoList LocationList;
 
    LocationList::const_iterator it;
    for ( it = _locations.begin(); it != _locations.end(); it++ ) {

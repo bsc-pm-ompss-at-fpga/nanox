@@ -34,7 +34,7 @@ inline std::ostream& operator<<( std::ostream& os, const MemController& mcontrol
       const CopyData& copy = wd->getCopies()[index];
       const MemCacheCopy& mCacheCopy = mcontrol._memCacheCopies[index];
 
-      NewNewDirectoryEntryData *entry = NewNewRegionDirectory::getDirectoryEntry(
+      DirectoryEntryData *entry = RegionDirectory::getDirectoryEntry(
                                              *(mCacheCopy._reg.key), mCacheCopy._reg.id );
       if( copy.isInput() )
          os << "in ";

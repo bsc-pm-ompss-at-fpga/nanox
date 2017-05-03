@@ -23,6 +23,7 @@
 #include "regiondict.hpp"
 #include "regiondirectory.hpp"
 #include "memcachecopy.hpp"
+
 #include "globalregt.hpp"
 
 #include "cachedregionstatus.hpp"
@@ -89,28 +90,31 @@ void MemController::preInit( ) {
 
    if ( _preinitialized ) return;
 
-   unsigned index, parent_index;
+
+   unsigned index;
    for ( index = 0; index < _wd->getNumCopies(); index++ ) {
       _memCacheCopies.emplace_back( *_wd, index );
    }
-             NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 0 );)
-             NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 132 );)
-             for ( index = 0; index < _wd->getNumCopies(); index += 1 ) {
-                _memCacheCopies[ index ]._reg.id = _memCacheCopies[ index ]._reg.key->obtainRegionId( _wd->getCopies()[index], *_wd, index );
-                NewNewDirectoryEntryData *entry = ( NewNewDirectoryEntryData * ) _memCacheCopies[ index ]._reg.key->getRegionData( _memCacheCopies[ index ]._reg.id );
-                if ( entry == NULL ) {
-                   entry = NEW NewNewDirectoryEntryData();
-                   _memCacheCopies[ index ]._reg.key->setRegionData( _memCacheCopies[ index ]._reg.id, entry ); //preInit memCacheCopy._reg
-                }
-             }
-             NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 0 );)
-             NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 133 );)
+
+
+
    for ( index = 0; index < _wd->getNumCopies(); index += 1 ) {
-      uint64_t host_copy_addr = 0;
-      if ( _wd->getParent() != NULL /* && !_wd->getParent()->_mcontrol._mainWd */ ) {
-         for ( unsigned int parent_idx = 0; parent_idx < _wd->getParent()->getNumCopies(); parent_idx += 1 ) {
-            if ( _wd->getParent()->_mcontrol.getAddress( parent_idx ) == (uint64_t) _wd->getCopies()[ index ].getBaseAddress() ) {
-               host_copy_addr = (uint64_t) _wd->getParent()->getCopies()[ parent_idx ].getHostBaseAddress();
+      _memCacheCopies[ index ]._reg.id = _memCacheCopies[ index ]._reg.key->obtainRegionId( _wd->getCopies()[index], *_wd, index );
+      DirectoryEntryData *entry = ( DirectoryEntryData * ) _memCacheCopies[ index ]._reg.key->getRegionData( _memCacheCopies[ index ]._reg.id );
+      if ( entry == NULL ) {
+         entry = NEW DirectoryEntryData();
+         _memCacheCopies[ index ]._reg.key->setRegionData( _memCacheCopies[ index ]._reg.id, entry ); //preInit memCacheCopy._reg
+      }
+   }
+  
+   WD* parent = _wd->getParent();
+             
+   for ( index = 0; index < _wd->getNumCopies(); index += 1 ) {
+      memory::Address host_copy_addr = nullptr;
+      if ( parent != NULL /* && !parent->_mcontrol._mainWd */ ) {
+         for ( unsigned int parent_idx = 0; parent_idx < parent->getNumCopies(); parent_idx += 1 ) {
+            if ( parent->_mcontrol.getAddress( parent_idx ) == _wd->getCopies()[ index ].getBaseAddress() ) {
+               host_copy_addr = parent->getCopies()[ parent_idx ].getHostBaseAddress();
                _wd->getCopies()[ index ].setHostBaseAddress( host_copy_addr );
             }
          }
@@ -129,18 +133,18 @@ void MemController::preInit( ) {
 
       if ( cacheCopy.getVersion() != 0 ) {
          verbose_cache( "WD:", *_wd, "; copy ", index, "got location info from predecessor, "
-                        "reg[", cacheCopy._reg.key, ",", cacheCopy._reg.id, "] "
-                        "got version ", cacheCopy.getVersion() );
+               "reg[", cacheCopy._reg.key, ",", cacheCopy._reg.id, "] "
+               "got version ", cacheCopy.getVersion() );
 
          cacheCopy._locationDataReady = true;
       } else {
          verbose_cache( "WD:", *_wd, "; copy ", index, "got location info from global directory, "
-                        "reg[", cacheCopy._reg.key, ",", cacheCopy._reg.id, "]" );
+               "reg[", cacheCopy._reg.key, ",", cacheCopy._reg.id, "]" );
 
          cacheCopy.getVersionInfo();
       }
       verbose_cache( cacheCopy );
-
+      
       if( parent != NULL ) {
          if ( parent->_mcontrol.ownsRegion( cacheCopy._reg ) ) {
             /* do nothing, maybe here we can add a correctness check,
@@ -148,7 +152,7 @@ void MemController::preInit( ) {
              */
             _parentRegions.addRegion( cacheCopy._reg, cacheCopy.getVersion() );
          } else { /* this should be for private data */
-             parent->_mcontrol._ownedRegions.addRegion( cacheCopy._reg, cacheCopy.getVersion() );
+            parent->_mcontrol._ownedRegions.addRegion( cacheCopy._reg, cacheCopy.getVersion() );
          }
       }
    }
@@ -167,40 +171,40 @@ void MemController::preInit( ) {
    }
 #endif
 
-       for ( index = 0; index < _wd->getNumCopies(); index += 1 ) {
-          std::list< std::pair< reg_t, reg_t > > &missingParts = _memCacheCopies[index]._locations;
-          reg_key_t dict = _memCacheCopies[index]._reg.key;
-          for ( std::list< std::pair< reg_t, reg_t > >::iterator it = missingParts.begin(); it != missingParts.end(); it++ ) {
-             if ( it->first != it->second ) {
-                DirectoryEntryData *firstEntry = ( DirectoryEntryData * ) dict->getRegionData( it->first );
-                DirectoryEntryData *secondEntry = ( DirectoryEntryData * ) dict->getRegionData( it->second );
-                if ( firstEntry == NULL ) {
-                   if ( secondEntry != NULL ) {
-                      firstEntry = NEW DirectoryEntryData();
-                      *firstEntry = *secondEntry;
-                   } else {
-                      firstEntry = NEW DirectoryEntryData();
-                      secondEntry = NEW DirectoryEntryData();
-                      dict->setRegionData( it->second, secondEntry ); // preInit fragment
-                   }
-                   dict->setRegionData( it->first, firstEntry ); //preInit fragment
-                } else {
-                   if ( secondEntry != NULL ) {
-                      *firstEntry = *secondEntry;
-                   } else {
-                      *myThread->_file << "Dunno what to do..."<<std::endl;
-                   }
-                }
-             } else {
-                DirectoryEntryData *entry = ( DirectoryEntryData * ) dict->getRegionData( it->first );
-                if ( entry == NULL ) {
-                   entry = NEW DirectoryEntryData();
-                   dict->setRegionData( it->first, entry ); //preInit fragment
-                } else {
-                }
-             }
-          }
-       }
+   for ( index = 0; index < _wd->getNumCopies(); index += 1 ) {
+      std::list< std::pair< reg_t, reg_t > > &missingParts = _memCacheCopies[index]._locations;
+      reg_key_t dict = _memCacheCopies[index]._reg.key;
+      for ( std::list< std::pair< reg_t, reg_t > >::iterator it = missingParts.begin(); it != missingParts.end(); it++ ) {
+         if ( it->first != it->second ) {
+            DirectoryEntryData *firstEntry = ( DirectoryEntryData * ) dict->getRegionData( it->first );
+            DirectoryEntryData *secondEntry = ( DirectoryEntryData * ) dict->getRegionData( it->second );
+            if ( firstEntry == NULL ) {
+               if ( secondEntry != NULL ) {
+                  firstEntry = NEW DirectoryEntryData();
+                  *firstEntry = *secondEntry;
+               } else {
+                  firstEntry = NEW DirectoryEntryData();
+                  secondEntry = NEW DirectoryEntryData();
+                  dict->setRegionData( it->second, secondEntry ); // preInit fragment
+               }
+               dict->setRegionData( it->first, firstEntry ); //preInit fragment
+            } else {
+               if ( secondEntry != NULL ) {
+                  *firstEntry = *secondEntry;
+               } else {
+                  *myThread->_file << "Dunno what to do..."<<std::endl;
+               }
+            }
+         } else {
+            DirectoryEntryData *entry = ( DirectoryEntryData * ) dict->getRegionData( it->first );
+            if ( entry == NULL ) {
+               entry = NEW DirectoryEntryData();
+               dict->setRegionData( it->first, entry ); //preInit fragment
+            } else {
+            }
+         }
+      }
+   }
 
 
    verbose_cache( "### preInit WD:", *_wd );
@@ -267,7 +271,7 @@ bool MemController::allocateTaskMemory() {
 
       } else if ( _invalidating ) {
          for ( unsigned int idx = 0; idx < _wd->getNumCopies(); idx += 1 ) {
-			 MemCacheCopy& cacheCopy = _memCacheCopies[index];
+			 MemCacheCopy& cacheCopy = _memCacheCopies[idx];
             if (cacheCopy._invalControl._invalOps != NULL ) {
 				cacheCopy._invalControl.waitOps( _pe->getMemorySpaceId(), *_wd );
 

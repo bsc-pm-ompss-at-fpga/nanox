@@ -83,7 +83,7 @@ RegionDirectory::HashBucket::~HashBucket() { }
 RegionDirectory::RegionDirectory() : _keys(), _keysSeed( 1 ),
    _keysLock(), _objects( HASH_BUCKETS, HashBucket() ) {}
 
-memory::Address NewNewRegionDirectory::_getKey( memory::Address addr, size_t len, WD const *wd ) {
+memory::Address RegionDirectory::_getKey( memory::Address addr, size_t len, WD const *wd ) {
    bool exact;
    while ( !_keysLock.tryAcquire() ) {
       myThread->processTransfers();

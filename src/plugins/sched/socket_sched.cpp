@@ -245,7 +245,7 @@ namespace nanos {
                fatal_cond( _gpuNodes.count( newNode ) == 0, "Cannot find a node with GPUs to move the task to." );
                
                
-               verbose( "[NUMA] WD " << wd.getId() << " cannot run in node " << node << ", moved to " << newNode );
+               verbose( "[NUMA] WD " , wd.getId() , " cannot run in node " , node , ", moved to " , newNode );
                return newNode;
             }
             
@@ -339,8 +339,7 @@ namespace nanos {
                   wdata._initTask = true;
                   winner = tdata._next++ % sys.getNumNumaNodes();
                   
-                  verbose0( toString( "[NUMA] wd ") + toString( wd.getId() ) + toString( "(" ) + toString( wd.getDescription() )
-                     + toString(")") + toString( " is init task, assigned to NUMA node " ) + toString( winner ) );
+                  verbose( "[NUMA] wd ", wd.getId() , "(" , wd.getDescription(), ")", " is init task, assigned to NUMA node " , winner  );
                   //fprintf( stderr, "[socket] Round.robbin next = %d\n", tdata._next.value() );
                }
                else
@@ -431,7 +430,7 @@ namespace nanos {
                      // Move the iterator to the random position
                      advance( it, pos );
                      winner = *it;
-                     verbose0( toString( "[NUMA] Tie resolved, candidate is pos: " ) + toString( pos ) + toString( " (node " ) + toString( winner ) );
+                     verbose( "[NUMA] Tie resolved, candidate is pos: " , pos , " (node " , winner );
                   }
                   // If there's only one element
                   else if ( candidateRanks.size() == 1 ) {
@@ -443,7 +442,7 @@ namespace nanos {
                   }
                }
 
-               verbose0( "[NUMA] Winner is " + toString( winner ) );
+               verbose( "[NUMA] Winner is " , winner );
 
                wd.setNUMANode( winner );
 
@@ -473,7 +472,7 @@ namespace nanos {
             {
                if ( _steal && sys.getNumNumaNodes() == 1 )
                {
-                  message0( "[NUMA] Stealing can not be enabled with just one NUMA node available, disabling it" );
+                  message( "[NUMA] Stealing can not be enabled with just one NUMA node available, disabling it" );
                   _steal = false;
                }
 
@@ -600,7 +599,7 @@ namespace nanos {
                TeamData &tdata = (TeamData &) *thread->getTeam()->getScheduleData();
                
                if( wdata._wakeUpQueue != std::numeric_limits<unsigned>::max() )
-                  warning0( "WD already has a queue (" << wdata._wakeUpQueue << ")" );
+                  warning( "WD already has a queue (" , wdata._wakeUpQueue , ")" );
                
                unsigned index;
                unsigned node;
@@ -816,7 +815,7 @@ namespace nanos {
                
                WD *pred = ( WD* ) predecessor->getRelatedObject();
                if ( pred == NULL ) {
-                  debug( "SmartPriority::successorFound predecessor->getRelatedObject() is NULL" )
+                  debug( "SmartPriority::successorFound predecessor->getRelatedObject() is NULL" );
                   return;
                }
                
@@ -825,12 +824,11 @@ namespace nanos {
                   fatal( "SmartPriority::successorFound  successor->getRelatedObject() is NULL" );
                }
                
-               debug ( "Propagating priority from "
-                  << (void*)succ << ":" << succ->getId() << " to "
-                  << (void*)pred << ":"<< pred->getId()
-                  << ", old priority: " << pred->getPriority()
-                  << ", new priority: " << std::max( pred->getPriority(),
-                  succ->getPriority() )
+               debug ( "Propagating priority from ",
+                  (void*)succ, ":", succ->getId(), " to ",
+                  (void*)pred, ":", pred->getId(),
+                  ", old priority: ", pred->getPriority(),
+                  ", new priority: ", std::max( pred->getPriority(), succ->getPriority() )
                );
                
                // Propagate priority

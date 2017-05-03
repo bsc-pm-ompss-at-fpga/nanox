@@ -20,7 +20,7 @@
 #ifndef SMARTPOINTER
 #define SMARTPOINTER
 
-#include "debug.hpp"
+#include "error.hpp"
 
 namespace nanos {
 
@@ -177,7 +177,7 @@ class unique_pointer {
 
       T &operator*()
       {
-         fatal_cond0( !pointer, "Trying to dereference a null pointer." );
+         fatal_cond( !pointer, "Trying to dereference a null pointer." );
          return *pointer;
       }
 

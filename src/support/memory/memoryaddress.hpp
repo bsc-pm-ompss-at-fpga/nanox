@@ -299,11 +299,7 @@ class Address {
 /*! \brief Prints an address object to an output stream.
  *  \details String representation of an address in hexadecimal.
  */
-inline std::ostream& operator<<( std::ostream& out, const nanos::memory::Address& address )
-{
-	out << "0x" << std::hex << address.value();
-	return out;
-}
+std::ostream& operator<<( std::ostream& out, const nanos::memory::Address& address );
 
 } // namespace nanos 
 } // namespace memory

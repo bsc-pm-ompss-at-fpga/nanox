@@ -28,6 +28,7 @@
 #include "os.hpp"
 #include "plugin.hpp"
 #include "smpprocessor.hpp"
+#include "osallocator_decl.hpp"
 
 #include "system.hpp"
 

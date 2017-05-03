@@ -238,7 +238,7 @@ BaseAddressSpaceInOps::BaseAddressSpaceInOps( ProcessingElement *pe, bool delaye
 BaseAddressSpaceInOps::~BaseAddressSpaceInOps() {
 }
 
-void BaseAddressSpaceInOps::addOp( SeparateMemoryAddressSpace *from, global_reg_t const &reg, unsigned int version, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, uint64_t srcDevAddr, WD const &wd, unsigned int copyIdx ) {
+void BaseAddressSpaceInOps::addOp( SeparateMemoryAddressSpace *from, global_reg_t const &reg, unsigned int version, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, memory::Address srcDevAddr, WD const &wd, unsigned int copyIdx ) {
    TransferList &list = _separateTransfers[ from ];
    addAmountTransferredData( reg.getDataSize() );
 
@@ -301,7 +301,7 @@ void BaseAddressSpaceInOps::copyInputData( MemCacheCopy const &memCopy, WD const
             }
             ensure( location > 0, "Wrong location.");
             AllocatedChunk *source_chunk = sys.getSeparateMemory( location ).getCache().getAllocatedChunk( data_source, wd, copyIdx );
-            uint64_t orig_dev_addr = source_chunk->getAddress() + ( region_shape.getRealFirstAddress() - source_chunk->getHostAddress() );
+            memory::Address orig_dev_addr = source_chunk->getDeviceAddress() + ( region_shape.getRealFirstAddress() - source_chunk->getHostAddress() );
             source_chunk->unlock();
             insertOwnOp( rs_ops, region_shape, memCopy.getVersion(), 0 ); //i've got the responsability of copying this region
 //(*myThreadfile) << std::setprecision(std::numeric_limits<double>::digits10) << OS::getMonotonicTime() << " adding op (copy to host from " << location << " using chunk " << source_chunk << " w/addr " << source_chunk->getHostAddress() << std::endl;
@@ -319,7 +319,7 @@ void BaseAddressSpaceInOps::copyInputData( MemCacheCopy const &memCopy, WD const
             }
             ensure( location > 0, "Wrong location.");
             AllocatedChunk *source_chunk = sys.getSeparateMemory( location ).getCache().getAllocatedChunk( data_source, wd, copyIdx );
-            uint64_t orig_dev_addr = source_chunk->getAddress() + ( region_shape.getRealFirstAddress() - source_chunk->getHostAddress() );
+            memory::Address orig_dev_addr = source_chunk->getDeviceAddress() + ( region_shape.getRealFirstAddress() - source_chunk->getHostAddress() );
             source_chunk->unlock();
             insertOwnOp( rs_ops, region_shape, memCopy.getVersion(), 0 ); //i've got the responsability of copying this region
 //(*myThreadfile) << std::setprecision(std::numeric_limits<double>::digits10) << OS::getMonotonicTime() << " adding op (copy to host from " << location << " using chunk " << source_chunk << " w/addr " << source_chunk->getHostAddress() << std::endl;
@@ -340,7 +340,7 @@ SeparateAddressSpaceInOps::~SeparateAddressSpaceInOps() {
 
 void SeparateAddressSpaceInOps::addOpFromHost( global_reg_t const &reg, unsigned int version, AllocatedChunk *chunk, unsigned int copyIdx ) {
    addAmountTransferredData( reg.getDataSize() );
-   _hostTransfers.push_back( TransferListEntry( reg, version, NULL, chunk, /* source chunk */ (AllocatedChunk *) NULL, /* srcDevAddr */ 0, copyIdx ) );
+   _hostTransfers.push_back( TransferListEntry( reg, version, NULL, chunk, /* source chunk */ (AllocatedChunk *) NULL, /* srcDevAddr */ nullptr, copyIdx ) );
 }
 
 void SeparateAddressSpaceInOps::issue( WD const *wd ) {
@@ -376,7 +376,7 @@ void SeparateAddressSpaceOutOps::addOutOp( memory_space_id_t to, memory_space_id
       _lockedChunks.insert( chunk );
       chunk->unlock();
    }
-   list.push_back( TransferListEntry( reg, version, ops, /* destination */ (AllocatedChunk *) NULL, chunk, /* FIXME: srcAddr */ 0, copyIdx ) );
+   list.push_back( TransferListEntry( reg, version, ops, /* destination */ (AllocatedChunk *) NULL, chunk, /* FIXME: srcAddr */ nullptr, copyIdx ) );
 }
 
 void SeparateAddressSpaceOutOps::addOutOp( memory_space_id_t to, memory_space_id_t from, global_reg_t const &reg, unsigned int version, DeviceOps *ops, WD const &wd, unsigned int copyIdx ) {
@@ -387,7 +387,7 @@ void SeparateAddressSpaceOutOps::addOutOp( memory_space_id_t to, memory_space_id
    sas.getCache()._prepareRegionToBeCopied( reg, version, _lockedChunks, wd, copyIdx );
    sas.getCache().unlock();
    AllocatedChunk *chunk = sas.getCache()._getAllocatedChunk( reg, false, false, wd, copyIdx );
-   list.push_back( TransferListEntry( reg, version, ops, /* destination */ (AllocatedChunk *) NULL, chunk, /* FIXME: srcAddr */ 0, copyIdx ) );
+   list.push_back( TransferListEntry( reg, version, ops, /* destination */ (AllocatedChunk *) NULL, chunk, /* FIXME: srcAddr */ nullptr, copyIdx ) );
 }
 
 void SeparateAddressSpaceOutOps::issue( WD const *wd ) {

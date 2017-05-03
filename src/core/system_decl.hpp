@@ -54,9 +54,10 @@
 #include "openclprocessor_fwd.hpp"
 #endif
 
-#ifdef CLUSTER_DEV
+//#ifdef CLUSTER_DEV
 #include "clustermpiplugin_fwd.hpp"
-#else
+//#endif
+
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 #include "mainfunction_fwd.hpp"
 #endif
@@ -708,6 +709,7 @@ namespace nanos {
 
       //private:
          //std::list< std::list<GraphEntry *> * > _graphRepLists;
+
          //Lock _graphRepListsLock;
       public:
          //std::list<GraphEntry *> *getGraphRepList();

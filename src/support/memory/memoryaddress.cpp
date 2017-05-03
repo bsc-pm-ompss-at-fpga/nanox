@@ -1,12 +1,13 @@
 
-#include "memory/memoryaddress.hpp"
+#include "memoryaddress.hpp"
 
 namespace nanos {
-namespace utils {
+namespace memory {
 
-std::ostream& operator<<(std::ostream& out, nanos::utils::Address const &entry)
+std::ostream& operator<<(std::ostream& out, Address const &entry)
 {
-	return out << std::hex << entry.value;
+	out << "0x" << std::hex << entry.value();
+	return out;
 }
 
 }
