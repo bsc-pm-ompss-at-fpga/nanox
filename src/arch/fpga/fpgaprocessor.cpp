@@ -292,47 +292,6 @@ void FPGAProcessor::readInstrCounters( FPGATaskInfo_t & task ) {
    //_hwInstrCounters.erase( wd );
 
 }
-
-#if 0
-void FPGAThread::setupTaskInstrumentation( WD *wd ) {
-   //Set up HW instrumentation
-   FPGAProcessor *fpga = ( FPGAProcessor* ) this->runningOn();
-   const xdma_device deviceHandle =
-      fpga->getFPGAProcessorInfo()->getDeviceHandle();
-
-   //Instrument instrumentation setup
-   Instrumentation *instr = sys.getInstrumentation();
-   DeviceInstrumentation *submitInstr = fpga->getSubmitInstrumentation();
-   unsigned long long timestamp;
-   xdmaGetDeviceTime( &timestamp );
-   instr->addDeviceEvent(
-           Instrumentation::DeviceEvent( timestamp, TaskBegin, submitInstr, wd ) );
-   instr->addDeviceEvent(
-           Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, NULL, wd) );
-
-   xdma_instr_times * hwCounters;
-   xdmaSetupTaskInstrument(deviceHandle, &hwCounters);
-   hwCounters->outTransfer = 1;
-   //_hwInstrCounters[ wd ] = hwCounters;
-
-   timestamp = submitInstr->getDeviceTime();
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( timestamp, TaskSwitch, submitInstr, wd, NULL) );
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( timestamp, TaskEnd, submitInstr, wd) );
-}
-
-void FPGAThread::submitInstrSync( WD *wd ) {
-   FPGAProcessor *fpga = ( FPGAProcessor* ) this->runningOn();
-   const xdma_device deviceHandle =
-      fpga->getFPGAProcessorInfo()->getDeviceHandle();
-   const xdma_channel oChan = fpga->getFPGAProcessorInfo()->getOutputChannel();
-   xdma_transfer_handle handle;
-   xdmaSubmitKBuffer( _syncHandle, sizeof( unsigned long long int ), 0, XDMA_ASYNC,
-         deviceHandle, oChan, &handle );
-   _instrSyncHandles[ wd ] = handle;
-}
-#endif
 #endif
 
 void FPGAProcessor::waitAndFinishTask( FPGATaskInfo_t & task ) {
