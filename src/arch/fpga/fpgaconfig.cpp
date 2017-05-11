@@ -47,9 +47,9 @@ int FPGAConfig::_maxTransfers = 32;
 int FPGAConfig::_idleSyncBurst = 4;
 int FPGAConfig::_fpgaFreq = 100; //default to 100MHz
 bool FPGAConfig::_hybridWorker = false;
-int FPGAConfig::_maxPendingWD = 8;
+int FPGAConfig::_maxPendingWD = 4;
 int FPGAConfig::_finishWDBurst = 4;
-bool FPGAConfig::_idleCallback = true;
+bool FPGAConfig::_idleCallback = false;
 std::size_t FPGAConfig::_allocatorPoolSize = 64;
 std::string * FPGAConfig::_configFile = NULL;
 FPGATypesMap * FPGAConfig::_accTypesMap = NULL;
@@ -104,7 +104,7 @@ void FPGAConfig::prepare( Config &config )
    config.registerArgOption( "fpga_hybrid_worker", "fpga-hybrid-worker" );
 
    config.registerConfigOption( "fpga_max_pending_tasks", NEW Config::IntegerVar( _maxPendingWD ),
-      "Number of tasks allowed to be pending finalization for an fpga accelerator" );
+      "Number of tasks allowed to be pending finalization for an fpga accelerator (def: 4)" );
    config.registerEnvOption( "fpga_max_pending_tasks", "NX_FPGA_MAX_PENDING_TASKS" );
    config.registerArgOption( "fpga_max_pending_tasks", "fpga-max-pending-tasks" );
 
@@ -114,7 +114,7 @@ void FPGAConfig::prepare( Config &config )
    config.registerArgOption( "fpga_finish_task_busrt", "fpga-finish-task-burst" );
 
    config.registerConfigOption( "fpga_idle_callback", NEW Config::FlagOption( _idleCallback ),
-      "Perform fpga operations using the IDLE event callback of Event Dispatcher (def: enabled)" );
+      "Perform fpga operations using the IDLE event callback of Event Dispatcher (def: disabled)" );
    config.registerArgOption( "fpga_idle_callback", "fpga-idle-callback" );
 
    config.registerConfigOption( "fpga_alloc_pool_size", NEW Config::SizeVar( _allocatorPoolSize ),
