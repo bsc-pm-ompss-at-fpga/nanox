@@ -260,14 +260,14 @@ void FPGAProcessor::readInstrCounters( FPGATaskInfo_t & task ) {
 
    //Task execution
    instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->start, TaskBegin, _devInstr, wd ) );
+         Instrumentation::DeviceEvent( counters->inTransfer, TaskBegin, _devInstr, wd ) );
    //Beginning kernel execution is represented as a task switch from NULL to a WD
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( counters->inTransfer, TaskSwitch, _devInstr, NULL, wd ) );
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( counters->computation, TaskSwitch, _devInstr, wd, NULL ) );
    instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, _devInstr, wd ) );
+         Instrumentation::DeviceEvent( counters->computation, TaskEnd, _devInstr, wd ) );
 
   //DMA info
    instr->addDeviceEvent(
@@ -277,10 +277,10 @@ void FPGAProcessor::readInstrCounters( FPGATaskInfo_t & task ) {
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( counters->inTransfer, TaskSwitch, _dmaInInstr, wd, NULL ) );
    instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, _dmaInInstr, wd ) );
+         Instrumentation::DeviceEvent( counters->inTransfer, TaskEnd, _dmaInInstr, wd ) );
 
    instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->start, TaskBegin, _dmaOutInstr, wd ) );
+         Instrumentation::DeviceEvent( counters->computation, TaskBegin, _dmaOutInstr, wd ) );
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( counters->computation, TaskSwitch, _dmaOutInstr, NULL, wd ) );
    instr->addDeviceEvent(
