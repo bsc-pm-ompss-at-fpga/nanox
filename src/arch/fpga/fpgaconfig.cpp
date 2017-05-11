@@ -69,7 +69,7 @@ void FPGAConfig::prepare( Config &config )
    config.registerArgOption( "fpga-disable", "fpga-disable" );
 
    config.registerConfigOption( "num-fpga" , NEW Config::IntegerVar( _numAccelerators ),
-                                "Defines de number of FPGA acceleratos to use (defaults to one)" );
+      "Defines de number of FPGA acceleratos to use (default: number of accelerators detected in system)" );
    config.registerEnvOption( "num-fpga", "NX_FPGA_NUM" );
    config.registerArgOption( "num-fpga", "fpga-num" );
 
