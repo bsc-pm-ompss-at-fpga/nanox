@@ -137,11 +137,16 @@ class FPGAPlugin : public ArchPlugin
          _fpgaHelper = NULL;
 
          if ( FPGAConfig::isEnabled() ) {
-            //NOTE: Do it only when NANOS_INSTRUMENTATION_ENABLED?
             //Init the instrumentation
             xdma_status status = xdmaInitHWInstrumentation();
             if (status) {
-               warning0("Error initializing the instrumentation support in the DMA library. Returned status: " << status);
+               //NOTE: If the HW instrumentation initialization fails the execution must end.
+               //      Current accelerators always generate the HW instrumentation information
+               status = xdmaClose();
+               if ( status ) {
+                  warning0( "Error uninitializing xdma core library" );
+               }
+               fatal0( "Error initializing the instrumentation support in the DMA library." );
             }
 
             // Create the FPGAPinnedAllocator and set the global shared variable that points to it
@@ -205,7 +210,7 @@ class FPGAPlugin : public ArchPlugin
                debug0( "Xilinx close dma" );
                status = xdmaClose();
                if ( status ) {
-                  warning( "Error de-initializing xdma core library: " << status );
+                  warning( "Error uninitializing xdma core library: " << status );
                }
             }
          }
