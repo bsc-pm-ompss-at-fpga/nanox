@@ -32,8 +32,6 @@
 using namespace nanos;
 using namespace nanos::ext;
 
-#define DIRTY_SYNC
-
 FPGADevice::FPGADevice ( FPGADeviceType const t ) :
    Device( std::string( "FPGA " + toString(t) ).c_str() )
 {
