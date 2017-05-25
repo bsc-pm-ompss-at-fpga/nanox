@@ -50,7 +50,7 @@ bool FPGAConfig::_hybridWorker = false;
 int FPGAConfig::_maxPendingWD = 4;
 int FPGAConfig::_finishWDBurst = 4;
 bool FPGAConfig::_idleCallback = false;
-std::size_t FPGAConfig::_allocatorPoolSize = 64;
+std::size_t FPGAConfig::_allocatorPoolSize = 64*1024*1024; //Def. 64MB
 std::string * FPGAConfig::_configFile = NULL;
 FPGATypesMap * FPGAConfig::_accTypesMap = NULL;
 
@@ -118,7 +118,7 @@ void FPGAConfig::prepare( Config &config )
    config.registerArgOption( "fpga_idle_callback", "fpga-idle-callback" );
 
    config.registerConfigOption( "fpga_alloc_pool_size", NEW Config::SizeVar( _allocatorPoolSize ),
-      "Size (in MB) of the memory pool for the FPGA Tasks data copies (def: 64)" );
+      "XDMA memory pool size (def: 64MB)" );
    config.registerEnvOption( "fpga_alloc_pool_size", "NX_FPGA_ALLOC_POOL_SIZE" );
    config.registerArgOption( "fpga_alloc_pool_size", "fpga-alloc-pool-size" );
 

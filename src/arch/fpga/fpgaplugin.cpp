@@ -150,7 +150,7 @@ class FPGAPlugin : public ArchPlugin
             }
 
             // Create the FPGAPinnedAllocator and set the global shared variable that points to it
-            fpgaAllocator = NEW FPGAPinnedAllocator( FPGAConfig::getAllocatorPoolSize()*1024*1024 /* MB -> bytes */ );
+            fpgaAllocator = NEW FPGAPinnedAllocator( FPGAConfig::getAllocatorPoolSize() );
 
             memory_space_id_t memSpaceId = -1;
             unsigned int fpgasCount = 0;
