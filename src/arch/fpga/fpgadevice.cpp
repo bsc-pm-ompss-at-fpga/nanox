@@ -33,7 +33,7 @@ using namespace nanos;
 using namespace nanos::ext;
 
 FPGADevice::FPGADevice ( FPGADeviceType const t ) :
-   Device( std::string( "FPGA " + toString(t) ).c_str() )
+   FPGADeviceName( t ), Device( _fpgaArchName.c_str() )
 {
 }
 

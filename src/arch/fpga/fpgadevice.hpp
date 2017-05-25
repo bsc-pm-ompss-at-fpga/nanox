@@ -28,10 +28,19 @@
 #include "basethread.hpp" //for getMyThreadSafe() in warning/verbose, etc.
 
 namespace nanos {
+   /* \breif Auxiliar class that contains the string with the FPGADevice architecture name.
+    *        Cannot be a member of FPGADevice because the string constructor must be called before
+    *        the Device constructor
+    */
+   struct FPGADeviceName {
+      std::string _fpgaArchName;
+      FPGADeviceName ( FPGADeviceType const t ) : _fpgaArchName( "FPGA " + toString(t) ) {}
+   };
+
    /* \brief Device specialization for FPGA architecture
     * provides functions to allocate and copy data in the device
     */
-   class FPGADevice : public Device
+   class FPGADevice : private FPGADeviceName, public Device
    {
       private:
          /*!
