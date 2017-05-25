@@ -97,7 +97,7 @@ void MemController::preInit( ) {
    }
 
 
-
+//FIXME Here is the problem. with initialization on the constructor it works (memcachecopy.hpp)
    for ( index = 0; index < _wd->getNumCopies(); index += 1 ) {
       _memCacheCopies[ index ]._reg.id = _memCacheCopies[ index ]._reg.key->obtainRegionId( _wd->getCopies()[index], *_wd, index );
       DirectoryEntryData *entry = ( DirectoryEntryData * ) _memCacheCopies[ index ]._reg.key->getRegionData( _memCacheCopies[ index ]._reg.id );
@@ -106,9 +106,8 @@ void MemController::preInit( ) {
          _memCacheCopies[ index ]._reg.key->setRegionData( _memCacheCopies[ index ]._reg.id, entry ); //preInit memCacheCopy._reg
       }
    }
-  
-   WD* parent = _wd->getParent();
-             
+
+   WD* parent = _wd->getParent();             
    for ( index = 0; index < _wd->getNumCopies(); index += 1 ) {
       memory::Address host_copy_addr = nullptr;
       if ( parent != NULL /* && !parent->_mcontrol._mainWd */ ) {

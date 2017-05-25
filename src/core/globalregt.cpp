@@ -18,9 +18,7 @@
 /*************************************************************************************/
 
 #include <stdint.h>
-#include "globalregt_decl.hpp"
-#include "regiondirectory.hpp"
-#include "regiondict.hpp"
+#include "globalregt.hpp"
 #include "basethread.hpp"
 #include "debug.hpp"
 #include "router.hpp"
@@ -284,7 +282,7 @@ std::set< memory_space_id_t > const &global_reg_t::getLocations() const {
 }
 
 memory_space_id_t global_reg_t::getRootedLocation() const {
-   DirectoryEntryData *entry = RegionDirectory::getDirectoryEntry( *key, id );
+   DirectoryEntryData *entry = RegionDirectory::getDirectoryEntry( *(this->key), this->id );
    ensure(entry != NULL, "invalid entry.");
    return entry->getRootedLocation();
 }

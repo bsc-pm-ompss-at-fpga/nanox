@@ -2,6 +2,8 @@
 #define GLOBALREGT_HPP
 
 #include "globalregt_decl.hpp"
+#include "regiondirectory.hpp"
+#include "regiondict.hpp"
 
 namespace nanos {
 
