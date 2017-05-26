@@ -105,3 +105,22 @@ void ClusterNode::clusterWorker() {
 ClusterNode::ClusterSupportedArchMap const &ClusterNode::getSupportedArchs() const {
    return _supportedArchsById;
 }
+
+bool ClusterNode::inlineWorkDependent ( WD &wd ) {
+   fatal( "inline execution is not supported in this architecture (cluster).");
+   return true;
+}
+
+void ClusterNode::preOutlineWorkDependent ( WD &wd ) {
+   wd.preStart(WorkDescriptor::IsNotAUserLevelThread);
+}
+
+void ClusterNode::outlineWorkDependent ( WD &wd )
+{
+   SMPDD &dd = ( SMPDD & )wd.getActiveDevice();
+   ProcessingElement *pe = this;
+   if (dd.getWorkFct() == NULL ) return;
+
+   ( ( ClusterNode * ) pe )->incExecutedWDs();
+   sys.getNetwork()->sendWorkMsg( ( ( ClusterNode * ) pe )->getClusterNodeNum(), wd );
+}

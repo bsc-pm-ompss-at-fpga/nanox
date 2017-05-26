@@ -69,20 +69,12 @@ AsyncThread::AsyncThread ( unsigned int osId, WD &wd, ProcessingElement *creator
 
 bool AsyncThread::inlineWorkDependent( WD &work )
 {
-   ASYNC_THREAD_CREATE_EVENT( ASYNC_THREAD_INLINE_WORK_DEP_EVENT );
-
-   debug( "[Async] At inlineWorkDependent, adding WD " << &work << " : " << work.getId() << " to running WDs list" );
-
-   // Add WD to the queue
-   addNextWD( &work );
-
-   ASYNC_THREAD_CLOSE_EVENT;
-
+   fatal("AsyncThread::inlineWorkDependent is deprecated:\nNew interface is PE::inlineWorkDependent");
    return false;
 }
 
 
-void AsyncThread::idle()
+void AsyncThread::idle( bool dummy )
 {
    NANOS_INSTRUMENT( if ( _pendingEventsCounter > 0 ) { )
    ASYNC_THREAD_CREATE_EVENT( ASYNC_THREAD_CHECK_EVTS_EVENT );
@@ -333,7 +325,7 @@ void AsyncThread::runWD ( WD * wd )
    evt->setCreated();
 
    // Run WD
-   //this->inlineWorkDependent( *wd );
+   //this->runningOn()->inlineWorkDependent( *wd );
    this->runWDDependent( *wd, evt );
 
    evt->setPending();
@@ -466,7 +458,9 @@ void AsyncThread::postRunWD ( WD * wd )
    std::cout << s.str();
 #endif
 
-   Scheduler::finishWork( wd, canGetWork() );
+   // This can freeze as we can come from an invalidation, and then issue an allocation
+   //Scheduler::finishWork( wd, canGetWork() );
+   Scheduler::finishWork( wd, false );
 
    ASYNC_THREAD_CLOSE_EVENT;
 }
@@ -515,7 +509,7 @@ WD * AsyncThread::getNextWD ()
    return NULL;
 }
 
-bool AsyncThread::hasNextWD ()
+bool AsyncThread::hasNextWD () const
 {
    //if ( canGetWork() ) return BaseThread::hasNextWD();
    return false;

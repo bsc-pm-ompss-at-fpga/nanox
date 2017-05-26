@@ -28,7 +28,7 @@
 #include "workdescriptor_fwd.hpp"
 #include "processingelement_fwd.hpp"
 #include "deviceops_decl.hpp"
-#include "newregiondirectory_decl.hpp"
+#include "regiondirectory_decl.hpp"
 #include "memoryops_fwd.hpp"
 #include "cachedregionstatus_decl.hpp"
 #include "memcachecopy_fwd.hpp"
@@ -42,12 +42,12 @@ namespace nanos {
    class RegionCache;
 
    class LockedObjects {
-      std::set< NewNewRegionDirectory::RegionDirectoryKey > _lockedObjects;
+      std::set< RegionDirectory::RegionDirectoryKey > _lockedObjects;
       LockedObjects( LockedObjects const & );
       LockedObjects &operator=( LockedObjects const & );
       public:
       LockedObjects();
-      void addAndLock( NewNewRegionDirectory::RegionDirectoryKey key );
+      void addAndLock( RegionDirectory::RegionDirectoryKey key );
       void releaseLockedObjects();
    };
 
@@ -66,7 +66,7 @@ namespace nanos {
          std::map<int, std::set<int> >     _refLoc;
          global_reg_t                      _allocatedRegion;
          bool                              _flushable;
-         
+
          CacheRegionDictionary *_newRegions;
 
       public:
@@ -115,7 +115,7 @@ namespace nanos {
 
    class RegionCache {
       public:
-         enum CachePolicy { WRITE_BACK, WRITE_THROUGH, NO_CACHE, FPGA };
+         enum CachePolicy { WRITE_BACK, WRITE_THROUGH, NO_CACHE/*, FPGA*/ };
          enum CacheOptions {
             ALLOC_FIT,
             ALLOC_WIDE,
@@ -171,7 +171,7 @@ namespace nanos {
                void doStrided( global_reg_t const &reg, int dataLocation, uint64_t devAddr, uint64_t hostAddr, std::size_t size, std::size_t count, std::size_t ld, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd, bool fake ) ;
          } _copyOutObj;
 
-         void doOp( Op *opObj, global_reg_t const &hostMem, uint64_t devBaseAddr, unsigned int location, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd ); 
+         void doOp( Op *opObj, global_reg_t const &hostMem, uint64_t devBaseAddr, unsigned int location, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd );
 
       public:
          RegionCache( memory_space_id_t memorySpaceId, Device &cacheArch, enum CacheOptions flags, std::size_t slabSize );
@@ -197,10 +197,10 @@ namespace nanos {
          void _syncAndCopyInStrided1D( global_reg_t const &reg, memory_space_id_t syncFrom, uint64_t devAddr, uint64_t hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, DeviceOps *ops, AllocatedChunk *sourceChunk, WD const *wd, bool fake );
          bool _copyDevToDevStrided1D( global_reg_t const &reg, memory_space_id_t copyFrom, uint64_t devAddr, uint64_t hostAddr, std::size_t len, std::size_t numChunks, std::size_t ld, DeviceOps *ops, AllocatedChunk *sourceChunk, WD const *wd, bool fake );
          /* *********** */
-         void copyIn( global_reg_t const &hostMem, uint64_t devBaseAddr, unsigned int location, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd ); 
-         void copyOut( global_reg_t const &hostMem, uint64_t devBaseAddr, DeviceOps *ops, WD const *wd ); 
-         void NEWcopyIn( unsigned int location, global_reg_t const &hostMem, unsigned int version, WD const *wd, unsigned int copyIdx, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk ); 
-         void NEWcopyOut( global_reg_t const &hostMem, unsigned int version, WD const *wd, unsigned int copyIdx, DeviceOps *ops, bool inval, AllocatedChunk *origChunk ); 
+         void copyIn( global_reg_t const &hostMem, uint64_t devBaseAddr, unsigned int location, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk, WD const *wd );
+         void copyOut( global_reg_t const &hostMem, uint64_t devBaseAddr, DeviceOps *ops, WD const *wd );
+         void NEWcopyIn( unsigned int location, global_reg_t const &hostMem, unsigned int version, WD const *wd, unsigned int copyIdx, DeviceOps *ops, AllocatedChunk *destinationChunk, AllocatedChunk *sourceChunk );
+         void NEWcopyOut( global_reg_t const &hostMem, unsigned int version, WD const *wd, unsigned int copyIdx, DeviceOps *ops, bool inval, AllocatedChunk *origChunk );
          uint64_t getDeviceAddress( global_reg_t const &reg, uint64_t baseAddress, AllocatedChunk *chunk ) const;
          void lock();
          void unlock();

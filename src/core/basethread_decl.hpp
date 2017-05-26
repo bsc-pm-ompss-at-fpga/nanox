@@ -30,14 +30,13 @@
 #include "debug.hpp"
 #include "atomic_decl.hpp"
 #include "lock_decl.hpp"
+#include "schedulerhelper_decl.hpp"
 
 #include "workdescriptor_decl.hpp"
 #include "allocator_decl.hpp"
 #include "wddeque_decl.hpp"
 
 namespace nanos {
-
-   typedef void SchedulerHelper ( WD *oldWD, WD *newWD, void *arg); // FIXME: should be only in one place
 
    /*!
     * Each thread in a team has one of this. All data associated with the team should be here
@@ -46,7 +45,7 @@ namespace nanos {
    class TeamData
    {
       typedef ScheduleThreadData SchedData;
-      
+
       private:
          unsigned          _id;
          ThreadTeam       *_team;
@@ -89,7 +88,7 @@ namespace nanos {
          unsigned currentSingleGuard() {
             return _singleCount;
          }
-        
+
         /*! \brief Returns if related thread is starring within current team
          */
          bool isStarring ( void ) const ;
@@ -102,7 +101,7 @@ namespace nanos {
          void setScheduleData ( SchedData *data ) { _schedData = data; }
          SchedData * getScheduleData () const { return _schedData; }
 
-        /*! \brief Returns next global worksharing descriptor for _team 
+        /*! \brief Returns next global worksharing descriptor for _team
          */
          nanos_ws_desc_t *getTeamWorkSharingDescriptor( BaseThread * thread, bool *b );
 
@@ -183,7 +182,7 @@ namespace nanos {
          ProcessingElement      *_pe;            /**< Threads are binded to a PE for its life-time */
          // Thread synchro:
          Lock                    _mlock;         /**< Thread Lock */
-         // Current/following tasks: 
+         // Current/following tasks:
          WD                     &_threadWD;      /**< Thread implicit WorkDescriptor */
          WD                     *_currentWD;     /**< Current WorkDescriptor the thread is executing */
          WD                     *_heldWD;
@@ -207,11 +206,11 @@ namespace nanos {
          virtual void runDependent () = 0;
 
          // These must be called through the Scheduler interface
-         virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) = 0;
-         virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) = 0;
-         virtual bool inlineWorkDependent (WD &work) = 0;
-         virtual void switchTo( WD *work, SchedulerHelper *helper ) = 0;
-         virtual void exitTo( WD *work, SchedulerHelper *helper ) = 0;
+         virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
+         virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg );
+         virtual bool inlineWorkDependent (WD &work);
+         virtual void switchTo( WD *work, SchedulerHelper *helper );
+         virtual void exitTo( WD *work, SchedulerHelper *helper );
 
       private:
          //! \brief BaseThread default constructor (private)
@@ -236,9 +235,8 @@ namespace nanos {
          }
 
          // atomic access
-         void lock ();
-
-         void unlock ();
+         virtual void lock ();
+         virtual void unlock ();
 
          virtual void start () = 0;
          virtual void finish ();
@@ -254,13 +252,21 @@ namespace nanos {
          virtual void processTransfers();
          virtual void yield() {};
 
+         /*! \brief Called when the thread becomes blocked inside a SynchronizedCondition and it
+                    cannot execute any task (neither implicit thread task)
+          */
+         virtual void atBlock() { idle(); };
+
          /*! \brief Must be called by children classes after the join operation (protected)
-          */ 
-         void joined ( void ); 
+          */
+         void joined ( void );
          virtual void join() = 0;
+
+         bool hasJoined() const;
+
          virtual void bind() {};
-         virtual void outlineWorkDependent (WD &work) = 0;
-         virtual void preOutlineWorkDependent (WD &work) = 0;
+         virtual void outlineWorkDependent (WD &work);
+         virtual void preOutlineWorkDependent (WD &work);
 
          virtual void wait();
          virtual void resume();
@@ -296,7 +302,7 @@ namespace nanos {
 
          // team related methods
          void reserve();
-         void enterTeam( TeamData *data = NULL ); 
+         void enterTeam( TeamData *data = NULL );
          bool hasTeam() const;
          void leaveTeam();
 
@@ -314,7 +320,7 @@ namespace nanos {
          */
          nanos_ws_desc_t *getTeamWorkSharingDescriptor( bool *b );
 
-         //! Returns the id of the thread inside its current team 
+         //! Returns the id of the thread inside its current team
          int getTeamId() const;
 
          bool isStarted () const;
@@ -322,7 +328,7 @@ namespace nanos {
          bool isRunning () const;
 
          bool isSleeping () const;
-         
+
          bool isTeamCreator () const;
 
          //! \brief Is the thread paused as the result of stopping the scheduler?
@@ -339,9 +345,9 @@ namespace nanos {
          void setLeaveTeam ( bool leave );
 
          ProcessingElement * runningOn() const;
-         
+
          void setRunningOn(ProcessingElement* element);
-         
+
          void associate( WD *wd = NULL );
 
          int getId() const;
@@ -361,7 +367,7 @@ namespace nanos {
          */
          void setStar ( bool v = true ) ;
 
-         /*! \brief Get allocator for current thread 
+         /*! \brief Get allocator for current thread
           */
          Allocator & getAllocator();
 
@@ -387,7 +393,7 @@ namespace nanos {
          bool isMainThread ( void ) const;
          /*! \brief Get Status: Is waiting
           */
-         bool isWaiting () const; 
+         bool isWaiting () const;
          /*! \brief Set Status: Main Thread
           */
          void setMainThread ( bool v = true );
@@ -409,7 +415,7 @@ namespace nanos {
          bool isIdle ( void ) const;
          //! \brief Basethread step.
          void step( void );
-         //! \brief Set break point steps 
+         //! \brief Set break point steps
          void setSteps( unsigned short s );
          //! \brief Set break point callback
          void setCallBack( callback_t cb );

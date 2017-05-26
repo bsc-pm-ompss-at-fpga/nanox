@@ -97,6 +97,11 @@ namespace nanos {
                 data._readyQueue.push_front ( &wd );
             }
 
+            virtual void queue ( BaseThread ** threads, WD ** wds, size_t numElems )
+            {
+               fatal( "This method is not implemented yet" );
+            }
+
             /*!
             *  \brief Function called when a new task must be created: the new created task
             *          is directly executed (Depth-First policy)
@@ -111,6 +116,13 @@ namespace nanos {
             }
 
             virtual WD * atIdle ( BaseThread *thread, int numSteal );
+
+            virtual bool testDequeue()
+            {
+               // WorkFirst always switches to the submitted WD so we assume that
+               // at least some thread can switch to the user code
+               return true;
+            }
       };
 
       bool WorkFirst::_stealParent = true;
@@ -124,7 +136,10 @@ namespace nanos {
        */
       WD * WorkFirst::atIdle ( BaseThread *thread, int numSteal )
       {
-         WorkDescriptor * wd;
+         WorkDescriptor * wd = thread->getNextWD();
+
+         if ( wd ) return wd;
+
          WorkDescriptor * next = NULL; 
 
          ThreadData &data = ( ThreadData & ) *thread->getTeamData()->getScheduleData();

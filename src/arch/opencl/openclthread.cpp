@@ -40,14 +40,14 @@ void OpenCLThread::initializeDependent() {
     setMaxPrefetch( OpenCLConfig::getPrefetchNum() );
 }
 
-void OpenCLThread::runDependent() {    
+void OpenCLThread::runDependent() {
    WD &wd = getThreadWD();
    setCurrentWD( wd );
    OpenCLDD &dd = static_cast<OpenCLDD &> (wd.activateDevice(OpenCLDev));
 
    while ( getTeam() == NULL ) { OS::nanosleep( 100 ); }
-    
-   dd.getWorkFct()(wd.getData());    
+
+   dd.getWorkFct()(wd.getData());
    ( ( OpenCLProcessor * ) myThread->runningOn() )->cleanUp();
 }
 
@@ -55,12 +55,24 @@ bool OpenCLThread::runWDDependent( WD &wd, GenericEvent * evt ) {
    _currKernelEvent=evt;
 
    OpenCLDD &dd = ( OpenCLDD & )wd.getActiveDevice();
-      
-   NANOS_INSTRUMENT ( InstrumentStateAndBurst inst1( "user-code", wd.getId(), NANOS_RUNNING ) );
+
+   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("user-code") );
+   NANOS_INSTRUMENT ( nanos_event_value_t val = wd.getId() );
+   NANOS_INSTRUMENT ( if ( wd.isRuntimeTask() ) { );
+   NANOS_INSTRUMENT (    sys.getInstrumentation()->raiseOpenStateEvent ( NANOS_RUNTIME ) );
+   NANOS_INSTRUMENT ( } else { );
+   NANOS_INSTRUMENT (    sys.getInstrumentation()->raiseOpenStateAndBurst ( NANOS_RUNNING, key, val ) );
+   NANOS_INSTRUMENT ( } );
    ( dd.getWorkFct() )( wd.getData() );
    _currKernelEvent=NULL;
    
    NANOS_INSTRUMENT ( raiseWDClosingEvents() );
+
+   NANOS_INSTRUMENT ( if ( wd.isRuntimeTask() ) { );
+   NANOS_INSTRUMENT (    sys.getInstrumentation()->raiseCloseStateEvent() );
+   NANOS_INSTRUMENT ( } else { );
+   NANOS_INSTRUMENT (    sys.getInstrumentation()->raiseCloseStateAndBurst ( key, val ) );
+   NANOS_INSTRUMENT ( } );
    return false;
 }
 
@@ -120,21 +132,6 @@ GenericEvent * OpenCLThread::createPostRunEvent( WD * wd )
 #endif
 }
 
-void OpenCLThread::switchTo( WD *work, SchedulerHelper *helper )
-{
-   fatal("A Device Thread cannot call switchTo function.");
-}
-void OpenCLThread::exitTo( WD *work, SchedulerHelper *helper )
-{
-   fatal("A Device Thread cannot call exitTo function.");
-}
-
-void OpenCLThread::switchHelperDependent( WD* oldWD, WD* newWD, void *arg )
-{
-   fatal("A Device Thread cannot call switchHelperDependent function.");
-}
-
-
 void OpenCLThread::join()
 {
    _pthread.join();
@@ -164,7 +161,7 @@ bool OpenCLThread::processDependentWD ( WD * wd )
    if ( doSubmit != NULL ) {
       DependableObject::DependableObjectVector & preds = wd->getDOSubmit()->getPredecessors();
       for ( DependableObject::DependableObjectVector::iterator it = preds.begin(); it != preds.end(); it++ ) {
-         WD * wdPred = ( WD * ) it->second->getRelatedObject();         
+         WD * wdPred = ( WD * ) it->second->getRelatedObject();
          OpenCLDD& ddPred=static_cast<OpenCLDD&>(wdPred->getActiveDevice());
          if ( wdPred != NULL ) {
             if ( wdPred->isTiedTo() == NULL || wdPred->isTiedTo() == ( BaseThread * ) this ) {
@@ -184,7 +181,7 @@ bool OpenCLThread::processDependentWD ( WD * wd )
 
 void OpenCLThread::addEvent( GenericEvent * evt ){
    if (myThread==this) {
-      AsyncThread::addEvent(evt);          
+      AsyncThread::addEvent(evt);
    } else {
       _evlLock.acquire();
       _externalEventsList.push_back(evt);
@@ -196,12 +193,12 @@ void OpenCLThread::addEvent( GenericEvent * evt ){
 void OpenCLThread::checkEvents(){
     if (!_externalEventsList.empty()) {
        _evlLock.acquire();
-       for ( nanos::AsyncThread::GenericEventList::iterator it=_externalEventsList.begin(); 
+       for ( nanos::AsyncThread::GenericEventList::iterator it=_externalEventsList.begin();
               it != _externalEventsList.end(); ++it) {
-         AsyncThread::addEvent(*it);     
+         AsyncThread::addEvent(*it);
        }
        _externalEventsList.clear();
-       _evlLock.release();    
+       _evlLock.release();
     }
-    AsyncThread::checkEvents();         
+    AsyncThread::checkEvents();
 }

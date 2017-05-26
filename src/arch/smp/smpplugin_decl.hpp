@@ -105,7 +105,7 @@ class SMPPlugin : public SMPBasePlugin
 
    virtual void finalize();
 
-   virtual void addPEs( std::map<unsigned int, ProcessingElement *> &pes ) const;
+   virtual void addPEs( PEMap &pes ) const;
 
    virtual void addDevices( DeviceList &devices ) const;
 
@@ -212,7 +212,7 @@ protected:
 
    void createWorker( ext::SMPProcessor *target, std::map<unsigned int, BaseThread *> &workers );
 
-   bool isValidMask( const CpuSet& mask );
+   bool isValidMask( const CpuSet& mask ) const;
 
    virtual bool asyncTransfersEnabled() const;
 };

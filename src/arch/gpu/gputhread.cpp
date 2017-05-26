@@ -113,20 +113,6 @@ void GPUThread::wakeup()
    // For convenience we may call wakeup for all threads, just ignore then
 }
 
-void GPUThread::switchTo( WD *work, SchedulerHelper *helper )
-{
-   fatal("A GPUThread cannot call switchTo function.");
-}
-void GPUThread::exitTo( WD *work, SchedulerHelper *helper )
-{
-   fatal("A GPUThread cannot call exitTo function.");
-}
-
-void GPUThread::switchHelperDependent( WD* oldWD, WD* newWD, void *arg )
-{
-   fatal("A GPUThread cannot call switchHelperDependent function.");
-}
-
 void GPUThread::initializeDependent ()
 {
 
@@ -248,7 +234,13 @@ bool GPUThread::runWDDependent( WD &wd, GenericEvent * event )
    cudaStreamAddCallback( myGPU.getGPUProcessorInfo()->getTracingKernelStream( _kernelStreamIdx ), beforeWDRunCallback, ( void * ) cbd, 0 );
 #endif
 
-   NANOS_INSTRUMENT ( InstrumentStateAndBurst inst1( "user-code", wd.getId(), NANOS_RUNNING ) );
+   NANOS_INSTRUMENT ( static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("user-code") );
+   NANOS_INSTRUMENT ( nanos_event_value_t val = wd.getId() );
+   NANOS_INSTRUMENT ( if ( wd.isRuntimeTask() ) { );
+   NANOS_INSTRUMENT (    sys.getInstrumentation()->raiseOpenStateEvent ( NANOS_RUNTIME ) );
+   NANOS_INSTRUMENT ( } else { );
+   NANOS_INSTRUMENT (    sys.getInstrumentation()->raiseOpenStateAndBurst ( NANOS_RUNNING, key, val ) );
+   NANOS_INSTRUMENT ( } );
    ( dd.getWorkFct() )( wd.getData() );
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
@@ -270,6 +262,14 @@ bool GPUThread::runWDDependent( WD &wd, GenericEvent * event )
    } else {
       _kernelStreamIdx = streamIdx;
    }
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   NANOS_INSTRUMENT ( if ( wd.isRuntimeTask() ) { );
+   NANOS_INSTRUMENT (    sys.getInstrumentation()->raiseCloseStateEvent() );
+   NANOS_INSTRUMENT ( } else { );
+   NANOS_INSTRUMENT (    sys.getInstrumentation()->raiseCloseStateAndBurst ( key, val ) );
+   NANOS_INSTRUMENT ( } );
+#endif
 
    return false;
 }
@@ -553,4 +553,3 @@ void GPUThread::closeAsyncOutputEvent ( size_t size )
    //setCurrentWD( *oldwd );
 #endif
 }
-

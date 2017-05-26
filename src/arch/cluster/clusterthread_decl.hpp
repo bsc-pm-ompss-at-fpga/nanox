@@ -42,7 +42,7 @@ namespace ext {
          WD* _completedWDs[MAX_PRESEND];
       std::list< WD * > _waitingDataWDs;
       WD *_pendingInitWD;
-         
+
          public:
          RunningWDQueue();
          ~RunningWDQueue();
@@ -79,9 +79,6 @@ namespace ext {
       bool tryLock();
 
       virtual void runDependent ( void );
-      virtual bool inlineWorkDependent ( WD &wd );
-      virtual void preOutlineWorkDependent ( WD &wd );
-      virtual void outlineWorkDependent ( WD &wd );
 
       void addRunningWD( unsigned int archId, WorkDescriptor *wd );
       unsigned int numRunningWDs( unsigned int archId ) const;
@@ -94,17 +91,12 @@ namespace ext {
 
       virtual void idle( bool debug=false );
 
-      virtual void notifyOutlinedCompletionDependent( WD *completedWD ); 
+      virtual void notifyOutlinedCompletionDependent( WD *completedWD );
       virtual bool isCluster();
 
+      virtual void initializeDependent( void );
 
-         virtual void switchTo( WD *work, SchedulerHelper *helper );
-         virtual void exitTo( WD *work, SchedulerHelper *helper );
-         virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
-         virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg );
-         virtual void initializeDependent( void );
-
-         virtual void switchToNextThread();
+      virtual void switchToNextThread();
 
       virtual void setupSignalHandlers();
 

@@ -67,9 +67,6 @@ namespace ext {
          void initializeDependent( void );
          void runDependent ( void );
 
-         void preOutlineWorkDependent( WD &work ) { fatal( "GPUThread does not support preOutlineWorkDependent()" ); }
-         void outlineWorkDependent( WD &work ) { fatal( "GPUThread does not support outlineWorkDependent()" ); }
-
          bool runWDDependent( WD &work, GenericEvent * evt = NULL );
          //bool inlineWorkDependent( WD &work );
 
@@ -110,13 +107,6 @@ namespace ext {
 #ifdef NANOS_RESILIENCY_ENABLED
          virtual void setupSignalHandlers() { _pthread.setupSignalHandlers(); }
 #endif
-
-
-         void switchTo( WD *work, SchedulerHelper *helper );
-         void exitTo( WD *work, SchedulerHelper *helper );
-
-         void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
-         void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
 
          void switchToNextThread() { fatal( "GPUThread does not support switchToNextThread()" ); }
          BaseThread *getNextThread() { return this; }

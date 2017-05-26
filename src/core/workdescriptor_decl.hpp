@@ -113,14 +113,7 @@ typedef std::set<const Device *>  DeviceList;
          const Device *_architecture; /**< Related Device (architecture). */
       private:
          work_fct       _work;
-         /*! \brief Indicates if DeviceData is compatible with a given ProcessingElement
-          * **REQUERIMENT** If pe == NULL, this function must return true
-          *
-          *  \param[pe] pe is the ProcessingElement which we have to compare to.
-          *  \return a boolean indicating if both elements (DeviceData and PE) are compatible.
-          */
-         virtual bool isCompatibleWithPE ( const ProcessingElement *pe ) ;
-         
+
       public:
 
          /*! \brief DeviceData constructor
@@ -169,7 +162,7 @@ typedef std::set<const Device *>  DeviceList;
           */
          virtual size_t size ( void ) = 0;
 
-         /*! \brief FIXME: (#170) documentation needed 
+         /*! \brief FIXME: (#170) documentation needed
           */
          virtual DeviceData *copyTo ( void *addr ) = 0;
          const char * getName ( void ) const { return _architecture->getName(); }
@@ -221,6 +214,7 @@ typedef std::set<const Device *>  DeviceList;
             bool is_implicit;        //!< Is the WD an implicit task (in a team)?
             bool is_recoverable;   //!< Flags a task as recoverable, that is, it can be re-executed if it finished with errors.
             bool is_invalid;       //!< Flags an invalid workdescriptor. Used in resiliency when a task fails.
+            bool is_runtime_task;  //!< Is the WD a task for doing runtime jobs?
          } WDFlags;
          typedef enum { INIT, START, READY, BLOCKED } State;
          typedef int PriorityType;
@@ -281,13 +275,17 @@ typedef std::set<const Device *>  DeviceList;
          void const                   *_remoteAddr;
          void                         *_callback;
          void                         *_arguments;
+         std::vector<WorkDescriptor *>*_submittedWDs;
+         bool                          _reachedTaskwait;
       public:
+         int                           _schedValues[8];
+         std::map<memory_space_id_t,unsigned int>   _schedPredecessorLocs;
          MemController                 _mcontrol;
       private: /* private methods */
          /*! \brief WorkDescriptor copy assignment operator (private)
           */
          const WorkDescriptor & operator= ( const WorkDescriptor &wd );
-         /*! \brief WorkDescriptor default constructor (private) 
+         /*! \brief WorkDescriptor default constructor (private)
           */
          WorkDescriptor ();
 
@@ -392,7 +390,7 @@ typedef std::set<const Device *>  DeviceList;
          BaseThread * isTiedTo() const;
 
          memory_space_id_t isTiedToLocation() const;
-         
+
          bool shouldBeTied() const;
 
          void untie();
@@ -424,8 +422,7 @@ typedef std::set<const Device *>  DeviceList;
          unsigned getDepth() const;
 
          /* device related methods */
-         //bool canRunIn ( const Device &device ) const;
-         bool canRunIn ( const Device &device, const ProcessingElement * pe=NULL ) const;
+         bool canRunIn ( const Device &device ) const;
          bool canRunIn ( const ProcessingElement &pe ) const;
          DeviceData & activateDevice ( const Device &device );
          DeviceData & activateDevice ( unsigned int deviceIdx );
@@ -443,13 +440,13 @@ typedef std::set<const Device *>  DeviceList;
 
          /*! \brief Sets specific internal data of the programming model
           * \param [in] data Pointer to internal data
-          * \param [in] ownedByWD States if the pointer to internal data will be owned by this WD. 
+          * \param [in] ownedByWD States if the pointer to internal data will be owned by this WD.
           *             If so, it means that it will be deallocated when the WD is destroyed
           */
          void setInternalData ( void *data, bool ownedByWD = true );
 
          void * getInternalData () const;
-         
+
          /*! \brief Sets custom data for the scheduling policy
           *  \param [in] data Pointer do the data. Ownership will be
           *  changed to the WD, so that data will be destroyed with it
@@ -459,7 +456,7 @@ typedef std::set<const Device *>  DeviceList;
           *  destroyed
           */
          void setSchedulerData( ScheduleWDData * data, bool ownedByWD = true );
-         
+
          ScheduleWDData* getSchedulerData() const;
 
          void setTranslateArgs( nanos_translate_args_t translateArgs );
@@ -467,7 +464,7 @@ typedef std::set<const Device *>  DeviceList;
          nanos_translate_args_t getTranslateArgs() const;
 
          /*! \brief Returns the NUMA node that this WD was assigned to.
-          * 
+          *
           * \see NUMANodet
           */
          int getNUMANode() const;
@@ -477,7 +474,7 @@ typedef std::set<const Device *>  DeviceList;
           * \see getNUMANode
           */
          void setNUMANode( int node );
-         
+
          /*! \brief Get the number of devices
           *
           *  This function return the number of devices for the current WD
@@ -504,7 +501,7 @@ typedef std::set<const Device *>  DeviceList;
           */
          void prepareDevice ( void );
 
-         /*! \brief WD dequeue 
+         /*! \brief WD dequeue
           *
           *  This function give us the next WD slice to execute. As a default
           *  behaviour give the whole WD and returns true, meaning that there
@@ -622,7 +619,7 @@ typedef std::set<const Device *>  DeviceList;
           *  \paran wd Must be a wd created in this WD's context.
           */
          void workFinished(WorkDescriptor &wd);
-         
+
          /*! \brief Early-release all the input dependencies of this WD
           */
          void releaseInputDependencies();
@@ -649,7 +646,7 @@ typedef std::set<const Device *>  DeviceList;
          void notifyOutlinedCompletion();
 
          void predecessorFinished( WorkDescriptor *predecessorWd );
-         
+
          void wgdone();
          void listed();
          void printCopies();
@@ -674,10 +671,13 @@ typedef std::set<const Device *>  DeviceList;
          /*! \brief Release ownership of commutative targets.
           *  Called when a task is finished.
           */
-         void releaseCommutativeAccesses(); 
+         void releaseCommutativeAccesses();
 
          void setImplicit( bool b = true );
          bool isImplicit( void );
+
+         void setRuntimeTask( bool b = true );
+         bool isRuntimeTask( void ) const;
 
          /*! \brief Set copies for a given WD
           * We call this when copies cannot be set at creation time of the work descriptor
@@ -721,7 +721,6 @@ typedef std::set<const Device *>  DeviceList;
                  size_t array_descriptor_size, void (*p_init)( void *, void * ),
                  void (*p_reducer)( void *, void * ), void (*p_reducer_orig_var)( void *, void * ) );
 
-         bool removeTaskReduction ( void *p_dep, bool del = false );
          void removeAllTaskReductions ( void );
 
          void * getTaskReductionThreadStorage( void *p_addr, size_t id );
@@ -736,7 +735,7 @@ typedef std::set<const Device *>  DeviceList;
 
          void setRemoteAddr( void const *addr );
          void const *getRemoteAddr() const;
-         
+
          /*! \brief Sets a WorkDescriptor to an invalid state or not depending on the flag value.
              If invalid (flag = true) it propagates upwards to the ancestors until
              no more ancestors exist or a recoverable task is found.
@@ -763,6 +762,7 @@ typedef std::set<const Device *>  DeviceList;
          //! \brief Returns the concurrency level of the WD considering
          //         the commutative access map that the caller provides.
          int getConcurrencyLevel( std::map<WD**, WD*> &comm_accesses ) const;
+         void addPresubmittedWDs( unsigned int numWDs, WD **wds );
    };
 
    typedef class WorkDescriptor WD;
@@ -772,4 +772,3 @@ typedef std::set<const Device *>  DeviceList;
 } // namespace nanos
 
 #endif
-

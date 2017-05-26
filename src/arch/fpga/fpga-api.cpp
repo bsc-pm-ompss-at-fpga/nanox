@@ -19,28 +19,28 @@
 /*************************************************************************************/
 
 #include "nanos-fpga.h"
-#include "basethread.hpp"
 #include "fpgadd.hpp"
-#include "debug.hpp"
-#include "fpgaprocessor.hpp"
 #include "fpgapinnedallocator.hpp"
-
-#include "libxdma.h"
 
 using namespace nanos;
 
 NANOS_API_DEF( void *, nanos_fpga_factory, ( void *args ) )
 {
    nanos_fpga_args_t *fpga = ( nanos_fpga_args_t * ) args;
-   return ( void * ) NEW ext::FPGADD( fpga->outline, fpga->acc_num );
+   // FIXME: acc_num have to be converted into an string
+   return ( void * ) NEW ext::FPGADD( fpga->outline, FPGADeviceType( fpga->acc_num < 0 ? 0 : fpga->acc_num ) );
 }
 
 NANOS_API_DEF( void *, nanos_fpga_alloc_dma_mem, ( size_t len ) )
 {
-    return nanos::ext::FPGAProcessor::getPinnedAllocator().allocate( len );
+   ensure( nanos::ext::fpgaAllocator != NULL,
+      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+    return nanos::ext::fpgaAllocator->allocate( len );
 }
 
 NANOS_API_DEF( void, nanos_fpga_free_dma_mem, ( void * buffer ) )
 {
-    nanos::ext::FPGAProcessor::getPinnedAllocator().free( buffer );
+   ensure( nanos::ext::fpgaAllocator != NULL,
+      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+    nanos::ext::fpgaAllocator->free( buffer );
 }

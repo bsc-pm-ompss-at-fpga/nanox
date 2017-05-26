@@ -29,14 +29,10 @@ namespace nanos {
       public:
          //We should add some methods for configuration
          static void FPGAWorkerLoop();
-         static WD * getFPGAWD(BaseThread *thread);
-         static void postOutlineWork( WD * wd );
+         static WD * getFPGAWD( BaseThread *thread );
       private:
-         static int _maxPendingWD;
-         static int _finishBurst;
 
    };
 } // namespace nanos
 
 #endif
-

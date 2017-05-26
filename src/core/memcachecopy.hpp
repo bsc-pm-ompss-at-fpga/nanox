@@ -34,7 +34,7 @@ inline MemCacheCopy::MemCacheCopy( WD const &wd, unsigned int index/*, MemContro
    , _invalControl()
    , _allocFrom( -1 )
    , _regionsToCommit() {
-   sys.getHostMemory().getRegionId( wd.getCopies()[ index ], _reg, wd, index );
+   sys.getHostMemory().getRegionId( wd.getCopies()[ index ], _reg, &wd, index );
 }
 
 
@@ -49,17 +49,17 @@ inline void MemCacheCopy::getVersionInfo() {
 
 inline void MemCacheCopy::generateOutOps( SeparateMemoryAddressSpace *from, SeparateAddressSpaceOutOps &ops, bool input, bool output, WD const &wd, unsigned int copyIdx ) {
    if ( ops.getPE()->getMemorySpaceId() != 0 ) {
-      if ( _policy == RegionCache::FPGA ) { //emit copy for all data
-         if ( output ) {
-            _chunk->copyRegionToHost( ops, _reg.id, _version + (output ? 1 : 0), wd, copyIdx );
-         }
-      } else {
+      // if ( _policy == RegionCache::FPGA ) { //emit copy for all data
+      //    if ( output ) {
+      //       _chunk->copyRegionToHost( ops, _reg.id, _version + (output ? 1 : 0), wd, copyIdx );
+      //    }
+      // } else {
          if ( output ) {
             if ( _policy != RegionCache::WRITE_BACK ) {
                _chunk->copyRegionToHost( ops, _reg.id, _version + 1, wd, copyIdx );
             }
          }
-      }
+      // }
    }
 }
 
@@ -109,7 +109,7 @@ inline bool MemCacheCopy::isRooted( memory_space_id_t &loc ) const {
 
 inline void MemCacheCopy::printLocations( std::ostream &o ) const {
    for ( NewLocationInfoList::const_iterator it = _locations.begin(); it != _locations.end(); it++ ) {
-      NewNewDirectoryEntryData *d = NewNewRegionDirectory::getDirectoryEntry( *(_reg.key), it->second );
+      DirectoryEntryData *d = RegionDirectory::getDirectoryEntry( *(_reg.key), it->second );
       o << "   [ " << it->first << "," << it->second << " ] "; _reg.key->printRegion( o, it->first ); 
       if ( d ) o << " " << *d << std::endl; 
       else o << " dir entry n/a" << std::endl;

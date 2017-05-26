@@ -27,8 +27,8 @@
 namespace nanos {
 namespace ext {
 
-   class SPUProcessor : public PE 
-   { 
+   class SPUProcessor : public PE
+   {
      private:
         SMPProcessor &_ppu;
         // disable copy constructor and assignment operator
@@ -41,10 +41,18 @@ namespace ext {
         ~SPUProcessor() {}
 
         SMPProcessor & getPPU() const { return _ppu; }
-        
+
         WD & getWorkerWD () const;
         WD & getMasterWD () const;
         BaseThread & createThread ( WorkDescriptor &wd );
+
+        //virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
+        //virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg );
+        virtual bool inlineWorkDependent (WD &work) {}
+        virtual void switchTo( WD *work, SchedulerHelper *helper ) {}
+        virtual void exitTo( WD *work, SchedulerHelper *helper ) {}
+        //virtual void outlineWorkDependent (WD &work);
+        //virtual void preOutlineWorkDependent (WD &work);
    };
 
 } // namespace ext
@@ -52,4 +60,3 @@ namespace ext {
 
 
 #endif
-

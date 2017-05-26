@@ -1,74 +1,44 @@
 #include "fpgapinnedallocator.hpp"
 #include "debug.hpp"
+#include "simpleallocator.hpp"
 
 using namespace nanos;
+using namespace nanos::ext;
 
-void * FPGAPinnedAllocator::allocate( size_t size )
+FPGAPinnedAllocator *nanos::ext::fpgaAllocator;
+
+FPGAPinnedAllocator::FPGAPinnedAllocator( size_t size )
 {
-   void * newBuffer;
-   xdma_buf_handle bufferHandle;
+   void * addr;
    xdma_status status;
-   status = xdmaAllocateKernelBuffer( &newBuffer, &bufferHandle, size );
+   status = xdmaAllocateKernelBuffer( &addr, &_xdmaHandle, size );
    if ( status != XDMA_SUCCESS ) {
-      warning0( "Could not allocate pinned memory" );
-      //TODO: do something intelligent in this case
-      return NULL;
+      // Before fail, try to allocate less memory
+      do {
+         size = size/2;
+         status = xdmaAllocateKernelBuffer( &addr, &_xdmaHandle, size );
+      } while ( status != XDMA_SUCCESS && size > 32768 /* 32KB */ );
+
+      // Emit a warning with the allocation result
+      if ( status == XDMA_SUCCESS ) {
+         warning0( "Could not allocate requested amount of XDMA pinned memory. Only " <<
+                   size << " bytes have been allocated." );
+      } else {
+         warning0( "Could not allocate XDMA pinned memory for the FPGAPinnedAllocator" );
+         addr = NULL;
+         size = 0;
+      }
    }
-   _lock.acquire();
-   _pinnedChunks[ newBuffer ] = size;
-   _handleMap[ newBuffer ] = bufferHandle;
-   _lock.release();
-
-   return newBuffer;
+   init( ( uint64_t )( addr ), size );
 }
 
-void FPGAPinnedAllocator::free( void * address )
+FPGAPinnedAllocator::~FPGAPinnedAllocator()
 {
-   xdma_buf_handle bHandle;
-   bHandle = _handleMap[ address ];
-   xdmaFreeKernelBuffer( address, bHandle );
-   _lock.acquire();
-   _pinnedChunks.erase( address );
-   _handleMap.erase( address );
-   _lock.release();
+   void * addr = ( void * )( getBaseAddress() );
+   xdmaFreeKernelBuffer( addr, _xdmaHandle );
 }
 
-//size should not be needed to determine the base address of a pointer
-void * FPGAPinnedAllocator::getBasePointer( void * address, size_t size )
+xdma_buf_handle FPGAPinnedAllocator::getBufferHandle()
 {
-   PinnedMemoryMap::iterator it = _pinnedChunks.lower_bound( address );
-
-   // Perfect match, check size
-   if ( it->first == address ) {
-      if ( it->second >= size ) return it->first;
-
-      // Size is bigger than pinned area
-      return NULL;
-   }
-
-   // address is lower than any other pinned address
-   if ( it == _pinnedChunks.begin() ) return NULL;
-
-   // It is an intermediate region, check it fits into a pinned area
-   it--;
-
-   if ( ( it->first < address ) && ( ( ( size_t ) it->first + it->second ) >= ( ( size_t ) address + size ) ) )
-      return it->first;
-
-   return NULL;
-}
-
-xdma_buf_handle FPGAPinnedAllocator::getBufferHandle( void * address )
-{
-   return _handleMap[ address ];
-}
-
-void FPGAPinnedAllocator::addBufferHandle( void * address, xdma_buf_handle handle )
-{
-   _handleMap[ address ] = handle;
-}
-
-void FPGAPinnedAllocator::delBufferHandle( void * address )
-{
-   _handleMap.erase( address );
+   return _xdmaHandle;
 }

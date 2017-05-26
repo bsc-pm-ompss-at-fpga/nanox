@@ -130,7 +130,7 @@ namespace ext {
          void setBaseAddress( void *addr ) {
             _baseAddress = addr;
          }
-         
+
          void setMemoryAlignment( size_t align ) {
             _memoryAlignment = align;
          }
@@ -153,6 +153,21 @@ inline GPUMemoryTransferList * GPUProcessor::getInTransferList ()
 inline GPUMemoryTransferList * GPUProcessor::getOutTransferList ()
 {
    return _gpuProcessorTransfers._pendingCopiesOut;
+}
+
+inline void GPUProcessor::switchTo( WD *work, SchedulerHelper *helper )
+{
+   fatal("A GPUThread cannot call switchTo function.");
+}
+
+inline void GPUProcessor::exitTo( WD *work, SchedulerHelper *helper )
+{
+   fatal("A GPUThread cannot call exitTo function.");
+}
+
+inline void GPUProcessor::switchHelperDependent( WD* oldWD, WD* newWD, void *arg )
+{
+   fatal("A GPUThread cannot call switchHelperDependent function.");
 }
 
 } // namespace ext

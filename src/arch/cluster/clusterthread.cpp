@@ -46,7 +46,7 @@ ClusterThread::RunningWDQueue::RunningWDQueue() : _numRunning(0), _completedHead
 ClusterThread::RunningWDQueue::~RunningWDQueue() {
 }
 
-void ClusterThread::RunningWDQueue::addRunningWD( WorkDescriptor *wd ) { 
+void ClusterThread::RunningWDQueue::addRunningWD( WorkDescriptor *wd ) {
    _numRunning++;
 }
 
@@ -80,7 +80,7 @@ void ClusterThread::RunningWDQueue::completeWD( void *remoteWdAddr ) {
    _numRunning--;
 }
 
-ClusterThread::ClusterThread( WD &w, PE *pe, SMPMultiThread *parent, int device ) 
+ClusterThread::ClusterThread( WD &w, PE *pe, SMPMultiThread *parent, int device )
    : BaseThread( (unsigned int) -1, w, pe, parent ), _clusterNode( device ), _lock() {
    setCurrentWD( w );
 }
@@ -95,101 +95,6 @@ void ClusterThread::runDependent () {
    SMPDD &dd = ( SMPDD & ) work.activateDevice( getSMPDevice() );
 
    dd.getWorkFct()( work.getData() );
-}
-
-
-bool ClusterThread::inlineWorkDependent ( WD &wd ) {
-   fatal( "inline execution is not supported in this architecture (cluster).");
-   return true;
-}
-
-void ClusterThread::preOutlineWorkDependent ( WD &wd ) {
-   wd.preStart(WorkDescriptor::IsNotAUserLevelThread);
-}
-
-void ClusterThread::outlineWorkDependent ( WD &wd )
-{
-   SMPDD &dd = ( SMPDD & )wd.getActiveDevice();
-   ProcessingElement *pe = this->runningOn();
-   if (dd.getWorkFct() == NULL ) return;
-
-   //wd.getGE()->setNode( ( ( ClusterNode * ) pe )->getClusterNodeNum() );
-
-#if 0
-   unsigned int totalDimensions = 0;
-   for (i = 0; i < wd.getNumCopies(); i += 1) {
-      totalDimensions += wd.getCopies()[i].getNumDimensions();
-   }
-
-   size_t totalBufferSize = wd.getDataSize() + 
-      sizeof(int) + wd.getNumCopies() * sizeof( CopyData ) + 
-      sizeof(int) + totalDimensions * sizeof( nanos_region_dimension_t ) + 
-      sizeof(int) + wd.getNumCopies() * sizeof( uint64_t );
-
-   char *buff = new char[ totalBufferSize ];
-
-
-   // Copy WD data to tmp buffer
-   if ( wd.getDataSize() > 0 )
-   {
-      memcpy( &buff[ 0 ], wd.getData(), wd.getDataSize() );
-   }
-
-   *((int *) &buff[ wd.getDataSize() ] ) = wd.getNumCopies();
-   *((int *) &buff[ wd.getDataSize() + sizeof( int ) + wd.getNumCopies() * sizeof( CopyData ) ] ) = totalDimensions;
-
-   CopyData *newCopies = ( CopyData * ) ( buff + wd.getDataSize() + sizeof( int ) );
-   nanos_region_dimension_internal_t *dimensions = ( nanos_region_dimension_internal_t * ) ( buff + wd.getDataSize() + sizeof( int ) + wd.getNumCopies() * sizeof( CopyData ) + sizeof( int ) );
-   
-   uintptr_t dimensionIndex = 0;
-   for (i = 0; i < wd.getNumCopies(); i += 1) {
-      new ( &newCopies[i] ) CopyData( wd.getCopies()[i] );
-      memcpy( &dimensions[ dimensionIndex ], wd.getCopies()[i].getDimensions(), sizeof( nanos_region_dimension_internal_t ) * wd.getCopies()[i].getNumDimensions());
-      newCopies[i].setDimensions( ( nanos_region_dimension_internal_t *  ) dimensionIndex ); // This is the index because it makes no sense to send an address over the network
-      newCopies[i].setHostBaseAddress( (uint64_t) wd.getCopies()[i].getBaseAddress() );
-      newCopies[i].setRemoteHost( true );
-      //newCopies[i].setBaseAddress( (void *) ( wd._ccontrol.getAddress( i ) - wd.getCopies()[i].getOffset() ) );
-      newCopies[i].setBaseAddress( (void *) wd._mcontrol.getAddress( i ) );
-      newCopies[i].setHostRegionId( wd._mcontrol._memCacheCopies[i]._reg.id );
-      dimensionIndex += wd.getCopies()[i].getNumDimensions();
-   }
-#endif
-
-#if 0
-
-   int arch = -1;
-   if ( wd.canRunIn( getSMPDevice() ) ) {
-      arch = 0;
-   }
-#ifdef GPU_DEV
-   else if (wd.canRunIn( GPU) )
-   {
-      arch = 1;
-   }
-#endif
-#ifdef OpenCL_DEV
-   else if (wd.canRunIn( OpenCLDev ) )
-   {
-      arch = 2;
-   }
-#endif
-#ifdef FPGA_DEV
-   else if (wd.canRunIn( FPGA ) )
-   {
-      arch = 3;
-   }
-#endif
-   else {
-      fatal("unsupported architecture");
-   }
-   #endif
-
-   //std::cerr << "run remote task, target pe: " << pe << " node num " << (unsigned int) ((ClusterNode *) pe)->getClusterNodeNum() << " arch: "<< arch << " " << (void *) &wd << ":" << (unsigned int) wd.getId() << " data size is " << wd.getDataSize() << " copies " << wd.getNumCopies() << " dimensions " << dimensionIndex << std::endl;
-
-   ( ( ClusterNode * ) pe )->incExecutedWDs();
-   sys.getNetwork()->sendWorkMsg( ( ( ClusterNode * ) pe )->getClusterNodeNum(), wd );
-   //sys.getNetwork()->sendWorkMsg( ( ( ClusterNode * ) pe )->getClusterNodeNum(), dd.getWorkFct(), wd.getDataSize(), wd.getId(), /* this should be the PE id */ arch, nwd.getBufferSize(), nwd.getBuffer(), wd.getTranslateArgs(), arch, (void *) &wd );
-
 }
 
 void ClusterThread::join() {
@@ -238,12 +143,12 @@ void ClusterThread::notifyOutlinedCompletionDependent( WD *completedWD ) {
       arch = 3;
    }
 #endif
-   else { 
+   else {
       fatal("Unsupported architecture");
    }
    _runningWDs[ arch ].completeWD( completedWD );
 }
-void ClusterThread::addRunningWD( unsigned int archId, WorkDescriptor *wd ) { 
+void ClusterThread::addRunningWD( unsigned int archId, WorkDescriptor *wd ) {
    _runningWDs[archId].addRunningWD( wd );
 }
 unsigned int ClusterThread::numRunningWDs( unsigned int archId ) const {
@@ -304,12 +209,8 @@ bool ClusterThread::isCluster() {
    return true;
 }
 
-void ClusterThread::switchTo( WD *work, SchedulerHelper *helper ) {}
-void ClusterThread::exitTo( WD *work, SchedulerHelper *helper ) {}
-void ClusterThread::switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
-void ClusterThread::exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
-void ClusterThread::initializeDependent( void ) {}
-void ClusterThread::switchToNextThread() {}
+void initializeDependent( void ) {}
+void switchToNextThread() {}
 
 void ClusterThread::unlock() {
    _lock.release();
@@ -383,7 +284,7 @@ WD * ClusterThread::getClusterWD( BaseThread *thread )
    if ( thread->getTeam() != NULL ) {
       wd = thread->getNextWD();
       if ( wd ) {
-         if ( !wd->canRunIn( *thread->runningOn() ) ) 
+         if ( !thread->runningOn()->canRun( *wd ) )
          { // found a non compatible wd in "nextWD", ignore it
             wd = thread->getTeam()->getSchedulePolicy().atIdle ( thread, 0 );
             //if(wd!=NULL)std::cerr << "GN got a wd with depth " <<wd->getDepth() << std::endl;
@@ -432,7 +333,7 @@ void ClusterThread::workerClusterLoop ()
                      if ( myClusterThread->hasAPendingWDToInit( arch_id ) ) {
                         WD * wd = myClusterThread->getPendingInitWD( arch_id );
                         if ( Scheduler::tryPreOutlineWork(wd) ) {
-                           current_thread->preOutlineWorkDependent( *wd );
+                           current_thread->runningOn()->preOutlineWorkDependent( *wd );
                            //std::cerr << "GOT A PENDIGN WD for thd " << current_thread->getId() <<" wd is " << wd->getId() << std::endl;
                            if ( wd->isInputDataReady() ) {
                               myClusterThread->addRunningWD( arch_id, wd );
@@ -452,9 +353,9 @@ void ClusterThread::workerClusterLoop ()
                            WD * wd = getClusterWD( current_thread );
                            if ( wd )
                            {
-                              Scheduler::prePreOutlineWork(wd); 
+                              Scheduler::prePreOutlineWork(wd);
                               if ( Scheduler::tryPreOutlineWork(wd) ) {
-                                 current_thread->preOutlineWorkDependent( *wd );
+                                 current_thread->runningOn()->preOutlineWorkDependent( *wd );
                                  if ( wd->isInputDataReady() ) {
                                     //std::cerr << "SUCCED WD for thd " << current_thread->getId() <<" wd is " << wd->getId() << std::endl;
                                     myClusterThread->addRunningWD( arch_id, wd );
@@ -476,7 +377,7 @@ void ClusterThread::workerClusterLoop ()
                   if ( myClusterThread->hasAPendingWDToInit( arch_id ) ) {
                      WD * wd = myClusterThread->getPendingInitWD( arch_id );
                      if ( Scheduler::tryPreOutlineWork(wd) ) {
-                        current_thread->preOutlineWorkDependent( *wd );
+                        current_thread->runningOn()->preOutlineWorkDependent( *wd );
                         //std::cerr << "GOT A PENDIGN WD for thd " << current_thread->getId() <<" wd is " << wd->getId() << std::endl;
                         if ( wd->isInputDataReady() ) {
                            myClusterThread->addRunningWD( arch_id, wd );
@@ -496,9 +397,9 @@ void ClusterThread::workerClusterLoop ()
                         WD * wd = getClusterWD( current_thread );
                         if ( wd )
                         {
-                           Scheduler::prePreOutlineWork(wd); 
+                           Scheduler::prePreOutlineWork(wd);
                            if ( Scheduler::tryPreOutlineWork(wd) ) {
-                              current_thread->preOutlineWorkDependent( *wd );
+                              current_thread->runningOn()->preOutlineWorkDependent( *wd );
                               if ( wd->isInputDataReady() ) {
                                  //std::cerr << "SUCCED WD for thd " << current_thread->getId() <<" wd is " << wd->getId() << std::endl;
                                  myClusterThread->addRunningWD( arch_id, wd );
@@ -521,7 +422,7 @@ void ClusterThread::workerClusterLoop ()
          }
       }
       //sys.getNetwork()->poll(parent->getId());
-      myThread->idle();
+      myThread->processTransfers();
       current_thread = ( myThread = myThread->getNextThread() );
    }
 

@@ -21,8 +21,6 @@
 #ifndef _NANOS_FPGA_THREAD
 #define _NANOS_FPGA_THREAD
 
-#include <queue>
-
 #include "fpgaprocessor.hpp"
 #include "smpthread.hpp"
 #include "libxdma.h"
@@ -35,49 +33,26 @@ namespace ext {
       public:
          //FPGAThread(WD &wd, PE *pe, SMPProcessor *core, Atomic<int> fpgaDevice) :
             //SMPThread(wd, pe, core), _pendingWD(), _hwInstrCounters() {}
-         FPGAThread(WD &wd, PE *pe, SMPMultiThread *parent, Atomic<int> fpgaDevice);
+         FPGAThread( WD &wd, PE *pe, SMPMultiThread *parent );
 
          void initializeDependent( void );
          void runDependent ( void );
-         bool inlineWorkDependent( WD &work );
-         virtual void preOutlineWorkDependent ( WD &work );
-         virtual void outlineWorkDependent ( WD &work );
 
          void yield();
          void idle( bool debug );
 
-         int getPendingWDs() const;
-         void finishPendingWD( int numWD );
-         void addPendingWD( WD *wd );
-         void finishAllWD();
-
-         virtual void switchTo( WD *work, SchedulerHelper *helper );
-         virtual void exitTo( WD *work, SchedulerHelper *helper );
-         virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
-         virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg );
          virtual void switchToNextThread();
-
          virtual void start() {}
-         virtual void join() {}
+         virtual void join() { joined(); }
          virtual BaseThread *getNextThread();
          virtual bool isCluster() { return false; }
 
-
-
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-         void setupTaskInstrumentation( WD *wd );
-         void submitInstrSync( WD *wd );
-#endif
-
+         Lock _lock;
       private:
-         std::queue< WD* > _pendingWD;
-         std::map< WD*, xdma_instr_times* > _hwInstrCounters;
-         std::map< WD*, xdma_transfer_handle > _instrSyncHandles;
+         //std::map< WD*, xdma_instr_times* > _hwInstrCounters;
+         //std::map< WD*, xdma_transfer_handle > _instrSyncHandles;
          xdma_buf_handle _syncHandle;
          unsigned int *_syncBuffer;
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-         void readInstrCounters( WD *wd );
-#endif
    };
 } // namespace ext
 } // namespace nanos

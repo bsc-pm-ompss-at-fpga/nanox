@@ -21,91 +21,76 @@
 #ifndef _FPGA_DEVICE_DECL
 #define _FPGA_DEVICE_DECL
 
+#include "fpgadevice_fwd.hpp"
 #include "workdescriptor_decl.hpp"
 #include "processingelement_fwd.hpp"
 #include "copydescriptor_decl.hpp"
 #include "basethread.hpp" //for getMyThreadSafe() in warning/verbose, etc.
 
 namespace nanos {
+   /* \breif Auxiliar class that contains the string with the FPGADevice architecture name.
+    *        Cannot be a member of FPGADevice because the string constructor must be called before
+    *        the Device constructor
+    */
+   struct FPGADeviceName {
+      std::string _fpgaArchName;
+      FPGADeviceName ( FPGADeviceType const t ) : _fpgaArchName( "FPGA " + toString(t) ) {}
+   };
 
    /* \brief Device specialization for FPGA architecture
     * provides functions to allocate and copy data in the device
     */
-   class FPGADevice : public Device
+   class FPGADevice : private FPGADeviceName, public Device
    {
+      private:
+         /*!
+          * Copy memory from src to dst where one of them can be a pinned FPGA memory region
+          */
+         static void copyData( void* dst, void* src, size_t len );
+
       public:
 
-         FPGADevice ( const char *n );
+         FPGADevice ( FPGADeviceType const t );
+
+         virtual ~FPGADevice () {}
 
          virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem,
                  WD const *wd, unsigned int copyIdx);
          virtual void memFree( uint64_t addr, SeparateMemoryAddressSpace &mem );
 
          virtual void _canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *sizes,
-                 unsigned int numChunks, std::size_t *remainingSizes ) {}
+                 unsigned int numChunks, std::size_t *remainingSizes );
 
-         virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace &mem ) {
-            //return 1GB of memory available. There is no addressable memory on the device
-            //Just return 1GB as this is the total system memmory.
-            return 1024*1024*1024;
-         }
+         virtual std::size_t getMemCapacity( SeparateMemoryAddressSpace &mem );
+
          virtual void _copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
                SeparateMemoryAddressSpace &mem, DeviceOps *ops,
                WD const *wd, void *hostObject, reg_t hostRegionId );
 
-         /*! \brief Copy from remoteSrc in the host to localDst in the device
-          *        Returns true if the operation is synchronous
-          */
-         static bool copyIn( void *localDst, CopyDescriptor &remoteSrc, size_t size, ProcessingElement *pe, const WD *wd );
-
          virtual void _copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
                SeparateMemoryAddressSpace &mem, DeviceOps *ops,
                WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId );
-         /*! \brief Copy from localSrc in the device to remoteDst in the host
-          *        Returns true if the operation is synchronous
-          */
-         static bool copyOut( CopyDescriptor &remoteDst, void *localSrc, size_t size, ProcessingElement *pe, const WD *wd );
-
-         /*!
-          * Copy memory inside the same device. This is empty as currently does
-          * not make sense for FPGA (no local memory in the fpga is accessible)
-          */
-         static void copyLocal( void *dst, void *src, size_t size, ProcessingElement *pe ){}
-
-         /*!
-          * Reallocate memory in the device.
-          * Empty as there is no allocatable memory inside an fpga.
-          */
-         static void * realloc( void * address, size_t size, size_t ceSize, ProcessingElement *pe )
-         {
-            return NULL;
-         }
 
          virtual bool _copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len,
                SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig,
                DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
-               reg_t hostRegionId ) { std::cerr << "wrong copyDevToDev" <<std::endl; return false; }
+               reg_t hostRegionId )
+         {
+            std::cerr << "wrong copyDevToDev" <<std::endl; return false;
+         }
 
          virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem,
-               SimpleAllocator::ChunkList &list ) { std::cerr << "wrong _getFreeMemoryChunksList()" <<std::endl; }
+               SimpleAllocator::ChunkList &list );
 
-         //not supported
          virtual void _copyInStrided1D( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
                std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &mem,
                DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
-               reg_t hostRegionId )
-         {
-            warning( "Strided fpga copies not implemented" );
-         }
+               reg_t hostRegionId );
 
-         //not supported
          virtual void _copyOutStrided1D( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
                std::size_t numChunks, std::size_t ld, SeparateMemoryAddressSpace &mem,
                DeviceOps *ops, WD const *wd, void *hostObject,
-               reg_t hostRegionId )
-         {
-            warning( "Strided fpga copies not implemented" );
-         }
+               reg_t hostRegionId );
 
          //not supported
          virtual bool _copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigAddr,
@@ -114,10 +99,8 @@ namespace nanos {
                DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
                reg_t hostRegionId )
          {
-
-            warning( "Strided fpga copies not implemented" );
+            warning( "Strided fpga to fpga copies not implemented" );
             return true;
-
          }
 
          /*!

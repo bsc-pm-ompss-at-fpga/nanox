@@ -193,6 +193,11 @@ namespace nanos {
                VarOption( T &ref ) :
                      ActionOption<T,helpFormat,checkT>(), _var( ref ) {}
 
+               VarOption( T &ref, T const& default_value ) :
+                     ActionOption<T,helpFormat,checkT>(), _var( ref ) {
+                  setValue( default_value );
+               }
+
                // copy constructor
                VarOption( const VarOption &opt ) :
                      ActionOption<T,helpFormat,checkT>( opt ),_var( opt._var ) {}
@@ -211,27 +216,31 @@ namespace nanos {
          {
 
             private:
-               std::list<T> &_var;
+               std::list<T>   &_var;
+               char            _sep;
+
                // assignment operator
                const ListOption & operator= ( const ListOption &opt );
 
             public:
                //constructors
-               ListOption( const std::string &name, std::list<T> &ref ) :
-                     ActionOption<T,helpFormat,checkT>( name ),_var( ref ) {}
+               ListOption( const std::string &name, std::list<T> &ref, char sep = ',' ) :
+                     ActionOption<T,helpFormat,checkT>( name ), _var( ref ), _sep( sep ) {}
 
-               ListOption( const char *name, std::list<T> &ref ) :
-                     ActionOption<T,helpFormat,checkT>( name ),_var( ref ) {}
+               ListOption( const char *name, std::list<T> &ref, char sep = ',' ) :
+                     ActionOption<T,helpFormat,checkT>( name ), _var( ref ), _sep( sep ) {}
 
-               ListOption( std::list<T> &ref ) :
-                     ActionOption<T,helpFormat,checkT>(), _var( ref ) {}
+               ListOption( std::list<T> &ref, char sep = ',' ) :
+                     ActionOption<T,helpFormat,checkT>(), _var( ref ), _sep( sep ) {}
 
                // copy constructor
                ListOption( const ListOption &opt ) :
-                     ActionOption<T,helpFormat,checkT>( opt ),_var( opt._var ) {}
+                     ActionOption<T,helpFormat,checkT>( opt ), _var( opt._var ), _sep( opt._sep ) {}
 
                //destructor
                virtual ~ListOption() {}
+
+               virtual void parse ( const char* value );
 
                virtual void setValue ( const T &value );
 
@@ -298,11 +307,14 @@ namespace nanos {
 
          typedef class ListOption<std::string, StringHelpFormat>                StringVarList;
 
+         typedef class ListOption< unsigned int, PositiveHelpFormat, isPositive<unsigned int> >
+                                                                                UintVarList;
+
          typedef class VarOption<int,PositiveHelpFormat,isPositive<int> >       PositiveVar;
 
          typedef class VarOption<unsigned int,PositiveHelpFormat,isPositive<unsigned int> >
                                                                                 UintVar;
-         
+
          typedef class ActionOption<int,IntegerHelpFormat>                      IntegerAction;
 
          typedef class ActionOption<bool,BoolHelpFormat>                        BoolAction;
@@ -441,7 +453,7 @@ namespace nanos {
 
                // copy constructor
                PluginVar( const PluginVar &opt ) : MapVar<std::string>( opt ) {}
-               
+
                PluginVar & addOption ( const std::string & value );
          };
 
@@ -554,7 +566,7 @@ namespace nanos {
 
                /**< Section in which the ConfigOption is*/
                std::string _section;
-            
+
             public:
               /* \brief Constructor
                * \param name: Name that identifies the option.
@@ -620,7 +632,7 @@ namespace nanos {
                */
                virtual BaseConfigOption * clone () = 0;
          };
-         
+
          /*! \brief Class option used for most configurations.
           *  It does release the option member.
           */
@@ -629,18 +641,18 @@ namespace nanos {
             public:
                ConfigOption( const std::string &name, Option &option, const std::string &helpMessage, const std::string &section ) :
                   BaseConfigOption( name, option, helpMessage, section ) {}
-               
+
                ConfigOption( const std::string &name, const std::string& env, const std::string &arg, Option &option, const std::string &helpMessage, const std::string &section ) :
                   BaseConfigOption( name, env, arg, option, helpMessage, section ) {}
-               
+
                ConfigOption( const ConfigOption &co ) : BaseConfigOption( co ) {}
                ~ConfigOption () { delete &_option;  /*FIXME: mercurium tests complain this delete */ }
-               
+
                /* \brief cloner function
                */
                BaseConfigOption * clone ();
          };
-         
+
          /*! \brief Class used for aliases. As the base class, it does not
           *  delete the option object (because it will be freed when deleting
           *  the ConfigNormalOption object).
@@ -650,12 +662,12 @@ namespace nanos {
             public:
                ConfigAliasOption( const std::string &name, Option &option, const std::string &helpMessage, const std::string &section ) :
                   BaseConfigOption( name, option, helpMessage, section ) {}
-               
+
                ConfigAliasOption( const std::string &name, const std::string& env, const std::string &arg, Option &option, const std::string &helpMessage, const std::string &section ) :
                   BaseConfigOption( name, env, arg, option, helpMessage, section ) {}
-                  
+
                ~ConfigAliasOption () {}
-               
+
                /* \brief cloner function
                 */
                BaseConfigOption * clone ();
@@ -705,7 +717,7 @@ namespace nanos {
 
          /**< Stores ConfigOptions by name */
          typedef TR1::unordered_map<std::string, BaseConfigOption *> ConfigOptionMap;
-         
+
          /**< Arguments that have been processed */
          typedef TR1::unordered_map<std::string, bool> ConfigOrphansMap;
 
@@ -749,7 +761,7 @@ namespace nanos {
         /* \brief initializes the config object
          */
          void init();
-         
+
 
         /* \brief Sets the current section in which new ConfigOptions will be listed
          * \param sectionName name of the section to be set as current
@@ -786,11 +798,11 @@ namespace nanos {
         /* Returns the formatted help text for the nanox runtime library
          */
          static const std::string getNanosHelp();
-         
+
         /* \brief Returns a vector of arguments that were not processed.
          */
          static std::vector<std::string> getOrphanOptionsList();
-         
+
         /* \brief Returns a comma separated list of unprocessed arguments.
            \note The static options map will be deleted. This method is meant
            to be called just *once*.

@@ -23,6 +23,7 @@
 #include "smpthread_fwd.hpp"
 #include "smpdevice_decl.hpp"
 #include "processingelement_decl.hpp"
+#include "smp_ult.hpp"
 
 #include "config.hpp"
 
@@ -83,6 +84,14 @@ namespace ext {
          //virtual void* newGetAddressDependent( CopyData const &cd );
          void setNumFutureThreads( unsigned int nthreads );
          unsigned int getNumFutureThreads() const;
+
+         virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
+         virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
+         virtual bool inlineWorkDependent (WD &work);
+         virtual void switchTo( WD *work, SchedulerHelper *helper );
+         virtual void exitTo( WD *work, SchedulerHelper *helper );
+         virtual void outlineWorkDependent( WD &work ) { fatal( "SMPProcessor does not support outlineWorkDependent()" ); }
+         virtual void preOutlineWorkDependent( WD &work ) { fatal( "SMPProcessor does not support preOutlineWorkDependent()" ); }
    };
 
 } // namespace ext

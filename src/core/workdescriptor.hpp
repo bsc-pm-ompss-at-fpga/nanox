@@ -40,7 +40,7 @@ namespace nanos {
 
 inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t data_size, size_t data_align, void *wdata,
                                  size_t numCopies, CopyData *copies, nanos_translate_args_t translate_args, const char *description )
-                               : _id( sys.getWorkDescriptorId() ), _hostId(0), _components( 0 ), 
+                               : _id( sys.getWorkDescriptorId() ), _hostId(0), _components( 0 ),
                                  _componentsSyncCond( EqualConditionChecker<int>( &_components.override(), 0 ) ), _parent(NULL), _forcedParent(NULL),
                                  _data_size ( data_size ), _data_align( data_align ),  _data ( wdata ), _totalSize(0),
                                  _wdData ( NULL ), _scheduleData( NULL ),
@@ -52,12 +52,13 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
 #endif
                                  _numCopies( numCopies ), _copies( copies ), _paramsSize( 0 ),
                                  _versionGroupId( 0 ), _executionTime( 0.0 ), _estimatedExecTime( 0.0 ), _runTime( 0.0 ), _estimatedRunTime( 0.0 ),
-                                 _doSubmit(NULL), _doWait(), _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ), 
+                                 _doSubmit(NULL), _doWait(), _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ),
                                  _translateArgs( translate_args ),
                                  _priority( 0 ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
                                  _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL),
                                  _taskReductions(),
                                  _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL ), _callback(0), _arguments(0),
+                                 _submittedWDs( NULL ), _reachedTaskwait( false ), _schedPredecessorLocs(),
                                  _mcontrol( this, numCopies )
                                  {
                                     _flags.is_final = 0;
@@ -70,11 +71,14 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
                                           copies[i].setRemoteHost( false );
                                        }
                                     }
+                                    for (unsigned int __i=0; __i<8;__i+=1) {
+                                       _schedValues[__i]=-1;
+                                    }
                                  }
 
 inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, size_t data_align, void *wdata,
                                  size_t numCopies, CopyData *copies, nanos_translate_args_t translate_args, const char *description )
-                               : _id( sys.getWorkDescriptorId() ), _hostId( 0 ), _components( 0 ), 
+                               : _id( sys.getWorkDescriptorId() ), _hostId( 0 ), _components( 0 ),
                                  _componentsSyncCond( EqualConditionChecker<int>( &_components.override(), 0 ) ), _parent(NULL), _forcedParent(NULL),
                                  _data_size ( data_size ), _data_align ( data_align ), _data ( wdata ), _totalSize(0),
                                  _wdData ( NULL ), _scheduleData( NULL ),
@@ -90,7 +94,9 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                  _translateArgs( translate_args ),
                                  _priority( 0 ),  _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
                                  _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL), _taskReductions(),
-                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL ), _callback(0), _arguments(0), _mcontrol( this, numCopies )
+                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL ), _callback(0), _arguments(0),
+                                 _submittedWDs( NULL ), _reachedTaskwait( false ), _schedPredecessorLocs(),
+                                 _mcontrol( this, numCopies )
                                  {
                                      _devices = new DeviceData*[1];
                                      _devices[0] = device;
@@ -104,10 +110,13 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                           copies[i].setRemoteHost( false );
                                        }
                                     }
+                                    for (unsigned int __i=0; __i<8;__i+=1) {
+                                       _schedValues[__i]=-1;
+                                    }
                                  }
 
 inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **devs, CopyData * copies, void *data, const char *description )
-                               : _id( sys.getWorkDescriptorId() ), _hostId( 0 ), _components( 0 ), 
+                               : _id( sys.getWorkDescriptorId() ), _hostId( 0 ), _components( 0 ),
                                  _componentsSyncCond( EqualConditionChecker<int>(&_components.override(), 0 ) ), _parent(NULL), _forcedParent(wd._forcedParent),
                                  _data_size( wd._data_size ), _data_align( wd._data_align ), _data ( data ), _totalSize(0),
                                  _wdData ( NULL ), _scheduleData( NULL ),
@@ -125,7 +134,9 @@ inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **d
                                  _translateArgs( wd._translateArgs ),
                                  _priority( wd._priority ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
                                  _copiesNotInChunk( wd._copiesNotInChunk), _description(description), _instrumentationContextData(), _slicer(wd._slicer), _taskReductions(),
-                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL ), _callback(0), _arguments(0), _mcontrol( this, wd._numCopies )
+                                 _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( NULL ), _callback(0), _arguments(0),
+                                 _submittedWDs( NULL ), _reachedTaskwait( false ), _schedPredecessorLocs(),
+                                 _mcontrol( this, wd._numCopies )
                                  {
                                     if ( wd._parent != NULL ) wd._parent->addWork(*this);
                                     _flags.is_final = wd._flags.is_final;
@@ -135,8 +146,12 @@ inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **d
                                     _flags.is_implicit = wd._flags.is_implicit;
                                     _flags.is_recoverable = wd._flags.is_recoverable;
                                     _flags.is_invalid = false;
+                                    _flags.is_runtime_task = wd._flags.is_runtime_task;
 
                                     _mcontrol.preInit();
+                                    for (unsigned int __i=0; __i<8;__i+=1) {
+                                       _schedValues[__i]=-1;
+                                    }
                                  }
 
 inline WorkDescriptor::~WorkDescriptor()
@@ -146,10 +161,10 @@ inline WorkDescriptor::~WorkDescriptor()
 
     for ( unsigned char i = 0; i < _numDevices; i++ ) delete _devices[i];
 
-    //! Delete device vector 
+    //! Delete device vector
     if ( ( (void*)_devices < chunkLower) || ( (void *) _devices > chunkUpper ) ) {
        delete[] _devices;
-    } 
+    }
 
     //! Delete Dependence Domain
     delete _depsDomain;
@@ -158,7 +173,7 @@ inline WorkDescriptor::~WorkDescriptor()
     union { char* p; intptr_t i; } u = { (char*)_wdData };
     bool internalDataOwned = (u.i & 1);
     // Clear the own status if set
-    u.i &= ((~(intptr_t)0) << 1);
+    u.i &= ~(intptr_t)1;
 
     if (internalDataOwned
             && (( (void*)u.p < chunkLower) || ( (void *) u.p > chunkUpper ) ))
@@ -172,7 +187,6 @@ inline WorkDescriptor::~WorkDescriptor()
 inline DeviceData::work_fct DeviceData::getWorkFct() const { return _work; }
 inline const Device * DeviceData::getDevice () const { return _architecture; }
 inline bool DeviceData::isCompatible ( const Device &arch ) { return _architecture == &arch; }
-inline bool DeviceData::isCompatibleWithPE ( const ProcessingElement* pe) { return true; }
 
 /* WorkDescriptor inlined functions */
 inline bool WorkDescriptor::started ( void ) const { return (( _state != INIT ) && (_state != START)); }
@@ -271,7 +285,7 @@ inline void WorkDescriptor::setCudaStreamIdx( int idx ) { _cudaStreamIdx = idx; 
 inline int WorkDescriptor::getCudaStreamIdx() const { return _cudaStreamIdx; }
 #endif
 
-inline void WorkDescriptor::setInternalData ( void *data, bool ownedByWD ) { 
+inline void WorkDescriptor::setInternalData ( void *data, bool ownedByWD ) {
     union { void* p; intptr_t i; } u = { data };
     // Set the own status
     u.i |= int( ownedByWD );
@@ -279,30 +293,30 @@ inline void WorkDescriptor::setInternalData ( void *data, bool ownedByWD ) {
     _wdData = u.p;
 }
 
-inline void * WorkDescriptor::getInternalData () const { 
+inline void * WorkDescriptor::getInternalData () const {
     union { void* p; intptr_t i; } u = { _wdData };
 
     // Clear the own status if set
-    u.i &= ((~(intptr_t)0) << 1);
+    u.i &= ~(intptr_t)1;
 
     return u.p;
 }
 
-inline void WorkDescriptor::setSchedulerData ( ScheduleWDData * data, bool ownedByWD ) { 
+inline void WorkDescriptor::setSchedulerData ( ScheduleWDData * data, bool ownedByWD ) {
     fatal_cond( _scheduleData != NULL, "Trying to change the scheduler data of a WD that already has one" );
-    
+
     union { ScheduleWDData * p; intptr_t i; } u = { data };
     // Set the own status
     u.i |= int( ownedByWD );
-    
+
     _scheduleData = u.p;
 }
 
-inline ScheduleWDData * WorkDescriptor::getSchedulerData () const { 
+inline ScheduleWDData * WorkDescriptor::getSchedulerData () const {
     union {ScheduleWDData* p; intptr_t i; } u = { _scheduleData };
 
     // Clear the own status if set
-    u.i &= ((~(intptr_t)0) << 1);
+    u.i &= ~(intptr_t)1;
 
     return u.p;
 }
@@ -365,10 +379,14 @@ inline void WorkDescriptor::submitWithDependencies( WorkDescriptor &wd, size_t n
 
    // Defining call back (cb)
    SchedulePolicySuccessorFunctor cb( *sys.getDefaultSchedulePolicy() );
-   
+
    initCommutativeAccesses( wd, numDeps, deps );
-   
+
    _depsDomain->submitDependableObject( *(wd._doSubmit), numDeps, deps, &cb );
+   if ( sys._preSchedule ) {
+      sys._slots[wd._doSubmit->getNum()].insert(&wd);
+   }
+
 }
 
 inline void WorkDescriptor::waitOn( size_t numDeps, DataAccess* deps )
@@ -387,7 +405,7 @@ class DOIsSchedulable : public DependableObjectPredicate
       ~DOIsSchedulable() {}
 
       bool operator() ( DependableObject &obj )
-      {       
+      {
          WD *wd = (WD *)obj.getRelatedObject();
          // FIXME: The started condition here ensures that doWait objects are not released as
          // they do not work properly if there is no dependenceSatisfied called before
@@ -455,7 +473,7 @@ inline void WorkDescriptor::releaseCommutativeAccesses()
    const size_t n = _commutativeOwners->size();
    for ( size_t i = 0; i < n; i++ )
       *(*_commutativeOwners)[i] = NULL;
-} 
+}
 
 inline void WorkDescriptor::setImplicit( bool b )
 {
@@ -469,7 +487,14 @@ inline void WorkDescriptor::setImplicit( bool b )
    }
 }
 
-inline bool WorkDescriptor::isImplicit( void ) { return _flags.is_implicit; } 
+inline bool WorkDescriptor::isImplicit( void ) { return _flags.is_implicit; }
+
+inline void WorkDescriptor::setRuntimeTask( bool b )
+{
+  _flags.is_runtime_task = b;
+}
+
+inline bool WorkDescriptor::isRuntimeTask( void ) const { return _flags.is_runtime_task; }
 
 inline const char * WorkDescriptor::getDescription ( void ) const  { return _description; }
 
@@ -571,4 +596,3 @@ inline void WorkDescriptor::setArguments ( void *a ) { _arguments = a; }
 } // namespace nanos
 
 #endif
-

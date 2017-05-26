@@ -39,8 +39,8 @@ namespace nanos {
 inline bool Scheduler::checkBasicConstraints ( WD &wd, BaseThread const &thread )
 {
    unsigned int this_node = thread.runningOn()->getMemorySpaceId() != 0 ? sys.getSeparateMemory( thread.runningOn()->getMemorySpaceId() ).getNodeNumber() : 0;
-   unsigned int tied_node = wd.isTiedLocation() ? ( wd.isTiedToLocation() != 0 ? sys.getSeparateMemory( wd.isTiedToLocation() ).getNodeNumber() : 0 ) : (unsigned int) -1; 
-   bool result = wd.canRunIn(*thread.runningOn()) &&
+   unsigned int tied_node = wd.isTiedLocation() ? ( wd.isTiedToLocation() != 0 ? sys.getSeparateMemory( wd.isTiedToLocation() ).getNodeNumber() : 0 ) : (unsigned int) -1;
+   bool result = thread.runningOn()->canRun( wd ) &&
       ( !wd.isTied() || wd.isTiedTo() == &thread ) &&
       ( !wd.isTiedLocation() || tied_node == this_node ) &&
       wd.tryAcquireCommutativeAccesses() &&
@@ -72,6 +72,11 @@ inline unsigned int SchedulerConf::getNumChecks ( void ) const
 inline unsigned int SchedulerConf::getNumStealAfterSpins ( void ) const
 {
    return _numStealAfterSpins;
+}
+
+inline bool SchedulerConf::getHoldTasksEnabled ( void ) const
+{
+   return _holdTasks;
 }
 
 inline const std::string & SchedulePolicy::getName () const
@@ -116,19 +121,19 @@ inline WD * SchedulePolicy::atWakeUp      ( BaseThread *thread, WD &wd )
       }
       else
          prefetchThread = wd.isTiedTo();
-      
+
       // Returning the wd here makes the application to hang
       // Use prefetching instead.
       if ( prefetchThread != NULL ) {
          prefetchThread->addNextWD( &wd );
-         
+
          return NULL;
       }
    }
-   
+
    // otherwise, as usual
    queue( thread, wd );
-   
+
    return NULL;
 }
 
@@ -160,9 +165,11 @@ inline void SchedulePolicy::queue ( BaseThread ** threads, WD ** wds, size_t num
    }
 }
 
-inline int SchedulePolicy::getNumConcurrentWDs()
+inline bool SchedulePolicy::testDequeue()
 {
-   return sys.getReadyNum();
+   // If a Scheduler does not define this method, we assume
+   // that a WD can be pulled if the _readyTasks value is positive
+   return sys.getReadyNum() > 0;
 }
 
 inline void SchedulePolicySuccessorFunctor::operator() ( DependableObject *predecessor, DependableObject *successor )
@@ -173,4 +180,3 @@ inline void SchedulePolicySuccessorFunctor::operator() ( DependableObject *prede
 } // namespace nanos
 
 #endif
-

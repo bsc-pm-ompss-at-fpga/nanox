@@ -58,14 +58,14 @@ void WorkDescriptor::initWithPE ( ProcessingElement &pe )
 
    /* Initializing instrumentation context */
    NANOS_INSTRUMENT( sys.getInstrumentation()->wdCreate( this ) );
-  
+
    //message("init wd " << getId() );
    //if ( getNewDirectory() == NULL )
    //   initNewDirectory();
-   //getNewDirectory()->setParent( ( getParent() != NULL ) ? getParent()->getNewDirectory() : NULL );   
+   //getNewDirectory()->setParent( ( getParent() != NULL ) ? getParent()->getNewDirectory() : NULL );
 
    if ( getNumCopies() > 0 ) {
-      
+
       //CopyData *copies = getCopies();
       //for ( unsigned int i = 0; i < getNumCopies(); i++ ) {
       //   CopyData & cd = copies[i];
@@ -78,7 +78,7 @@ void WorkDescriptor::initWithPE ( ProcessingElement &pe )
       //      //  getNewDirectory()->registerAccess( reg, cd.isInput(), cd.isOutput(), pe->getMemorySpaceId() );
       //   }
       //}
-      
+
       _notifyThread = pe.getFirstThread();
       pe.copyDataIn( *this );
       //this->notifyCopy();
@@ -112,7 +112,7 @@ void WorkDescriptor::start (ULTFlag isUserLevelThread, WorkDescriptor *previous)
 
    // Initializing devices
    _devices[_activeDeviceIdx]->lazyInit( *this, isUserLevelThread, previous );
-   
+
    ensure ( _activeDeviceIdx != _numDevices, "This WD has no active device. If you are using 'implements' feature, please use versioning scheduler." );
 
    // Waiting for copies
@@ -226,39 +226,22 @@ DeviceData & WorkDescriptor::activateDevice ( unsigned int deviceIdx )
    return *_devices[_activeDeviceIdx];
 }
 
-bool WorkDescriptor::canRunIn( const Device &device , const ProcessingElement * pe) const
-//bool WorkDescriptor::canRunIn( const Device &device ) const
+bool WorkDescriptor::canRunIn( const Device &device ) const
 {
    if ( _activeDeviceIdx != _numDevices ) return _devices[_activeDeviceIdx]->isCompatible( device );
-
    unsigned int i;
    for ( i = 0; i < _numDevices; i++ ) {
        if (_devices[i]->isCompatible( device )){
             return true;
        }
    }
-
    return false;
 }
 
 bool WorkDescriptor::canRunIn ( const ProcessingElement &pe ) const
 {
-   bool result = false;
-   if ( started() && !pe.supportsUserLevelThreads() ) return false;
-   result = canRunIn( *( pe.getDeviceTypes()[0] ), &pe ) ;
-
-//   std::vector<const Device *> const &pe_archs = pe.getDeviceTypes();
-//   if ( pe.getActiveDevice() == pe_archs.size() ) {
-//      // all active 
-//      for ( std::vector<const Device *>::const_iterator it = pe_archs.begin();
-//            it != pe_archs.end() && !result; it++ ) {
-//         result = canRunIn( *(*it) ) ;
-//      }
-//   } else {
-//      result = canRunIn( *pe_archs[pe.getActiveDevice()] );
-//   }
-
-   return result;   
+   warning("WorkDescriptor::canRunIn(ProcessingElement) is deprecated. Use PE::canRun(WD) instead.");
+   return pe.canRun( *this );
 }
 
 void WorkDescriptor::submit( bool force_queue )
@@ -270,7 +253,7 @@ void WorkDescriptor::submit( bool force_queue )
    } else {
       Scheduler::submit(*this, force_queue );
    }
-} 
+}
 
 void WorkDescriptor::submitOutputCopies ()
 {
@@ -283,7 +266,7 @@ void WorkDescriptor::waitOutputCopies ()
 {
    if ( getNumCopies() > 0 ) {
       while ( !_mcontrol.isOutputDataReady( *this ) ) {
-         myThread->idle();
+         myThread->processTransfers();
       }
    }
 }
@@ -333,7 +316,7 @@ bool WorkDescriptor::isOutputDataReady()
 void WorkDescriptor::done ()
 {
    // Releasing commutative accesses
-   releaseCommutativeAccesses(); 
+   releaseCommutativeAccesses();
 
    // Executing programming model specific finalization
    sys.getPMInterface().wdFinished( *this );
@@ -403,7 +386,7 @@ void WorkDescriptor::predecessorFinished( WorkDescriptor *predecessorWd )
    //if (predecessorWd != NULL) predecessorWd->listed();
 
    //*(myThread->_file) << "I'm " << getId() << " : " << getDescription() << " my predecessor " << predecessorWd->getId() << " : " << predecessorWd->getDescription() << " has finished." << std::endl;
-   _mcontrol.getInfoFromPredecessor( predecessorWd->_mcontrol ); 
+   _mcontrol.getInfoFromPredecessor( predecessorWd->_mcontrol );
 }
 
 void WorkDescriptor::wgdone()
@@ -499,7 +482,7 @@ bool WorkDescriptor::tryAcquireCommutativeAccesses()
       return false;
    }
    return true;
-} 
+}
 
 void WorkDescriptor::setCopies(size_t numCopies, CopyData * copies)
 {
@@ -533,21 +516,23 @@ void WorkDescriptor::setCopies(size_t numCopies, CopyData * copies)
 
 void WorkDescriptor::waitCompletion( bool avoidFlush )
 {
-   _depsDomain->finalizeAllReductions();
-   // Ask for more resources once we have finished creating tasks
-   if ( sys.getPMInterface().isMalleable() ) {
-      sys.getThreadManager()->returnClaimedCpus();
-      sys.getThreadManager()->acquireResourcesIfNeeded();
+   sys.preSchedule();
+   _reachedTaskwait = true;
+   if ( _submittedWDs != NULL && _submittedWDs->size() > 0 ) {
+      Scheduler::_submit( &(*_submittedWDs)[0], _submittedWDs->size() );
+      delete _submittedWDs;
+      _submittedWDs = NULL;
    }
+   _depsDomain->finalizeAllReductions();
    _componentsSyncCond.waitConditionAndSignalers();
    if ( !avoidFlush ) {
       _mcontrol.synchronize();
    }
+   _reachedTaskwait = false;
 
    removeAllTaskReductions();
 
    _depsDomain->clearDependenciesDomain();
-
 }
 
 void WorkDescriptor::exitWork ( WorkDescriptor &work )
@@ -573,9 +558,6 @@ void WorkDescriptor::registerTaskReduction( void *p_orig, size_t p_size, size_t 
 
    if ( it == _taskReductions.rend() ) {
        //! We must register p_orig as a new reduction
-       //No padding now as this leads to incorrect number of elements for certain cases. Fix: compute total number of elements before padding and pass it to the construct below
-       //NANOS_ARCHITECTURE_PADDING_SIZE(p_size);
-       //NANOS_ARCHITECTURE_PADDING_SIZE(p_el_size);
        _taskReductions.push_back(
                new TaskReduction(
             		   p_orig,
@@ -583,7 +565,7 @@ void WorkDescriptor::registerTaskReduction( void *p_orig, size_t p_size, size_t 
 					   p_reducer,
 					   p_size,
 					   p_el_size,
-					   myThread->getTeam()->getFinalSize(),
+					   sys.getThreadManager()->getMaxThreads(),
 					   myThread->getCurrentWD()->getDepth(),
 					   sys._lazyPrivatizationEnabled
 					   )
@@ -602,8 +584,6 @@ void WorkDescriptor::registerFortranArrayTaskReduction( void *p_orig, void *p_de
 
    if ( it == _taskReductions.rend() ) {
       //! We must register p_orig as a new reduction
-      NANOS_ARCHITECTURE_PADDING_SIZE(array_descriptor_size);
-
      _taskReductions.push_back(
             new TaskReduction(
             		p_orig,
@@ -612,7 +592,7 @@ void WorkDescriptor::registerFortranArrayTaskReduction( void *p_orig, void *p_de
 					p_reducer,
 					p_reducer_orig_var,
 					array_descriptor_size,
-					myThread->getTeam()->getFinalSize(),
+					sys.getThreadManager()->getMaxThreads(),
 					myThread->getCurrentWD()->getDepth(),
 					sys._lazyPrivatizationEnabled
 					)
@@ -628,65 +608,27 @@ void * WorkDescriptor::getTaskReductionThreadStorage( void *p_addr, size_t id )
       if((*it)->has( p_addr )) break;
    }
 
-   if ( it != _taskReductions.rend() ) {
-	  void * ptr = (*it)->get(id);
-
-      if ( ptr != NULL ) {
-    	  if((*it)->isInitialized(id))
-    	  {
-    		  //std::cout << "1:" << ptr << ",WD:"<<this <<", "<< _taskReductions[0]->_original<< "," << _taskReductions[0]->_original << "," << _taskReductions[0]  << std::endl;
-			  return ptr;
-      	  }
-      	  else
-      	  {
-      		//std::cout << "2:" << ptr << ",WD:"<<this<< ", "<< _taskReductions[0]->_original << "," << _taskReductions[0]->_original << "," << _taskReductions[0]  << std::endl;
-      		return (*it)->initialize(id);
-      	  }
-      }else
-      {
-    	  //allocate memory
-    	  //std::cout << "3:" << ptr << ",WD:"<<this<<", "<< _taskReductions[0]->_original << "," << _taskReductions[0]->_original << "," << _taskReductions[0]  << std::endl;
-		  (*it)->allocate(id);
-		  return (*it)->initialize(id);
-      }
-   }
-
-   if(isFinal()) return NULL;
-  // std::cout << "4:" << p_addr << ",WD:"<<this<< ", "<< _taskReductions[0]->_original << "," << _taskReductions[0]->_original << "," << _taskReductions[0]  << std::endl;
-
-   //this should never be reached
-   return NULL;
-}
-
-bool WorkDescriptor::removeTaskReduction( void *p_dep, bool del )
-{
-   // Check if we have registered a reduction with this address
-   task_reduction_vector_t::reverse_iterator it;
-   for ( it = _taskReductions.rbegin(); it != _taskReductions.rend(); it++) {
-      if ( (*it)->has( p_dep ) ) break;
-   }
+   // If 'p_addr' is not registered as a reduction we should return NULL
+   void *storage = NULL;
 
    if ( it != _taskReductions.rend() ) {
-      if ( del ) {
-         delete (*it);
-         // Reverse iterators cannot be erased directly, we need to transform them
-         // to common iterators
-         _taskReductions.erase( --(it.base()) );
-      }
-      return true;
+      storage = (*it)->get(id);
+
+      if ( storage == NULL )
+         storage = (*it)->allocate(id);
+
+      if ( !(*it)->isInitialized(id) )
+         (*it)->initialize(id);
    }
-   return false;
+   return storage;
 }
 
 void WorkDescriptor::removeAllTaskReductions( void )
 {
-   bool b;
-   // Check if we have registered a reduction with this address
    task_reduction_vector_t::reverse_iterator it;
    for ( it = _taskReductions.rbegin(); it != _taskReductions.rend(); it++) {
-      if ( _parent )  b = _parent->removeTaskReduction( (*it)->get(0), false ) ; 
-      else b = false;
-      if ( !b) {
+      // Am I the owner of this reduction?
+      if (_depth == (*it)->getDepth()) {
          delete (*it);
          _taskReductions.erase( --(it.base()) );
       }
@@ -737,11 +679,11 @@ int WorkDescriptor::getConcurrencyLevel( std::map<WD**, WD*> &comm_accesses ) co
    if ( _slicer != NULL ) {
       nanos_loop_info_t *loop_info;
       loop_info = ( nanos_loop_info_t* ) _data;
-      int _chunk = loop_info->chunk;
-      int _lower = loop_info->lower;
-      int _upper = loop_info->upper;
-      int _step  = loop_info->step;
-      int _niters = (((_upper - _lower) / _step ) + 1 );
+      int64_t _chunk = loop_info->chunk;
+      int64_t _lower = loop_info->lower;
+      int64_t _upper = loop_info->upper;
+      int64_t _step  = loop_info->step;
+      int64_t _niters = (((_upper - _lower) / _step ) + 1 );
 
       if ( _chunk == 0 ) {
          num_wds = 1;
@@ -791,4 +733,29 @@ int WorkDescriptor::getConcurrencyLevel( std::map<WD**, WD*> &comm_accesses ) co
    }
 
    return num_wds;
+}
+
+void WorkDescriptor::addPresubmittedWDs( unsigned int numWDs, WD **wds ) {
+   bool delay = false;
+   if ( wds[0]->_parent == this ) {
+      /* Im the parent of these WDs */
+      delay = !_reachedTaskwait;
+   } else if ( _parent != NULL && wds[0]->_parent == _parent ) {
+      /* Im a sibling */
+      delay = !(_parent->_reachedTaskwait);
+
+   }
+   if ( delay ) {
+      if ( _submittedWDs == NULL ) {
+         _submittedWDs = NEW std::vector< WD * >( &wds[0], &wds[numWDs] );
+      } else {
+         std::size_t orig_size = _submittedWDs->size();
+         _submittedWDs->resize( orig_size + numWDs );
+         for ( std::size_t idx = orig_size; idx < orig_size + numWDs; idx += 1 ) {
+            (*_submittedWDs)[idx] = wds[idx - orig_size];
+         }
+      }
+   } else {
+      Scheduler::_submit( wds, numWDs );
+   }
 }

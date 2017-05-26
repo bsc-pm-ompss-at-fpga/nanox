@@ -41,7 +41,7 @@ void SPUThread::bootstrap ()
       perror ("Failed loading program");
       exit (1);
     }
-    
+
     if (spe_context_run(ctx, &entry, 0, 0, (void*)0, NULL) < 0 ) {
       perror ("Failed running context");
       exit (1);
@@ -59,18 +59,6 @@ void SPUThread::join ()
 }
 
 void SPUThread::runDependent ()
-{
-}
-
-void SPUThread::inlineWorkDependent( WD &work )
-{
-}
-
-void SPUThread::switchTo( WD *work )
-{
-}
-
-void SPUThread::exitTo( WD *work )
 {
 }
 

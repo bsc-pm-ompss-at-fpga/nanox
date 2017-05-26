@@ -27,12 +27,14 @@
 
 #include "schedule_fwd.hpp"
 #include "threadteam_fwd.hpp"
+#include "schedulerhelper_decl.hpp"
 
 #include "workdescriptor_decl.hpp"
 #include "processingelement.hpp"
 #include "basethread_decl.hpp"
 #include "wddeque.hpp"
 #include "smpthread.hpp"
+#include <stdio.h>
 
 #include "system.hpp"
 
@@ -42,7 +44,7 @@ namespace nanos {
    {
       delete _schedData;
    }
-   
+
    inline bool TeamData::isStarring ( void ) const { return _star; }
 
    inline void TeamData::setStar ( bool v ) { _star = v; }
@@ -57,7 +59,7 @@ namespace nanos {
 
       *b = false;
 
-      // If current WorkDescriptor in not implicit, 
+      // If current WorkDescriptor in not implicit,
       if ( thread->getCurrentWD()->isImplicit() == false ) {
          if ( _team == NULL ) fatal("Asking for team WorkSharing with no associated team.");
          next = NEW nanos_ws_desc_t();
@@ -120,6 +122,7 @@ namespace nanos {
                char tmpbuf[64];
                sprintf(tmpbuf, "thd_out.%04d.%04d.log", sys.getNetwork()->getNodeNum(), _id );
                _file = NEW std::ofstream(tmpbuf);
+               *_file << "This is thread " << _id << std::endl;
             }
          } else {
             _file = &std::cerr;
@@ -135,11 +138,13 @@ namespace nanos {
 
    inline void BaseThread::joined ( void ) { _status.has_joined = true; }
 
+   inline bool BaseThread::hasJoined ( void ) const { return static_cast<bool>(_status.has_joined); }
+
    // atomic access
    inline void BaseThread::lock () { _mlock++; }
- 
+
    inline void BaseThread::unlock () { _mlock--; }
- 
+
    inline void BaseThread::stop() { _status.must_stop = true; }
 
    inline void BaseThread::wakeup() { _status.must_sleep = false; }
@@ -153,7 +158,7 @@ namespace nanos {
       _status.is_paused = true;
       sys.pausedThread();
    }
-   
+
    inline void BaseThread::unpause ()
    {
       // If the thread was already unpaused, do nothing
@@ -163,19 +168,17 @@ namespace nanos {
       _status.is_paused = false;
       sys.unpausedThread();
    }
- 
-   inline void BaseThread::processTransfers () { this->idle(); }
 
    // set/get methods
    inline void BaseThread::setHeldWD ( WD *wd ) { _heldWD = wd; }
    inline WD * BaseThread::getHeldWD () const { return _heldWD; }
 
    inline void BaseThread::setCurrentWD ( WD &current ) { _currentWD = &current; }
- 
+
    inline WD * BaseThread::getCurrentWD () const { return _currentWD; }
- 
+
    inline WD & BaseThread::getThreadWD () const { return _threadWD; }
- 
+
    inline int BaseThread::getMaxPrefetch () const { return ( int ) _maxPrefetch; }
 
    inline void BaseThread::setMaxPrefetch ( int max ) { _maxPrefetch = (unsigned short) max; }
@@ -190,18 +193,18 @@ namespace nanos {
 
    // team related methods
    inline void BaseThread::reserve() { _status.has_team = true; }
- 
+
    inline void BaseThread::enterTeam( TeamData *data )
    {
       if ( data != NULL ) _teamData = data;
       else _teamData = _nextTeamData;
       _status.has_team = true;
    }
- 
+
    inline bool BaseThread::hasTeam() const { return _status.has_team; }
 
    inline ThreadTeam * BaseThread::getTeam() const { return _teamData ? _teamData->getTeam() : NULL; }
- 
+
    inline TeamData * BaseThread::getTeamData() const { return _teamData; }
 
    inline void BaseThread::setNextTeamData( TeamData * td) { _nextTeamData = td; }
@@ -213,12 +216,12 @@ namespace nanos {
       if ( _teamData ) return _teamData->getTeamWorkSharingDescriptor ( this,  b );
       else return NULL;
    }
- 
-   //! Returns the id of the thread inside its current team 
+
+   //! Returns the id of the thread inside its current team
    inline int BaseThread::getTeamId() const { return _teamData->getId(); }
- 
+
    inline bool BaseThread::isStarted () const { return _status.has_started; }
- 
+
    inline bool BaseThread::isRunning () const { return _status.has_started && !_status.must_stop; }
 
    inline bool BaseThread::isSleeping () const { return _status.must_sleep && !_status.must_stop; }
@@ -229,7 +232,7 @@ namespace nanos {
 
    inline void BaseThread::disableGettingWork () { _status.can_get_work = false; }
 
-   inline bool BaseThread::isTeamCreator () const { return _teamData->isCreator(); } 
+   inline bool BaseThread::isTeamCreator () const { return _teamData->isCreator(); }
 
    inline void BaseThread::wait ( void ) { _status.is_waiting = true; }
 
@@ -242,13 +245,13 @@ namespace nanos {
    inline bool BaseThread::isLeavingTeam () const { return _status.must_leave_team; }
 
    inline ProcessingElement * BaseThread::runningOn() const { return _pe; }
-   
+
    inline void BaseThread::setRunningOn(ProcessingElement* element) { _pe=element; }
- 
+
    inline int BaseThread::getId() const { return _id; }
- 
+
    //inline int BaseThread::getCpuId() const { return _pe->getId(); }
- 
+
    inline bool BaseThread::isStarring ( const ThreadTeam *t ) const
    {
       if ( _teamData && t == _teamData->getTeam() ) return _teamData->isStarring();
@@ -261,25 +264,25 @@ namespace nanos {
    inline Allocator & BaseThread::getAllocator() { return _allocator; }
 
    inline void BaseThread::rename ( const char *name ) { _name = name; }
- 
+
    inline const std::string & BaseThread::getName ( void ) const { return _name; }
- 
-   inline const std::string & BaseThread::getDescription ( void ) 
+
+   inline const std::string & BaseThread::getDescription ( void )
    {
      if ( _description.empty() ) {
- 
+
         /* description name */
         _description = getName();
         _description.append("-");
- 
+
         /* adding device type */
         _description.append( /*_pe->getDeviceType()->getName()*/"" );
         _description.append("-");
- 
+
         /* adding global id */
         _description.append( toString<int>(getId()) );
      }
- 
+
      return _description;
    }
 
@@ -300,6 +303,49 @@ namespace nanos {
    inline ThreadTeam* BaseThread::getNextTeam() const { return _nextTeam; }
 
    inline void BaseThread::setNextTeam( ThreadTeam *team ) { _nextTeam = team; }
+
+
+   inline void BaseThread::switchHelperDependent( WD* oldWD, WD* newWD, void *arg )
+   {
+      warning( "BaseThread::switchHelperDependent is deprecated:\tNew interface is PE::switchHelperDependent" );
+      runningOn()->switchHelperDependent( oldWD, newWD, arg );
+   }
+
+   inline void BaseThread::exitHelperDependent( WD* oldWD, WD* newWD, void *arg )
+   {
+      warning( "BaseThread::exitHelperDependent is deprecated:\tNew interface is PE::exitHelperDependent" );
+      runningOn()->exitHelperDependent( oldWD, newWD, arg );
+   }
+
+   inline bool BaseThread::inlineWorkDependent (WD &work)
+   {
+      warning( "BaseThread::inlineWorkDependent is deprecated:\tNew interface is PE::inlineWorkDependent" );
+      return runningOn()->inlineWorkDependent( work );
+   }
+
+   inline void BaseThread::switchTo( WD *work, SchedulerHelper *helper )
+   {
+      warning( "BaseThread::switchTo is deprecated:\tNew interface is PE::switchTo" );
+      runningOn()->switchTo( work, helper );
+   }
+
+   inline void BaseThread::exitTo( WD *work, SchedulerHelper *helper )
+   {
+      warning( "BaseThread::switchTo is deprecated:\tNew interface is PE::switchTo" );
+      runningOn()->exitTo( work, helper );
+   }
+
+   inline void BaseThread::outlineWorkDependent (WD &work)
+   {
+      warning( "BaseThread::outlineWorkDependent is deprecated:\tNew interface is PE::outlineWorkDependent" );
+      runningOn()->outlineWorkDependent( work );
+   }
+
+   inline void BaseThread::preOutlineWorkDependent (WD &work)
+   {
+      warning( "BaseThread::preOutlineWorkDependent is deprecated:\tNew interface is PE::preOutlineWorkDependent" );
+      runningOn()->preOutlineWorkDependent( work );
+   }
 
 } // namespace nanos
 

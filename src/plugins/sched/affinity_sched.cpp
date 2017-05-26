@@ -25,7 +25,7 @@
 #include "memtracker.hpp"
 #include "clusterthread_decl.hpp"
 #include "regioncache.hpp"
-#include "newregiondirectory.hpp"
+#include "regiondirectory.hpp"
 #include "smpdd.hpp"
 #include "regiondict.hpp"
 #include "memcachecopy.hpp"
@@ -34,6 +34,7 @@
 #define PUSH_BACK_TO_READY_QUEUE( idx, wd ) \
    do {                                     \
       if ( !_useQueueSets ) {               \
+         /* *myThread->_file << "Push wd " << (wd)->getId() << " to tdata._readyQueues " << idx << std::endl; */\
          tdata._readyQueues[ idx ].push_back( wd );\
       } else {\
          unsigned int num = tdata._pushCounter[ idx ]++ % tdata._thdsPerQueue[ idx ];\
@@ -178,7 +179,6 @@ namespace nanos {
          }
 
          void _getWithWD( WD *wd, BaseThread *thread ) {
-            NANOS_INSTRUMENT(static nanos_event_key_t ikey = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("debug");)
             memory_space_id_t mem_id = thread->runningOn()->getMemorySpaceId();
             //*myThread->_file << "computing WDs with base wd " << wd->getId() << " has numCopies " << wd->getNumCopies() << std::endl;
             //std::ostream &o = *thread->_file;
@@ -186,7 +186,6 @@ namespace nanos {
                int count=0;
                std::map< WD *, unsigned int > wd_count;
                std::map< GlobalRegionDictionary *, std::set< reg_t > > wd_regions;
-            NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 137 );)
                for ( unsigned int idx = 0; idx < wd->getNumCopies(); idx += 1 ) {
                   global_reg_t allocated_reg;
                   sys.getSeparateMemory(mem_id).getCache().getAllocatableRegion(wd->_mcontrol._memCacheCopies[idx]._reg, allocated_reg);
@@ -236,9 +235,6 @@ namespace nanos {
                      }
                   }
                }
-               NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 0 );)
-               NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 9000000 + count );)
-               NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( ikey, 0 );)
             }
          }
 
@@ -249,8 +245,6 @@ namespace nanos {
                {
                   if ( _invSet.empty() ) {
                      //std::ostream &o = *thread->_file;
-                     NANOS_INSTRUMENT(static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("debug");)
-                     NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 134 );)
                      this->_getWithWD( selected_wd, thread );
                      for ( _wd_set_t::const_iterator invIt = _invSet.begin(); invIt != _invSet.end(); invIt++ ) {
                         //this->_prepareToPush( thread, *invIt );
@@ -260,7 +254,6 @@ namespace nanos {
                      _invSet.insert(selected_wd);
                      //this->_prepareToPush( thread, selected_wd );
                      this->_remove(selected_wd);
-                     NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 0 );)
                   }
                   last_selected_wd = selected_wd;
                   selected_wd = NULL;
@@ -272,7 +265,7 @@ namespace nanos {
          }
 
          void insert( WD *wd ) {
-            while ( !_lock.tryAcquire() ) { myThread->idle(); }
+            while ( !_lock.tryAcquire() ) { myThread->processTransfers(); }
             this->_insert(wd);
             _lock.release();
          }
@@ -300,7 +293,6 @@ namespace nanos {
          }
 
          WD *fetch( BaseThread *thread ) {
-            NANOS_INSTRUMENT(static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("debug");)
             //std::ostream &o = *myThread->_file;
             memory_space_id_t id = thread->runningOn()->getMemorySpaceId();
             //o << "fetch for " << id << std::endl;
@@ -309,7 +301,6 @@ namespace nanos {
             if ( _topWDsQueue.empty() ) {
                if ( _lock.tryAcquire() ) {
                   //std::map<GlobalRegionDictionary *, std::set<reg_t> > const &map = sys.getSeparateMemory(id).getCache().getAllocatedRegionMap();
-                  //NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 131 );)
                   while ( !_preQueue.empty() ) {
                      WD *preWD = _preQueue.pop_front( thread );
                      if ( preWD != NULL ) {
@@ -318,7 +309,6 @@ namespace nanos {
                         break;
                      }
                   }
-                  //NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 );)
                   _tryComputeNextSet( thread );
 
                   // *myThread->_file << "topWDs queues: " << _topWDsQueue.size() << " invSet: " << _invSet.size() << std::endl;
@@ -326,7 +316,6 @@ namespace nanos {
                      //if ( _nextComputed.cswap( 1, 0 ) ) 
                      if ( _nextComputedLock.tryAcquire() ) 
                      {
-                        NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 132 );)
                         //o << "insert from invSet: { ";
                         for ( _wd_set_t::const_iterator it = _invSet.begin(); it != _invSet.end(); it++ ) {
                            WD *this_wd = *it;
@@ -338,21 +327,18 @@ namespace nanos {
                         }
                         //o << "}" << std::endl;
                         _invSet.clear();
-                        NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 );)
                         //*myThread->_file<<"done process inv set" << std::endl;
                         _nextComputedLock.release();
                      }
                   }
 
                   if ( _topWDsQueue.empty() && sys.getSeparateMemory(id).getCache().getCurrentAllocations() == 0 ) {
-            NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 146 );)
                _scan(thread);
-            NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 );)
                   }
                   top_wd = _topWDsQueue.pop_front( thread );
                   _lock.release();
                } else {
-                  myThread->idle();
+                  myThread->processTransfers();
                }
                if ( top_wd == NULL ) {
                   if ( _lock.tryAcquire() ) {
@@ -377,7 +363,6 @@ namespace nanos {
          }
 
          void _scan( BaseThread *thread ) {
-            NANOS_INSTRUMENT(static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("debug");)
             memory_space_id_t id = thread->runningOn()->getMemorySpaceId();
             std::map<GlobalRegionDictionary *, std::set<reg_t> > const map = sys.getSeparateMemory(id).getCache().getAllocatedRegionMap();
             int inserted_wds = 0;
@@ -391,7 +376,6 @@ namespace nanos {
                   it != map.end(); it++ ) {
                _reg_map_t &reg_map = _wdMap[ it->first ];
                //it->first->lockContainer();
-               NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 133 );)
                //o << "\tobject " << it->first << " has regs: " <<  it->second.size() << std::endl;
                for ( std::set<reg_t>::iterator rit = it->second.begin(); rit != it->second.end(); rit++ ) {
                   //o << "\t\t"; it->first->printRegion(o, *rit ); o << std::endl;
@@ -418,9 +402,7 @@ namespace nanos {
                               this->_remove(wd);
                               //_wdCount -= 1;
                               //wd_set.erase(this_it);
-            //NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 133 );)
                               _topWDsQueue.push_back(wd);
-            //NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 );)
                               inserted_wds += 1;
                            } else {
                               unsigned int current_count = wd_count[ wd ] + 1;
@@ -429,9 +411,7 @@ namespace nanos {
             //*myThread->_file << myThread->getId() << " remove (from scan(2)) wd " << wd->getId() << std::endl;
                                  this->_remove(wd);
                                  wd_count.erase( wd );
-            //NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 133 );)
                                  _topWDsQueue.push_back(wd);
-            //NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 );)
                                  inserted_wds += 1;
                                  //_topWDs.erase( wd );
                               } else {
@@ -448,12 +428,8 @@ namespace nanos {
                   }
                }
                //it->first->releaseContainer();
-            NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 );)
             }
-            NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 1000000 + inserted_wds );)
-            NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 );)
             if ( selected_wd == NULL ) {
-               NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 140 );)
                // if ( _topWDs.size() > 0 ) {
                //    selected_wd = *_topWDs.begin();
                // } else
@@ -473,13 +449,12 @@ namespace nanos {
                   selected_wd = this->_getRandomWD();
                   //o << "computed selected_wd w/random, wd "<< (selected_wd!=NULL ? selected_wd->getId() : 0) << std::endl;
                }
-               NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 );)
             }
          }
 
          void remove( WD *wd ) {
             while ( !_lock.tryAcquire() ) {
-               myThread->idle();
+               myThread->processTransfers();
             }
             //*myThread->_file << myThread->getId() << " remove (from remove) wd " << wd->getId() << std::endl;
             this->_remove(wd);
@@ -508,16 +483,11 @@ namespace nanos {
          }
 
          void prefetch( BaseThread *thread, WD &wd ) {
-            NANOS_INSTRUMENT(static nanos_event_key_t key = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("debug");)
             if ( &wd == last_selected_wd ) {
                //*myThread->_file << "could prefetch!!" << std::endl;
                _lock.acquire();
-            NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 144 );)
-            NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 );)
                last_selected_wd = NULL;
-            NANOS_INSTRUMENT(sys.getInstrumentation()->raiseOpenBurstEvent( key, 145 );)
                _scan(thread);
-            NANOS_INSTRUMENT(sys.getInstrumentation()->raiseCloseBurstEvent( key, 0 );)
                _lock.release();
             }
          }
@@ -641,7 +611,7 @@ namespace nanos {
                      }
                      for ( unsigned int __i = 0; __i < _numQueues; __i++ ) {
                         //FIXME : maybe this should iterate workers, not PEs.
-                        for ( std::map<unsigned int, PE *>::const_iterator pit = sys.getPEs().begin(); pit != sys.getPEs().end(); pit++ ) {
+                        for ( PEMap::const_iterator pit = sys.getPEs().begin(); pit != sys.getPEs().end(); pit++ ) {
                            _thdsPerQueue[__i] += (*_queueToMemSpace)[__i] == pit->second->getMemorySpaceId();
                         }
                      }
@@ -763,7 +733,7 @@ namespace nanos {
                            NewLocationInfoList const &locs = wd._mcontrol._memCacheCopies[ i ]._locations;
                            if ( !locs.empty() ) {
                               for ( NewLocationInfoList::const_iterator it = locs.begin(); it != locs.end(); it++ ) {
-                                 if ( ! NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn()->getMemorySpaceId() ) ) {
+                                 if ( ! RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn()->getMemorySpaceId() ) ) {
                                     return false;
                                  }
                               }
@@ -789,7 +759,7 @@ namespace nanos {
             //               NewLocationInfoList const &locs = wd._mcontrol._memCacheCopies[ i ]._locations;
             //               if ( !locs.empty() ) {
             //                  for ( NewLocationInfoList::const_iterator it = locs.begin(); it != locs.end(); it++ ) {
-            //                     if ( ! NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn()->getMemorySpaceId() ) ) {
+            //                     if ( ! RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn()->getMemorySpaceId() ) ) {
             //                        return true;
             //                     }
             //                  }
@@ -815,7 +785,7 @@ namespace nanos {
                            NewLocationInfoList const &locs = wd._mcontrol._memCacheCopies[ i ]._locations;
                            if ( ! locs.empty() ) {
                               for ( NewLocationInfoList::const_iterator it = locs.begin(); it != locs.end(); it++ ) {
-                                 if ( ! NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn() ) && NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, (memory_space_id_t) 0) ) {
+                                 if ( ! RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn() ) && RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, (memory_space_id_t) 0) ) {
                                     return true;
                                  }
                               }
@@ -842,8 +812,8 @@ namespace nanos {
                            NewLocationInfoList const &locs = wd._mcontrol._memCacheCopies[ i ]._locations;
                            if ( !locs.empty() ) {
                               for ( NewLocationInfoList::const_iterator it = locs.begin(); it != locs.end(); it++ ) {
-                                 if ( ! NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn()->getMemorySpaceId() )
-                                 && NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, (memory_space_id_t) 0 )  ) {
+                                 if ( ! RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn()->getMemorySpaceId() )
+                                 && RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, (memory_space_id_t) 0 )  ) {
                                     return true;
                                 }
                               }
@@ -871,7 +841,7 @@ namespace nanos {
                            NewLocationInfoList const &locs = wd._mcontrol._memCacheCopies[ i ]._locations;
                            if ( !locs.empty() ) {
                               for ( NewLocationInfoList::const_iterator it = locs.begin(); it != locs.end(); it++ ) {
-                                 if ( ! NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn() ) && ! NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, (memory_space_id_t) 0 ) ) {
+                                 if ( ! RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn() ) && ! RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, (memory_space_id_t) 0 ) ) {
                                     return true;
                                  }
                               }
@@ -898,7 +868,7 @@ namespace nanos {
                            NewLocationInfoList const &locs = wd._mcontrol._memCacheCopies[ i ]._locations;
                            if ( !locs.empty() ) {
                               for ( NewLocationInfoList::const_iterator it = locs.begin(); it != locs.end(); it++ ) {
-                                 if ( ! NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn() ) && ! NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, (memory_space_id_t) 0 ) ) {
+                                 if ( ! RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn() ) && ! RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, (memory_space_id_t) 0 ) ) {
                                     return true;
                                  }
                               }
@@ -1151,7 +1121,6 @@ namespace nanos {
             */
             virtual void queue ( BaseThread *thread, WD &wd )
             {
-               //(*myThread->_file) << " queue wd " << wd.getId() << std::endl;
 #if 1
                ThreadData &data = ( ThreadData & ) *thread->getTeamData()->getScheduleData();
                data.initialize( thread );
@@ -1190,7 +1159,7 @@ namespace nanos {
                   PUSH_BACK_TO_READY_QUEUE( index, &wd );
                   return;
                }
-               memory_space_id_t rootedLocation;
+               memory_space_id_t rootedLocation = (memory_space_id_t) -1;
                bool rooted = wd._mcontrol.isRooted( rootedLocation );
 
                std::list< memory_space_id_t > locs;
@@ -1201,8 +1170,9 @@ namespace nanos {
                   unsigned int queue_idx = ( frn != 0 ? sys.getSeparateMemory( frn ).getNodeNumber() : 0 );
                   PUSH_BACK_TO_READY_QUEUE( queue_idx, &wd );
                } else
-               if ( rooted ) { //it has to be executed on a given node
-                  unsigned int tied_node = rootedLocation != 0 ? sys.getSeparateMemory( wd.isTiedToLocation() ).getNodeNumber() : 0; 
+               if ( rooted || wd.isTiedToLocation() != ( memory_space_id_t ) -1 ) { //it has to be executed on a given node
+                  ensure( ( rootedLocation == wd.isTiedToLocation() && rooted == true ) || rooted == false , "error");
+                  unsigned int tied_node = wd.isTiedToLocation() != 0 ? sys.getSeparateMemory( wd.isTiedToLocation() ).getNodeNumber() : 0; 
                   //FIXME take into account local accelerators
                   if ( tied_node == 0 ) {
                      bool locationDataIsAvailable = true;
@@ -1211,17 +1181,19 @@ namespace nanos {
                      }
 
                      if ( locationDataIsAvailable ) {
-                        //(*myThread->_file) <<"all data is available, ranking... wd "<< wd.getId() << std::endl;
-                        rankWD(thread, wd);
+                        //(*myThread->_file) <<" in master... all data is available, ranking... wd "<< wd.getId() << std::endl;
+                     //   rankWD(thread, wd);
+                     PUSH_BACK_TO_READY_QUEUE( 0, &wd );
 
                         //  (*myThread->_file) <<"all data is available, ranked" << wd.getId() << std::endl;
                      } else { //no location data available, set as unranked
-                        (*myThread->_file) <<"not all data is available, pushing..." << wd.getId() <<std::endl;
+                        //(*myThread->_file) <<"in master... not all data is available, pushing..." << wd.getId() <<std::endl;
                         tdata._unrankedQueue.push_back( &wd );
                         //      (*myThread->_file) <<"not all data is available, pushed" << wd.getId() << std::endl;
                      }
                   } else {
                      //tdata._readyQueues[ tied_node ].push_back( &wd );
+                        //(*myThread->_file) <<"pushed wd " << wd.getId() << " to node " << tied_node <<std::endl;
                      PUSH_BACK_TO_READY_QUEUE( tied_node, &wd );
                   }
                } else {
@@ -1376,6 +1348,11 @@ namespace nanos {
 #endif
             }
 
+            virtual void queue ( BaseThread ** threads, WD ** wds, size_t numElems )
+            {
+               fatal( "This method is not implemented yet" );
+            }
+
             /*!
             *  \brief Function called when a new task must be created: the new created task
             *          is directly queued (Breadth-First policy)
@@ -1393,7 +1370,7 @@ namespace nanos {
             virtual WD *atIdle ( BaseThread *thread, int numSteal );
             virtual WD *atBlock ( BaseThread *thread, WD *current );
 
-            virtual WD *atAfterExit ( BaseThread *thread, WD *current )
+            virtual WD *atAfterExit ( BaseThread *thread, WD *current, int numStealDummy )
             {
                return atBlock(thread, current );
             }
@@ -1482,7 +1459,7 @@ namespace nanos {
                   do {
                      result = wd->_mcontrol.allocateTaskMemory();
                      if ( !result ) {
-                        myThread->idle();
+                        myThread->processTransfers();
                      }
                   } while( result == false );
                   wd->init();
@@ -1525,7 +1502,7 @@ namespace nanos {
                         do {
                            result = wd->_mcontrol.allocateTaskMemory();
                            if ( !result ) {
-                              myThread->idle();
+                              myThread->processTransfers();
                            }
                         } while( result == false );
 
@@ -1546,12 +1523,12 @@ namespace nanos {
                      actualClusterThread->addRunningWD( 0, wd );
                      Scheduler::preOutlineWorkWithThread( actualClusterThread, wd );
 
-                     actualClusterThread->preOutlineWorkDependent( *wd );
+                     actualClusterThread->runningOn()->preOutlineWorkDependent( *wd );
                      //(*myThread->_file) << myThread->getId() << " helped SICOPYNOMASTERINIT ai LAUNCH with wd " << wd->getId() << " to node " << selectedNode << std::endl;
                      //actualClusterThread->runningOn()->waitInputs( *wd );
                      while( !wd->isInputDataReady() ) {
                      }
-                     actualClusterThread->outlineWorkDependent(*wd);
+                     actualClusterThread->runningOn()->outlineWorkDependent(*wd);
                      //(*myThread->_file) << myThread->getId() << " helped SICOPYNOMASTERINIT ai WDONE LAUNCH with wd " << wd->getId() << " to node " << selectedNode << std::endl;
 
                      data._helped++;
@@ -1569,7 +1546,7 @@ namespace nanos {
                      do {
                         result = wd->_mcontrol.allocateTaskMemory();
                         if ( !result ) {
-                           myThread->idle();
+                           myThread->processTransfers();
                         }
                      } while( result == false );
                      wd->initWithPE( sys.getSeparateMemory( (*tdata._nodeToMemSpace)[ selectedNode ] ).getPE() );
@@ -1579,12 +1556,12 @@ namespace nanos {
                      //(*myThread->_file) << "ore outline with thd "<<std::endl;
                      Scheduler::preOutlineWorkWithThread( actualClusterThread, wd );
                      //(*myThread->_file) << "start wd at "<< selectedNode <<std::endl;
-                     actualClusterThread->preOutlineWorkDependent( *wd );
+                     actualClusterThread->runningOn()->preOutlineWorkDependent( *wd );
                      //(*myThread->_file) << myThread->getId() << " helped SICOPYNOMASTERINIT REMOTE COPY AND LAUNCH with wd " << wd->getId() << " to node " << selectedNode << std::endl;
                      //actualClusterThread->runningOn()->waitInputs( *wd );
                      while( !wd->isInputDataReady() ) {
                      }
-                     actualClusterThread->outlineWorkDependent(*wd);
+                     actualClusterThread->runningOn()->outlineWorkDependent(*wd);
                      //(*myThread->_file) << "done start wd at "<< selectedNode <<std::endl;
                      //(*myThread->_file) << myThread->getId() << " helped SICOPYNOMASTERINIT WDONE REMOTE COPY AND LAUNCH with wd " << wd->getId() << " to node " << selectedNode << std::endl;
 
@@ -1808,7 +1785,7 @@ namespace nanos {
                            do {
                               result = helpWD->_mcontrol.allocateTaskMemory();
                               if ( !result ) {
-                                 myThread->idle();
+                                 myThread->processTransfers();
                               }
                            } while( result == false );
                            helpWD->init(); //WithPE( myThread->runningOn() );
@@ -1828,7 +1805,7 @@ namespace nanos {
                            do {
                               result = helpWD->_mcontrol.allocateTaskMemory();
                               if ( !result ) {
-                                 myThread->idle();
+                                 myThread->processTransfers();
                               }
                            } while( result == false );
                            helpWD->init(); //WithPE( myThread->runningOn() );
@@ -2125,7 +2102,7 @@ namespace nanos {
                maxPossibleScore += wd._mcontrol._memCacheCopies[ i ]._reg.getDataSize();
                // *myThread->_file << "Affinity score for region "; wd._mcontrol._memCacheCopies[ i ]._reg.key->printRegion( *myThread->_file, wd._mcontrol._memCacheCopies[ i ]._reg.id );
                // {
-               //    NewNewDirectoryEntryData *entry = NewNewRegionDirectory::getDirectoryEntry( *wd._mcontrol._memCacheCopies[ i ]._reg.key, wd._mcontrol._memCacheCopies[ i ]._reg.id );
+               //    DirectoryEntryData *entry = RegionDirectory::getDirectoryEntry( *wd._mcontrol._memCacheCopies[ i ]._reg.key, wd._mcontrol._memCacheCopies[ i ]._reg.id );
                //    *myThread->_file << " " << *entry << std::endl;
                // }
                if ( locs.empty() ) {

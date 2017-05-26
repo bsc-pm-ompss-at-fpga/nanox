@@ -43,10 +43,10 @@
 #include "hwloc_decl.hpp"
 #include "threadmanager_decl.hpp"
 #include "router_decl.hpp"
-#include "clustermpiplugin_fwd.hpp"
 
-#include "newregiondirectory_decl.hpp"
+#include "regiondirectory_decl.hpp"
 #include "smpdevice_decl.hpp"
+#include "eventdispatcher_decl.hpp"
 
 #ifdef GPU_DEV
 #include "pinnedallocator_decl.hpp"
@@ -55,6 +55,16 @@
 
 #ifdef OpenCL_DEV
 #include "openclprocessor_fwd.hpp"
+#endif
+
+#ifdef CLUSTER_DEV
+#include "clustermpiplugin_fwd.hpp"
+#else
+namespace nanos {
+namespace ext {
+class ClusterMPIPlugin;
+}
+}
 #endif
 
 namespace nanos {
@@ -78,7 +88,6 @@ namespace nanos {
 
       private:
          // types
-         typedef std::map<unsigned int, PE *>         PEList;
          typedef std::map<std::string, Slicer *> Slicers;
          typedef std::map<std::string, WorkSharing *> WorkSharings;
          typedef std::multimap<std::string, std::string> ModulesPlugins;
@@ -143,7 +152,7 @@ namespace nanos {
          ArchitecturePlugins  _archs;
 
 
-         PEList               _pes;
+         PEMap                _pes;
          ThreadList           _workers;
 
          //! List of all supported architectures by _pes
@@ -208,6 +217,9 @@ namespace nanos {
          ThreadManagerConf                             _threadManagerConf;
          ThreadManager *                               _threadManager;
 
+         /*! Event dispatcher members */
+         EventDispatcher                               _eventDispatcher;
+
 #ifdef GPU_DEV
          //! Keep record of the data that's directly allocated on pinned memory
          PinnedAllocator      _pinnedMemoryCUDA;
@@ -255,15 +267,19 @@ namespace nanos {
          bool _cgAlloc;
          bool _inIdle;
          bool _lazyPrivatizationEnabled;
+         bool _preSchedule;
+         std::map<int, std::set<WD *> > _slots;
          void *_watchAddr;
 
       private:
          PE * createPE ( std::string pe_type, int pid, int uid );
 
-         //* \brief Prints the Environment Summary (resources, plugins, prog. model, etc.) before the execution
+         /*! \brief Prints the Environment Summary (resources, plugins, prog. model, etc.)
+          */
          void environmentSummary( void );
 
-         //* \brief Prints the Execution Summary (time, completed tasks, etc.) at the end of the execution
+         /*! \brief Prints the Execution Summary (time, completed tasks, etc.)
+          */
          void executionSummary( void );
 
       public:
@@ -309,10 +325,10 @@ namespace nanos {
          */
          void setupWD( WD &work, WD *parent );
 
-        /*!                                                                     
-         * \brief Method to get the device types of all the architectures running
-         */                                                                     
-        DeviceList & getSupportedDevices();
+         /*!
+          * \brief Method to get the device types of all the architectures running
+          */
+         DeviceList & getSupportedDevices();
 
          void setDeviceStackSize ( size_t stackSize );
 
@@ -364,8 +380,6 @@ namespace nanos {
          int nextThreadId ();
          unsigned int nextPEId ();
 
-         bool isSummaryEnabled() const;
-
          /*!
           * \brief Returns the maximum number of times a task can try to recover from an error by re-executing itself.
           */
@@ -385,7 +399,7 @@ namespace nanos {
           * \param[in] parallel Identifies the type of team, parallel code or single executor.
           */
          ThreadTeam * createTeam ( unsigned nthreads, void *constraints=NULL, bool reuse=true, bool enter=true, bool parallel=false );
-         
+
          ThreadList::iterator getWorkersBegin();
          ThreadList::iterator getWorkersEnd();
 
@@ -593,9 +607,9 @@ namespace nanos {
          //Lock _graphRepListsLock;
       public:
          //std::list<GraphEntry *> *getGraphRepList();
-         
-         NewNewRegionDirectory const &getMasterRegionDirectory() { return _hostMemory.getDirectory(); }
-         ProcessingElement &getPEWithMemorySpaceId( memory_space_id_t id );;
+
+         RegionDirectory const &getMasterRegionDirectory() { return _hostMemory.getDirectory(); }
+         ProcessingElement &getPEWithMemorySpaceId( memory_space_id_t id );
 
          void setValidPlugin ( const std::string &module,  const std::string &plugin );
 
@@ -671,6 +685,7 @@ namespace nanos {
          bool getVerboseDevOps() const;
          void setVerboseDevOps(bool value);
          bool getVerboseCopies() const;
+         void setVerboseCopies(bool value);
          bool getSplitOutputForThreads() const;
          std::string getRegionCachePolicyStr() const;
          void setRegionCachePolicyStr( std::string policy );
@@ -699,6 +714,9 @@ namespace nanos {
          ThreadManagerConf& getThreadManagerConf();
          ThreadManager* getThreadManager() const;
 
+         //! \brief Returns the Event Dispatcher
+         EventDispatcher& getEventDispatcher();
+
          //! \brief Returns true if the compiler says priorities are required
          bool getPrioritiesNeeded() const;
          Router& getRouter();
@@ -707,7 +725,7 @@ namespace nanos {
          bool usePredecessorCopyInfo() const;
          bool invalControlEnabled() const;
          std::set<memory_space_id_t> const &getActiveMemorySpaces() const;
-         PEList const &getPEs() const;
+         PEMap& getPEs();
          void allocLock();
          void allocUnlock();
          bool useFineAllocLock() const;
@@ -721,6 +739,7 @@ global_reg_t _registerMemoryChunk_2dim(void *addr, std::size_t rows, std::size_t
          void notifyOutOfBlockingMPICall();
          void notifyIdle( unsigned int node );
          void disableHelperNodes();
+         void preSchedule();
    };
 
    extern System sys;

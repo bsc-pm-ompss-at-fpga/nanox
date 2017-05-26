@@ -24,7 +24,7 @@
 #include "os.hpp"
 #include "memtracker.hpp"
 #include "regioncache.hpp"
-#include "newregiondirectory.hpp"
+#include "regiondirectory.hpp"
 
 //#define EXTRA_QUEUE_DEBUG
 
@@ -109,7 +109,7 @@ namespace nanos {
                   inline void pushBack ( WD * wd, int index )
                   {
 #ifdef EXTRA_QUEUE_DEBUG
-                     if ( !wd->canRunIn( *_pes[index] ) ) {
+                     if ( !_pes[index]->canRun( *wd ) ) {
                         std::cout << "Impossible to add WD to incompatible queue!!!" << std::endl;
                      }
 #endif
@@ -220,7 +220,7 @@ namespace nanos {
                   inline void pushBack ( WD * wd, int index )
                   {
 #ifdef EXTRA_QUEUE_DEBUG
-                     if ( !wd->canRunIn( *_pes[index] ) ) {
+                     if ( !_pes[index]->canRun( *wd ) ) {
                         std::cout << "Impossible to add WD to incompatible queue!!!" << std::endl;
                      }
 #endif
@@ -420,7 +420,7 @@ namespace nanos {
                         NewLocationInfoList const &locs = wd._mcontrol._memCacheCopies[ i ]._locations;
                         if ( !locs.empty() ) {
                            for ( NewLocationInfoList::const_iterator it = locs.begin(); it != locs.end(); it++ ) {
-                              if ( ! NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn()->getMemorySpaceId() ) ) {
+                              if ( ! RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->first, thread.runningOn()->getMemorySpaceId() ) ) {
                                  return false;
                               }
                            }
@@ -520,7 +520,7 @@ namespace nanos {
 
                for ( ThreadDataSet::const_iterator it = tdata._teamThreadData.begin(); it != tdata._teamThreadData.end(); it++ ) {
                   ThreadData * thd = *it;
-                  if ( wd.canRunIn( * thd->_pe ) ) {
+                  if ( thd->_pe->canRun( wd ) ) {
                      executors++;
                      candidate = thd->_memId;
                   }
@@ -535,6 +535,11 @@ namespace nanos {
                tdata._queues->globalPushBack( &wd );
             }
 
+
+            virtual void queue ( BaseThread ** threads, WD ** wds, size_t numElems )
+            {
+               fatal ( "This method is not implemented yet" );
+            }
 
             /*!
              *  \brief Enqueue a work descriptor in the readyQueue of the passed thread
@@ -579,7 +584,7 @@ namespace nanos {
                      int winner = -1;
                      for ( ThreadDataSet::const_iterator it = tdata._teamThreadData.begin(); it != tdata._teamThreadData.end(); it++ ) {
                         ThreadData * thd = *it;
-                        if ( wd.canRunIn( * thd->_pe ) ) {
+                        if ( thd->_pe->canRun( wd ) ) {
                            if ( winner == -1 ) {
                               winner = thd->_memId;
                            } else {
@@ -600,7 +605,7 @@ namespace nanos {
                   // Check which memory spaces this WD can be run on
                   for ( ThreadDataSet::const_iterator it = tdata._teamThreadData.begin(); it != tdata._teamThreadData.end(); it++ ) {
                      ThreadData * thd = *it;
-                     if ( wd.canRunIn( * thd->_pe ) ) {
+                     if ( thd->_pe->canRun( wd ) ) {
                         tdata._queues->pushBack( &wd, thd->_memId );
                         break;
                      }
@@ -630,7 +635,7 @@ namespace nanos {
             virtual WD *atIdle ( BaseThread *thread, int numSteal );
             virtual WD *atBlock ( BaseThread *thread, WD *current );
 
-            virtual WD *atAfterExit ( BaseThread *thread, WD *current, bool steal )
+            virtual WD *atAfterExit ( BaseThread *thread, WD *current, int  numStealDummy )
             {
                return atBlock(thread, current );
             }
@@ -762,7 +767,7 @@ namespace nanos {
                   //propagatePriority( obj );
                }
             }
-            
+
             bool usingPriorities() const
             {
                return _usePriority;
@@ -869,7 +874,7 @@ namespace nanos {
                   for ( NewLocationInfoList::const_iterator it = locs.begin(); it != locs.end(); it++ ) {
                      for ( unsigned int mem = 0; mem < numMemSpaces; mem++ ) {
                         if ( scores[mem] != -1 ) {
-                           if ( NewNewRegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->second, mem ) ) {
+                           if ( RegionDirectory::isLocatedIn( wd._mcontrol._memCacheCopies[ i ]._reg.key, it->second, mem ) ) {
                               scores[ mem ] += wd._mcontrol._memCacheCopies[ i ]._reg.getDataSize();
                            }
                         }
