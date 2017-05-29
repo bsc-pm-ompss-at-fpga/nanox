@@ -51,8 +51,7 @@ class OperationFailure : public SegmentationFaultException {
          // segment on the same address.
          const memory::MemoryChunk affectedMemory = getSignalInfo().getAffectedMemoryLocation();
 
-         std::vector<memory::MemoryPage> affectedPages =
-            memory::MemoryPage::getPagesWrappingChunk( affectedMemory );
+         std::vector<memory::MemoryPage> affectedPages = memory::MemoryPage::getPagesWrappingChunk( affectedMemory );
 
          for( memory::MemoryPage& page : affectedPages ) {
             page.remap();
