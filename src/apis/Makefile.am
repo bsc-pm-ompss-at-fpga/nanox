@@ -25,7 +25,6 @@ include $(top_srcdir)/src/common.am
 pkginclude_HEADERS=\
 c/nanos.h \
 c/nanos_version.h \
-c/nanos_reduction.h \
 c/nanos_atomic.h \
 error-injection/nanos-error-injection.h \
 $(END)
@@ -46,9 +45,9 @@ c/nanos_version.h : $(srcdir)/c/nanos_version.def
        echo "#ifdef _MERCURIUM" >> $@; \
        echo "#ifndef _NANOS_INTERNAL" >> $@; \
        cat $(srcdir)/c/nanos_version.def | $(SED) -e 's,^\s*\(\S\+\)\s*=\s*\(\S\+\)\s*$$,#pragma nanos interface family(\1) version(\2),' >> $@; \
-       echo "#endif // _NANOS_INTERNAL" >> $@; \
-       echo "#endif // _MERCURIUM" >> $@; \
-       echo "#endif // _NANOS_enabled_H_" >> $@; \
+       echo "#endif /* _NANOS_INTERNAL */" >> $@; \
+       echo "#endif /* _MERCURIUM */" >> $@; \
+       echo "#endif /* _NANOS_enabled_H_ */" >> $@; \
        )
 
 
@@ -66,8 +65,6 @@ nanos_c_sources = \
 	c/nanos_memory.cpp\
 	c/nanos_atomic.h\
 	c/nanos_atomic.cpp\
-	c/nanos_reduction.h\
-	c/nanos_reduction.cpp\
 	c/nanos_sched.cpp\
 	c/nanos_dependence.cpp\
 	c/iomp_symbols.cpp\
