@@ -25,7 +25,6 @@ devinclude_HEADERS = \
 	pthread_decl.hpp \
 	pthread.hpp \
 	cpuset.hpp \
-	mutex.hpp \
 	condition_variable.hpp \
 	filelock.hpp \
 	$(END) 
