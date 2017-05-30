@@ -581,6 +581,7 @@ inline bool WorkDescriptor::isAbleToExecute() const { return !isInvalid() && (ge
 inline bool WorkDescriptor::isExecutionRepeatable() const
 {
    return isInvalid()
+		  && sys.isResiliencyEnabled()
           && isRecoverable()
           && ( _numFailedExecutions <= sys.getTaskMaxRetrials() )
           && ( !getParent() || !getParent()->isInvalid() );

@@ -40,6 +40,11 @@ class CheckpointFailure {
          NANOS_INSTRUMENT ( nanos_event_value_t task_discard_val = (nanos_event_value_t ) NANOS_FT_CKPT_FAILURE );
          NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(1, &task_discard_key, &task_discard_val) );
 
+		//WorkDescriptor* recoverableAncestor = _failedOperation.getTask().propagateInvalidationAndGetRecoverableAncestor();
+		//if( !recoverableAncestor ) {
+		//	fatal( "Could not find a recoverable task when recovering from ", _failedOperation.what() );
+		//}
+
          // Operation's task point to thread->currentWD()
          // In checkpoints, this is not the affected workdescriptor, since
          // the current thread does not point to it until it finishes

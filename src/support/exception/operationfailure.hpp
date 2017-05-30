@@ -49,6 +49,9 @@ class OperationFailure : public SegmentationFaultException {
          // Retrieve all the memory pages that are affected by this error
          // and map them again, so that the kernel allocates a healthy memory
          // segment on the same address.
+
+/*MOVED TO HANDLER
+#ifdef NANOS_RESILIENCY_ENABLED
          const memory::MemoryChunk affectedMemory = getSignalInfo().getAffectedMemoryLocation();
 
          std::vector<memory::MemoryPage> affectedPages = memory::MemoryPage::getPagesWrappingChunk( affectedMemory );
@@ -56,6 +59,9 @@ class OperationFailure : public SegmentationFaultException {
          for( memory::MemoryPage& page : affectedPages ) {
             page.remap();
          }
+#endif
+*/
+
       }
 };
 

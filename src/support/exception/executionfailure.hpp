@@ -50,6 +50,20 @@ class ExecutionFailure {
             fatal( "Could not find a recoverable task when recovering from ", operation.what() );
          } else {
             debug("Resiliency: execution error detected in task ", task, ". " , operation.what() );
+
+#ifdef NANOS_RESILIENCY_ENABLED
+			if(sys.isResiliencyEnabled()){
+				debug( "Trying to remap affected memory region..." );
+				const memory::MemoryChunk affectedMemory = _failedOperation.getSignalInfo().getAffectedMemoryLocation();
+	
+				std::vector<memory::MemoryPage> affectedPages = memory::MemoryPage::getPagesWrappingChunk( affectedMemory );
+	
+				for( memory::MemoryPage& page : affectedPages ) {
+					page.remap();
+				}
+			}
+#endif         
+
          }
       }
 };

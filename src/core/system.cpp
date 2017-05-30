@@ -814,8 +814,8 @@ void System::finish ()
    delete[] _lockPool;
 
    //! \note deleting main work descriptor
+   //delete ( WorkDescriptor * ) &( mythread->getThreadWD() );
    delete ( WorkDescriptor * ) ( mythread->getCurrentWD() );
-   delete ( WorkDescriptor * ) &( mythread->getThreadWD() );
 
    //! \note deleting loaded slicers
    for ( Slicers::const_iterator it = _slicers.begin(); it !=   _slicers.end(); it++ ) {
@@ -826,7 +826,7 @@ void System::finish ()
    for ( WorkSharings::const_iterator it = _worksharings.begin(); it !=   _worksharings.end(); it++ ) {
       delete ( WorkSharing * )  it->second;
    }
-   
+      
    //! \note  printing thread team statistics and deleting it
    if ( team->getScheduleData() != NULL ) team->getScheduleData()->printStats();
 
