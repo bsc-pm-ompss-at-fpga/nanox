@@ -814,7 +814,7 @@ void System::finish ()
    delete[] _lockPool;
 
    //! \note deleting main work descriptor
-   //delete ( WorkDescriptor * ) &( mythread->getThreadWD() );
+   delete ( WorkDescriptor * ) &( mythread->getThreadWD() );
    delete ( WorkDescriptor * ) ( mythread->getCurrentWD() );
 
    //! \note deleting loaded slicers

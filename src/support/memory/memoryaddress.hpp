@@ -46,8 +46,7 @@ class Address {
 		 *  \details Creates a new Address instance
 		 *  using an unsigned integer.
 		 */
-		constexpr
-		Address( uintptr_t v ) noexcept :
+		constexpr Address( uintptr_t v ) noexcept :
 			_value( v )
 		{
 		}
@@ -56,8 +55,7 @@ class Address {
 		 *  \details Creates a new Address instance
 		 *  that points to 0x0
 		 */
-		constexpr
-		Address( std::nullptr_t ) noexcept :
+		constexpr Address( std::nullptr_t ) noexcept :
 			_value( 0 )
 		{
 		}
@@ -67,35 +65,30 @@ class Address {
 		 *  using a pointer's address.
 		 */
 		template< typename T >
-		constexpr
-		Address( T* v ) noexcept :
+		constexpr Address( T* v ) noexcept :
 			_value( reinterpret_cast<uintptr_t>(v) )
 		{
 		}
 
 		//! \brief Copy constructor
-		constexpr
-		Address( Address const& o ) noexcept :
+		constexpr Address( Address const& o ) noexcept :
 			_value(o._value)
 		{
 		}
 
-      constexpr
-		uintptr_t value() noexcept
+      		constexpr uintptr_t value() noexcept
 		{
 			return _value;
 		}
 
 		//! \brief Checks if two addresses are equal
-		constexpr
-		bool operator==( Address const& o ) noexcept
+		constexpr bool operator==( Address const& o ) noexcept
 		{
 			return _value == o._value;
 		}
 
 		//! \brief Checks if two addresses differ
-		constexpr
-		bool operator!=( Address const& o ) noexcept
+		constexpr bool operator!=( Address const& o ) noexcept
 		{
 			return _value != o._value;
 		}
@@ -106,8 +99,7 @@ class Address {
 		 *  @returns A new address object displaced offset bytes
 		 *  with respect to the value of this object.
 		 */
-		constexpr
-		Address operator+( ptrdiff_t offset ) noexcept
+		constexpr Address operator+( ptrdiff_t offset ) noexcept
 		{
 			//ensure( offset > 0 && _value < (_value+offset), "address value overflow" );
 			//ensure( offset < 0 && _value > offset, "address value underflow" );
@@ -120,8 +112,7 @@ class Address {
 		 *  @returns A new address object displaced offset bytes
 		 *  with respect to the value of this object.
 		 */
-		constexpr
-		Address operator-( ptrdiff_t offset ) noexcept
+		constexpr Address operator-( ptrdiff_t offset ) noexcept
 		{
 			//ensure( offset > 0 && _value > offset, "address value underflow" );
 			//ensure( offset < 0 && _value < (_value+offset), "address value overflow" );
@@ -134,8 +125,7 @@ class Address {
 		 *  @returns A new address object displaced size bytes
 		 *  with respect to the value of this object.
 		 */
-		constexpr
-		ptrdiff_t operator-( Address const& base ) noexcept
+		constexpr ptrdiff_t operator-( Address const& base ) noexcept
 		{
 			return _value - base._value;
 		}
@@ -154,44 +144,38 @@ class Address {
 			return *this;
 		}
 
-		constexpr
-		bool operator==( std::nullptr_t ) noexcept
+		constexpr bool operator==( std::nullptr_t ) noexcept
 		{
 			return _value == 0;
 		}
 
-		constexpr
-		bool operator!=( std::nullptr_t ) noexcept
+		constexpr bool operator!=( std::nullptr_t ) noexcept
 		{
 			return _value != 0;
 		}
 
 		//! \returns if this address is smaller than the reference
-		constexpr
-		bool operator<( Address const& reference ) noexcept
+		constexpr bool operator<( Address const& reference ) noexcept
 		{
 			return _value < reference._value;
 		}
 
 		//! \returns if this address is greater than the reference
-		constexpr
-		bool operator>( Address const& reference ) noexcept
+		constexpr bool operator>( Address const& reference ) noexcept
 		{
 			return _value > reference._value;
 		}
 
 		//! \returns if this address is smaller than or equal
 		// to the reference
-		constexpr
-		bool operator<=( Address const& reference ) noexcept
+		constexpr bool operator<=( Address const& reference ) noexcept
 		{
 			return _value <= reference._value;
 		}
 
 		//! \returns if this address is greater than or equal
 		// to the reference
-		constexpr
-		bool operator>=( Address const& reference ) noexcept
+		constexpr bool operator>=( Address const& reference ) noexcept
 		{
 			return _value >= reference._value;
 		}
@@ -211,8 +195,7 @@ class Address {
 		 * @param[in] alignment_constraint the alignment
 		 * restriction
 		 */
-		constexpr
-		bool isAligned( size_t alignment_constraint ) noexcept
+		constexpr bool isAligned( size_t alignment_constraint ) noexcept
 		{
 			return ( _value & (alignment_constraint-1)) == 0;
 		}
@@ -223,8 +206,7 @@ class Address {
 		 * restriction
 		 */
 		template< size_t alignment_constraint >
-		constexpr
-		bool isAligned() noexcept
+		constexpr bool isAligned() noexcept
 		{
 			return ( _value & (alignment_constraint-1)) == 0;
 		}
@@ -232,8 +214,7 @@ class Address {
 		/*! @returns returns an aligned address
 		 * @param[in] alignment_constraint the alignment to be applied
 		 */
-		constexpr
-		Address align( size_t alignment_constraint ) noexcept
+		constexpr Address align( size_t alignment_constraint ) noexcept
 		{
 			return Address(
 						_value &
@@ -245,8 +226,7 @@ class Address {
 		 * @tparam alignment_constraint the alignment to be applied
 		 */
 		template< size_t alignment_constraint >
-		constexpr
-		Address align() noexcept
+		constexpr Address align() noexcept
 		{
 			return Address(
 						_value &
@@ -272,8 +252,7 @@ class Address {
 		 *          3) Perform a bitwise-NOT to finish the mask with
 		 *             all 1s but in the non-significant bits.
 		 */
-		constexpr
-		Address alignToLSB( short lsb ) noexcept
+		constexpr Address alignToLSB( short lsb ) noexcept
 		{
 			return Address(
 						_value &
@@ -286,8 +265,7 @@ class Address {
 		 * \sa alignUsingLSB"("short lsb")"
 		 */
 		template< short lsb >
-		constexpr
-		Address alignToLSB() noexcept
+		constexpr Address alignToLSB() noexcept
 		{
 			return Address(
 						_value &
