@@ -25,6 +25,7 @@
 
 #include <signal.h>
 #include <ucontext.h>
+#include <unistd.h>
 
 namespace nanos {
 namespace error {
@@ -118,14 +119,20 @@ class SignalInfo {
 		 */
 		memory::MemoryChunk getAffectedMemoryLocation() const
 		{
-			return memory::MemoryChunk( getAddress(),
+			if (getSignalNumber()==SIGBUS) 
+				return memory::MemoryChunk( getAddress(), 1 << (_info.si_addr_lsb));
+			else 
+				return memory::MemoryChunk( getAddress(), sysconf(_SC_PAGESIZE));
+		}
+/*		
 #ifdef si_addr_lsb
 						1 << (_info.si_addr_lsb)
 #else
 						1 << 12 // 4K, a memory page
 #endif
 					);
-		}
+*/
+
 };
 
 } // namespace error
