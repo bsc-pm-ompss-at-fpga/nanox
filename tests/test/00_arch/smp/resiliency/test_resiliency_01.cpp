@@ -30,6 +30,7 @@
 #include "debug.hpp"
 
 using namespace std;
+using namespace nanos;
 
 typedef struct
 {

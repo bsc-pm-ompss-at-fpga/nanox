@@ -59,7 +59,7 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
                                  _translateArgs( translate_args ),
                                  _priority( 0 ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
                                  _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL),
-                                 _taskReductions(),
+                                 _taskReductions(), _numFailedExecutions(0),
                                  _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr( nullptr), _callback(0), _arguments(0),
                                  _submittedWDs( NULL ), _reachedTaskwait( false ), _schedPredecessorLocs(),
                                  _mcontrol( this, numCopies )
@@ -96,7 +96,7 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                  _doSubmit(NULL), _doWait(), _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ),
                                  _translateArgs( translate_args ),
                                  _priority( 0 ),  _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
-                                 _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL), _taskReductions(),
+                                 _copiesNotInChunk(false), _description(description), _instrumentationContextData(), _slicer(NULL), _taskReductions(), _numFailedExecutions(0),
                                  _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr(nullptr), _callback(0), _arguments(0),
                                  _submittedWDs( NULL ), _reachedTaskwait( false ), _schedPredecessorLocs(),
                                  _mcontrol( this, numCopies )
@@ -136,7 +136,7 @@ inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **d
                                  _depsDomain( sys.getDependenciesManager()->createDependenciesDomain() ),
                                  _translateArgs( wd._translateArgs ),
                                  _priority( wd._priority ), _commutativeOwnerMap(NULL), _commutativeOwners(NULL),
-                                 _copiesNotInChunk( wd._copiesNotInChunk), _description(description), _instrumentationContextData(), _slicer(wd._slicer), _taskReductions(),
+                                 _copiesNotInChunk( wd._copiesNotInChunk), _description(description), _instrumentationContextData(), _slicer(wd._slicer), _taskReductions(), _numFailedExecutions(0),
                                  _notifyCopy( NULL ), _notifyThread( NULL ), _remoteAddr(nullptr), _callback(0), _arguments(0),
                                  _submittedWDs( NULL ), _reachedTaskwait( false ), _schedPredecessorLocs(),
                                  _mcontrol( this, wd._numCopies )

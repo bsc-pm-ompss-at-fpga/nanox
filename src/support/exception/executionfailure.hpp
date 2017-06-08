@@ -52,7 +52,7 @@ class ExecutionFailure {
             debug("Resiliency: execution error detected in task ", task, ". " , operation.what() );
 
 #ifdef NANOS_RESILIENCY_ENABLED
-			if(sys.isResiliencyEnabled()){
+			if(sys.isResiliencyEnabled() && !(_failedOperation.getSignalInfo().getAddress()==nullptr)){
 				debug( "Trying to remap affected memory region..." );
 				const memory::MemoryChunk affectedMemory = _failedOperation.getSignalInfo().getAffectedMemoryLocation();
 	

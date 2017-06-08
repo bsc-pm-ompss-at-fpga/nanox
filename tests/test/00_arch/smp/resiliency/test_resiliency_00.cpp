@@ -34,6 +34,7 @@
 #include <errno.h>
 
 using namespace std;
+using namespace nanos;
 
 bool errors = false;
 volatile bool wait = true;/* volatile means that this variable value can be modified 
@@ -58,18 +59,18 @@ void testSignal ( void *arg )
 
 void testSignals ( void *arg )
 {
-   nanos::WD* this_wd = getMyThreadSafe()->getCurrentWD();
+   nanos::WD* this_wd = nanos::getMyThreadSafe()->getCurrentWD();
 
    int *array = (int*) mmap(NULL, 64*sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED| MAP_ANONYMOUS, -1 , 0);
    if (array == MAP_FAILED)
       cerr << "Mmap failed: " << strerror(errno) << endl;
    
    // First phase: do a first dry run. This one should not fail.
-   WD *task = new nanos::WD(new nanos::ext::SMPDD(testSignal), sizeof(int*),
+   nanos::WD *task = new nanos::WD(new nanos::ext::SMPDD(testSignal), sizeof(int*),
          __alignof__(int*), array);
  
    this_wd->addWork(*task);
-   if ( sys.getPMInterface().getInternalDataSize() > 0 ) {
+   if ( nanos::sys.getPMInterface().getInternalDataSize() > 0 ) {
       char *idata = NEW char[sys.getPMInterface().getInternalDataSize()];
       sys.getPMInterface().initInternalData( idata );
       task->setInternalData( idata );
@@ -104,7 +105,7 @@ void testSignals ( void *arg )
    __sync_synchronize();/* memory barrier (needed to make this change visible 
                          * for all threads in  ibm like power memory consistency model)
                          */
-   WD *task2 = new nanos::WD(new nanos::ext::SMPDD(testSignal), sizeof(int*),
+   nanos::WD *task2 = new nanos::WD(new nanos::ext::SMPDD(testSignal), sizeof(int*),
          __alignof__(int*), array);
  
    this_wd->addWork(*task2);
@@ -151,7 +152,7 @@ int main ( int argc, char **argv )
 
    nanos::WD* this_wd = getMyThreadSafe()->getCurrentWD();
 
-   WD* task = new nanos::WD(new nanos::ext::SMPDD(testSignals));
+   nanos::WD* task = new nanos::WD(new nanos::ext::SMPDD(testSignals));
    task->setRecoverable(true);
    this_wd->addWork(*task);
    if ( sys.getPMInterface().getInternalDataSize() > 0 ) {
