@@ -25,6 +25,7 @@
 #include "regiontree.hpp"
 #include "regionbuilder.hpp"
 #include "trackableobject.hpp"
+#include "commutationdepobj.hpp"
 
 namespace nanos {
    namespace ext {

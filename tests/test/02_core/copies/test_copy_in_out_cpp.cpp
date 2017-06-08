@@ -57,7 +57,7 @@ void hello_world ( void *args )
       std::cout << "Checking for CopyData address correctness... PASS" << std::endl;
    }
 
-   if ( (void *)( (char *)hargs + (unsigned long)cd[1].getAddress() ) != (void *) &(hargs->b) ) {
+   if ( (void *)( (char *)hargs + cd[1].getAddress().value() ) != (void *) &(hargs->b) ) {
       std::cout << "Error: CopyData address '" << cd[1].getAddress() << "' does not match argument with address '"
                 << &(hargs->b) << "'." << std::endl;
       abort();
