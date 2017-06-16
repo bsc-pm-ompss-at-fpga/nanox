@@ -48,6 +48,7 @@ bool GPUConfig::_overlapInputs = true;
 bool GPUConfig::_overlapOutputs = true;
 transfer_mode GPUConfig::_transferMode = NANOS_GPU_TRANSFER_NORMAL;
 size_t GPUConfig::_maxGPUMemory = 0;
+size_t GPUConfig::_maxPinnedMemory = 1024; // 1024 MB
 bool GPUConfig::_allocatePinnedBuffers = true;
 bool GPUConfig::_gpuWarmup = true;
 bool GPUConfig::_initCublas = false;
@@ -64,7 +65,7 @@ void GPUConfig::prepare( Config& config )
                                 "Enable the use of GPUs with CUDA" );
    config.registerEnvOption( "enable-cuda", "NX_ENABLECUDA" );
    config.registerArgOption( "enable-cuda", "enable-cuda" );
-   
+
    config.registerConfigOption( "disable-cuda", NEW Config::FlagOption( _forceDisableCUDA ),
                                 "Disable the use of GPUs with CUDA" );
    config.registerEnvOption( "disable-cuda", "NX_DISABLECUDA" );
@@ -125,6 +126,12 @@ void GPUConfig::prepare( Config& config )
    config.registerEnvOption ( "gpu-max-memory", "NX_GPUMAXMEM" );
    config.registerArgOption ( "gpu-max-memory", "gpu-max-memory" );
 
+   // Set maximum Host Pinned memory to allocate
+   config.registerConfigOption( "gpu-max-pinned-memory", new Config::SizeVar( _maxPinnedMemory ),
+                                "Defines the maximum amount of Pinned memory (in MB) to use for each GPU (defaults to 1024 MB)" );
+   config.registerEnvOption ( "gpu-max-pinned-memory", "NX_GPUMAXPINMEM" );
+   config.registerArgOption ( "gpu-max-pinned-memory", "gpu-max-pinned-memory" );
+
    // Enable / disable overlapping of outputs
    config.registerConfigOption( "gpu-pinned-buffers", NEW Config::FlagOption( _allocatePinnedBuffers ),
                                 "Set whether GPU component should allocate pinned buffers used by data transfers (enabled by default)" );
@@ -178,9 +185,6 @@ void GPUConfig::apply()
    automatic_cublas_init = automatic_cublas_init || nanos_needs_cublas_fun;
    _initCublas = _initCublas || automatic_cublas_init;
 
-   // CuSparse is only detected via flags
-   _initCuSparse = _initCuSparse;
-
    dlclose( myself );
 
    if ( !_enableCUDA ) {
@@ -201,6 +205,7 @@ void GPUConfig::apply()
       _overlapInputs = false;
       _overlapOutputs = false;
       _maxGPUMemory = 0;
+      _maxPinnedMemory = 0;
       _gpuWarmup = false;
       _initCublas = false;
       _initCuSparse = false;
@@ -317,7 +322,7 @@ void GPUConfig::apply()
             warning0( "Couldn't initialize cuSPARSE library at runtime startup" );
          }
       }
-      
+
       if ( _numGPUs == 0 ) {
          if ( mercurium_has_tasks ) {
             message0( " CUDA tasks were compiled and no CUDA devices were found, execution"

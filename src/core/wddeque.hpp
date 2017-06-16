@@ -30,10 +30,14 @@
 
 namespace nanos {
 
-inline WDDeque::WDDeque( bool enableDeviceCounter ) : _dq(), _lock(), _nelems(0), _ndevs(), _deviceCounter( enableDeviceCounter )
+inline WDDeque::WDDeque( bool enableDeviceCounter ) : _dq(), _lock(), _nelems(0), _ndevs(),
+   _deviceCounter( enableDeviceCounter )
 {
    if ( _deviceCounter ) {
-      initDeviceList();
+      const DeviceList &devs = sys.getSupportedDevices();
+      for ( DeviceList::const_iterator it = devs.begin(); it != devs.end(); ++it ) {
+         _ndevs.insert( std::make_pair<const Device*, Atomic<unsigned int> >( *it, 0 ) );
+      }
    }
 }
 
@@ -52,13 +56,7 @@ inline void WDDeque::push_front ( WorkDescriptor *wd )
    {
       LockBlock lock( _lock );
       _dq.push_front( wd );
-
-      if ( _deviceCounter ) {
-         for ( unsigned int i = 0; i < wd->getNumDevices(); i++ ) {
-            _ndevs[( wd->getDevices()[i]->getDevice() )]++;
-         }
-      }
-
+      increaseDeviceCounter( wd );
       int tasks = ++( sys.getSchedulerStats()._readyTasks );
       increaseTasksInQueues(tasks);
       memoryFence();
@@ -71,13 +69,7 @@ inline void WDDeque::push_back ( WorkDescriptor *wd )
    {
       LockBlock lock( _lock );
       _dq.push_back( wd );
-
-      if ( _deviceCounter ) {
-         for ( unsigned int i = 0; i < wd->getNumDevices(); i++ ) {
-            _ndevs[( wd->getDevices()[i]->getDevice() )]++;
-         }
-      }
-
+      increaseDeviceCounter( wd );
       int tasks = ++( sys.getSchedulerStats()._readyTasks );
       increaseTasksInQueues(tasks);
       memoryFence();
@@ -97,12 +89,7 @@ inline void WDDeque::push_front( WD** wds, size_t numElems )
       WD* wd = wds[i];
       wd->setMyQueue( this );
       _dq.push_front( wd );
-
-      if ( _deviceCounter ) {
-         for ( unsigned int j = 0; j < wd->getNumDevices(); j++ ) {
-            _ndevs[( wd->getDevices()[j]->getDevice() )]++;
-         }
-      }
+      increaseDeviceCounter( wd );
    }
    int tasks = sys.getSchedulerStats()._readyTasks += numElems;
    increaseTasksInQueues(tasks,numElems);
@@ -116,12 +103,7 @@ inline void WDDeque::push_back( WD** wds, size_t numElems )
       WD* wd = wds[i];
       wd->setMyQueue( this );
       _dq.push_back( wd );
-
-      if ( _deviceCounter ) {
-         for ( unsigned int j = 0; j < wd->getNumDevices(); j++ ) {
-            _ndevs[( wd->getDevices()[j]->getDevice() )]++;
-         }
-      }
+      increaseDeviceCounter( wd );
    }
    int tasks = sys.getSchedulerStats()._readyTasks += numElems;
    increaseTasksInQueues(tasks,numElems);
@@ -186,12 +168,7 @@ inline WorkDescriptor * WDDeque::popFrontWithConstraints ( BaseThread const *thr
             if ( Scheduler::checkBasicConstraints( wd, *thread) && Constraints::check(wd,*thread) ) {
                if ( wd.dequeue( &found ) ) {
                    _dq.erase( it );
-                   if ( _deviceCounter ) {
-                      for ( unsigned int i = 0; i < found->getNumDevices(); i++ ) {
-                         _ndevs[( found->getDevices()[i]->getDevice() )]--;
-                      }
-                   }
-
+                   decreaseDeviceCounter( found );
                    int tasks = --(sys.getSchedulerStats()._readyTasks);
                    decreaseTasksInQueues(tasks);
                }
@@ -264,11 +241,7 @@ inline WorkDescriptor * WDDeque::popBackWithConstraints ( BaseThread const *thre
             if ( Scheduler::checkBasicConstraints( wd, *thread) && Constraints::check(wd,*thread)) {
                if ( wd.dequeue( &found ) ) {
                   _dq.erase( ( ++rit ).base() );
-                  if ( _deviceCounter ) {
-                     for ( unsigned int i = 0; i < found->getNumDevices(); i++ ) {
-                        _ndevs[( found->getDevices()[i]->getDevice() )]--;
-                     }
-                  }
+                  decreaseDeviceCounter( found );
                   int tasks = --(sys.getSchedulerStats()._readyTasks);
                   decreaseTasksInQueues(tasks);
                }
@@ -305,13 +278,8 @@ inline bool WDDeque::removeWDWithConstraints( BaseThread *thread, WorkDescriptor
          for ( it = _dq.begin(); it != _dq.end(); it++ ) {
             if ( *it == toRem ) {
                if ( ( *it )->dequeue( next ) ) {
-                  WD *this_wd = *it;
                   _dq.erase( it );
-                  if ( _deviceCounter ) {
-                     for ( unsigned int i = 0; i < this_wd->getNumDevices(); i++ ) {
-                        _ndevs[( this_wd->getDevices()[i]->getDevice() )]--;
-                     }
-                  }
+                  decreaseDeviceCounter( *next );
                   int tasks = --(sys.getSchedulerStats()._readyTasks);
                   decreaseTasksInQueues(tasks);
                }
@@ -341,23 +309,53 @@ inline void WDDeque::decreaseTasksInQueues( int tasks, int decrement )
    _nelems -= decrement;
 }
 
+inline void WDDeque::increaseDeviceCounter ( WorkDescriptor *wd )
+{
+   if ( _deviceCounter ) {
+      for ( unsigned int i = 0; i < wd->getNumDevices(); i++ ) {
+         const Device *device = wd->getDevices()[i]->getDevice();
+         WDDeviceCounter::iterator device_counter = _ndevs.find( device );
+         ensure( device_counter != _ndevs.end(), "Device not initialized" );
+         ++device_counter->second;
+      }
+   }
+}
+
+inline void WDDeque::decreaseDeviceCounter ( WorkDescriptor *wd )
+{
+   if ( _deviceCounter ) {
+      for ( unsigned int i = 0; i < wd->getNumDevices(); i++ ) {
+         const Device *device = wd->getDevices()[i]->getDevice();
+         WDDeviceCounter::iterator device_counter = _ndevs.find( device );
+         ensure( device_counter != _ndevs.end(), "Device not initialized" );
+         --device_counter->second;
+      }
+   }
+}
+
 inline bool WDDeque::testDequeue()
 {
    if ( _dq.empty() )
       return false;
 
-   // Auxiliary map to count successful commutative accesses
-   std::map<WD**, WD*> comm_accesses;
-   // ReadyQueue iterator
-   WDDeque::BaseContainer::const_iterator it;
-   LockBlock lock( _lock );
-   for ( it = _dq.begin(); it != _dq.end(); ++it ) {
-      const WD &wd = *(WD *)*it;
-      if ( wd.getConcurrencyLevel( comm_accesses ) > 0 )
-         return true;
+   bool wd_avail = false;
+   // Skip check if there's contention in the queue
+   if ( _lock.tryAcquire() ) {
+      // Auxiliary map to count successful commutative accesses
+      std::map<WD**, WD*> comm_accesses;
+      // ReadyQueue iterator
+      WDDeque::BaseContainer::const_iterator it;
+      for ( it = _dq.begin(); it != _dq.end(); ++it ) {
+         const WD &wd = *(WD *)*it;
+         if ( wd.getConcurrencyLevel( comm_accesses ) > 0 ) {
+            wd_avail = true;
+            break;
+         }
+      }
+      _lock.release();
    }
 
-   return false;
+   return wd_avail;
 }
 
 inline void WDDeque::transferElemsFrom( WDDeque &dq )
@@ -534,14 +532,10 @@ inline WDPriorityQueue<T>::WDPriorityQueue( bool enableDeviceCounter, bool optim
      _getter( getter ), _maxPriority( 0 ), _minPriority( 0 )
 {
    if ( _deviceCounter ) {
-
-         DeviceList devs = sys.getSupportedDevices();
-
-         for ( DeviceList::iterator it = devs.begin(); it != devs.end(); it++ ) {
-            const Device * dev = *it;
-            Atomic<unsigned int> num = 0;
-            _ndevs.insert( std::make_pair( dev, num ) );
-         }
+      const DeviceList &devs = sys.getSupportedDevices();
+      for ( DeviceList::const_iterator it = devs.begin(); it != devs.end(); ++it ) {
+         _ndevs.insert( std::make_pair<const Device*, Atomic<unsigned int> >( *it, 0 ) );
+      }
    }
 }
 
@@ -653,11 +647,7 @@ inline void WDPriorityQueue<T>::push_back ( WorkDescriptor *wd )
    {
       LockBlock lock( _lock );
       insertOrdered( wd, true );
-      if ( _deviceCounter ) {
-         for ( unsigned int i = 0; i < wd->getNumDevices(); i++ ) {
-            _ndevs[( wd->getDevices()[i]->getDevice() )]++;
-         }
-      }
+      increaseDeviceCounter( wd );
       int tasks = ++( sys.getSchedulerStats()._readyTasks );
       increaseTasksInQueues(tasks);
       memoryFence();
@@ -675,11 +665,7 @@ inline void WDPriorityQueue<T>::push_front ( WorkDescriptor *wd )
    {
       LockBlock lock( _lock );
       insertOrdered( wd, false );
-      if ( _deviceCounter ) {
-         for ( unsigned int i = 0; i < wd->getNumDevices(); i++ ) {
-            _ndevs[( wd->getDevices()[i]->getDevice() )]++;
-         }
-      }
+      increaseDeviceCounter( wd );
       int tasks = ++( sys.getSchedulerStats()._readyTasks );
       increaseTasksInQueues(tasks);
       memoryFence();
@@ -722,11 +708,7 @@ inline void WDPriorityQueue<T>::push_front( WD** wds, size_t numElems )
       WD* wd = wds[i];
       wd->setMyQueue( this );
       insertOrdered( wd, false );
-      if ( _deviceCounter ) {
-         for ( unsigned int j = 0; j < wd->getNumDevices(); j++ ) {
-            _ndevs[( wd->getDevices()[j]->getDevice() )]++;
-         }
-      }
+      increaseDeviceCounter( wd );
    }
    int tasks = sys.getSchedulerStats()._readyTasks += numElems;
    increaseTasksInQueues(tasks,numElems);
@@ -754,11 +736,7 @@ inline void WDPriorityQueue<T>::push_back( WD** wds, size_t numElems )
          WD* wd = wds[i];
          wd->setMyQueue( this );
          insertOrdered( wd, true );
-         if ( _deviceCounter ) {
-            for ( unsigned int j = 0; j < wd->getNumDevices(); j++ ) {
-               _ndevs[( wd->getDevices()[j]->getDevice() )]++;
-            }
-         }
+         increaseDeviceCounter( wd );
       }
    /*}
    // Otherwise, insert in the same position
@@ -770,11 +748,7 @@ inline void WDPriorityQueue<T>::push_back( WD** wds, size_t numElems )
          wd->setMyQueue( this );
       }
       insertOrdered( wds, numElems, true );
-      if ( _deviceCounter ) {
-         for ( unsigned int j = 0; j < wd->getNumDevices(); j++ ) {
-            _ndevs[( wd->getDevices()[j]->getDevice() )]++;
-         }
-      }
+      increaseDeviceCounter( wd );
 
    }*/
    int tasks = sys.getSchedulerStats()._readyTasks += numElems;
@@ -812,11 +786,7 @@ inline WorkDescriptor * WDPriorityQueue<T>::popFrontWithConstraints ( BaseThread
             if ( Scheduler::checkBasicConstraints( wd, *thread) && Constraints::check(wd,*thread)) {
                if ( wd.dequeue( &found ) ) {
                   _dq.erase( it );
-                  if ( _deviceCounter ) {
-                     for ( unsigned int i = 0; i < wd.getNumDevices(); i++ ) {
-                        _ndevs[( wd.getDevices()[i]->getDevice() )]--;
-                     }
-                  }
+                  decreaseDeviceCounter( found );
                   // Update max and min
                   if ( _dq.empty() ){
                      _maxPriority = 0;
@@ -867,11 +837,7 @@ inline WorkDescriptor * WDPriorityQueue<T>::popBackWithConstraints ( BaseThread 
             if ( Scheduler::checkBasicConstraints( wd, *thread) && Constraints::check(wd,*thread)) {
                if ( wd.dequeue( &found ) ) {
                   _dq.erase( it );
-                  if ( _deviceCounter ) {
-                     for ( unsigned int i = 0; i < wd.getNumDevices(); i++ ) {
-                        _ndevs[( wd.getDevices()[i]->getDevice() )]--;
-                     }
-                  }
+                  decreaseDeviceCounter( found );
                   // Update max and min
                   if ( _dq.empty() ){
                      _maxPriority = 0;
@@ -921,11 +887,7 @@ inline bool WDPriorityQueue<T>::removeWDWithConstraints( BaseThread *thread, Wor
             if ( *it == toRem ) {
                if ( ( *it )->dequeue( next ) ) {
                   _dq.erase( it );
-                  if ( _deviceCounter ) {
-                     for ( unsigned int i = 0; i < ( *it )->getNumDevices(); i++ ) {
-                        _ndevs[( ( *it )->getDevices()[i]->getDevice() )]--;
-                     }
-                  }
+                  decreaseDeviceCounter( *next );
                   int tasks = --(sys.getSchedulerStats()._readyTasks);
                   decreaseTasksInQueues(tasks);
                }
@@ -993,23 +955,55 @@ inline void WDPriorityQueue<T>::decreaseTasksInQueues( int tasks, int decrement 
 }
 
 template<typename T>
+inline void WDPriorityQueue<T>::increaseDeviceCounter ( WorkDescriptor *wd )
+{
+   if ( _deviceCounter ) {
+      for ( unsigned int i = 0; i < wd->getNumDevices(); i++ ) {
+         const Device *device = wd->getDevices()[i]->getDevice();
+         WDDeviceCounter::iterator device_counter = _ndevs.find( device );
+         ensure( device_counter != _ndevs.end(), "Device not initialized" );
+         ++device_counter->second;
+      }
+   }
+}
+
+template<typename T>
+inline void WDPriorityQueue<T>::decreaseDeviceCounter ( WorkDescriptor *wd )
+{
+   if ( _deviceCounter ) {
+      for ( unsigned int i = 0; i < wd->getNumDevices(); i++ ) {
+         const Device *device = wd->getDevices()[i]->getDevice();
+         WDDeviceCounter::iterator device_counter = _ndevs.find( device );
+         ensure( device_counter != _ndevs.end(), "Device not initialized" );
+         --device_counter->second;
+      }
+   }
+}
+
+template<typename T>
 inline bool WDPriorityQueue<T>::testDequeue()
 {
    if ( _dq.empty() )
       return false;
 
-   // Auxiliary map to count successful commutative accesses
-   std::map<WD**, WD*> comm_accesses;
-   // ReadyQueue iterator
-   WDPQ::BaseContainer::const_iterator it;
-   LockBlock lock( _lock );
-   for ( it = _dq.begin(); it != _dq.end(); ++it ) {
-      const WD &wd = *(WD *)*it;
-      if ( wd.getConcurrencyLevel( comm_accesses ) > 0 )
-         return true;
+   bool wd_avail = false;
+   // Skip check if there's contention in the queue
+   if ( _lock.tryAcquire() ) {
+      // Auxiliary map to count successful commutative accesses
+      std::map<WD**, WD*> comm_accesses;
+      // ReadyQueue iterator
+      WDPQ::BaseContainer::const_iterator it;
+      for ( it = _dq.begin(); it != _dq.end(); ++it ) {
+         const WD &wd = *(WD *)*it;
+         if ( wd.getConcurrencyLevel( comm_accesses ) > 0 ) {
+            wd_avail = true;
+            break;
+         }
+      }
+      _lock.release();
    }
 
-   return false;
+   return wd_avail;
 }
 
 } // namespace nanos

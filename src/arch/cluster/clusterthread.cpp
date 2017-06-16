@@ -212,6 +212,10 @@ bool ClusterThread::isCluster() {
 void initializeDependent( void ) {}
 void switchToNextThread() {}
 
+void ClusterThread::lock() {
+   _lock.acquire();
+}
+
 void ClusterThread::unlock() {
    _lock.release();
 }
