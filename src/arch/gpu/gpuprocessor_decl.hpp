@@ -214,11 +214,11 @@ namespace ext {
 
          virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
          virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) {}
-         virtual bool inlineWorkDependent (WD &work);
+         virtual bool inlineWorkDependent (WD &work) { fatal( "GPUProcessor does not support inlineWorkDependent()" ); }
          virtual void switchTo( WD *work, SchedulerHelper *helper );
          virtual void exitTo( WD *work, SchedulerHelper *helper );
-         virtual void outlineWorkDependent( WD &work ) { fatal( "GPUThread does not support outlineWorkDependent()" ); }
-         virtual void preOutlineWorkDependent( WD &work ) { fatal( "GPUThread does not support preOutlineWorkDependent()" ); }
+         virtual void outlineWorkDependent( WD &work ) { fatal( "GPUProcessor does not support outlineWorkDependent()" ); }
+         virtual void preOutlineWorkDependent( WD &work ) { fatal( "GPUProcessor does not support preOutlineWorkDependent()" ); }
    };
 
 } // namespace ext
