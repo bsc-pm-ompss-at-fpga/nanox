@@ -57,7 +57,7 @@ namespace ext {
 
             virtual WD & getWorkerWD () const;
             virtual WD & getMasterWD () const;
-            virtual WD & getMultiWorkerWD () const;
+            virtual WD & getMultiWorkerWD ( DD::work_fct workerFun ) const;
             virtual BaseThread & createThread ( WorkDescriptor &wd, SMPMultiThread *parent );
             virtual BaseThread & createMultiThread ( WorkDescriptor &wd, unsigned int numPEs, PE **repPEs );
 

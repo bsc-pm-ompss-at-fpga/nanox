@@ -292,7 +292,7 @@ public:
 
    WD &getMasterWD() const;
 
-   virtual WD & getMultiWorkerWD () const
+   virtual WD & getMultiWorkerWD ( DD::work_fct workerFun ) const
    {
       fatal( "getMultiWorkerWD: OpenCLProcessor is not allowed to create MultiThreads" );
    }

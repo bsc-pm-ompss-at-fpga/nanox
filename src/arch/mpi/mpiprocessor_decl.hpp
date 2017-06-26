@@ -197,7 +197,7 @@ namespace ext {
             static void prepareConfig(Config &config);
 
             // capability query functions
-            virtual WD & getMultiWorkerWD () const
+            virtual WD & getMultiWorkerWD ( DD::work_fct workerFun ) const
             {
                fatal( "getMultiWorkerWD: GPUProcessor is not allowed to create MultiThreads" );
             }

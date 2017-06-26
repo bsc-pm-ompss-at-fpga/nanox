@@ -51,7 +51,7 @@ WorkDescriptor & ClusterNode::getMasterWD () const {
    fatal("Attempting to create a cluster master thread");
 }
 
-WD & ClusterNode::getMultiWorkerWD () const {
+WD & ClusterNode::getMultiWorkerWD ( DD::work_fct workerFun ) const {
    fatal( "getMultiWorkerWD: ClusterNode is not allowed to create MultiThreads" );
 }
 
