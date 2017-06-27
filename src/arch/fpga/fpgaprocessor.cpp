@@ -160,7 +160,7 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 static void dmaSubmitStart( FPGAProcessor *fpga, const WD *wd ) {
-   unsigned long long timestamp;
+   uint64_t timestamp;
    xdma_status status;
    status = xdmaGetDeviceTime( &timestamp );
    if ( status != XDMA_SUCCESS ) {
@@ -180,7 +180,7 @@ static void dmaSubmitStart( FPGAProcessor *fpga, const WD *wd ) {
 }
 
 static void dmaSubmitEnd( FPGAProcessor *fpga, const WD *wd ) {
-   unsigned long long timestamp;
+   uint64_t timestamp;
    xdma_status status;
    status = xdmaGetDeviceTime( &timestamp );
    if ( status != XDMA_SUCCESS ) {
