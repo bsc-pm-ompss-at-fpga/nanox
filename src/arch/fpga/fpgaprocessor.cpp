@@ -206,7 +206,7 @@ xdma_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
       xdmaAddArg( task, argIdx, XDMA_GLOBAL, handle, offset );
    }
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-    dmaSubmitStart( this, &wd );
+   dmaSubmitStart( this, &wd );
 #endif
    if ( xdmaSendTask(_fpgaProcessorInfo->getDeviceHandle(), task) != XDMA_SUCCESS ) {
       //TODO: If error is XDMA_ENOMEM we can retry after a while
@@ -241,7 +241,7 @@ void FPGAProcessor::readInstrCounters( FPGATaskInfo_t & task ) {
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( counters->computation, TaskEnd, _devInstr, wd ) );
 
-  //DMA info
+   //DMA info
    instr->addDeviceEvent(
          Instrumentation::DeviceEvent( counters->start, TaskBegin, _dmaInInstr, wd ) );
    instr->addDeviceEvent(
