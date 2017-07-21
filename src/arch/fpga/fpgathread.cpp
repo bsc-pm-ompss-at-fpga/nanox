@@ -20,7 +20,6 @@
 
 #include "fpgathread.hpp"
 #include "fpgadd.hpp"
-#include "fpgamemorytransfer.hpp"
 #include "fpgaworker.hpp"
 #include "fpgaprocessorinfo.hpp"
 #include "instrumentation_decl.hpp"
@@ -46,14 +45,14 @@ void FPGAThread::runDependent()
 void FPGAThread::yield()
 {
    verbose("FPGA yield");
-   //Synchronizing transfers here seems to yield slightly better performance
+   //Synchronizing tasks here seems to yield slightly better performance
    static int const finishBurst = FPGAConfig::getFinishWDBurst();
    ((FPGAProcessor*)runningOn())->finishPendingWD( finishBurst );
 }
 
 void FPGAThread::idle( bool debug )
 {
-   //Sync transfers on idle
+   //Sync tasks on idle
    static int const finishBurst = FPGAConfig::getFinishWDBurst();
    ((FPGAProcessor*)runningOn())->finishPendingWD( finishBurst );
 }

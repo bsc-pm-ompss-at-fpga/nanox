@@ -103,14 +103,6 @@ namespace nanos {
             return true;
          }
 
-         /*!
-          * \brief Finish pending transfer
-          * Usually this causes to priorize a data transfer because someone else needs it
-          * In this case it forces the transfer to be finished and synchronized.
-          * Since all transfers are submitted, this is the way to make the data available.
-          */
-         static void syncTransfer( uint64_t hostAddress, ProcessingElement *pe);
-
    };
 } // namespace nanos
 #endif

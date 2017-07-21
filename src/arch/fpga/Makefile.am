@@ -35,7 +35,6 @@ devinclude_HEADERS = \
 	fpgaprocessor.hpp \
 	fpgaprocessorinfo.hpp \
 	fpgathread.hpp \
-	fpgamemorytransfer.hpp \
 	fpgaworker.hpp \
 	fpgapinnedallocator.hpp \
 	fpgainstrumentation.hpp \
@@ -59,8 +58,6 @@ fpga_sources = \
 	fpgaprocessorinfo.hpp \
 	fpgathread.hpp \
 	fpgathread.cpp \
-	fpgamemorytransfer.hpp \
-	fpgamemorytransfer.cpp \
 	fpgaworker.hpp \
 	fpgaworker.cpp \
 	fpgapinnedallocator.hpp \

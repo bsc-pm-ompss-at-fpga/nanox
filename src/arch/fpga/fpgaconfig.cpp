@@ -41,15 +41,11 @@ bool FPGAConfig::_forceDisableFPGA = false;
 int  FPGAConfig::_numAccelerators = -1;
 int  FPGAConfig::_numAcceleratorsSystem = -1;
 int  FPGAConfig::_numFPGAThreads = -1;
-//TODO set sensible defaults (disabling transfers when necessary, etc.)
-unsigned int FPGAConfig::_burst = 8;
-int FPGAConfig::_maxTransfers = 32;
-int FPGAConfig::_idleSyncBurst = 4;
 int FPGAConfig::_fpgaFreq = 100; //default to 100MHz
 bool FPGAConfig::_hybridWorker = false;
-int FPGAConfig::_maxPendingWD = 4;
-int FPGAConfig::_finishWDBurst = 4;
-bool FPGAConfig::_idleCallback = false;
+int FPGAConfig::_maxPendingWD = 8;
+int FPGAConfig::_finishWDBurst = 8;
+bool FPGAConfig::_idleCallback = true;
 std::size_t FPGAConfig::_allocatorPoolSize = 64*1024*1024; //Def. 64MB
 std::string * FPGAConfig::_configFile = NULL;
 FPGATypesMap * FPGAConfig::_accTypesMap = NULL;
@@ -73,25 +69,10 @@ void FPGAConfig::prepare( Config &config )
    config.registerEnvOption( "num-fpga", "NX_FPGA_NUM" );
    config.registerArgOption( "num-fpga", "fpga-num" );
 
-   config.registerConfigOption( "fpga-burst", NEW Config::UintVar( _burst ),
-      "Defines the number of transfers fo be waited in a row when the maximum active transfer is reached (-1 acts as unlimited)");
-   config.registerEnvOption( "fpga-burst", "NX_FPGA_BURST" );
-   config.registerArgOption( "fpga-burst", "fpga-burst" );
-
    config.registerConfigOption( "fpga_helper_threads", NEW Config::IntegerVar( _numFPGAThreads ),
       "Defines de number of helper threads managing fpga accelerators");
    config.registerEnvOption( "fpga_helper_threads", "NX_FPGA_HELPER_THREADS" );
    config.registerArgOption( "fpga_helper_threads", "fpga-helper-threads" );
-
-   config.registerConfigOption( "fpga_max_transfers", NEW Config::IntegerVar( _maxTransfers ),
-      "Defines the maximum number of active transfers per dma accelerator channel (-1 behaves as unlimited)" );
-   config.registerEnvOption( "fpga_max_transfers", "NX_FPGA_MAX_TRANSFERS" );
-   config.registerArgOption( "fpga_max_transfers", "fpga-max-transfers" );
-
-   config.registerConfigOption( "fpga_idle_sync_burst", NEW Config::IntegerVar( _idleSyncBurst ),
-      "Number of transfers synchronized when calling thread's idle" );
-   config.registerEnvOption( "fpga_idle_sync_burst", "NX_FPGA_IDLE_SYNC_BURST" );
-   config.registerArgOption( "fpga_idle_sync_burst", "fpga-idle-sync-burst" );
 
    config.registerConfigOption( "fpga_freq", NEW Config::IntegerVar( _fpgaFreq ),
                                 "FPGA accelerator clock frequency in MHz" );
@@ -166,7 +147,6 @@ void FPGAConfig::apply()
                << "Using one thread per accelerator" );
       _numFPGAThreads = _numAccelerators;
    }
-   _idleSyncBurst = ( _idleSyncBurst < 0 ) ? _burst : _idleSyncBurst;
 
    if ( _enableFPGA && !_configFile->compare( "" ) ) {
       // Get the config file name using the executable filename

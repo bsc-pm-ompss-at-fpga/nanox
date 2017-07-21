@@ -19,7 +19,6 @@
 /*************************************************************************************/
 #include "fpgaprocessor.hpp"
 #include "fpgaprocessorinfo.hpp"
-#include "fpgamemorytransfer.hpp"
 #include "fpgadevice.hpp"
 #include "fpgaconfig.hpp"
 #include "deviceops.hpp"
@@ -93,16 +92,6 @@ void FPGADevice::memFree( uint64_t addr, SeparateMemoryAddressSpace &mem )
    SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
    verbose( "FPGADevice free memory:\t " << ptr << " in allocator " << allocator );
    allocator->free( ptr );
-}
-
-//this is used to priorize transfers (because someone needs the data)
-//In our case this causes this actually means "finish the transfer"
-void FPGADevice::syncTransfer( uint64_t hostAddress, ProcessingElement *pe )
-{
-    //TODO: At this point we only are going to sync output transfers
-    // as input transfers do not need to be synchronized
-    ((FPGAProcessor *)pe)->getOutTransferList()->syncTransfer(hostAddress);
-    //((FPGAProcessor *)pe)->getInTransferList()->syncTransfer(hostAddress);
 }
 
 void FPGADevice::_canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *sizes,

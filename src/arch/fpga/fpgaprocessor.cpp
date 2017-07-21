@@ -25,7 +25,6 @@
 #include "fpgaconfig.hpp"
 #include "fpgaworker.hpp"
 #include "fpgaprocessorinfo.hpp"
-#include "fpgamemorytransfer.hpp"
 #include "instrumentationmodule_decl.hpp"
 #include "smpprocessor.hpp"
 #include "fpgapinnedallocator.hpp"
@@ -51,15 +50,11 @@ FPGAProcessor::FPGAProcessor( int const accId, memory_space_id_t memSpaceId, Dev
 #endif
 {
    _fpgaProcessorInfo = NEW FPGAProcessorInfo;
-   _inputTransfers = NEW FPGAMemoryInTransferList();
-   _outputTransfers = NEW FPGAMemoryOutTransferList(*this);
 }
 
 FPGAProcessor::~FPGAProcessor()
 {
    delete _fpgaProcessorInfo;
-   delete _inputTransfers;
-   delete _outputTransfers;
 }
 
 void FPGAProcessor::init()
@@ -104,10 +99,6 @@ void FPGAProcessor::cleanUp()
    ensure( _pendingTasks.empty(), "Queue of FPGA pending tasks is not empty in one FPGAProcessor" );
    ensure( _readyTasks.empty(), "Queue of FPGA ready tasks is not empty in one FPGAProcessor" );
    ensure( _waitInTasks.empty(),  "Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
-
-   //wait for remaining transfers that could remain
-   _inputTransfers->syncAll();
-   _outputTransfers->syncAll();
 }
 
 WorkDescriptor & FPGAProcessor::getWorkerWD () const

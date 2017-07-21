@@ -35,9 +35,6 @@
 namespace nanos {
 namespace ext {
 
-   //forward declaration of transfer list
-   class FPGAMemoryTransferList;
-
    class FPGAProcessor: public ProcessingElement
    {
       public:
@@ -57,9 +54,6 @@ namespace ext {
          Queue< FPGATaskInfo_t >       _pendingTasks;       //!< Tasks in the accelerator (running)
          FPGATasksQueue_t              _readyTasks;         //!< Tasks that are ready but are waiting for device memory
          FPGATasksQueue_t              _waitInTasks;        //!< Tasks that are ready but are waiting for input copies
-
-         FPGAMemoryTransferList       *_inputTransfers;     //< List of in stream transfers
-         FPGAMemoryTransferList       *_outputTransfers;    //< List of out stream transfers
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          DeviceInstrumentation * _devInstr;
@@ -83,12 +77,6 @@ namespace ext {
 
          inline FPGAProcessorInfo * getFPGAProcessorInfo() const {
             return _fpgaProcessorInfo;
-         }
-         inline FPGAMemoryTransferList * getInTransferList() const {
-            return _inputTransfers;
-         }
-         inline FPGAMemoryTransferList * getOutTransferList() const {
-            return _outputTransfers;
          }
 
          /*! \brief Initialize hardware:
