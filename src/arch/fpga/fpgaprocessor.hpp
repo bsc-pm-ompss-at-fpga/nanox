@@ -30,6 +30,7 @@
 #include "fpgaconfig.hpp"
 #include "cachedaccelerator.hpp"
 #include "fpgapinnedallocator.hpp"
+#include "libxdma.h"
 
 namespace nanos {
 namespace ext {

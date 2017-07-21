@@ -196,7 +196,7 @@ void FPGAWorker::FPGAWorkerLoop() {
 
       // Acquire the lock and leave it acquired to avoid any further access
       currentThread = ( FPGAThread * )myThread;
-      currentThread->_lock.acquire();
+      //currentThread->_lock.acquire(); //NOTE: Not sure if can be deleted (if not, restore the class member)
 
       myThread->leaveTeam();
       myThread->joined();

@@ -29,22 +29,10 @@ using namespace nanos;
 using namespace nanos::ext;
 
 FPGAThread::FPGAThread( WD &wd, PE *pe, SMPMultiThread *parent ) :
-   BaseThread( ( unsigned int ) -1, wd, pe, parent),
-   _lock()/*, _hwInstrCounters()*/ {
-      setCurrentWD( wd );
-   }
-
-void FPGAThread::initializeDependent()
+   BaseThread( ( unsigned int ) -1, wd, pe, parent)
 {
-   //initialize instrumentation
-   //xdmaInitHWInstrumentation();
-   //jbosch: Disabling the previous call because it is called several times (SMPMultiWorker)
-   //        Moving the call after the xdmaInit
-
-   //allocate sync buffer to ensure instrumentation data is ready
-   xdmaAllocateKernelBuffer( ( void ** )&_syncBuffer, &_syncHandle, sizeof( unsigned int ) );
+   setCurrentWD( wd );
 }
-
 
 void FPGAThread::runDependent()
 {
@@ -53,37 +41,25 @@ void FPGAThread::runDependent()
    setCurrentWD( work );
    SMPDD &dd = ( SMPDD & ) work.activateDevice( getSMPDevice() );
    dd.getWorkFct()( work.getData() );
-   //NOTE: Cleanup is done in the FPGA plugin (maybe PE is not running any thread)
-   //( ( FPGAProcessor * ) this->runningOn() )->cleanUp();
 }
 
-void FPGAThread::yield() {
+void FPGAThread::yield()
+{
    verbose("FPGA yield");
-#if 0
    //Synchronizing transfers here seems to yield slightly better performance
-   ((FPGAProcessor*)runningOn())->getOutTransferList()->syncAll();
-   ((FPGAProcessor*)runningOn())->getInTransferList()->syncAll();
-#endif
    static int const finishBurst = FPGAConfig::getFinishWDBurst();
    ((FPGAProcessor*)runningOn())->finishPendingWD( finishBurst );
 }
 
-//Sync transfers on idle
-void FPGAThread::idle( bool debug ) {
-#if 0
-    //TODO:get the number of transfers from config
-    //TODO: figure put a sensible default
-    int n = FPGAConfig::getIdleSyncBurst();
-    ((FPGAProcessor*)runningOn())->getOutTransferList()->syncNTransfers(n);
-    ((FPGAProcessor*)runningOn())->getInTransferList()->syncNTransfers(n);
-#endif
+void FPGAThread::idle( bool debug )
+{
+   //Sync transfers on idle
    static int const finishBurst = FPGAConfig::getFinishWDBurst();
    ((FPGAProcessor*)runningOn())->finishPendingWD( finishBurst );
 }
 
-void FPGAThread::switchToNextThread() {}
-
-BaseThread *FPGAThread::getNextThread() {
+BaseThread *FPGAThread::getNextThread()
+{
    if ( getParent() != NULL ) {
       return getParent()->getNextThread();
    } else {
