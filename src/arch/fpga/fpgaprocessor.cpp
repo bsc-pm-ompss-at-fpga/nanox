@@ -77,7 +77,7 @@ void FPGAProcessor::init()
 
    //open input channel
    NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_REQ_CHANNEL_EVENT );
-   status = xdmaOpenChannel(devices[_accelId], XDMA_TO_DEVICE, XDMA_CH_NONE, &iChan);
+   status = xdmaGetDeviceChannel(devices[_accelId], XDMA_TO_DEVICE, &iChan);
    NANOS_FPGA_CLOSE_RUNTIME_EVENT;
 
    if (status)
@@ -88,7 +88,7 @@ void FPGAProcessor::init()
    _fpgaProcessorInfo->setInputChannel( iChan );
 
    NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_REQ_CHANNEL_EVENT );
-   status = xdmaOpenChannel(devices[_accelId], XDMA_FROM_DEVICE, XDMA_CH_NONE, &oChan);
+   status = xdmaGetDeviceChannel(devices[_accelId], XDMA_FROM_DEVICE, &oChan);
    NANOS_FPGA_CLOSE_RUNTIME_EVENT;
    if (status || !oChan)
        warning0("Error opening DMA output channel");
@@ -105,37 +105,9 @@ void FPGAProcessor::cleanUp()
    ensure( _readyTasks.empty(), "Queue of FPGA ready tasks is not empty in one FPGAProcessor" );
    ensure( _waitInTasks.empty(),  "Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
 
-    //release channels
-    xdma_status status;
-    xdma_channel tmpChannel;
-
-    //wait for remaining transfers that could remain
-    _inputTransfers->syncAll();
-    _outputTransfers->syncAll();
-
-    debug("Release DMA channels");
-    NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_REL_CHANNEL_EVENT );
-    tmpChannel = _fpgaProcessorInfo->getInputChannel();
-    debug("release input channel " << _fpgaProcessorInfo->getInputChannel() );
-    status = xdmaCloseChannel( &tmpChannel );
-    debug("  channel released");
-    //Update the new channel as it may be modified by closing the channel
-    _fpgaProcessorInfo->setInputChannel( tmpChannel );
-    NANOS_FPGA_CLOSE_RUNTIME_EVENT;
-
-    if ( status )
-        warning ( "Failed to release input dma channel" );
-
-    NANOS_FPGA_CREATE_RUNTIME_EVENT( ext::NANOS_FPGA_REL_CHANNEL_EVENT );
-    tmpChannel = _fpgaProcessorInfo->getOutputChannel();
-    debug("release output channel " << _fpgaProcessorInfo->getOutputChannel() );
-    status = xdmaCloseChannel( &tmpChannel );
-    debug("  channel released");
-    _fpgaProcessorInfo->setOutputChannel( tmpChannel );
-    NANOS_FPGA_CLOSE_RUNTIME_EVENT;
-
-    if ( status )
-        warning ( "Failed to release output dma channel" );
+   //wait for remaining transfers that could remain
+   _inputTransfers->syncAll();
+   _outputTransfers->syncAll();
 }
 
 WorkDescriptor & FPGAProcessor::getWorkerWD () const

@@ -131,7 +131,8 @@ class FPGAPlugin : public ArchPlugin
          //NOTE: Apply the config now because before FPGAConfig doesn't know the number of accelerators in the system
          FPGAConfig::apply();
          FPGADD::init( &_fpgaDevices );
-         _fpgas = NEW std::vector< FPGAProcessor* >( FPGAConfig::getFPGACount(),( FPGAProcessor* )NULL) ;
+         _fpgas = NEW std::vector< FPGAProcessor* >();
+         _fpgas->reserve( FPGAConfig::getFPGACount() );
          _fpgaThreads = NEW std::vector< FPGAThread* >( FPGAConfig::getNumFPGAThreads(),( FPGAThread* )NULL) ;
          _core = NULL;
          _fpgaHelper = NULL;
@@ -154,6 +155,7 @@ class FPGAPlugin : public ArchPlugin
 
             memory_space_id_t memSpaceId = -1;
             unsigned int fpgasCount = 0;
+            unsigned int maxFpgasCount = FPGAConfig::getFPGACount();
             for ( FPGATypesMap::const_iterator typesIter = FPGAConfig::getAccTypesMap().begin();
                   typesIter != FPGAConfig::getAccTypesMap().end(); ++typesIter )
             {
@@ -178,12 +180,12 @@ class FPGAPlugin : public ArchPlugin
                }
 
                // Create the FPGA accelerators for the current type
-               for ( size_t i = 0; i < numAccels && fpgasCount < _fpgas->size(); ++i ) {
+               for ( size_t i = 0; i < numAccels && fpgasCount < maxFpgasCount; ++i ) {
                   debug0( "New FPGAProcessor created with id: " << fpgasCount << ", memSpaceId: " <<
                           memSpaceId << ", fpgaType: " << fpgaType );
 
                   FPGAProcessor *fpga = NEW FPGAProcessor( fpgasCount, memSpaceId, fpgaDevice );
-                  (*_fpgas)[fpgasCount] = fpga;
+                  _fpgas->push_back( fpga );
 #ifdef NANOS_INSTRUMENTATION_ENABLED
                   //Register device in the instrumentation system
                   registerDeviceInstrumentation( fpga, fpgasCount );
