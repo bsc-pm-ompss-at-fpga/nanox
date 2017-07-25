@@ -28,10 +28,9 @@
 using namespace nanos;
 using namespace nanos::ext;
 
-FPGADevice::FPGADevice ( FPGADeviceType const t ) :
-   FPGADeviceName( t ), Device( _fpgaArchName.c_str() )
-{
-}
+FPGADevice::FPGADevice ( FPGADeviceType const t ) : FPGADeviceName( t ),
+   Device( _fpgaArchName.c_str() ), _fpgaType( t )
+{}
 
 void FPGADevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
    SeparateMemoryAddressSpace &mem, DeviceOps *ops, WD const *wd, void *hostObject,

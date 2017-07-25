@@ -47,8 +47,6 @@ int FPGAConfig::_maxPendingWD = 8;
 int FPGAConfig::_finishWDBurst = 8;
 bool FPGAConfig::_idleCallback = true;
 std::size_t FPGAConfig::_allocatorPoolSize = 64*1024*1024; //Def. 64MB
-std::string * FPGAConfig::_configFile = NULL;
-FPGATypesMap * FPGAConfig::_accTypesMap = NULL;
 
 void FPGAConfig::prepare( Config &config )
 {
@@ -102,12 +100,6 @@ void FPGAConfig::prepare( Config &config )
       "XDMA memory pool size (def: 64MB)" );
    config.registerEnvOption( "fpga_alloc_pool_size", "NX_FPGA_ALLOC_POOL_SIZE" );
    config.registerArgOption( "fpga_alloc_pool_size", "fpga-alloc-pool-size" );
-
-   _accTypesMap = new FPGATypesMap();
-   _configFile = new std::string();
-   config.registerConfigOption( "fpga_acc_types_map", NEW Config::StringVar( *_configFile ),
-      "List with the number of accelerators for each type. Default is [fpga_num] which means that all accelerators have the same type" );
-   config.registerEnvOption( "fpga_acc_types_map", "NX_FPGA_CONFIG_FILE" );
 }
 
 void FPGAConfig::apply()
@@ -147,66 +139,11 @@ void FPGAConfig::apply()
                << "Using one thread per accelerator" );
       _numFPGAThreads = _numAccelerators;
    }
-
-   if ( _enableFPGA && !_configFile->compare( "" ) ) {
-      // Get the config file name using the executable filename
-      // http://www.cplusplus.com/reference/string/string/find_last_of/
-      std::string argv0 = std::string( OS::getArg(0) );
-
-      // Look in the application binary folder
-      *_configFile = argv0 + ".nanox.config";
-      std::ifstream test( _configFile->c_str() );
-      if ( !test.is_open() ) {
-         // Look in the execution folder
-         std::size_t found = argv0.find_last_of("/\\");
-         if ( found == std::string::npos ) {
-            // Something went wrong (argv0 does not contain any slash)
-            fatal0( "FPGA support requires reading a '.nanox.config' file to initialize the accelerator types."
-                     << " However, NX_FPGA_CONFIG_FILE was not defined and runtime was not able to build the"
-                     << " filename based on the application binary." );
-         }
-         *_configFile = argv0.substr( found + 1 ) + ".nanox.config";
-      }
-   }
-
-   // Generate the FPGA accelerators types mask
-   if ( _enableFPGA ) {
-      std::ifstream cnfFile( _configFile->c_str() );
-      if ( cnfFile.is_open() ) {
-         std::string line;
-         std::getline( cnfFile, line ); // First line is the headers line (ignore it)
-         while ( std::getline( cnfFile, line ) ) {
-            // Each line contains [acc_id, num_instances, acc_name]
-            std::istringstream iss( line );
-            FPGADeviceType type;
-            size_t count;
-            std::string name;
-            if ( !( iss >> type >> count >> name ) ) {
-               fatal0( "Invalid line reading file " << *_configFile << ". Wrong line is:\t" << line );
-            }
-            _accTypesMap->insert( std::make_pair( type, count ) );
-         }
-         if ( _accTypesMap->empty() ) {
-            warning0( "Configuration file '" << *_configFile << "' is empty (no accelerator types read)."
-                      << " Assuming that all accelerators (" << _numAccelerators << ") are of type '0'" );
-            _accTypesMap->insert( std::make_pair( FPGADeviceType( 0 ), _numAccelerators ) );
-         }
-      } else {
-         warning0( "Cannot open file '" << *_configFile << "' to build the map of accelerators types."
-                   << " Assuming that all accelerators (" << _numAccelerators << ") are of type '0'" );
-         _accTypesMap->insert( std::make_pair( FPGADeviceType( 0 ), _numAccelerators ) );
-      }
-   }
 }
 
 void FPGAConfig::setFPGASystemCount ( int numFPGAs )
 {
    _numAcceleratorsSystem = numFPGAs;
-}
-
-bool FPGAConfig::mayBeEnabled ()
-{
-   return ( _enableFPGA || nanos_needs_fpga_fun ) && !_forceDisableFPGA && _numAccelerators != 0;
 }
 
 } // namespace ext

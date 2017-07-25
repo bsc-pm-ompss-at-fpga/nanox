@@ -22,7 +22,6 @@
 #define _NANOS_FPGA_PROCESSOR
 
 #include "atomic.hpp"
-#include "compatibility.hpp"
 #include "copydescriptor_decl.hpp"
 #include "queue_decl.hpp"
 
@@ -30,7 +29,10 @@
 #include "fpgaconfig.hpp"
 #include "cachedaccelerator.hpp"
 #include "fpgapinnedallocator.hpp"
-#include "libxdma.h"
+#include "fpgaprocessorinfo.hpp"
+#include "fpgainstrumentation.hpp"
+
+#include "libxtasks.h"
 
 namespace nanos {
 namespace ext {
@@ -38,57 +40,48 @@ namespace ext {
    class FPGAProcessor: public ProcessingElement
    {
       public:
-         class FPGAProcessorInfo;
          typedef Queue< WD * > FPGATasksQueue_t;
 
       private:
          typedef struct FPGATaskInfo_t {
-            WD              *_wd;
-            xdma_task_handle _handle;
+            WD                 *_wd;
+            xtasks_task_handle _handle;
 
-            FPGATaskInfo_t( WD * const wd = NULL, xdma_task_handle h = 0 ) : _wd( wd ), _handle( h ) {}
+            FPGATaskInfo_t( WD * const wd = NULL, xtasks_task_handle h = 0 ) :
+               _wd( wd ), _handle( h ) {}
          } FPGATaskInfo_t;
 
-         int                           _accelId;            //!< Unique FPGA Accelerator identifier
-         FPGAProcessorInfo            *_fpgaProcessorInfo;  //!< Accelerator information
+         FPGAProcessorInfo             _fpgaProcessorInfo;  //!< Accelerator information
          Queue< FPGATaskInfo_t >       _pendingTasks;       //!< Tasks in the accelerator (running)
          FPGATasksQueue_t              _readyTasks;         //!< Tasks that are ready but are waiting for device memory
          FPGATasksQueue_t              _waitInTasks;        //!< Tasks that are ready but are waiting for input copies
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-         DeviceInstrumentation * _devInstr;
-         DeviceInstrumentation * _dmaInInstr;
-         DeviceInstrumentation * _dmaOutInstr;
-         DeviceInstrumentation * _submitInstrumentation;
+         FPGAInstrumentation           _devInstr;
+         FPGAInstrumentation           _dmaInInstr;
+         FPGAInstrumentation           _dmaOutInstr;
+         FPGAInstrumentation           _submitInstrumentation;
+         bool                          _dmaSubmitWarnShown; //!< Defines if the warning has already been shown
 #endif
 
          // AUX functions
          void waitAndFinishTask( FPGATaskInfo_t & task );
-         xdma_task_handle createAndSubmitTask( WD &wd );
+         xtasks_task_handle createAndSubmitTask( WD &wd );
 #ifdef NANOS_INSTRUMENTATION_ENABLED
+         void dmaSubmitStart( const WD *wd );
+         void dmaSubmitEnd( const WD *wd );
          void readInstrCounters( FPGATaskInfo_t & task );
-         xdma_instr_times * getInstrCounters( FPGATaskInfo_t & task );
+         xtasks_ins_times * getInstrCounters( FPGATaskInfo_t & task );
 #endif
 
       public:
 
-         FPGAProcessor( int const accId, memory_space_id_t memSpaceId, Device const * arch );
+         FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpaceId, Device const * arch );
          ~FPGAProcessor();
 
-         inline FPGAProcessorInfo * getFPGAProcessorInfo() const {
+         inline FPGAProcessorInfo getFPGAProcessorInfo() const {
             return _fpgaProcessorInfo;
          }
-
-         /*! \brief Initialize hardware:
-          *   * Open device
-          *   * Get channels
-          */
-         void init();
-
-         /*! \brief Deinit hardware
-          *      Close channels and device
-          */
-         void cleanUp();
 
          //Inherted from ProcessingElement
          WD & getWorkerWD () const;
@@ -105,7 +98,7 @@ namespace ext {
 
          virtual bool hasSeparatedMemorySpace() const { return true; }
          bool supportsUserLevelThreads () const { return false; }
-         int getAccelId() const { return _accelId; }
+         FPGADeviceId getAccelId() const { return _fpgaProcessorInfo.getId(); }
 
          FPGAPinnedAllocator * getAllocator ( void );
 
@@ -115,37 +108,6 @@ namespace ext {
 
          FPGATasksQueue_t & getReadyTasks() { return _readyTasks; }
          FPGATasksQueue_t & getWaitInTasks() { return _waitInTasks; }
-
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-         /*! Defines if the warning has already been shown
-          */
-         bool _dmaSubmitWarnShown;
-
-         void setDeviceInstrumentation( DeviceInstrumentation * devInstr ) {
-            _devInstr = devInstr;
-         }
-         void setDmaInstrumentation( DeviceInstrumentation *dmaIn,
-                 DeviceInstrumentation *dmaOut ) {
-            _dmaInInstr = dmaIn;
-            _dmaOutInstr = dmaOut;
-         }
-         void setSubmitInstrumentation( DeviceInstrumentation * submitInstr ) {
-            _submitInstrumentation = submitInstr;
-         }
-
-         DeviceInstrumentation *getDeviceInstrumentation() {
-            return _devInstr;
-         }
-         DeviceInstrumentation *getDmaInInstrumentation() {
-            return _dmaInInstr;
-         }
-         DeviceInstrumentation *getDmaOutInstrumentation() {
-            return _dmaOutInstr;
-         }
-         DeviceInstrumentation *getSubmitInstrumentation() {
-            return _submitInstrumentation;
-         }
-#endif
 
          virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {
             fatal("switchHelperDependent is not implemented in the FPGAProcessor");

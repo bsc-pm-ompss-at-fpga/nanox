@@ -23,14 +23,10 @@
 #include "config.hpp"
 
 #include "system_decl.hpp"
-#include "fpgadevice_fwd.hpp"
 #include "compatibility.hpp"
 
 namespace nanos {
 namespace ext {
-
-//! \brief Map with pairs {FPGADeviceType, num_instances}
-typedef TR1::unordered_map<FPGADeviceType, size_t> FPGATypesMap;
 
    class FPGAConfig
    {
@@ -48,8 +44,6 @@ typedef TR1::unordered_map<FPGADeviceType, size_t> FPGATypesMap;
          static int                       _finishWDBurst;
          static bool                      _idleCallback;
          static std::size_t               _allocatorPoolSize;
-         static std::string              *_configFile; //! Path of FPGA configuration file (used to generate _accTypesMap)
-         static FPGATypesMap             *_accTypesMap;
 
          /*! Parses the FPGA user options */
          static void prepare ( Config &config );
@@ -85,9 +79,6 @@ typedef TR1::unordered_map<FPGADeviceType, size_t> FPGATypesMap;
 
          //! \brief Returns FPGA Allocator size in MB
          static std::size_t getAllocatorPoolSize() { return _allocatorPoolSize; }
-
-         //! \brief Returns a map with the accelerators types and number of instances
-         static FPGATypesMap& getAccTypesMap() { return *_accTypesMap; }
 
          //! \brief Sets the number of FPGAs and return the old value
          static void setFPGASystemCount ( int numFPGAs );

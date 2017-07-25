@@ -30,8 +30,8 @@
 #define @HAVE_GASNET@
 #endif
 
-#ifndef @HAVE_XDMA@
-#define @HAVE_XDMA@
+#ifndef @HAVE_FPGA@
+#define @HAVE_FPGA@
 #endif
 
 /* External libraries */
@@ -41,6 +41,14 @@
 
 #ifndef @HAVE_DLB@
 #define @HAVE_DLB@
+#endif
+
+#ifndef @HAVE_XDMA@
+#define @HAVE_XDMA@
+#endif
+
+#ifndef @HAVE_XTASKS@
+#define @HAVE_XTASKS@
 #endif
 
 /* Internal features */

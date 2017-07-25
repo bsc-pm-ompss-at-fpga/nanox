@@ -42,3 +42,15 @@ xdma_buf_handle FPGAPinnedAllocator::getBufferHandle()
 {
    return _xdmaHandle;
 }
+
+uint64_t FPGAPinnedAllocator::getBaseAddressPhy() const
+{
+   unsigned long ret;
+#ifdef NANOS_DEBUG_ENABLED
+   xdma_status status = xdmaGetDMAAddress( _xdmaHandle, &ret );
+   ensure0( status == XDMA_SUCCESS, "Error getting the DMA address of the FPGAPinnedAllocator" );
+#else
+   xdmaGetDMAAddress( _xdmaHandle, &ret );
+#endif
+   return ret;
+}

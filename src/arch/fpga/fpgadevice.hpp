@@ -28,6 +28,7 @@
 #include "basethread.hpp" //for getMyThreadSafe() in warning/verbose, etc.
 
 namespace nanos {
+namespace ext {
    /* \breif Auxiliar class that contains the string with the FPGADevice architecture name.
     *        Cannot be a member of FPGADevice because the string constructor must be called before
     *        the Device constructor
@@ -48,11 +49,15 @@ namespace nanos {
           */
          static void copyData( void* dst, void* src, size_t len );
 
+         FPGADeviceType const    _fpgaType; ///< Type information
+
       public:
 
          FPGADevice ( FPGADeviceType const t );
 
          virtual ~FPGADevice () {}
+
+         FPGADeviceType getFPGAType() { return _fpgaType; }
 
          virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem,
                  WD const *wd, unsigned int copyIdx);
@@ -104,5 +109,6 @@ namespace nanos {
          }
 
    };
+} // namespace ext
 } // namespace nanos
 #endif

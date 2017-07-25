@@ -33,6 +33,7 @@
 #include "fpgapinnedallocator.hpp"
 
 #include "libxdma.h"
+#include "libxtasks.h"
 
 #define NUM_STRING_LEN  16
 
@@ -57,79 +58,30 @@ class FPGAPlugin : public ArchPlugin
          FPGAConfig::prepare( cfg );
       }
 
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-      void registerDeviceInstrumentation( FPGAProcessor *fpga, int i ) {
-          unsigned int id;
-          //FIXME: assign proper IDs to deviceinstrumentation
-          //for (int i=0; i<accNum; i++) {
-             char devNum[NUM_STRING_LEN];
-             sprintf(devNum, "%d", i);
-             id = sys.getNumInstrumentAccelerators();
-             FPGAInstrumentation *instr = new FPGAInstrumentation(
-                   std::string( "FPGA accelerator" ) + devNum );
-             instr->setId( id );
-             sys.addDeviceInstrumentation( instr );
-
-             id = sys.getNumInstrumentAccelerators();
-             FPGAInstrumentation *dmaInInstr = new FPGAInstrumentation(
-                   std::string( "DMA in" ) + devNum );
-             dmaInInstr->setId( id );
-             sys.addDeviceInstrumentation( dmaInInstr );
-
-             id = sys.getNumInstrumentAccelerators();
-             FPGAInstrumentation *dmaOutInstr = new FPGAInstrumentation(
-                   std::string( "DMA out" ) + devNum );
-             dmaOutInstr->setId( id );
-             sys.addDeviceInstrumentation( dmaOutInstr );
-
-             id = sys.getNumInstrumentAccelerators();
-             FPGAInstrumentation *submitInstr = new FPGAInstrumentation(
-                   std::string( "DMA submit" ) + devNum );
-             submitInstr->setId( id );
-             sys.addDeviceInstrumentation( submitInstr );
-
-             instr->init();
-             //sys.getInstrumentation()->registerInstrumentDevice( instr );
-             fpga->setDeviceInstrumentation( instr );
-             fpga->setDmaInstrumentation( dmaInInstr, dmaOutInstr );
-             fpga->setSubmitInstrumentation( submitInstr );
-          //}
-      }
-#endif
-
       /*!
        * \brief Initialize fpga device plugin.
        * Load config and initialize xilinx dma library
        */
       void init()
       {
-         /*
-          * Initialize dma library here if fpga support may be required
-          * We must init the DMA lib before any operation using it is performed
-          */
-         int xdmaOpened = false;
-         if ( FPGAConfig::mayBeEnabled() ) {
-            debug0( "xilinx dma initialization" );
-            //Instrumentation has not been initialized yet so we cannot trace things yet
-            int status = xdmaOpen();
-            //Abort if dma library failed to initialize
-            //Otherwise this will cause problems (segfaults/hangs) later on the execution
-            if (status)
-               fatal0( "Error initializing DMA library: Returned status: " << status );
-            xdmaOpened = true;
-
-            //Check the number of accelerators in the system
-            int numAccel;
-            status = xdmaGetNumDevices( &numAccel );
-            if ( status != XDMA_SUCCESS ) {
-               warning0( "Error getting the number of accelerators in the system: Returned status: " << status );
-            } else {
-               FPGAConfig::setFPGASystemCount( numAccel );
-            }
+         //Init the xTasks library
+         xtasks_stat sxt = xtasksInit();
+         if ( sxt != XTASKS_SUCCESS ) {
+            fatal0( "Error initializing xTasks library, returned status: " << sxt );
          }
 
+         //Check the number of accelerators in the system
+         size_t numAccel;
+         sxt = xtasksGetNumAccs( &numAccel );
+         if ( sxt != XTASKS_SUCCESS ) {
+            xtasksFini();
+            fatal0( "Error getting the number of accelerators in the system, returned status: " << sxt );
+         }
+         FPGAConfig::setFPGASystemCount( numAccel );
          //NOTE: Apply the config now because before FPGAConfig doesn't know the number of accelerators in the system
          FPGAConfig::apply();
+
+         //Initialize some variables
          FPGADD::init( &_fpgaDevices );
          _fpgas = NEW std::vector< FPGAProcessor* >();
          _fpgas->reserve( FPGAConfig::getFPGACount() );
@@ -138,60 +90,69 @@ class FPGAPlugin : public ArchPlugin
          _fpgaHelper = NULL;
 
          if ( FPGAConfig::isEnabled() ) {
+            debug0( "xilinx dma initialization" );
+
+            //Init the DMA lib before any operation using it is performed
+            xdma_status sxd = xdmaOpen();
+            if ( sxd != XDMA_SUCCESS ) {
+               //Abort if dma library failed to initialize
+               fatal0( "Error initializing DMA library, returned status: " << sxd );
+            }
+
             //Init the instrumentation
-            xdma_status status = xdmaInitHWInstrumentation();
-            if (status) {
+            sxd = xdmaInitHWInstrumentation();
+            if ( sxd != XDMA_SUCCESS ) {
                //NOTE: If the HW instrumentation initialization fails the execution must end.
                //      Current accelerators always generate the HW instrumentation information
-               status = xdmaClose();
-               if ( status ) {
+               sxd = xdmaClose();
+               if ( sxd != XDMA_SUCCESS ) {
                   warning0( "Error uninitializing xdma core library" );
                }
                fatal0( "Error initializing the instrumentation support in the DMA library." );
             }
 
-            // Create the FPGAPinnedAllocator and set the global shared variable that points to it
+            //Create the FPGAPinnedAllocator and set the global shared variable that points to it
             fpgaAllocator = NEW FPGAPinnedAllocator( FPGAConfig::getAllocatorPoolSize() );
 
+            //Get the accelerators information array
+            size_t count, maxFpgasCount = FPGAConfig::getFPGACount();
+            xtasks_acc_handle accels[maxFpgasCount];
+            sxt = xtasksGetAccs( maxFpgasCount, &accels[0], &count );
+            ensure( count == maxFpgasCount, "Cannot retrieve accelerators information" );
+            if ( sxt != XTASKS_SUCCESS ) {
+               fatal0( "Error getting accelerators information, returned status" << sxt );
+            }
+
+            //Create the FPGAProcessors and FPGADevices
             memory_space_id_t memSpaceId = -1;
-            unsigned int fpgasCount = 0;
-            unsigned int maxFpgasCount = FPGAConfig::getFPGACount();
-            for ( FPGATypesMap::const_iterator typesIter = FPGAConfig::getAccTypesMap().begin();
-                  typesIter != FPGAConfig::getAccTypesMap().end(); ++typesIter )
-            {
-               // At least one iteration will be done because FPGAConfig ensures that the map is not empty
-               FPGADeviceType fpgaType = ( *typesIter ).first;
-               size_t numAccels = ( *typesIter ).second;
+            FPGADevice * fpgaDevice = NULL;
+            for ( size_t fpgasCount = 0; fpgasCount < maxFpgasCount; ++fpgasCount ) {
+               FPGAProcessorInfo info( accels[fpgasCount] );
+               FPGADeviceType fpgaType = info.getType();
 
-               // Create the FPGA device
-               FPGADevice * fpgaDevice = NEW FPGADevice( fpgaType );
-               _fpgaDevices.insert( std::make_pair(fpgaType, fpgaDevice) );
-               if ( fpgasCount == 0 ) {
-                  /* NOTE: In order to create the FPGAProcessor the memSpaceId is needed and this one
-                   *       wants one Device to performe the copies operations.
-                   *       However, the FPGADevice will delegate the copies, allocations, etc. to the
-                   *       FPGAPinnedAllocator. So, the used FPGADevice doesn't matter.
-                   */
-                  memSpaceId = sys.addSeparateMemoryAddressSpace( *fpgaDevice, true, 0 );
-                  SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
-                  fpgaAddressSpace.setAcceleratorNumber( sys.getNewAcceleratorId() );
-                  fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
-                  fpgaAddressSpace.setSpecificData( fpgaAllocator );
+               //Check the accelerator type
+               if ( fpgaDevice == NULL || fpgaType != fpgaDevice->getFPGAType() ) {
+                  fpgaDevice = NEW FPGADevice( fpgaType );
+                  _fpgaDevices.insert( std::make_pair( fpgaType, fpgaDevice ) );
+
+                  if ( fpgasCount == 0 ) {
+                     /* NOTE: In order to create the FPGAProcessor the memSpaceId is needed and this one
+                      *       wants one Device to performe the copies operations.
+                      *       However, the FPGADevice will delegate the copies, allocations, etc. to the
+                      *       FPGAPinnedAllocator. So, the used FPGADevice doesn't matter.
+                      */
+                     memSpaceId = sys.addSeparateMemoryAddressSpace( *fpgaDevice, true, 0 );
+                     SeparateMemoryAddressSpace &fpgaAddressSpace = sys.getSeparateMemory( memSpaceId );
+                     fpgaAddressSpace.setAcceleratorNumber( sys.getNewAcceleratorId() );
+                     fpgaAddressSpace.setNodeNumber( 0 ); //there is only 1 node on this machine
+                     fpgaAddressSpace.setSpecificData( fpgaAllocator );
+                  }
                }
 
-               // Create the FPGA accelerators for the current type
-               for ( size_t i = 0; i < numAccels && fpgasCount < maxFpgasCount; ++i ) {
-                  debug0( "New FPGAProcessor created with id: " << fpgasCount << ", memSpaceId: " <<
-                          memSpaceId << ", fpgaType: " << fpgaType );
-
-                  FPGAProcessor *fpga = NEW FPGAProcessor( fpgasCount, memSpaceId, fpgaDevice );
-                  _fpgas->push_back( fpga );
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-                  //Register device in the instrumentation system
-                  registerDeviceInstrumentation( fpga, fpgasCount );
-#endif
-                  ++fpgasCount;
-               }
+               debug0( "New FPGAProcessor created with id: " << info.getId() << ", memSpaceId: " <<
+                       memSpaceId << ", fpgaType: " << fpgaType );
+               FPGAProcessor *fpga = NEW FPGAProcessor( info, memSpaceId, fpgaDevice );
+               _fpgas->push_back( fpga );
             }
 
             if ( _fpgaThreads->size() > 0 ) {
@@ -207,16 +168,11 @@ class FPGAPlugin : public ArchPlugin
                }
             }
          } else { //!FPGAConfig::isEnabled()
-            if ( xdmaOpened ) {
-               int status;
-               debug0( "Xilinx close dma" );
-               status = xdmaClose();
-               if ( status ) {
-                  warning( "Error uninitializing xdma core library: " << status );
-               }
+            sxt = xtasksFini();
+            if ( sxt != XTASKS_SUCCESS ) {
+               warning0( "Error uninitializing xTasks library, returned status: " << sxt );
             }
          }
-
       }
       /*!
        * \brief Finalize plugin and close dma library.
@@ -224,11 +180,6 @@ class FPGAPlugin : public ArchPlugin
       void finalize() {
          if ( FPGAConfig::isEnabled() ) { //cleanup only if we have initialized
             int status;
-
-            // Run FPGAProcessor cleanup. Maybe it won't run any thread and cleanup must be run in any case
-            for ( unsigned int i = 0; i < _fpgas->size(); i++ ) {
-               (*_fpgas)[i]->cleanUp();
-            }
 
             // Delete FPGADevices
             FPGADD::fini();
@@ -261,6 +212,12 @@ class FPGAPlugin : public ArchPlugin
             if ( status ) {
                warning( "Error uninitializing xdma core library: " << status );
             }
+
+            //Finalize the xTasks library
+            xtasks_stat xst = xtasksFini();
+            if ( xst != XTASKS_SUCCESS ) {
+               warning( "Error uninitializing xTasks library, returned status: " << status );
+            }
          }
       }
 
@@ -285,12 +242,6 @@ class FPGAPlugin : public ArchPlugin
                it != _fpgas->end(); it++ )
          {
             pes.insert( std::make_pair( (*it)->getId(), *it) );
-            /*
-             * Initialize device. Maybe it won't run any thread and must be initialized in any case
-             * NOTE: This cannot be done during the FPGAPlugin init call because the instrumentation
-             *       is not available
-             */
-            ( *it )->init();
          }
       }
 
