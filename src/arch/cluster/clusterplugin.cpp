@@ -25,6 +25,8 @@
 #include "remoteworkdescriptor_decl.hpp"
 #include "basethread.hpp"
 #include "smpprocessor.hpp"
+#include "clusterthread_decl.hpp"
+
 #ifdef OpenCL_DEV
 #include "opencldd.hpp"
 #endif
@@ -35,16 +37,16 @@
 #include "fpgadd.hpp"
 #endif
 
-#if defined(__SIZEOF_SIZE_T__) 
+#if defined(__SIZEOF_SIZE_T__)
    #if  __SIZEOF_SIZE_T__ == 8
 
-#define DEFAULT_NODE_MEM (0x542000000ULL) 
-#define MAX_NODE_MEM     (0x542000000ULL) 
+#define DEFAULT_NODE_MEM (0x542000000ULL)
+#define MAX_NODE_MEM     (0x542000000ULL)
 
    #elif __SIZEOF_SIZE_T__ == 4
 
-#define DEFAULT_NODE_MEM (0x40000000UL) 
-#define MAX_NODE_MEM     (0x40000000UL) 
+#define DEFAULT_NODE_MEM (0x40000000UL)
+#define MAX_NODE_MEM     (0x40000000UL)
 
    #else
       #error "Weird"
@@ -111,7 +113,7 @@ void ClusterPlugin::init()
             arch_idx += 1;
          }
 
-         _remoteNodes = NEW std::vector<nanos::ext::ClusterNode *>(nodes - 1, (nanos::ext::ClusterNode *) NULL); 
+         _remoteNodes = NEW std::vector<nanos::ext::ClusterNode *>(nodes - 1, (nanos::ext::ClusterNode *) NULL);
          unsigned int node_index = 0;
          for ( unsigned int nodeC = 0; nodeC < nodes; nodeC++ ) {
             if ( nodeC != _gasnetApi->getNodeNum() ) {
@@ -157,7 +159,7 @@ void ClusterPlugin::init()
 // void * ClusterPlugin::getPinnedSegmentAddr( unsigned int idx ) const {
 //    return _pinnedSegmentAddrList[ idx ];
 // }
-// 
+//
 // std::size_t ClusterPlugin::getPinnedSegmentLen( unsigned int idx ) const {
 //    return _pinnedSegmentLenList[ idx ];
 // }
@@ -240,14 +242,21 @@ void ClusterPlugin::startSupportThreads() {
    if ( _gasnetApi->getNumNodes() > 1 )
    {
       if ( _gasnetApi->getNodeNum() == 0 ) {
-         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker( _gasnetApi->getNumNodes() - 1, (ProcessingElement **) &(*_remoteNodes)[0] ) );
+         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker(
+            _gasnetApi->getNumNodes() - 1,
+            ( ProcessingElement ** ) &( *_remoteNodes )[0],
+            ( DD::work_fct ) ClusterThread::workerClusterLoop
+         ) );
       } else {
-         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker( 0, NULL ) );
+         _clusterThread = dynamic_cast<ext::SMPMultiThread *>(&_cpu->startMultiWorker(
+            0, NULL,
+            ( DD::work_fct )ClusterThread::workerClusterLoop
+         ) );
          if ( sys.getPMInterface().getInternalDataSize() > 0 )
             _clusterThread->getThreadWD().setInternalData(NEW char[sys.getPMInterface().getInternalDataSize()]);
          //_pmInterface->setupWD( smpRepThd->getThreadWD() );
          //setSlaveParentWD( &mainWD );
-         if ( sys.getNumAccelerators() > 0 ) { 
+         if ( sys.getNumAccelerators() > 0 ) {
             /* This works, but it could happen that the cluster is initialized before the accelerators, and this call could return 0 */
             sys.getNetwork()->enableCheckingForDataInOtherAddressSpaces();
          }
@@ -272,7 +281,7 @@ void ClusterPlugin::startWorkerThreads( std::map<unsigned int, BaseThread *> &wo
          }
       }
    } else {
-      workers.insert( std::make_pair( _clusterThread->getId(), _clusterThread ) ); 
+      workers.insert( std::make_pair( _clusterThread->getId(), _clusterThread ) );
    }
 }
 
@@ -357,4 +366,3 @@ bool ClusterPlugin::unalignedNodeMemory() const {
 }
 
 DECLARE_PLUGIN("arch-cluster",nanos::ext::ClusterPlugin);
-

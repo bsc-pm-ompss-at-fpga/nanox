@@ -35,16 +35,16 @@
 #include "fpgadd.hpp"
 #endif
 
-#if defined(__SIZEOF_SIZE_T__) 
+#if defined(__SIZEOF_SIZE_T__)
    #if  __SIZEOF_SIZE_T__ == 8
 
 #define DEFAULT_NODE_MEM  (0x80000000ULL) //2Gb
-#define MAX_NODE_MEM     (0x542000000ULL) 
+#define MAX_NODE_MEM     (0x542000000ULL)
 
    #elif __SIZEOF_SIZE_T__ == 4
 
-#define DEFAULT_NODE_MEM (0x40000000UL) 
-#define MAX_NODE_MEM     (0x40000000UL) 
+#define DEFAULT_NODE_MEM (0x40000000UL)
+#define MAX_NODE_MEM     (0x40000000UL)
 
    #else
       #error "Weird"
@@ -127,8 +127,8 @@ int ClusterMPIPlugin::initNetwork(int *argc, char ***argv)
       }
 
 
-      _nodes = NEW std::vector<nanos::ext::ClusterNode *>(nodes, (nanos::ext::ClusterNode *) NULL); 
-      std::vector<ProcessingElement *> tmp_nodes(nodes-1, (ProcessingElement *) NULL); 
+      _nodes = NEW std::vector<nanos::ext::ClusterNode *>(nodes, (nanos::ext::ClusterNode *) NULL);
+      std::vector<ProcessingElement *> tmp_nodes(nodes-1, (ProcessingElement *) NULL);
       unsigned int node_index = 0;
       for ( unsigned int nodeC = 0; nodeC < nodes; nodeC++ ) {
          if ( nodeC != _gasnetApi->getNodeNum() ) {
@@ -250,8 +250,11 @@ unsigned ClusterMPIPlugin::getNumThreads() const {
 }
 
 void ClusterMPIPlugin::startSupportThreads() {
-   _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker( 0, NULL ) );
-   if ( sys.getNumAccelerators() > 0 ) { 
+   _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker(
+      0, NULL,
+     ( DD::work_fct )ClusterThread::workerClusterLoop )
+   ) );
+   if ( sys.getNumAccelerators() > 0 ) {
       /* This works, but it could happen that the cluster is initialized before the accelerators, and this call could return 0 */
       sys.getNetwork()->enableCheckingForDataInOtherAddressSpaces();
    }
@@ -268,7 +271,7 @@ void ClusterMPIPlugin::startWorkerThreads( std::map<unsigned int, BaseThread *> 
    //       }
    //    }
    // } else {
-       workers.insert( std::make_pair( _clusterThread->getId(), _clusterThread ) ); 
+       workers.insert( std::make_pair( _clusterThread->getId(), _clusterThread ) );
    // }
 }
 
@@ -357,4 +360,3 @@ BaseThread *ClusterMPIPlugin::getClusterThread() const {
 }
 
 DECLARE_PLUGIN("arch-cluster",nanos::ext::ClusterMPIPlugin);
-

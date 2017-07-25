@@ -7,7 +7,7 @@
 #endif
 #ifdef FPGA_DEV
 #include "fpgadd.hpp"
-#include "fpgadevice_decl.hpp"
+#include "fpgadevice.hpp"
 #endif
 #ifdef GPU_DEV
 #include "gpudd.hpp"

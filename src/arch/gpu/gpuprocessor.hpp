@@ -157,17 +157,12 @@ inline GPUMemoryTransferList * GPUProcessor::getOutTransferList ()
 
 inline void GPUProcessor::switchTo( WD *work, SchedulerHelper *helper )
 {
-   fatal("A GPUThread cannot call switchTo function.");
+   fatal("A GPUProcessor cannot call switchTo function.");
 }
 
 inline void GPUProcessor::exitTo( WD *work, SchedulerHelper *helper )
 {
-   fatal("A GPUThread cannot call exitTo function.");
-}
-
-inline void GPUProcessor::switchHelperDependent( WD* oldWD, WD* newWD, void *arg )
-{
-   fatal("A GPUThread cannot call switchHelperDependent function.");
+   fatal("A GPUProcessor cannot call exitTo function.");
 }
 
 } // namespace ext
