@@ -39,32 +39,8 @@
 #include "errno.h"
 #include <unistd.h>
 
-#ifndef EXTRAE_VERSION
-#warning Extrae library version is not supported (use >= 2.4):
-#else
+#define extrae_size_t unsigned int
 
-#  define NANOX_EXTRAE_SUPPORTED_VERSION
-
-#  if EXTRAE_VERSION_MAJOR(EXTRAE_VERSION) == 2 /************* version 2.x.x */
-#      define extrae_size_t unsigned int
-
-#    if EXTRAE_VERSION_MINOR(EXTRAE_VERSION) == 2 /*********** version 2.2.x */ 
-#      warning Extrae library version is not supported (use >= 2.4):
-#      undef NANOX_EXTRAE_SUPPORTED_VERSION
-#    endif /*------------------------------------------------- version 2.2.x */
-
-#    if EXTRAE_VERSION_MINOR(EXTRAE_VERSION) == 3 /*********** version 2.3.x */
-#      warning Extrae library version is not supported (use >= 2.4):
-#      undef NANOX_EXTRAE_SUPPORTED_VERSION
-#    endif /*------------------------------------------------- version 2.3.x */
-
-#  endif /*--------------------------------------------------- version 2.x.x */
-#  if EXTRAE_VERSION_MAJOR(EXTRAE_VERSION) == 3 /************* version 3.x.x */
-#      define extrae_size_t unsigned int
-#  endif /*--------------------------------------------------- version 3.x.x */
-#endif
-
-#ifdef NANOX_EXTRAE_SUPPORTED_VERSION
 extern "C" {
    unsigned int nanos_ompitrace_get_max_threads ( void );
    unsigned int nanos_ompitrace_get_thread_num ( void );
@@ -77,11 +53,13 @@ extern "C" {
 
 namespace nanos {
 
+#ifdef NANOS_INSTRUMENTATION_ENABLED
    const extrae_type_t _eventState      = 9000000;   /*!< event coding state changes */
    const extrae_type_t _eventPtPStart   = 9000001;   /*!< event coding comm start */
    const extrae_type_t _eventPtPEnd     = 9000002;   /*!< event coding comm end */
    const extrae_type_t _eventSubState   = 9000004;   /*!< event coding sub-state changes */
    const extrae_type_t _eventBase       = 9200000;   /*!< event base (used in key/value pairs) */
+#endif
 
 class InstrumentationExtrae: public Instrumentation 
 {
@@ -645,5 +623,3 @@ class InstrumentationParaverPlugin : public Plugin {
 } // namespace nanos
 
 DECLARE_PLUGIN("instrumentation-paraver",nanos::ext::InstrumentationParaverPlugin);
-
-#endif

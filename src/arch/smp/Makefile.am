@@ -34,6 +34,8 @@ EXTRA_DIST= \
 	ppc64_v2/stack_asm.s \
 	armv71/stack.cpp \
 	armv71/stack_asm.s \
+	armv71_hf/stack.cpp \
+	armv71_hf/stack_asm.s \
 	aarch64/stack.cpp \
 	aarch64/stack_asm.s \
 	tile64/stack.cpp \
@@ -51,7 +53,7 @@ devinclude_HEADERS = \
 	smpthread_fwd.hpp \
 	smptransferqueue_decl.hpp \
 	smptransferqueue.hpp \
-	$(END) 
+	$(END)
 
 common_libadd=\
         $(END)
@@ -85,7 +87,7 @@ else
   ult_sources=
 endif
 
-noinst_LTLIBRARIES = 
+noinst_LTLIBRARIES =
 
 if is_debug_enabled
 noinst_LTLIBRARIES += debug/libsmp.la
@@ -93,7 +95,7 @@ debug_LTLIBRARIES = debug/libnanox-pe-smp.la
 
 debug_libsmp_la_CPPFLAGS=$(common_debug_CPPFLAGS)
 debug_libsmp_la_CXXFLAGS=$(common_debug_CXXFLAGS)
-debug_libsmp_la_CCASFLAGS=$(common_debug_CXXFLAGS)
+debug_libsmp_la_CCASFLAGS=$(common_debug_CCASFLAGS)
 debug_libsmp_la_SOURCES=$(smp_sources) $(ult_sources)
 
 debug_libnanox_pe_smp_la_CPPFLAGS=$(common_debug_CPPFLAGS) @memkindinc@
@@ -109,7 +111,7 @@ instrumentation_LTLIBRARIES = instrumentation/libnanox-pe-smp.la
 
 instrumentation_libsmp_la_CPPFLAGS=$(common_instrumentation_CPPFLAGS)
 instrumentation_libsmp_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS)
-instrumentation_libsmp_la_CCASFLAGS=$(common_instrumentation_CXXFLAGS)
+instrumentation_libsmp_la_CCASFLAGS=$(common_instrumentation_CCASFLAGS)
 instrumentation_libsmp_la_SOURCES=$(smp_sources) $(ult_sources)
 
 instrumentation_libnanox_pe_smp_la_CPPFLAGS=$(common_instrumentation_CPPFLAGS) @memkindinc@
@@ -125,7 +127,7 @@ instrumentation_debug_LTLIBRARIES = instrumentation-debug/libnanox-pe-smp.la
 
 instrumentation_debug_libsmp_la_CPPFLAGS=$(common_instrumentation_debug_CPPFLAGS)
 instrumentation_debug_libsmp_la_CXXFLAGS=$(common_instrumentation_debug_CXXFLAGS)
-instrumentation_debug_libsmp_la_CCASFLAGS=$(common_instrumentation_debug_CXXFLAGS)
+instrumentation_debug_libsmp_la_CCASFLAGS=$(common_instrumentation_debug_CCASFLAGS)
 instrumentation_debug_libsmp_la_SOURCES=$(smp_sources) $(ult_sources)
 
 instrumentation_debug_libnanox_pe_smp_la_CPPFLAGS=$(common_instrumentation_debug_CPPFLAGS) @memkindinc@
@@ -141,7 +143,7 @@ performance_LTLIBRARIES = performance/libnanox-pe-smp.la
 
 performance_libsmp_la_CPPFLAGS=$(common_performance_CPPFLAGS)
 performance_libsmp_la_CXXFLAGS=$(common_performance_CXXFLAGS)
-performance_libsmp_la_CCASFLAGS=$(common_performance_CXXFLAGS)
+performance_libsmp_la_CCASFLAGS=$(common_performance_CCASFLAGS)
 performance_libsmp_la_SOURCES=$(smp_sources) $(ult_sources)
 
 performance_libnanox_pe_smp_la_CPPFLAGS=$(common_performance_CPPFLAGS) @memkindinc@
@@ -150,4 +152,3 @@ performance_libnanox_pe_smp_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags) @memkind
 performance_libnanox_pe_smp_la_LIBADD=$(common_libadd) @memkindlibs@
 performance_libnanox_pe_smp_la_SOURCES=$(pe_smp_sources)
 endif
-
