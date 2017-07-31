@@ -59,14 +59,14 @@ namespace ext {
          static inline int getAccPerThread() { return _numAccelerators/_numFPGAThreads; }
          static inline int getNumFPGAThreads() { return _numFPGAThreads; }
 
-         //! \brief Returns if the FPGA support is enabled
+         /*! \brief Returns if the FPGA support is enabled.
+          *         NOTE: It may be enabled in the apply() method
+          */
          static inline bool isEnabled() { return _enableFPGA; }
 
-         /*! \brief Returns if the FPGA support may be enabled after call apply.
-          *         This method can be called before the apply (and setFPGASystemCount) to Check
-                    if the support is expected to be enabled or not.
+         /*! \brief Returns if the FPGA support is disabled and won't be enabled in apply()
           */
-         static bool mayBeEnabled();
+         static bool isDisabled();
 
          //! \brief Returns cycle time in ns
          static unsigned int getCycleTime() {
@@ -80,7 +80,7 @@ namespace ext {
          //! \brief Returns FPGA Allocator size in MB
          static std::size_t getAllocatorPoolSize() { return _allocatorPoolSize; }
 
-         //! \brief Sets the number of FPGAs and return the old value
+         //! \brief Sets the number of FPGAs
          static void setFPGASystemCount ( int numFPGAs );
    };
     //create instrumentation macros (as gpu) to make code cleaner

@@ -64,6 +64,10 @@ class FPGAPlugin : public ArchPlugin
        */
       void init()
       {
+         //Check if the plugin has to be initialized
+         if ( FPGAConfig::isDisabled() ) return;
+         debug0( "FPGA Arch support may be enabled" );
+
          //Init the xTasks library
          xtasks_stat sxt = xtasksInit();
          if ( sxt != XTASKS_SUCCESS ) {
@@ -90,7 +94,7 @@ class FPGAPlugin : public ArchPlugin
          _fpgaHelper = NULL;
 
          if ( FPGAConfig::isEnabled() ) {
-            debug0( "xilinx dma initialization" );
+            debug0( "FPGA Arch support enabled. Initializing structures..." );
 
             //Init the DMA lib before any operation using it is performed
             xdma_status sxd = xdmaOpen();
@@ -207,7 +211,6 @@ class FPGAPlugin : public ArchPlugin
              * After the plugin is unloaded, no more operations regarding the DMA
              * library nor the FPGA device will be performed so it's time to close the dma lib
              */
-            debug0( "Xilinx close dma" );
             status = xdmaClose();
             if ( status ) {
                warning( "Error uninitializing xdma core library: " << status );

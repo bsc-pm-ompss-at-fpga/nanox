@@ -146,5 +146,10 @@ void FPGAConfig::setFPGASystemCount ( int numFPGAs )
    _numAcceleratorsSystem = numFPGAs;
 }
 
+bool FPGAConfig::isDisabled ()
+{
+   return _forceDisableFPGA || !( _enableFPGA || nanos_needs_fpga_fun );
+}
+
 } // namespace ext
 } // namespace nanos
