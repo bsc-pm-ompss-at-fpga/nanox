@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,19 +17,36 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef MPIALL_HPP
-#define MPIALL_HPP
 
-#include "mpiplugin.cpp"
-#include "mpiprocessor.cpp"
-#include "mpiremotenode.cpp"
-#include "mpidevice.cpp"
-#include "mpidd.cpp"
-#include "mpithread.cpp"
-#include "mpi-api.cpp"
-#include "hostinfo.cpp"
-#include "command.cpp"
-#include "cachecommand.cpp"
+#include "smp_ult.hpp"
+#include <iostream>
 
-#endif	/* MPIALL_HPP */
+extern "C"
+{
+// low-level helper routine to start a new user-thread
+   void startHelper ();
+}
 
+void * initContext( void *stack, size_t stackSize, void (*wrapperFunction)(nanos::WD&), nanos::WD *wd,
+                    void *cleanup, void *cleanupArg )
+{
+   intptr_t * state = (intptr_t *) stack;
+   state += (stackSize/sizeof(intptr_t)) - 1;
+
+   //! Stack must be aligned to 8 byte boundary
+   unsigned int align = ( ( (unsigned int) state ) & 7) / sizeof(intptr_t *);
+   state -= align;
+
+   *state = ( intptr_t )cleanup;
+   state--;
+   *state = ( intptr_t )cleanupArg;
+   state --;
+   *state = ( intptr_t )wrapperFunction;
+   state--;
+   *state = ( intptr_t )wd;
+   state--;
+   *state = ( intptr_t )startHelper;
+   state -= 25; //number of push and pop registers except for the lr on pc on stack.s
+
+   return (void *) state;
+}
