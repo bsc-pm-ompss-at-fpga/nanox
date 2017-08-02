@@ -104,8 +104,6 @@ void FPGAConfig::prepare( Config &config )
 
 void FPGAConfig::apply()
 {
-   verbose0( "Initializing FPGA support component" );
-
    //Auto-enable support if Mercurium requires it
    _enableFPGA = _enableFPGA || nanos_needs_fpga_fun;
 

@@ -64,8 +64,10 @@ class FPGAPlugin : public ArchPlugin
       void init()
       {
          //Check if the plugin has to be initialized
-         if ( FPGAConfig::isDisabled() ) return;
-         debug0( "FPGA Arch support may be enabled" );
+         if ( FPGAConfig::isDisabled() ) {
+            debug0( "FPGA Arch support not needed or disabled. Skipping initialization" );
+            return;
+         }
 
          //Init the xTasks library
          xtasks_stat sxt = xtasksInit();
@@ -91,7 +93,7 @@ class FPGAPlugin : public ArchPlugin
          _helperCores.reserve( FPGAConfig::getNumFPGAThreads() );
 
          if ( FPGAConfig::isEnabled() ) {
-            debug0( "FPGA Arch support enabled. Initializing structures..." );
+            debug0( "FPGA Arch support required. Initializing structures..." );
 
             //Init the DMA lib before any operation using it is performed
             xdma_status sxd = xdmaOpen();
