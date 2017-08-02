@@ -287,6 +287,8 @@ class FPGAPlugin : public ArchPlugin
                &(*it)->startMultiWorker( _fpgas.size(), (ProcessingElement **) &_fpgas[0],
                ( DD::work_fct )FPGAWorker::FPGAWorkerLoop )
             );
+            debug0( "New FPGA Helper Thread created with id: " << fpgaHelper->getId() <<
+               ", in SMP processor: " << ( *it )->getId() );
             _helperThreads.push_back( fpgaHelper );
 
             // Register each sub-thread of Multithread
