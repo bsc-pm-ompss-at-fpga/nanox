@@ -43,12 +43,11 @@ namespace ext {
 class FPGAPlugin : public ArchPlugin
 {
    private:
-      std::vector< FPGAProcessor* > *_fpgas;
-      std::vector< FPGAThread* >    *_fpgaThreads;
+      std::vector< FPGAProcessor* >  _fpgas;
+      std::vector< SMPMultiThread* > _helperThreads;
+      std::vector< SMPProcessor* >   _helperCores;
       std::vector< FPGAListener* >   _fpgaListeners;
       FPGADeviceMap                  _fpgaDevices;
-      SMPProcessor                  *_core;
-      SMPMultiThread                *_fpgaHelper;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -87,11 +86,9 @@ class FPGAPlugin : public ArchPlugin
 
          //Initialize some variables
          FPGADD::init( &_fpgaDevices );
-         _fpgas = NEW std::vector< FPGAProcessor* >();
-         _fpgas->reserve( FPGAConfig::getFPGACount() );
-         _fpgaThreads = NEW std::vector< FPGAThread* >( FPGAConfig::getNumFPGAThreads(),( FPGAThread* )NULL) ;
-         _core = NULL;
-         _fpgaHelper = NULL;
+         _fpgas.reserve( FPGAConfig::getFPGACount() );
+         _helperThreads.reserve( FPGAConfig::getNumFPGAThreads() );
+         _helperCores.reserve( FPGAConfig::getNumFPGAThreads() );
 
          if ( FPGAConfig::isEnabled() ) {
             debug0( "FPGA Arch support enabled. Initializing structures..." );
@@ -156,20 +153,20 @@ class FPGAPlugin : public ArchPlugin
                debug0( "New FPGAProcessor created with id: " << info.getId() << ", memSpaceId: " <<
                        memSpaceId << ", fpgaType: " << fpgaType );
                FPGAProcessor *fpga = NEW FPGAProcessor( info, memSpaceId, fpgaDevice );
-               _fpgas->push_back( fpga );
+               _fpgas.push_back( fpga );
             }
 
-            if ( _fpgaThreads->size() > 0 ) {
-               //Assuming 1 FPGA helper thread
-               //TODO: Allow any number of fpga threads
-               _core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
-               if ( _core ) {
-                  _core->setNumFutureThreads( 1 );
+            //Reserve some SMP cores to run the helper threads
+            for ( int i = 0; i < FPGAConfig::getNumFPGAThreads(); ++i ) {
+               SMPProcessor * core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
+               if ( core != NULL ) {
+                  core->setNumFutureThreads( 1 );
                } else {
-                  _core = sys.getSMPPlugin()->getFirstSMPProcessor();
-                  _core->setNumFutureThreads( _core->getNumFutureThreads() + 1 );
+                  core = sys.getSMPPlugin()->getFirstSMPProcessor();
+                  core->setNumFutureThreads( core->getNumFutureThreads() + 1 );
                   NANOS_INSTRUMENT( sys.getInstrumentation()->incrementMaxThreads(); );
                }
+               _helperCores.push_back( core );
             }
          } else { //!FPGAConfig::isEnabled()
             sxt = xtasksFini();
@@ -185,6 +182,12 @@ class FPGAPlugin : public ArchPlugin
          if ( FPGAConfig::isEnabled() ) { //cleanup only if we have initialized
             int status;
 
+            // Join and delete FPGA Helper threads
+            //NOTE: As they are in the workers list, they are deleted during the System::finish()
+
+            // Delete FPGA Processors
+            //NOTE: As they are in the PEs map, they are deleted during the System::finish()
+
             // Delete FPGADevices
             FPGADD::fini();
             for ( FPGADeviceMap::const_iterator it = _fpgaDevices.begin();
@@ -193,9 +196,11 @@ class FPGAPlugin : public ArchPlugin
                delete it->second;
             }
 
+            // Delete FPGA Allocator
             delete fpgaAllocator;
             fpgaAllocator = NULL;
 
+            // Delete FPGA Idle Callbacks
             for (size_t i = 0; i < _fpgaListeners.size(); ++i) {
                delete _fpgaListeners[i];
             }
@@ -225,11 +230,11 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual unsigned getNumHelperPEs() const {
-         return ( _fpgaHelper != NULL );
+         return _helperCores.size();
       }
 
       virtual unsigned getNumPEs() const {
-         return _fpgas->size();
+         return _fpgas.size();
       }
 
       virtual unsigned getNumThreads() const {
@@ -237,12 +242,12 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual unsigned getNumWorkers() const {
-         return _fpgaThreads->size();
+         return _helperThreads.size();
       }
 
       virtual void addPEs( PEMap &pes ) const {
-         for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas->begin();
-               it != _fpgas->end(); it++ )
+         for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas.begin();
+               it != _fpgas.end(); it++ )
          {
             pes.insert( std::make_pair( (*it)->getId(), *it) );
          }
@@ -258,8 +263,8 @@ class FPGAPlugin : public ArchPlugin
 
       virtual void startSupportThreads () {
          if ( !FPGAConfig::getIdleCallbackEnabled() ) return;
-         for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas->begin();
-               it != _fpgas->end(); it++ )
+         for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas.begin();
+               it != _fpgas.end(); it++ )
          {
             // Register Event Listener
             FPGAListener* l = new FPGAListener( *it );
@@ -269,22 +274,30 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual void startWorkerThreads( std::map<unsigned int, BaseThread*> &workers ) {
-         if ( !_core ) return;
-         ensure( !_fpgas->empty(), "Starting one FPGA Support Thread but there are not accelerators" );
+         ensure( !_fpgas.empty(), "Starting FPGA Support Threads but there are not accelerators" );
 
-         // Starting the SMP (multi)Thread
-         _fpgaHelper = dynamic_cast< ext::SMPMultiThread * >(
-            &_core->startMultiWorker( _fpgas->size(), (ProcessingElement **) &(*_fpgas)[0],
-            ( DD::work_fct )FPGAWorker::FPGAWorkerLoop )
-         );
+         for ( std::vector<SMPProcessor*>::const_iterator it = _helperCores.begin();
+               it != _helperCores.end(); it++ )
+         {
+            // Starting the SMP (multi)Thread
+            //NOTE: Assuming that all threads send to all accelerators
+            SMPMultiThread * fpgaHelper = dynamic_cast< ext::SMPMultiThread * >(
+               &(*it)->startMultiWorker( _fpgas.size(), (ProcessingElement **) &_fpgas[0],
+               ( DD::work_fct )FPGAWorker::FPGAWorkerLoop )
+            );
+            _helperThreads.push_back( fpgaHelper );
 
-         // Register each sub-thread of Multithread
-         for ( unsigned int i = 0; i< _fpgaHelper->getNumThreads(); i++) {
-            BaseThread *thd = _fpgaHelper->getThreadVector()[ i ];
-            workers.insert( std::make_pair( thd->getId(), thd ) );
+            // Register each sub-thread of Multithread
+            for ( std::vector<BaseThread*>::const_iterator it2 = fpgaHelper->getThreadVector().begin();
+                  it2 != fpgaHelper->getThreadVector().end(); it2++ )
+            {
+               BaseThread * thd = *it2;
+               workers.insert( std::make_pair( thd->getId(), thd ) );
+            }
+
+            //Push multithread into the team to let it steam tasks from other smp threads
+            workers.insert( std::make_pair( fpgaHelper->getId(), fpgaHelper ) );
          }
-         //Push multithread into the team to let it steam tasks from other smp threads
-         workers.insert( std::make_pair( _fpgaHelper->getId(), _fpgaHelper ) );
       }
 
       virtual ProcessingElement * createPE( unsigned id , unsigned uid ) {
