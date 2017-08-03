@@ -79,10 +79,7 @@ namespace ext {
          virtual bool _copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len,
                SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig,
                DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
-               reg_t hostRegionId )
-         {
-            std::cerr << "wrong copyDevToDev" <<std::endl; return false;
-         }
+               reg_t hostRegionId );
 
          virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem,
                SimpleAllocator::ChunkList &list );
@@ -97,17 +94,11 @@ namespace ext {
                DeviceOps *ops, WD const *wd, void *hostObject,
                reg_t hostRegionId );
 
-         //not supported
          virtual bool _copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigAddr,
                std::size_t len, std::size_t numChunks, std::size_t ld,
                SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memOrig,
                DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
-               reg_t hostRegionId )
-         {
-            warning( "Strided fpga to fpga copies not implemented" );
-            return true;
-         }
-
+               reg_t hostRegionId );
    };
 } // namespace ext
 } // namespace nanos
