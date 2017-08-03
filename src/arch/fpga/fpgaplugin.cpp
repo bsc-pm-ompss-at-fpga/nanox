@@ -285,8 +285,6 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual void startWorkerThreads( std::map<unsigned int, BaseThread*> &workers ) {
-         ensure( !_fpgas.empty(), "Starting FPGA Support Threads but there are not accelerators" );
-
          for ( std::vector<SMPProcessor*>::const_iterator it = _helperCores.begin();
                it != _helperCores.end(); it++ )
          {
