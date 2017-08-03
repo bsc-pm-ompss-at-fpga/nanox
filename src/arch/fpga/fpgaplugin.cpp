@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -33,9 +32,19 @@
 #include "fpgapinnedallocator.hpp"
 
 #include "libxdma.h"
+#include "libxdma_version.h"
 #include "libxtasks.h"
+#include "libxtasks_version.h"
 
-#define NUM_STRING_LEN  16
+//! Check that libxdma version is compatible
+#if !defined(LIBXDMA_VERSION_MAJOR) || LIBXDMA_VERSION_MAJOR < 1
+# error Installed libxdma is not supported (use >= 1.0)
+#endif
+
+//! Check that libxtasks version is compatible
+#if !defined(LIBXTASKS_VERSION_MAJOR) || LIBXTASKS_VERSION_MAJOR < 1
+# error Installed libxtasks is not supported (use >= 1.0)
+#endif
 
 namespace nanos {
 namespace ext {
