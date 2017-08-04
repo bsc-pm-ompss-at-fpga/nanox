@@ -44,12 +44,10 @@ namespace ext {
          FPGAProcessorInfo( xtasks_acc_handle handle ) :
             _handle( handle )
          {
-#if NANOS_DEBUG_ENABLED
             xtasks_stat sxt = xtasksGetAccInfo( _handle, &_info );
-            ensure0( sxt == XTASKS_SUCCESS, "Cannot retrieve accelerator information" );
-#else
-            xtasksGetAccInfo( _handle, &_info );
-#endif
+            if ( sxt != XTASKS_SUCCESS ) {
+               ensure0( sxt == XTASKS_SUCCESS, "Cannot retrieve accelerator information" );
+            }
          }
 
          xtasks_acc_handle getHandle() const {

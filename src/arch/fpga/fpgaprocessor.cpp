@@ -140,25 +140,20 @@ void FPGAProcessor::dmaSubmitEnd( const WD *wd )
 #endif  //NANOS_INSTRUMENTATION_ENABLED
 
 xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
-#ifdef NANOS_DEBUG_ENABLED
    xtasks_stat status;
-#endif
    xtasks_task_handle task;
 
    size_t numArgs = wd.getDataSize()/sizeof(uintptr_t);
    ensure( wd.getDataSize()%sizeof(uintptr_t) == 0,
            "WD's data size is not multiple of uintptr_t (All args must be pointers)" );
 
-#ifndef NANOS_DEBUG_ENABLED
-   xtasksCreateTask( (uintptr_t)&wd, _fpgaProcessorInfo.getHandle(), XTASKS_COMPUTE_ENABLE, &task );
-#else
    status = xtasksCreateTask( (uintptr_t)&wd, _fpgaProcessorInfo.getHandle(), XTASKS_COMPUTE_ENABLE, &task );
    if ( status != XTASKS_SUCCESS ) {
-      //TODO: If status == XTASKS_SUCCESS, block and wait untill mem is available
-      fatal( "Cannot initialize FPGA task info (accId: " << _fpgaProcessorInfo.getId() << ", #args: "
-             << numArgs << "): " << ( status == XTASKS_ENOMEM ? "XTASKS_ENOMEM" : "XTASKS_ERROR" ) );
+      //TODO: If status == XTASKS_ENOMEM, block and wait untill mem is available
+      fatal( "Cannot initialize FPGA task info (accId: " <<
+             _fpgaProcessorInfo.getId() << ", #args: " << numArgs << "): " <<
+             ( status == XTASKS_ENOMEM ? "XTASKS_ENOMEM" : "XTASKS_ERROR" ) );
    }
-#endif
 
    uintptr_t * args = ( uintptr_t * )( wd.getData() );
    static FPGAPinnedAllocator * const allocator = getAllocator();
@@ -169,12 +164,11 @@ xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
       size_t  offset = args[argIdx] - baseAddress;
       argValues[argIdx] = baseAddressPhy + offset;
    }
-#ifndef NANOS_DEBUG_ENABLED
-   xtasksAddArgs( numArgs, XTASKS_GLOBAL, &argValues[0], task );
-#else
+
    status = xtasksAddArgs( numArgs, XTASKS_GLOBAL, &argValues[0], task );
-   ensure( status == XTASKS_SUCCESS, "Error adding arguments to a FPGA task" );
-#endif
+   if ( status != XTASKS_SUCCESS ) {
+      ensure( status == XTASKS_SUCCESS, "Error adding arguments to a FPGA task" );
+   }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    dmaSubmitStart( &wd );
