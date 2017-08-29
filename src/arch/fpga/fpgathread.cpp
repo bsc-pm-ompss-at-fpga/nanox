@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -21,6 +20,7 @@
 #include "fpgathread.hpp"
 #include "fpgadd.hpp"
 #include "fpgaworker.hpp"
+#include "fpgaprocessor.hpp"
 #include "fpgaprocessorinfo.hpp"
 #include "instrumentation_decl.hpp"
 

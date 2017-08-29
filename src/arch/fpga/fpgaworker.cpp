@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -19,8 +18,8 @@
 /*************************************************************************************/
 
 #include "fpgaworker.hpp"
+#include "fpgaprocessor.hpp"
 #include "schedule.hpp"
-#include "fpgathread.hpp"
 #include "instrumentation.hpp"
 #include "system.hpp"
 #include "os.hpp"
@@ -29,13 +28,88 @@
 using namespace nanos;
 using namespace ext;
 
+bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
+   static int const maxPendingWD = FPGAConfig::getMaxPendingWD();
+   static int const finishBurst = FPGAConfig::getFinishWDBurst();
+
+   //check if we have reached maximum pending WD
+   //  finalize one (or some of them)
+   //FPGAThread *myThread = (FPGAThread*)getMyThreadSafe();
+   FPGAProcessor * fpga = ( FPGAProcessor * )( thread->runningOn() );
+   WD * wd;
+   bool wdExecuted = false;
+
+   if ( fpga->getPendingWDs() > maxPendingWD ) {
+      fpga->finishPendingWD( finishBurst );
+   }
+
+   // Check queue of tasks waiting for input copies
+   if ( !fpga->getWaitInTasks().empty() ) {
+      if ( fpga->getWaitInTasks().try_pop( wd ) ) {
+         if ( wd->isInputDataReady() ) {
+            Scheduler::outlineWork( thread, wd );
+            //wd->submitOutputCopies();
+            wdExecuted = true;
+         } else {
+            // Task does not have input data in the memory device yet
+            fpga->getWaitInTasks().push( wd );
+         }
+      }
+   }
+   // Check queue of tasks waiting for memory allocation
+   else if ( !fpga->getReadyTasks().empty() ) {
+      if ( fpga->getReadyTasks().try_pop( wd ) ) {
+         if ( Scheduler::tryPreOutlineWork( wd ) ) {
+            fpga->preOutlineWorkDependent( *wd );
+
+            //TODO: may need to increment copies version number here
+            if ( wd->isInputDataReady() ) {
+               Scheduler::outlineWork( thread, wd );
+               //wd->submitOutputCopies();
+               wdExecuted = true;
+            } else {
+               // Task does not have input data in the memory device yet
+               fpga->getWaitInTasks().push( wd );
+            }
+         } else {
+            // Task does not have memory allocated yet
+            fpga->getReadyTasks().push( wd );
+         }
+      }
+   }
+   // Check for tasks in the scheduler ready queue
+   else if ( (wd = FPGAWorker::getFPGAWD( thread )) != NULL ) {
+      Scheduler::prePreOutlineWork( wd );
+      if ( Scheduler::tryPreOutlineWork( wd ) ) {
+         fpga->preOutlineWorkDependent( *wd );
+
+         //TODO: may need to increment copies version number here
+         if ( wd->isInputDataReady() ) {
+            Scheduler::outlineWork( thread, wd );
+            //wd->submitOutputCopies();
+            wdExecuted = true;
+         } else {
+            // Task does not have input data in the memory device yet
+            fpga->getWaitInTasks().push( wd );
+         }
+      } else {
+         // Task does not have memory allocated yet
+         fpga->getReadyTasks().push( wd );
+      }
+   } else {
+      //we may be waiting for the last tasks to finalize or
+      //waiting for some dependence to be released
+      fpga->finishAllWD();
+      //myThread->finishPendingWD(1);
+   }
+   return wdExecuted;
+}
+
 void FPGAWorker::FPGAWorkerLoop() {
    BaseThread *parent = getMyThreadSafe();
    const int init_spins = ( ( SMPMultiThread* ) parent )->getNumThreads();
    const bool use_yield = false;
    unsigned int spins = init_spins;
-   int maxPendingWD = FPGAConfig::getMaxPendingWD();
-   int finishBurst = FPGAConfig::getFinishWDBurst();
 
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
 
@@ -57,82 +131,11 @@ void FPGAWorker::FPGAWorkerLoop() {
    NANOS_INSTRUMENT ( unsigned long long time_yields = 0; ) /* Time of yields by idle phase */
 
    myThread = parent->getNextThread();
-   FPGAThread *currentThread = ( FPGAThread* )myThread;
+   BaseThread *currentThread = myThread;
    for (;;){
-      //check if we have reached maximum pending WD
-      //  finalize one (or some of them)
-      //FPGAThread *myThread = (FPGAThread*)getMyThreadSafe();
-      FPGAProcessor * fpga = ( FPGAProcessor * )( currentThread->runningOn() );
-      WD * wd;
-      bool wdExecuted = false;
-
-      if ( fpga->getPendingWDs() > maxPendingWD ) {
-          fpga->finishPendingWD( finishBurst );
-      }
-
       if ( !parent->isRunning() ) break;
 
-      // Check queue of tasks waiting for input copies
-      if ( !fpga->getWaitInTasks().empty() ) {
-         if ( fpga->getWaitInTasks().try_pop( wd ) ) {
-            if ( wd->isInputDataReady() ) {
-               Scheduler::outlineWork( currentThread, wd );
-               //wd->submitOutputCopies();
-               wdExecuted = true;
-            } else {
-               // Task does not have input data in the memory device yet
-               fpga->getWaitInTasks().push( wd );
-            }
-         }
-      }
-      // Check queue of tasks waiting for memory allocation
-      else if ( !fpga->getReadyTasks().empty() ) {
-         if ( fpga->getReadyTasks().try_pop( wd ) ) {
-            if ( Scheduler::tryPreOutlineWork( wd ) ) {
-               fpga->preOutlineWorkDependent( *wd );
-
-               //TODO: may need to increment copies version number here
-               if ( wd->isInputDataReady() ) {
-                  Scheduler::outlineWork( currentThread, wd );
-                  //wd->submitOutputCopies();
-                  wdExecuted = true;
-               } else {
-                  // Task does not have input data in the memory device yet
-                  fpga->getWaitInTasks().push( wd );
-               }
-            } else {
-               // Task does not have memory allocated yet
-               fpga->getReadyTasks().push( wd );
-            }
-         }
-      }
-      // Check for tasks in the scheduler ready queue
-      else if ( (wd = FPGAWorker::getFPGAWD( currentThread )) != NULL ) {
-         Scheduler::prePreOutlineWork( wd );
-         if ( Scheduler::tryPreOutlineWork( wd ) ) {
-            fpga->preOutlineWorkDependent( *wd );
-
-            //TODO: may need to increment copies version number here
-            if ( wd->isInputDataReady() ) {
-               Scheduler::outlineWork( currentThread, wd );
-               //wd->submitOutputCopies();
-               wdExecuted = true;
-            } else {
-               // Task does not have input data in the memory device yet
-               fpga->getWaitInTasks().push( wd );
-            }
-         } else {
-            // Task does not have memory allocated yet
-            fpga->getReadyTasks().push( wd );
-         }
-      } else {
-         //we may be waiting for the last tasks to finalize or
-         //waiting for some dependence to be released
-         fpga->finishAllWD();
-         //myThread->finishPendingWD(1);
-      }
-
-      if ( wdExecuted ) {
+      if ( tryOutlineTask( currentThread ) ) {
          //update instrumentation values & rise event
          NANOS_INSTRUMENT ( nanos_event_value_t values[numEvents]; )
          NANOS_INSTRUMENT ( total_spins+= (init_spins - spins); )
@@ -182,7 +185,7 @@ void FPGAWorker::FPGAWorkerLoop() {
          }
       }
 
-      currentThread = ( FPGAThread * )parent->getNextThread();
+      currentThread = parent->getNextThread();
       myThread = currentThread;
 
    }
@@ -195,7 +198,7 @@ void FPGAWorker::FPGAWorkerLoop() {
       myThread = parentM->getThreadVector()[ i ];
 
       // Acquire the lock and leave it acquired to avoid any further access
-      currentThread = ( FPGAThread * )myThread;
+      currentThread = myThread;
       //currentThread->_lock.acquire(); //NOTE: Not sure if can be deleted (if not, restore the class member)
 
       myThread->leaveTeam();

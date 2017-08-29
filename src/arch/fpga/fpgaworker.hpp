@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -21,18 +20,22 @@
 #ifndef _FPGA_WORKER_DECL
 #define _FPGA_WORKER_DECL
 
-
 #include "workdescriptor.hpp"
 
 namespace nanos {
+namespace ext {
+
    class FPGAWorker {
       public:
          //We should add some methods for configuration
          static void FPGAWorkerLoop();
+         static bool tryOutlineTask( BaseThread * thread );
          static WD * getFPGAWD( BaseThread *thread );
       private:
 
    };
+
+} // namespace ext
 } // namespace nanos
 
 #endif

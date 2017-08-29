@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -21,7 +20,6 @@
 #ifndef _NANOS_FPGA_THREAD
 #define _NANOS_FPGA_THREAD
 
-#include "fpgaprocessor.hpp"
 #include "smpthread.hpp"
 
 namespace nanos {
