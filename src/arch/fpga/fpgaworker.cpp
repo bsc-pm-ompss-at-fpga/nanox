@@ -44,46 +44,22 @@ bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
    }
 
    // Check queue of tasks waiting for input copies
-   if ( !fpga->getWaitInTasks().empty() ) {
-      if ( fpga->getWaitInTasks().try_pop( wd ) ) {
-         if ( wd->isInputDataReady() ) {
-            Scheduler::outlineWork( thread, wd );
-            //wd->submitOutputCopies();
-            wdExecuted = true;
-         } else {
-            // Task does not have input data in the memory device yet
-            fpga->getWaitInTasks().push( wd );
-         }
-      }
+   if ( !fpga->getWaitInTasks().empty() && fpga->getWaitInTasks().try_pop( wd ) ) {
+      goto TEST_IN_READY;
    }
    // Check queue of tasks waiting for memory allocation
-   else if ( !fpga->getReadyTasks().empty() ) {
-      if ( fpga->getReadyTasks().try_pop( wd ) ) {
-         if ( Scheduler::tryPreOutlineWork( wd ) ) {
-            fpga->preOutlineWorkDependent( *wd );
-
-            //TODO: may need to increment copies version number here
-            if ( wd->isInputDataReady() ) {
-               Scheduler::outlineWork( thread, wd );
-               //wd->submitOutputCopies();
-               wdExecuted = true;
-            } else {
-               // Task does not have input data in the memory device yet
-               fpga->getWaitInTasks().push( wd );
-            }
-         } else {
-            // Task does not have memory allocated yet
-            fpga->getReadyTasks().push( wd );
-         }
-      }
+   else if ( !fpga->getReadyTasks().empty() && fpga->getReadyTasks().try_pop( wd ) ) {
+      goto TEST_PRE_OUTLINE;
    }
    // Check for tasks in the scheduler ready queue
    else if ( (wd = FPGAWorker::getFPGAWD( thread )) != NULL ) {
       Scheduler::prePreOutlineWork( wd );
+      TEST_PRE_OUTLINE:
       if ( Scheduler::tryPreOutlineWork( wd ) ) {
          fpga->preOutlineWorkDependent( *wd );
 
          //TODO: may need to increment copies version number here
+         TEST_IN_READY:
          if ( wd->isInputDataReady() ) {
             Scheduler::outlineWork( thread, wd );
             //wd->submitOutputCopies();
