@@ -60,7 +60,7 @@ FPGAProcessor::FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpace
    sys.addDeviceInstrumentation( &_dmaInInstr );
 
    id = sys.getNumInstrumentAccelerators();
-   _dmaOutInstr = FPGAInstrumentation( id, std::string( "DMA in" ) + devNum );
+   _dmaOutInstr = FPGAInstrumentation( id, std::string( "DMA out" ) + devNum );
    sys.addDeviceInstrumentation( &_dmaOutInstr );
 
    id = sys.getNumInstrumentAccelerators();
