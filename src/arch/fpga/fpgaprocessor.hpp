@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -70,8 +69,7 @@ namespace ext {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          void dmaSubmitStart( const WD *wd );
          void dmaSubmitEnd( const WD *wd );
-         void readInstrCounters( FPGATaskInfo_t & task );
-         xtasks_ins_times * getInstrCounters( FPGATaskInfo_t & task );
+         void readInstrCounters( WD * const wd, xtasks_task_handle & task );
 #endif
 
       public:

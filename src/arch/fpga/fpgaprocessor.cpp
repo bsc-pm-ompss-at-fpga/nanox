@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2017 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -184,16 +183,12 @@ xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
 }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-xtasks_ins_times *FPGAProcessor::getInstrCounters( FPGATaskInfo_t & task ) {
-   xtasks_ins_times *times;
-   xtasksGetInstrumentData( task._handle, &times );
-   return times;
-}
+void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task ) {
+   Instrumentation * instr = sys.getInstrumentation();
 
-void FPGAProcessor::readInstrCounters( FPGATaskInfo_t & task ) {
-   xtasks_ins_times * counters = getInstrCounters( task );
-   Instrumentation * instr     = sys.getInstrumentation();
-   WD * const wd = task._wd;
+   //Get the counters
+   xtasks_ins_times * counters;
+   xtasksGetInstrumentData( task, &counters );
 
    //Task execution
    instr->addDeviceEvent(
@@ -235,7 +230,7 @@ void FPGAProcessor::waitAndFinishTask( FPGATaskInfo_t & task ) {
    }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-   readInstrCounters( task );
+   readInstrCounters( task._wd, task._handle );
 #endif
    xtasksDeleteTask( &(task._handle) );
    //FPGAWorker::postOutlineWork( task._wd );
