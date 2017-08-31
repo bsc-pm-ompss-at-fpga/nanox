@@ -445,6 +445,8 @@ namespace nanos {
             registerEventValue("api","stick_to_producer","nanos_stick_to_producer()");
             registerEventValue("api","task_reduction_register","nanos_task_reduction_register()");
             registerEventValue("api","task_reduction_get_thread_storage","nanos_task_reduction_get_thread_storage()");
+            registerEventValue("api","fpga_alloc_dma_mem","nanos_fpga_alloc_dma_mem()");
+            registerEventValue("api","fpga_free_dma_mem","nanos_fpga_free_dma_mem()");
 
             /* 02 */ registerEventKey("wd-id","Work Descriptor id:", true, EVENT_DEVELOPER, true);
 
