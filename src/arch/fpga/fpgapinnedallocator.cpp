@@ -1,13 +1,15 @@
 #include "fpgapinnedallocator.hpp"
 #include "debug.hpp"
 #include "simpleallocator.hpp"
+#include "lock.hpp"
+#include "basethread.hpp" //For getMyThreadSafe in warning
 
 using namespace nanos;
 using namespace nanos::ext;
 
 FPGAPinnedAllocator *nanos::ext::fpgaAllocator;
 
-FPGAPinnedAllocator::FPGAPinnedAllocator( size_t size )
+FPGAPinnedAllocator::FPGAPinnedAllocator( size_t size ) : _extraAllocLock(), _extraAllocMap()
 {
    void * addr;
    xdma_status status;
@@ -51,4 +53,35 @@ uint64_t FPGAPinnedAllocator::getBaseAddressPhy() const
       ensure0( status == XDMA_SUCCESS, "Error getting the DMA address of the FPGAPinnedAllocator" );
    }
    return ret;
+}
+
+void * FPGAPinnedAllocator::allocateExtraMemory( size_t const size )
+{
+   xdma_status status;
+   xdma_buf_handle handle;
+   void * addr;
+
+   status = xdmaAllocateKernelBuffer( &addr, &handle, size );
+   if ( status != XDMA_SUCCESS ) {
+      return NULL;
+   }
+
+   _extraAllocLock.acquire();
+   _extraAllocMap[addr] = handle;
+   _extraAllocLock.release();
+
+   return addr;
+}
+
+void FPGAPinnedAllocator::freeExtraMemory( void * address )
+{
+   XdmaHandleMap::iterator it = _extraAllocMap.find( address );
+   if ( it != _extraAllocMap.end() ) {
+      xdmaFreeKernelBuffer( address, it->second );
+      _extraAllocLock.acquire();
+      _extraAllocMap.erase( it );
+      _extraAllocLock.release();
+   } else {
+      warning( "Unregistered FPGA pinned memory region. Address: " << std::hex << address );
+   }
 }
