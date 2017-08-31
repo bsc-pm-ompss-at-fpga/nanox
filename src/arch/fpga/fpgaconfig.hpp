@@ -83,14 +83,6 @@ namespace ext {
          //! \brief Sets the number of FPGAs
          static void setFPGASystemCount ( int numFPGAs );
    };
-    //create instrumentation macros (as gpu) to make code cleaner
-   #define NANOS_FPGA_CREATE_RUNTIME_EVENT(x)    NANOS_INSTRUMENT( \
-           sys.getInstrumentation()->raiseOpenBurstEvent (    \
-           sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey( "in-xdma" ), (x) ); )
-
-   #define NANOS_FPGA_CLOSE_RUNTIME_EVENT       NANOS_INSTRUMENT( \
-           sys.getInstrumentation()->raiseCloseBurstEvent (   \
-           sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey( "in-xdma" ), 0 ); )
 
    typedef enum {
       NANOS_FPGA_NULL_EVENT = 0,      // 0

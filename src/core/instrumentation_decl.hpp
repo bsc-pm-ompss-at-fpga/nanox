@@ -659,15 +659,15 @@ namespace nanos {
 
             /* 66 */ registerEventKey("steal","Stolen WD", true, EVENT_DEVELOPER );
 
-            /* 67 */ registerEventKey("in-xdma", "Inside xdma FPGA DMA library", true, EVENT_ADVANCED);
-            registerEventValue("in-xdma", "NANOS_FPGA_OPEN_EVENT", "xdma open()");                       /* 1 */
-            registerEventValue("in-xdma", "NANOS_FPGA_CLOSE_EVENT", "xdma close");                     /* 2 */
-            registerEventValue("in-xdma", "NANOS_FPGA_REQ_CHANNEL_EVENT", "xdma open channel");          /* 3 */
-            registerEventValue("in-xdma", "NANOS_FPGA_REL_CHANNEL_EVENT", "xdma close channel");          /* 4 */
+            /* 67 */ registerEventKey("in-xdma", "Inside xdma FPGA DMA library", true, EVENT_DISABLED);
+            registerEventValue("in-xdma", "NANOS_FPGA_OPEN_EVENT", "xdma open()");                  /* 1 */
+            registerEventValue("in-xdma", "NANOS_FPGA_CLOSE_EVENT", "xdma close");                  /* 2 */
+            registerEventValue("in-xdma", "NANOS_FPGA_REQ_CHANNEL_EVENT", "xdma open channel");     /* 3 */
+            registerEventValue("in-xdma", "NANOS_FPGA_REL_CHANNEL_EVENT", "xdma close channel");    /* 4 */
             registerEventValue("in-xdma", "NANOS_FPGA_SUBMIT_IN_DMA_EVENT", "xdma submit in");      /* 5 */
             registerEventValue("in-xdma", "NANOS_FPGA_SUBMIT_OUT_DMA_EVENT", "xdma submit out");    /* 5 */
-            registerEventValue("in-xdma", "NANOS_FPGA_WAIT_INPUT_DMA_EVENT", "xdma wait in");                /* 6 */
-            registerEventValue("in-xdma", "NANOS_FPGA_WAIT_OUTPUT_DMA_EVENT", "xdma wait out");                /* 7 */
+            registerEventValue("in-xdma", "NANOS_FPGA_WAIT_INPUT_DMA_EVENT", "xdma wait in");       /* 6 */
+            registerEventValue("in-xdma", "NANOS_FPGA_WAIT_OUTPUT_DMA_EVENT", "xdma wait out");     /* 7 */
             /* 68 */ registerEventKey("accelerator#", "Accelerator on which task is being executed", true, EVENT_ADVANCED);
 
             /* 69 */ registerEventKey("reduction", "Reduction support", true, EVENT_DEVELOPER);
@@ -676,6 +676,8 @@ namespace nanos {
             /* 70 */ registerEventKey("network-transfer", "Network transfer to node ", false, EVENT_ADVANCED);
             /* 71 */ registerEventKey("cache-evict", "Cache eviction", false, EVENT_ADVANCED);
             /* 72 */ registerEventKey("copy-data-alloc","Cache allocation", false, EVENT_ADVANCED);
+
+            /* 68 */ registerEventKey("fpga-finish-task", "Finished FPGA task that is being processed", true, EVENT_ADVANCED);
 
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }
