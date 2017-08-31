@@ -42,16 +42,8 @@ namespace ext {
          typedef Queue< WD * > FPGATasksQueue_t;
 
       private:
-         typedef struct FPGATaskInfo_t {
-            WD                 *_wd;
-            xtasks_task_handle _handle;
-
-            FPGATaskInfo_t( WD * const wd = NULL, xtasks_task_handle h = 0 ) :
-               _wd( wd ), _handle( h ) {}
-         } FPGATaskInfo_t;
-
          FPGAProcessorInfo             _fpgaProcessorInfo;  //!< Accelerator information
-         Queue< FPGATaskInfo_t >       _pendingTasks;       //!< Tasks in the accelerator (running)
+         Atomic<size_t>                _runningTasks;       //!< Tasks in the accelerator (running)
          FPGATasksQueue_t              _readyTasks;         //!< Tasks that are ready but are waiting for device memory
          FPGATasksQueue_t              _waitInTasks;        //!< Tasks that are ready but are waiting for input copies
 
@@ -64,7 +56,6 @@ namespace ext {
 #endif
 
          // AUX functions
-         void waitAndFinishTask( FPGATaskInfo_t & task );
          xtasks_task_handle createAndSubmitTask( WD &wd );
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          void dmaSubmitStart( const WD *wd );
@@ -101,8 +92,6 @@ namespace ext {
          FPGAPinnedAllocator * getAllocator ( void );
 
          int getPendingWDs() const;
-         void finishPendingWD( int numWD );
-         void finishAllWD();
 
          FPGATasksQueue_t & getReadyTasks() { return _readyTasks; }
          FPGATasksQueue_t & getWaitInTasks() { return _waitInTasks; }
@@ -116,7 +105,7 @@ namespace ext {
          virtual void exitTo( WD *work, SchedulerHelper *helper ) {}
          virtual void outlineWorkDependent (WD &work);
          virtual void preOutlineWorkDependent (WD &work);
-
+         bool tryPostOutlineTasks( size_t max = 9999 );
    };
 
    inline FPGAPinnedAllocator * FPGAProcessor::getAllocator() {

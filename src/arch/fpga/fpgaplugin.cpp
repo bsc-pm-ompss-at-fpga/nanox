@@ -42,8 +42,12 @@
 #endif
 
 //! Check that libxtasks version is compatible
-#if !defined(LIBXTASKS_VERSION_MAJOR) || LIBXTASKS_VERSION_MAJOR < 1
-# error Installed libxtasks is not supported (use >= 1.0)
+#define LIBXTASKS_MIN_MAJOR 2
+#define LIBXTASKS_MIN_MINOR 0
+#if !defined(LIBXTASKS_VERSION_MAJOR) || !defined(LIBXTASKS_VERSION_MINOR) || \
+    LIBXTASKS_VERSION_MAJOR < LIBXTASKS_MIN_MAJOR || \
+    (LIBXTASKS_VERSION_MAJOR == LIBXTASKS_MIN_MAJOR && LIBXTASKS_VERSION_MINOR < LIBXTASKS_MIN_MINOR)
+# error Installed libxtasks is not supported (use >= 2.0)
 #endif
 
 namespace nanos {

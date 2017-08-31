@@ -40,7 +40,7 @@ bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
    bool wdExecuted = false;
 
    if ( fpga->getPendingWDs() > maxPendingWD ) {
-      fpga->finishPendingWD( finishBurst );
+      fpga->tryPostOutlineTasks( finishBurst );
    }
 
    // Check queue of tasks waiting for input copies
@@ -75,8 +75,7 @@ bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
    } else {
       //we may be waiting for the last tasks to finalize or
       //waiting for some dependence to be released
-      fpga->finishAllWD();
-      //myThread->finishPendingWD(1);
+      fpga->tryPostOutlineTasks();
    }
    return wdExecuted;
 }

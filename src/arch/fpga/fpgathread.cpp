@@ -47,14 +47,14 @@ void FPGAThread::yield()
    verbose("FPGA yield");
    //Synchronizing tasks here seems to yield slightly better performance
    static int const finishBurst = FPGAConfig::getFinishWDBurst();
-   ((FPGAProcessor*)runningOn())->finishPendingWD( finishBurst );
+   ((FPGAProcessor*)runningOn())->tryPostOutlineTasks( finishBurst );
 }
 
 void FPGAThread::idle( bool debug )
 {
    //Sync tasks on idle
    static int const finishBurst = FPGAConfig::getFinishWDBurst();
-   ((FPGAProcessor*)runningOn())->finishPendingWD( finishBurst );
+   ((FPGAProcessor*)runningOn())->tryPostOutlineTasks( finishBurst );
 }
 
 BaseThread *FPGAThread::getNextThread()

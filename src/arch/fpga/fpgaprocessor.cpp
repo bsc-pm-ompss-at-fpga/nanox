@@ -41,7 +41,7 @@ using namespace nanos::ext;
  */
 FPGAProcessor::FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpaceId, Device const * arch ) :
    ProcessingElement( arch, memSpaceId, 0, 0, false, 0, false ), _fpgaProcessorInfo( info ),
-   _pendingTasks( ), _readyTasks( ), _waitInTasks( )
+   _runningTasks( 0 ), _readyTasks( ), _waitInTasks( )
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    , _dmaSubmitWarnShown( false )
 #endif
@@ -70,7 +70,7 @@ FPGAProcessor::FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpace
 
 FPGAProcessor::~FPGAProcessor()
 {
-   ensure( _pendingTasks.empty(), "Queue of FPGA pending tasks is not empty in one FPGAProcessor" );
+   ensure( _runningTasks.value() == 0, "There are running task in one FPGAProcessor" );
    ensure( _readyTasks.empty(), "Queue of FPGA ready tasks is not empty in one FPGAProcessor" );
    ensure( _waitInTasks.empty(),  "Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
 }
@@ -222,38 +222,8 @@ void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task 
 }
 #endif
 
-void FPGAProcessor::waitAndFinishTask( FPGATaskInfo_t & task ) {
-   //Scheduler::postOutlineWork( wd, false, this );
-   //Wait for the task to finish
-   if ( xtasksWaitTask( task._handle ) != XTASKS_SUCCESS ) {
-      fatal( "Error waiting for an FPGA task" );
-   }
-
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-   readInstrCounters( task._wd, task._handle );
-#endif
-   xtasksDeleteTask( &(task._handle) );
-   //FPGAWorker::postOutlineWork( task._wd );
-   Scheduler::postOutlineWork( task._wd, false, myThread, myThread->getCurrentWD() );
-}
-
 int FPGAProcessor::getPendingWDs() const {
-   return _pendingTasks.size();
-}
-
-void FPGAProcessor::finishPendingWD( int numWD ) {
-   FPGATaskInfo_t task;
-   int cnt = 0;
-   while ( cnt++ < numWD && _pendingTasks.try_pop( task ) ) {
-      waitAndFinishTask( task );
-   }
-}
-
-void FPGAProcessor::finishAllWD() {
-   FPGATaskInfo_t task;
-   while( _pendingTasks.try_pop( task ) ) {
-      waitAndFinishTask( task );
-   }
+   return _runningTasks.value();
 }
 
 bool FPGAProcessor::inlineWorkDependent( WD &wd )
@@ -273,13 +243,39 @@ void FPGAProcessor::preOutlineWorkDependent ( WD &wd ) {
    wd.preStart(WorkDescriptor::IsNotAUserLevelThread);
 }
 
-void FPGAProcessor::outlineWorkDependent ( WD &wd ) {
+void FPGAProcessor::outlineWorkDependent ( WD &wd )
+{
    //wd.start( WD::IsNotAUserLevelThread );
-   xtasks_task_handle handle = createAndSubmitTask( wd );
+   createAndSubmitTask( wd );
+   ++_runningTasks;
 
    //set flag to allow new update
    FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
    ( dd.getWorkFct() )( wd.getData() );
+}
 
-   _pendingTasks.push( FPGATaskInfo_t( &wd, handle ) );
+bool FPGAProcessor::tryPostOutlineTasks( size_t max )
+{
+   bool ret = false;
+   xtasks_task_handle xHandle;
+   xtasks_task_id xId;
+   xtasks_stat xStat;
+   for ( size_t cnt = 0; cnt < max; ++cnt ) {
+      xStat = xtasksTryGetFinishedTaskAccel( _fpgaProcessorInfo.getHandle(), &xHandle, &xId );
+      if ( xStat == XTASKS_SUCCESS ) {
+         WD * wd = (WD *)xId;
+         ret = true;
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+         readInstrCounters( wd, xHandle );
+#endif
+         xtasksDeleteTask( &xHandle );
+         --_runningTasks;
+         Scheduler::postOutlineWork( wd, false, myThread, myThread->getCurrentWD() );
+      } else {
+         ensure( xStat == XTASKS_PENDING, "Error trying to get a finished FPGA task" );
+         break;
+      }
+   }
+   return ret;
 }
