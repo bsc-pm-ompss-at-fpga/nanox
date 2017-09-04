@@ -101,7 +101,7 @@ namespace nanos {
             if ( _internal && !_inst.isInternalsEnabled() ) return;
             _inst.raiseOpenStateEvent( state );
          }
-         /*! \brief InstrumentState destructor 
+         /*! \brief InstrumentState destructor
           */
          ~InstrumentState ( )
          {
@@ -162,6 +162,16 @@ namespace nanos {
           */
          void close() { _closed=true; _inst.raiseCloseBurstEvent(_key, _val);  }
    };
+
+/*!\function instrumentPoint
+ * \brief instrumentPoint raises a point event when called.
+ */
+   inline void instrumentPoint( const char * key, nanos_event_value_t val )
+   {
+      nanos_event_key_t k = sys.getInstrumentation()->
+         getInstrumentationDictionary()->getEventKey( key );
+      sys.getInstrumentation()->raisePointEvents( 1, &k, &val );
+   }
 #endif
 
 } // namespace nanos
