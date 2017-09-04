@@ -35,6 +35,10 @@
 using namespace nanos;
 using namespace nanos::ext;
 
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+Atomic<size_t> FPGAProcessor::_totalRunningTasks( 0 );
+#endif
+
 /*
  * TODO: Support the case where each thread may manage a different number of accelerators
  *       jbosch: This should be supported using different MultiThreads each one with a subset of accels
@@ -142,7 +146,7 @@ xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
    xtasks_stat status;
    xtasks_task_handle task;
 
-   NANOS_INSTRUMENT( InstrumentBurst( "accelerator#", _fpgaProcessorInfo.getId() + 1 ) );
+   NANOS_INSTRUMENT( InstrumentBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
 
    size_t numArgs = wd.getDataSize()/sizeof(uintptr_t);
    ensure( wd.getDataSize()%sizeof(uintptr_t) == 0,
@@ -250,6 +254,10 @@ void FPGAProcessor::outlineWorkDependent ( WD &wd )
    //wd.start( WD::IsNotAUserLevelThread );
    createAndSubmitTask( wd );
    ++_runningTasks;
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   ++_totalRunningTasks;
+   instrumentPoint( "fpga-run-tasks", _totalRunningTasks.value() );
+#endif
 
    //set flag to allow new update
    FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
@@ -269,6 +277,8 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
          ret = true;
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
+         --_totalRunningTasks;
+         instrumentPoint( "fpga-run-tasks", _totalRunningTasks.value() );
          InstrumentBurst( "fpga-finish-task", wd->getId() );
          readInstrCounters( wd, xHandle );
 #endif

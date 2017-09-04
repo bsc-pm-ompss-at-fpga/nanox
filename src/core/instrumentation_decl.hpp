@@ -668,7 +668,7 @@ namespace nanos {
             registerEventValue("in-xdma", "NANOS_FPGA_SUBMIT_OUT_DMA_EVENT", "xdma submit out");    /* 5 */
             registerEventValue("in-xdma", "NANOS_FPGA_WAIT_INPUT_DMA_EVENT", "xdma wait in");       /* 6 */
             registerEventValue("in-xdma", "NANOS_FPGA_WAIT_OUTPUT_DMA_EVENT", "xdma wait out");     /* 7 */
-            /* 68 */ registerEventKey("accelerator#", "Accelerator on which task is being executed", true, EVENT_ADVANCED);
+            /* 68 */ registerEventKey("fpga-accelerator-num", "Accelerator on which task is being executed", true, EVENT_ADVANCED);
 
             /* 69 */ registerEventKey("reduction", "Reduction support", true, EVENT_DEVELOPER);
             registerEventValue("reduction", "RED_REQUEST_NEW_STORAGE", "Allocating private storage" ); /* 1 */
@@ -677,7 +677,8 @@ namespace nanos {
             /* 71 */ registerEventKey("cache-evict", "Cache eviction", false, EVENT_ADVANCED);
             /* 72 */ registerEventKey("copy-data-alloc","Cache allocation", false, EVENT_ADVANCED);
 
-            /* 68 */ registerEventKey("fpga-finish-task", "Finished FPGA task that is being processed", true, EVENT_ADVANCED);
+            /* 73 */ registerEventKey("fpga-finish-task", "Finished FPGA task ID that is being processed", true, EVENT_ADVANCED);
+            /* 74 */ registerEventKey("fpga-run-tasks", "Number of FPGA tasks submitted to the accels", true, EVENT_ADVANCED);
 
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }

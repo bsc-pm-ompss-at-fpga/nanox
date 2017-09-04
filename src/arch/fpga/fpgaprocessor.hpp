@@ -53,6 +53,7 @@ namespace ext {
          FPGAInstrumentation           _dmaOutInstr;
          FPGAInstrumentation           _submitInstrumentation;
          bool                          _dmaSubmitWarnShown; //!< Defines if the warning has already been shown
+         static Atomic<size_t>         _totalRunningTasks;  //!< Global tasks counter between all processors
 #endif
 
          // AUX functions
