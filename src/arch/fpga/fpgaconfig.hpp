@@ -32,8 +32,11 @@ namespace ext {
    {
       friend class FPGAPlugin;
       private:
-         static bool                      _enableFPGA; //! Enable all CUDA support
-         static bool                      _forceDisableFPGA; //! Force disable all CUDA support
+         static bool                      _enableFPGA; //! Enable all FPGA support
+         static bool                      _forceDisableFPGA; //! Force disable all FPGA support
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+         static bool                      _disableInst; //! Disable FPGA instrumentation using HW timer
+#endif //NANOS_INSTRUMENTATION_ENABLED
 
          static int                       _numAccelerators; //! Number of accelerators used in the execution
          static int                       _numAcceleratorsSystem; //! Number of accelerators detected in the system
@@ -82,6 +85,14 @@ namespace ext {
 
          //! \brief Sets the number of FPGAs
          static void setFPGASystemCount ( int numFPGAs );
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+         //! \brief Returns if the instrumentation using the HW timer is disabled
+         static bool isInstrDisabled() { return _disableInst; }
+
+         //! \brief Set the disable instrumentation flag to true
+         static void forceDisableInstr();
+#endif //NANOS_INSTRUMENTATION_ENABLED
    };
 
    typedef enum {

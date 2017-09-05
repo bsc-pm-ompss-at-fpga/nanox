@@ -37,8 +37,12 @@
 #include "libxtasks_version.h"
 
 //! Check that libxdma version is compatible
-#if !defined(LIBXDMA_VERSION_MAJOR) || LIBXDMA_VERSION_MAJOR < 1
-# error Installed libxdma is not supported (use >= 1.0)
+#define LIBXDMA_MIN_MAJOR 1
+#define LIBXDMA_MIN_MINOR 1
+#if !defined(LIBXDMA_VERSION_MAJOR) || !defined(LIBXDMA_VERSION_MINOR) || \
+    LIBXDMA_VERSION_MAJOR < LIBXDMA_MIN_MAJOR || \
+    (LIBXDMA_VERSION_MAJOR == LIBXDMA_MIN_MAJOR && LIBXDMA_VERSION_MINOR < LIBXDMA_MIN_MINOR)
+# error Installed libxdma is not supported (use >= 1.1)
 #endif
 
 //! Check that libxtasks version is compatible
@@ -112,20 +116,24 @@ class FPGAPlugin : public ArchPlugin
             xdma_status sxd = xdmaOpen();
             if ( sxd != XDMA_SUCCESS ) {
                //Abort if dma library failed to initialize
-               fatal0( "Error initializing DMA library, returned status: " << sxd );
+               fatal0( "Error initializing DMA library (status: " << sxd << ")." <<
+                  ( sxd == XDMA_ENOENT ? " Check if xdma device exist in the system." : "" ) <<
+                  ( sxd == XDMA_EACCES ? " Current user cannot access xdma device." : "" )
+               );
             }
 
+#if NANOS_INSTRUMENTATION_ENABLED
             //Init the instrumentation
             sxd = xdmaInitHWInstrumentation();
             if ( sxd != XDMA_SUCCESS ) {
-               //NOTE: If the HW instrumentation initialization fails the execution must end.
-               //      Current accelerators always generate the HW instrumentation information
-               sxd = xdmaClose();
-               if ( sxd != XDMA_SUCCESS ) {
-                  warning0( "Error uninitializing xdma core library" );
-               }
-               fatal0( "Error initializing the instrumentation support in the DMA library." );
+               FPGAConfig::forceDisableInstr();
+               warning0( " Error initializing the FPGA instrumentation support (status: " << sxd << ")." <<
+                  ( sxd == XDMA_ENOENT ? " Check if xdma_instr device exist in the system." : "" ) <<
+                  ( sxd == XDMA_EACCES ? " Current user cannot access xdma_instr device." : "" )
+               );
+               warning0( " Disabling all events generated using the FPGA instrumentation timer." );
             }
+#endif //NANOS_INSTRUMENTATION_ENABLED
 
             //Create the FPGAPinnedAllocator and set the global shared variable that points to it
             fpgaAllocator = NEW FPGAPinnedAllocator( FPGAConfig::getAllocatorPoolSize() );
@@ -220,12 +228,14 @@ class FPGAPlugin : public ArchPlugin
                delete _fpgaListeners[i];
             }
 
-            //NOTE: Do it only when NANOS_INSTRUMENTATION_ENABLED?
+#if NANOS_INSTRUMENTATION_ENABLED
             //Finalize the HW instrumentation
             status = xdmaFiniHWInstrumentation();
             if (status) {
-               warning("Error uninitializing the instrumentation support in the DMA library. Returned status: " << status);
+               warning( " Error uninitializing the instrumentation support in the DMA library (status: "
+                  << status << ")" );
             }
+#endif //NANOS_INSTRUMENTATION_ENABLED
 
             /*
              * After the plugin is unloaded, no more operations regarding the DMA

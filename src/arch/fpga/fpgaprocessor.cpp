@@ -51,24 +51,26 @@ FPGAProcessor::FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpace
 #endif
 {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-   int id;
-   std::string devNum = toString( _fpgaProcessorInfo.getId() );
+   if ( !FPGAConfig::isInstrDisabled() ) {
+      int id;
+      std::string devNum = toString( _fpgaProcessorInfo.getId() );
 
-   id = sys.getNumInstrumentAccelerators();
-   _devInstr = FPGAInstrumentation( id, std::string( "FPGA accelerator" ) + devNum );
-   sys.addDeviceInstrumentation( &_devInstr );
+      id = sys.getNumInstrumentAccelerators();
+      _devInstr = FPGAInstrumentation( id, std::string( "FPGA accelerator " ) + devNum );
+      sys.addDeviceInstrumentation( &_devInstr );
 
-   id = sys.getNumInstrumentAccelerators();
-   _dmaInInstr = FPGAInstrumentation( id, std::string( "DMA in" ) + devNum );
-   sys.addDeviceInstrumentation( &_dmaInInstr );
+      id = sys.getNumInstrumentAccelerators();
+      _dmaInInstr = FPGAInstrumentation( id, std::string( "DMA in " ) + devNum );
+      sys.addDeviceInstrumentation( &_dmaInInstr );
 
-   id = sys.getNumInstrumentAccelerators();
-   _dmaOutInstr = FPGAInstrumentation( id, std::string( "DMA out" ) + devNum );
-   sys.addDeviceInstrumentation( &_dmaOutInstr );
+      id = sys.getNumInstrumentAccelerators();
+      _dmaOutInstr = FPGAInstrumentation( id, std::string( "DMA out " ) + devNum );
+      sys.addDeviceInstrumentation( &_dmaOutInstr );
 
-   id = sys.getNumInstrumentAccelerators();
-   _submitInstrumentation = FPGAInstrumentation( id, std::string( "DMA submit" ) + devNum );
-   sys.addDeviceInstrumentation( &_submitInstrumentation );
+      id = sys.getNumInstrumentAccelerators();
+      _submitInstrumentation = FPGAInstrumentation( id, std::string( "DMA submit " ) + devNum );
+      sys.addDeviceInstrumentation( &_submitInstrumentation );
+   }
 #endif
 }
 
@@ -102,6 +104,8 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 void FPGAProcessor::dmaSubmitStart( const WD *wd )
 {
+   if ( FPGAConfig::isInstrDisabled() ) return;
+
    uint64_t timestamp;
    xdma_status status;
    status = xdmaGetDeviceTime( &timestamp );
@@ -122,6 +126,8 @@ void FPGAProcessor::dmaSubmitStart( const WD *wd )
 
 void FPGAProcessor::dmaSubmitEnd( const WD *wd )
 {
+   if ( FPGAConfig::isInstrDisabled() ) return;
+
    uint64_t timestamp;
    xdma_status status;
    status = xdmaGetDeviceTime( &timestamp );
@@ -190,6 +196,8 @@ xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task ) {
+   if ( FPGAConfig::isInstrDisabled() ) return;
+
    Instrumentation * instr = sys.getInstrumentation();
 
    //Get the counters

@@ -47,6 +47,9 @@ int FPGAConfig::_maxPendingWD = 8;
 int FPGAConfig::_finishWDBurst = 8;
 bool FPGAConfig::_idleCallback = true;
 std::size_t FPGAConfig::_allocatorPoolSize = 64*1024*1024; //Def. 64MB
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   bool FPGAConfig::_disableInst = false;
+#endif //NANOS_INSTRUMENTATION_ENABLED
 
 void FPGAConfig::prepare( Config &config )
 {
@@ -147,6 +150,13 @@ bool FPGAConfig::isDisabled ()
 {
    return _forceDisableFPGA || !( _enableFPGA || nanos_needs_fpga_fun );
 }
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+void FPGAConfig::forceDisableInstr ()
+{
+   _disableInst = true;
+}
+#endif //NANOS_INSTRUMENTATION_ENABLED
 
 } // namespace ext
 } // namespace nanos
