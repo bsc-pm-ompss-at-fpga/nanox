@@ -1,4 +1,4 @@
-# Nanos++ Runtime Library
+# Nanos++ Runtime Library  [FPGA edition]
 
 Nanos++ is a parallel runtime library aimed at fast
 prototyping developed by the [*Programming Models group*](https://pm.bsc.es/)
@@ -58,6 +58,24 @@ application is built.
   3. Use the CC field to stay tuned to changes in a bug. Add your username or
 e-mail there to track a bug and receive all the notifications due the different
 actions taken in this ticket.
+
+## Build Information
+
+### Requirements
+
+The runtime relies on some underlying libraries to support the communication with
+FPGA and other low-level operations. Therefore, you need to have installed the
+following libraries before building Nanos++ RTL to enable the FPGA support:
+  - [libxdma](https://pm.bsc.es/gitlab/ompss-at-fpga/xdma)
+
+### Instructions
+
+You have to follow the usual autoreconf, configure, make and make install steps.
+To enable the FPGA support, you must provide some information during the configure
+stage to define where are installed the libraries in the requirements 
+section (use `configure --help` to obtain more detailed information). Moreover,
+if you are cross-compiling the runtime you may need to use the `--host` option
+during the configure stage.
 
 ## Contact Information
 
