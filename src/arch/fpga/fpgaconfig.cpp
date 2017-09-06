@@ -42,8 +42,8 @@ int  FPGAConfig::_numAccelerators = -1;
 int  FPGAConfig::_numAcceleratorsSystem = -1;
 int  FPGAConfig::_numFPGAThreads = -1;
 int FPGAConfig::_fpgaFreq = 100; //default to 100MHz
-bool FPGAConfig::_hybridWorker = false;
-int FPGAConfig::_maxPendingWD = 8;
+bool FPGAConfig::_hybridWorker = true;
+int FPGAConfig::_maxPendingWD = 4;
 int FPGAConfig::_finishWDBurst = 8;
 bool FPGAConfig::_idleCallback = true;
 std::size_t FPGAConfig::_allocatorPoolSize = 64*1024*1024; //Def. 64MB
@@ -56,32 +56,32 @@ void FPGAConfig::prepare( Config &config )
    config.setOptionsSection( "FPGA Arch", "FPGA spefific options" );
 
    config.registerConfigOption( "fpga-enable", NEW Config::FlagOption( _enableFPGA ),
-                                "Enable the support for FPGA accelerators" );
+                                "Enable the support for FPGA accelerators and allocator" );
    config.registerEnvOption( "fpga-enable", "NX_FPGA_ENABLE" );
    config.registerArgOption( "fpga-enable", "fpga-enable" );
 
    config.registerConfigOption( "fpga-disable", NEW Config::FlagOption( _forceDisableFPGA ),
-                                "Disable the support for FPGA accelerators" );
+                                "Disable the support for FPGA accelerators and allocator" );
    config.registerEnvOption( "fpga-disable", "NX_FPGA_DISABLE" );
    config.registerArgOption( "fpga-disable", "fpga-disable" );
 
    config.registerConfigOption( "num-fpga" , NEW Config::IntegerVar( _numAccelerators ),
-      "Defines de number of FPGA acceleratos to use (default: number of accelerators detected in system)" );
+      "Defines de number of FPGA acceleratos to use (def: #accels from libxtasks)" );
    config.registerEnvOption( "num-fpga", "NX_FPGA_NUM" );
    config.registerArgOption( "num-fpga", "fpga-num" );
 
    config.registerConfigOption( "fpga_helper_threads", NEW Config::IntegerVar( _numFPGAThreads ),
-      "Defines de number of helper threads managing fpga accelerators");
+      "Defines de number of helper threads managing fpga accelerators (def: 1)");
    config.registerEnvOption( "fpga_helper_threads", "NX_FPGA_HELPER_THREADS" );
    config.registerArgOption( "fpga_helper_threads", "fpga-helper-threads" );
 
    config.registerConfigOption( "fpga_freq", NEW Config::IntegerVar( _fpgaFreq ),
-                                "FPGA accelerator clock frequency in MHz" );
+                                "FPGA accelerator clock frequency in MHz (def: 100)" );
    config.registerEnvOption( "fpga_freq", "NX_FPGA_FREQ" );
    config.registerArgOption( "fpga_freq", "nx-fpga-freq" );
 
    config.registerConfigOption( "fpga_hybrid_worker", NEW Config::FlagOption( _hybridWorker ),
-                                "Allow FPGA helper thread to run smp tasks" );
+                                "Allow FPGA helper thread to run smp tasks (def: enabled)" );
    config.registerEnvOption( "fpga_hybrid_worker", "NX_FPGA_HYBRID_WORKER" );
    config.registerArgOption( "fpga_hybrid_worker", "fpga-hybrid-worker" );
 
@@ -91,12 +91,12 @@ void FPGAConfig::prepare( Config &config )
    config.registerArgOption( "fpga_max_pending_tasks", "fpga-max-pending-tasks" );
 
    config.registerConfigOption( "fpga_finish_task_busrt", NEW Config::IntegerVar( _finishWDBurst ),
-      "Number of tasks to be finalized in a burst when limit is reached" );
+      "Max number of tasks to be finalized in a burst when limit is reached (def: 8)" );
    config.registerEnvOption( "fpga_finish_task_busrt", "NX_FPGA_FINISH_TASK_BURST" );
    config.registerArgOption( "fpga_finish_task_busrt", "fpga-finish-task-burst" );
 
    config.registerConfigOption( "fpga_idle_callback", NEW Config::FlagOption( _idleCallback ),
-      "Perform fpga operations using the IDLE event callback of Event Dispatcher (def: disabled)" );
+      "Perform fpga operations using the IDLE event callback of Event Dispatcher (def: enabled)" );
    config.registerArgOption( "fpga_idle_callback", "fpga-idle-callback" );
 
    config.registerConfigOption( "fpga_alloc_pool_size", NEW Config::SizeVar( _allocatorPoolSize ),
