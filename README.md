@@ -67,12 +67,13 @@ The runtime relies on some underlying libraries to support the communication wit
 FPGA and other low-level operations. Therefore, you need to have installed the
 following libraries before building Nanos++ RTL to enable the FPGA support:
   - [libxdma](https://pm.bsc.es/gitlab/ompss-at-fpga/xdma)
+  - [libxtasks](https://pm.bsc.es/gitlab/ompss-at-fpga/xtasks)
 
 ### Instructions
 
 You have to follow the usual autoreconf, configure, make and make install steps.
 To enable the FPGA support, you must provide some information during the configure
-stage to define where are installed the libraries in the requirements 
+stage to define where are installed the libraries in the requirements
 section (use `configure --help` to obtain more detailed information). Moreover,
 if you are cross-compiling the runtime you may need to use the `--host` option
 during the configure stage.
@@ -81,5 +82,5 @@ during the configure stage.
 
 For questions, suggestions and bug reports, you can contact us through the pm-tools@bsc.es.
 
-You can also join our pm-tools-users@bsc.es mailing list by sending an e-mail to 
+You can also join our pm-tools-users@bsc.es mailing list by sending an e-mail to
 pm-tools-users-join@bsc.es.
