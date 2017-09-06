@@ -145,8 +145,7 @@ int SMPThread::getCpuId() const {
 SMPMultiThread::SMPMultiThread( WD &w, SMPProcessor *pe,
       unsigned int representingPEsCount, PE **representingPEs ) :
    SMPThread ( w, pe, pe ),
-   _current( 0 ),
-   _totalThreads( representingPEsCount ) {
+   _current( 0 ) {
    setCurrentWD( w );
    if ( representingPEsCount > 0 ) {
       addThreadsFromPEs( representingPEsCount, representingPEs );
@@ -155,19 +154,18 @@ SMPMultiThread::SMPMultiThread( WD &w, SMPProcessor *pe,
 
 void SMPMultiThread::addThreadsFromPEs(unsigned int representingPEsCount, PE **representingPEs)
 {
-   _threads.reserve( representingPEsCount );
+   _threads.reserve( _threads.size() + representingPEsCount );
    for ( unsigned int i = 0; i < representingPEsCount; i++ )
    {
-      _threads[ i ] = &( representingPEs[ i ]->startWorker( this ) );
+      _threads.push_back( &( representingPEs[ i ]->startWorker( this ) ) );
    }
-   _totalThreads = representingPEsCount;
 }
 
 //TODO: Check if the next function implementation can be removed
 void SMPMultiThread::initializeDependent( void ) {
 
    BaseThread *tmpMyThread = myThread;
-   for ( unsigned int i = 0; i<_totalThreads; i++ ) {
+   for ( unsigned int i = 0; i < _threads.size(); i++ ) {
       //Change myThread so calls to myThread->... or getMythreadSafe()->...
       //    work as expected and do not try call parent multithread (this)
       myThread = _threads[ i ];

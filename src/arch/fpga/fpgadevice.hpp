@@ -28,6 +28,7 @@
 #include "basethread.hpp" //for getMyThreadSafe() in warning/verbose, etc.
 
 namespace nanos {
+namespace ext {
    /* \breif Auxiliar class that contains the string with the FPGADevice architecture name.
     *        Cannot be a member of FPGADevice because the string constructor must be called before
     *        the Device constructor
@@ -48,11 +49,15 @@ namespace nanos {
           */
          static void copyData( void* dst, void* src, size_t len );
 
+         FPGADeviceType const    _fpgaType; ///< Type information
+
       public:
 
          FPGADevice ( FPGADeviceType const t );
 
          virtual ~FPGADevice () {}
+
+         FPGADeviceType getFPGAType() { return _fpgaType; }
 
          virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem,
                  WD const *wd, unsigned int copyIdx);
@@ -74,10 +79,7 @@ namespace nanos {
          virtual bool _copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len,
                SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig,
                DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
-               reg_t hostRegionId )
-         {
-            std::cerr << "wrong copyDevToDev" <<std::endl; return false;
-         }
+               reg_t hostRegionId );
 
          virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem,
                SimpleAllocator::ChunkList &list );
@@ -92,25 +94,12 @@ namespace nanos {
                DeviceOps *ops, WD const *wd, void *hostObject,
                reg_t hostRegionId );
 
-         //not supported
          virtual bool _copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigAddr,
                std::size_t len, std::size_t numChunks, std::size_t ld,
                SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memOrig,
                DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
-               reg_t hostRegionId )
-         {
-            warning( "Strided fpga to fpga copies not implemented" );
-            return true;
-         }
-
-         /*!
-          * \brief Finish pending transfer
-          * Usually this causes to priorize a data transfer because someone else needs it
-          * In this case it forces the transfer to be finished and synchronized.
-          * Since all transfers are submitted, this is the way to make the data available.
-          */
-         static void syncTransfer( uint64_t hostAddress, ProcessingElement *pe);
-
+               reg_t hostRegionId );
    };
+} // namespace ext
 } // namespace nanos
 #endif

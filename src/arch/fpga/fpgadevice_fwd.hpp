@@ -21,13 +21,15 @@
 #define _FPGA_DEVICE_FWD_H
 
 #include "compatibility.hpp"
+#include "fpgaprocessorinfo.hpp"
 
 namespace nanos {
+namespace ext {
 
    class FPGADevice;
 
-   typedef int FPGADeviceType;
    typedef TR1::unordered_map<FPGADeviceType, FPGADevice const *> FPGADeviceMap;
 
+} // namespace ext
 } // namespace nanos
 #endif

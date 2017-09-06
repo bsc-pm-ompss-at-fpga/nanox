@@ -27,60 +27,57 @@
 namespace nanos {
 namespace ext {
 
-      class FPGADD : public DD
-      {
-         friend class FPGAPlugin;
-         protected:
-            //! \breif Map with the available accelerators types in the system
-            static FPGADeviceMap     *_accDevices;
+   class FPGADD : public DD
+   {
+      friend class FPGAPlugin;
+      protected:
+         //! \breif Map with the available accelerators types in the system
+         static FPGADeviceMap     *_accDevices;
 
-            /*! \brief Initializes the FPGADeviceMap to allow FPGADD creation
-             *         Must be called one time before the first FPGADD creation
-             */
-            static void init( FPGADeviceMap * map ) {
-               ensure ( _accDevices == NULL, "Double initialization of FPGADD static members" );
-               _accDevices = map;
-            }
+         /*! \brief Initializes the FPGADeviceMap to allow FPGADD creation
+          *         Must be called one time before the first FPGADD creation
+          */
+         static void init( FPGADeviceMap * map ) {
+            ensure ( _accDevices == NULL, "Double initialization of FPGADD static members" );
+            _accDevices = map;
+         }
 
-            /*! \breif Removes references to the FPGADeviceMap
-            */
-            static void fini() {
-               _accDevices = NULL;
-            }
+         /*! \breif Removes references to the FPGADeviceMap
+         */
+         static void fini() {
+            _accDevices = NULL;
+         }
 
-         public:
-            // constructors
-            FPGADD( work_fct w , FPGADeviceType const t ) : DD( (*_accDevices)[t], w ) {
-               ensure( getDevice() != NULL, "Trying to use an unexisting FPGA Accelerator type." );
-            }
+      public:
+         // constructors
+         FPGADD( work_fct w , FPGADeviceType const t ) : DD( (*_accDevices)[t], w ) {
+            ensure( getDevice() != NULL, "Trying to use an unexisting FPGA Accelerator type." );
+         }
 
-            // copy constructors
-            FPGADD( const FPGADD &dd ) : DD( dd ) { }
+         // copy constructors
+         FPGADD( const FPGADD &dd ) : DD( dd ) { }
 
-            // assignment operator
-            const FPGADD & operator= ( const FPGADD &wd );
+         // assignment operator
+         const FPGADD & operator= ( const FPGADD &wd );
 
-            // destructor
-            virtual ~FPGADD() { }
+         // destructor
+         virtual ~FPGADD() { }
 
-            virtual void lazyInit ( WD &wd, bool isUserLevelThread, WD *previous ) { }
-            virtual size_t size ( void ) { return sizeof( FPGADD ); }
-            virtual FPGADD *copyTo ( void *toAddr );
-            virtual FPGADD *clone () const { return NEW FPGADD ( *this ); }
+         virtual void lazyInit ( WD &wd, bool isUserLevelThread, WD *previous ) { }
+         virtual size_t size ( void ) { return sizeof( FPGADD ); }
+         virtual FPGADD *copyTo ( void *toAddr );
+         virtual FPGADD *clone () const { return NEW FPGADD ( *this ); }
+   };
 
-            // NOTE: Using the default implementation. If 'onto(-1)' the task will use accelerators with type '0'
-            //virtual bool isCompatible ( const Device &arch );
-      };
+   inline const FPGADD & FPGADD::operator= ( const FPGADD &dd )
+   {
+      // self-assignment: ok
+      if ( &dd == this ) return *this;
 
-      inline const FPGADD & FPGADD::operator= ( const FPGADD &dd )
-      {
-         // self-assignment: ok
-         if ( &dd == this ) return *this;
+      DD::operator= ( dd );
 
-         DD::operator= ( dd );
-
-         return *this;
-      }
+      return *this;
+   }
 
 } // namespace ext
 } // namespace nanos

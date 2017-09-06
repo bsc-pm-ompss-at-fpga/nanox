@@ -5,7 +5,7 @@
 #
 # DESCRIPTION
 #
-#   Check whether a valid Zynq Xilinx DMA library is available, and the path to the headers 
+#   Check whether a valid Zynq Xilinx DMA library is available, and the path to the headers
 #   and libraries are correctly specified.
 #
 # LICENSE
@@ -88,18 +88,14 @@ AS_IF([test "$xdma" = yes],[
                 [xdma=no])
   ])dnl
 
-  
+
   xdmalibs="$LIBS"
 
   AX_VAR_POPVALUE([CPPFLAGS])
   AX_VAR_POPVALUE([CXXFLAGS])
   AX_VAR_POPVALUE([LDFLAGS])
   AX_VAR_POPVALUE([LIBS])
-  
-  AS_IF([test "$xdma" = yes],[
-    ARCHITECTURES="$ARCHITECTURES fpga"
-    AC_DEFINE([FPGA_DEV],[],[Enables FPGA support])
-  ])dnl
+
 ])dnl
 
 AC_SUBST([xdmainc])
@@ -108,10 +104,9 @@ AC_SUBST([xdmalibs])
 AM_CONDITIONAL([XDMA_SUPPORT],[test "$xdma" = yes])
 
 AS_IF([test "$xdma" = yes], [
-   AC_SUBST([HAVE_XDMA], [FPGA_DEV])
+   AC_SUBST([HAVE_XDMA], [XDMA])
 ], [
-   AC_SUBST([HAVE_XDMA], [NO_FPGA_DEV])
+   AC_SUBST([HAVE_XDMA], [NO_XDMA])
 ])
 
 ])dnl AX_CHECK_XDMA
-

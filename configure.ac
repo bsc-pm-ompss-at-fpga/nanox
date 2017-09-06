@@ -19,7 +19,7 @@ m4_ifdef([AM_SILENT_RULES],
          [supported_silent_rules=0])
 
 AM_CONDITIONAL([SUPPORTED_SILENT_RULES], test x$supported_silent_rules = x1)
- 
+
 # Nanos version check
 # Make sure build_version is double-quoted!
 AS_IF([test -d "$srcdir/.git"],[
@@ -64,13 +64,13 @@ AC_SUBST([DEB_RELEASE])
 # ------------------
  AC_PROG_CC
  AC_PROG_CPP
- 
+
  AC_PROG_CXX
  AC_PROG_CXXCPP
- 
+
  AC_PROG_LD
  AM_PROG_AS
- 
+
  AC_PROG_SED
 
  # AM_PROG_AR must be called before LT_INIT or a warning ensues
@@ -122,7 +122,7 @@ AX_CHECK_GASNET
 # Memkind
 AX_CHECK_MEMKIND
 
-# Check if NVidia CUDA device has been selected 
+# Check if NVidia CUDA device has been selected
 AX_CHECK_CUDA
 
 # Check if OpenCL device has been selected
@@ -137,8 +137,16 @@ AX_CHECK_HWLOC
 # Check for DLB support
 AX_CHECK_DLB
 
-# Check for Zynq Xilinx DMA driver library (fpga)
+# Check for FPGA support
 AX_CHECK_XDMA
+AX_CHECK_XTASKS
+AS_IF([test "$xdma" = yes && test "$xtasks" = yes],[
+  ARCHITECTURES="$ARCHITECTURES fpga"
+  AC_DEFINE([FPGA_DEV],[],[Enables FPGA support])
+  AC_SUBST([HAVE_FPGA], [FPGA])
+], [
+  AC_SUBST([HAVE_FPGA], [NO_FPGA])
+])dnl
 
 # Enable Task callback feature
 AX_ENABLE_TASK_CALLBACK
@@ -344,4 +352,3 @@ AS_IF([test "$gasnet_available_conduits" != ""],[
    AS_ECHO(["\
 Cluster/GASNet conduits:  $gasnet_available_conduits"])
 ])
-

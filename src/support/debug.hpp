@@ -76,8 +76,10 @@ namespace nanos {
    do { if (sys.getNetwork()->getNodeNum() == 0) { _nanos_ostream << "MSG: m:[?] " << msg << std::endl; } } while (0)
 
 #ifdef NANOS_DEBUG_ENABLED
-#define ensure(cond,msg) if ( !(cond) ) throw nanos::FailedAssertion(__FILE__, __LINE__ , #cond, msg, getMyThreadSafe()->getId());
-#define ensure0(cond,msg) if ( !(cond) ) throw nanos::FailedAssertion(__FILE__, __LINE__, #cond, msg );
+#define ensure(cond,msg) if ( !(cond) ) { std::stringstream sts; sts<<msg; \
+   throw nanos::FailedAssertion(__FILE__, __LINE__ , #cond, sts.str(), getMyThreadSafe()->getId()); }
+#define ensure0(cond,msg) if ( !(cond) ) { std::stringstream sts; sts<<msg; \
+   throw nanos::FailedAssertion(__FILE__, __LINE__, #cond, sts.str() ); }
 
 #define verbose(msg) \
    if (sys.getVerbose()) _nanos_ostream << "[" << std::dec << getMyThreadSafe()->getId() << "]" << msg << std::endl;
