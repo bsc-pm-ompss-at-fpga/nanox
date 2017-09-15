@@ -216,7 +216,7 @@ typedef std::set<const Device *>  DeviceList;
             bool is_invalid;       //!< Flags an invalid workdescriptor. Used in resiliency when a task fails.
             bool is_runtime_task;  //!< Is the WD a task for doing runtime jobs?
          } WDFlags;
-         typedef enum { INIT, START, READY, BLOCKED } State;
+         typedef enum { INIT, START, READY, BLOCKED, DONE } State;
          typedef int PriorityType;
          typedef SingleSyncCond<EqualConditionChecker<int> >  components_sync_cond_t;
          typedef std::vector<TaskReduction *>        task_reduction_vector_t;  //< List of task reductions type
@@ -763,6 +763,9 @@ typedef std::set<const Device *>  DeviceList;
          //         the commutative access map that the caller provides.
          int getConcurrencyLevel( std::map<WD**, WD*> &comm_accesses ) const;
          void addPresubmittedWDs( unsigned int numWDs, WD **wds );
+
+         //! \brief Returns whether a WorkDescriptor is executed (done method has been called) or not.
+         bool isDone ( void ) const;
    };
 
    typedef class WorkDescriptor WD;

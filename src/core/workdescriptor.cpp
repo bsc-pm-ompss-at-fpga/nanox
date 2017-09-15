@@ -315,6 +315,8 @@ bool WorkDescriptor::isOutputDataReady()
 
 void WorkDescriptor::done ()
 {
+   _state = DONE;
+
    // Releasing commutative accesses
    releaseCommutativeAccesses();
 

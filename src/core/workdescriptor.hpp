@@ -593,6 +593,8 @@ inline void WorkDescriptor::setCallback ( void *cb ) { _callback = cb; }
 
 inline void WorkDescriptor::setArguments ( void *a ) { _arguments = a; }
 
+inline bool WorkDescriptor::isDone() const { return _state == DONE; }
+
 } // namespace nanos
 
 #endif
