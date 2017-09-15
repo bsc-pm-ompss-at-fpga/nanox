@@ -902,7 +902,7 @@ bool Scheduler::inlineWorkAsync ( WD *wd, bool schedule )
    //NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldwd, wd, false) );
 
    // Will return false in general
-   const bool done = thread->inlineWorkDependent( *wd );
+   const bool done = thread->runningOn()->inlineWorkDependent( *wd );
 
    // reload thread after running WD because wd may be not tied to thread if
    // both work descriptors were not tied to any thread
