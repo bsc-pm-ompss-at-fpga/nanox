@@ -25,6 +25,7 @@
 #include "remoteworkdescriptor_decl.hpp"
 #include "basethread.hpp"
 #include "smpprocessor.hpp"
+#include "clusterthread_decl.hpp"
 #ifdef OpenCL_DEV
 #include "opencldd.hpp"
 #endif
@@ -253,7 +254,7 @@ void ClusterMPIPlugin::startSupportThreads() {
    _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker(
       0, NULL,
      ( DD::work_fct )ClusterThread::workerClusterLoop )
-   ) );
+   );
    if ( sys.getNumAccelerators() > 0 ) {
       /* This works, but it could happen that the cluster is initialized before the accelerators, and this call could return 0 */
       sys.getNetwork()->enableCheckingForDataInOtherAddressSpaces();
