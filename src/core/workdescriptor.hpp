@@ -65,6 +65,7 @@ inline WorkDescriptor::WorkDescriptor ( int ndevices, DeviceData **devs, size_t 
                                     _flags.is_submitted = false;
                                     _flags.is_recoverable = false;
                                     _flags.is_invalid = false;
+                                    _flags.is_outlined = false;
                                     if ( copies != NULL ) {
                                        for ( unsigned int i = 0; i < numCopies; i += 1 ) {
                                           copies[i].setHostBaseAddress( 0 );
@@ -104,6 +105,7 @@ inline WorkDescriptor::WorkDescriptor ( DeviceData *device, size_t data_size, si
                                     _flags.is_submitted = false;
                                     _flags.is_recoverable = false;
                                     _flags.is_invalid = false;
+                                    _flags.is_outlined = false;
                                     if ( copies != NULL ) {
                                        for ( unsigned int i = 0; i < numCopies; i += 1 ) {
                                           copies[i].setHostBaseAddress( 0 );
@@ -147,6 +149,7 @@ inline WorkDescriptor::WorkDescriptor ( const WorkDescriptor &wd, DeviceData **d
                                     _flags.is_recoverable = wd._flags.is_recoverable;
                                     _flags.is_invalid = false;
                                     _flags.is_runtime_task = wd._flags.is_runtime_task;
+                                    _flags.is_outlined = wd._flags.is_outlined;
 
                                     _mcontrol.preInit();
                                     for (unsigned int __i=0; __i<8;__i+=1) {
@@ -595,6 +598,9 @@ inline void WorkDescriptor::setArguments ( void *a ) { _arguments = a; }
 
 inline bool WorkDescriptor::isDone() const { return _state == DONE; }
 inline void WorkDescriptor::setDone() { _state = DONE; }
+
+inline bool WorkDescriptor::isOutlined() const { return _flags.is_outlined; }
+inline void WorkDescriptor::setOutlined( bool flag ) { _flags.is_outlined = flag; }
 
 } // namespace nanos
 

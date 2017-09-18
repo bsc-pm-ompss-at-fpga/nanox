@@ -774,6 +774,7 @@ void Scheduler::outlineWork( BaseThread *currentThread, WD *wd ) {
    currentThread->setCurrentWD( *wd );
 
    NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, wd, false) );
+   wd->setOutlined( true );
    currentThread->runningOn()->outlineWorkDependent( *wd );
 
    currentThread->setCurrentWD( *oldWD );

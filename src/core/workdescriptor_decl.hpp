@@ -215,6 +215,7 @@ typedef std::set<const Device *>  DeviceList;
             bool is_recoverable;   //!< Flags a task as recoverable, that is, it can be re-executed if it finished with errors.
             bool is_invalid;       //!< Flags an invalid workdescriptor. Used in resiliency when a task fails.
             bool is_runtime_task;  //!< Is the WD a task for doing runtime jobs?
+            bool is_outlined;      //!< Is the WD executed as an outline task?
          } WDFlags;
          typedef enum { INIT, START, READY, BLOCKED, DONE } State;
          typedef int PriorityType;
@@ -769,6 +770,12 @@ typedef std::set<const Device *>  DeviceList;
 
          //! \brief Puts a WorkDescriptor in DONE state.
          void setDone ( void );
+
+         //! \breif Returns whether a WorkDescriptor is executed outlined or not
+         bool isOutlined ( void ) const;
+
+         //! \breif Sets the outlined WorkDescriptor flag
+         void setOutlined ( bool flag );
    };
 
    typedef class WorkDescriptor WD;
