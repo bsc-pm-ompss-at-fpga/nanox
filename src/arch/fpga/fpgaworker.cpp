@@ -39,8 +39,11 @@ bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
    WD * wd;
    bool wdExecuted = false;
 
-   if ( fpga->getPendingWDs() > maxPendingWD ) {
+   if ( fpga->getPendingWDs() >= maxPendingWD ) {
       fpga->tryPostOutlineTasks( finishBurst );
+      if ( fpga->getPendingWDs() >= maxPendingWD ) {
+         return false;
+      }
    }
 
    // Check queue of tasks waiting for input copies
