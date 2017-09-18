@@ -593,9 +593,20 @@ inline void WorkDescriptor::setCallback ( void *cb ) { _callback = cb; }
 
 inline void WorkDescriptor::setArguments ( void *a ) { _arguments = a; }
 
-inline bool WorkDescriptor::isDone() const { return _state == DONE; }
-inline void WorkDescriptor::setDone() { _state = DONE; }
+<<<<<<< HEAD
+=======
+inline uint8_t WorkDescriptor::getArchitecturesMask () const
+{
+   uint8_t ret = 0;
+   for ( unsigned char i = 0; i < _numDevices; i++ ) {
+      ret |= _devices[i]->getDevice()->getArchitectureMask();
+   }
+   return ret;
+}
 
+inline bool WorkDescriptor::isDone() const { return _state == DONE; }
+
+>>>>>>> 1db2334... Added WD's DONE state
 } // namespace nanos
 
 #endif

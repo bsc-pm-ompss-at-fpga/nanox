@@ -764,7 +764,14 @@ typedef std::set<const Device *>  DeviceList;
          int getConcurrencyLevel( std::map<WD**, WD*> &comm_accesses ) const;
          void addPresubmittedWDs( unsigned int numWDs, WD **wds );
 
+<<<<<<< HEAD
+         //! \brief Returns whether a WorkDescriptor is executed (done method has been called) or not.
+=======
+         //! \brief Returns a compatibility mask according to the WD's devices
+         uint8_t getArchitecturesMask () const;
+
          //! \brief Returns whether a WorkDescriptor is executed (done or setDone have been called) or not.
+>>>>>>> 3598de0... Added setDone method to mark a WD as done
          bool isDone ( void ) const;
 
          //! \brief Puts a WorkDescriptor in DONE state.
