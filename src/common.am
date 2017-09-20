@@ -23,7 +23,7 @@ api_includes=\
 
 devincludedir = $(prefix)/include/nanox-dev
 
-AM_CPPFLAGS=-D_NANOS_INTERNAL @cc_dep_CPPFLAGS@ @hwlocinc@ $(common_includes) -DLIBDIR='$(libdir)'
+AM_CPPFLAGS=-D_NANOS_INTERNAL @cc_dep_CPPFLAGS@ @hwlocinc@ @xtasksinc@ $(common_includes) -DLIBDIR='$(libdir)'
 AM_CXXFLAGS=@PTHREAD_CFLAGS@ @cc_dep_CXXFLAGS@
 AM_LDFLAGS=@hwloclib@ @cudalib@ @xdmalib@ @xtaskslib@
 LIBS+=@hwloclibs@ @cudalibs@ @xdmalibs@ @xtaskslibs@
