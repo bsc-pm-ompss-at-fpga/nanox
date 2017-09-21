@@ -750,7 +750,7 @@ void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner, WD *
     *       may not be the implicit thread WD
     */
    thread->setCurrentWD( next );
-   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, &next, true) );
+   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, NULL, true) );
 
    //std::cerr << "completed WD " << wd->getId() << " at thd " << owner->getId() << " thd addr " << owner << std::endl;
    //NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( NULL, oldwd, false) );
@@ -769,16 +769,10 @@ void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner, WD *
 }
 
 void Scheduler::outlineWork( BaseThread *currentThread, WD *wd ) {
-   // TODO: Check if 'setCurrentWD' calls are redundant or if introduce some race/bug
-   WD * oldWD = currentThread->getCurrentWD();
    currentThread->setCurrentWD( *wd );
-
-   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, wd, false) );
+   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( NULL, wd, false) );
    wd->setOutlined( true );
    currentThread->runningOn()->outlineWorkDependent( *wd );
-
-   currentThread->setCurrentWD( *oldWD );
-   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( wd, oldWD, false) );
 }
 
 void Scheduler::finishWork( WD * wd, bool schedule )
