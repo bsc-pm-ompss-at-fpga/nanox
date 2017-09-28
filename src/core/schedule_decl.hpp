@@ -45,7 +45,7 @@ namespace nanos {
          static void exitHelper (WD *oldWD, WD *newWD, void *arg);
 
          template<class behaviour>
-         static void idleLoop ( bool exit = false );
+         static void idleLoop ( void );
 
       public:
          static bool tryPreOutlineWork ( WD *work );
@@ -69,8 +69,9 @@ namespace nanos {
          static void switchToThread ( BaseThread * thread );
          static void finishWork( WD * wd, bool schedule );
 
-         static void workerLoop ( bool exit = false );
+         static void workerLoop ( void );
          static void asyncWorkerLoop ( void );
+         static void helperWorkerLoop ( void );
          static void yield ( void );
 
          static void exit ( void );

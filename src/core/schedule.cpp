@@ -204,7 +204,7 @@ struct TestInputs {
 };
 
 template<class behaviour>
-inline void Scheduler::idleLoop ( bool exit )
+inline void Scheduler::idleLoop ()
 {
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
 
@@ -399,10 +399,10 @@ inline void Scheduler::idleLoop ( bool exit )
          // Also reset the number of empty calls
          num_empty_calls = 0;
          //if called from a multithread, don not start a new iteration
-         if ( !exit ) continue;
+         if ( !behaviour::mustExit() ) continue;
       }
       //exit if called from another architecture
-      if ( exit ) break;
+      if ( behaviour::mustExit() ) break;
 
       // Otherwise, getWD returned NULL, increase the counter
       ++num_empty_calls;
@@ -581,6 +581,7 @@ struct WorkerBehaviour
    }
    static bool checkThreadRunning( WD *current) { return true; }
    static bool exiting() { return false; }
+   static bool mustExit () { return false; }
 };
 
 struct AsyncWorkerBehaviour
@@ -608,16 +609,48 @@ struct AsyncWorkerBehaviour
    }
 
    static bool exiting() { return false; }
+   static bool mustExit () { return false; }
 };
 
-void Scheduler::workerLoop ( bool exit )
+struct HelperBehaviour
 {
-   idleLoop<WorkerBehaviour>( exit );
+   static WD * getWD ( BaseThread *thread, WD *current, int numSteal )
+   {
+      WD * ret = thread->getTeam()->getSchedulePolicy().atIdle( thread, numSteal );
+      if ( ret != NULL && ret->started() ) {
+         //Avoid tasks which execution started as may require a context switch
+         //NOTE: Maybe only needed if ULT is enabled/supported
+         thread->getTeam()->getSchedulePolicy().queue( thread, *ret );
+         ret = NULL;
+      }
+      return ret;
+   }
+
+   static void switchWD ( BaseThread *thread, WD *current, WD *next )
+   {
+      if ( Scheduler::inlineWork( next, false /*schedule*/ ) ) {
+         next->~WorkDescriptor();
+         delete[] ( char * )( next );
+      }
+   }
+
+   static bool exiting () { return false; }
+   static bool mustExit () { return true; }
+};
+
+void Scheduler::workerLoop ()
+{
+   idleLoop<WorkerBehaviour>();
 }
 
 void Scheduler::asyncWorkerLoop ()
 {
    idleLoop<AsyncWorkerBehaviour>();
+}
+
+void Scheduler::helperWorkerLoop ()
+{
+   idleLoop<HelperBehaviour>();
 }
 
 void Scheduler::preOutlineWorkWithThread ( BaseThread * thread, WD *wd )
@@ -1031,6 +1064,7 @@ struct ExitBehaviour
       }
    }
    static bool exiting() { return true; }
+   static bool mustExit () { return false; }
 };
 
 void Scheduler::exitTo ( WD *to )

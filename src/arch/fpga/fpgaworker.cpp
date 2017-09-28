@@ -139,12 +139,12 @@ void FPGAWorker::FPGAWorkerLoop() {
 
          spins = init_spins;
          if ( FPGAConfig::getHybridWorkerEnabled() ) {
-             //When spins go to 0 it means that there is no work for any fpga accelerator
-             // -> get an SMP task
-             BaseThread *tmpThread = myThread;
-             myThread = parent; //Parent should be already an smp thread
-             Scheduler::workerLoop( true );
-             myThread = tmpThread;
+            //When spins go to 0 it means that there is no work for any fpga accelerator
+            // -> get an SMP task
+            BaseThread *tmpThread = myThread;
+            myThread = parent; //Parent should be already an smp thread
+            Scheduler::helperWorkerLoop();
+            myThread = tmpThread;
          }
 
          //do not limit number of yields disregard of configuration options
