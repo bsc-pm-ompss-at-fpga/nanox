@@ -135,9 +135,9 @@ void FPGAConfig::apply()
    if ( _numFPGAThreads < 0 ) {
       _numFPGAThreads = 1;
    } else if ( _numFPGAThreads > _numAccelerators ) {
-      warning0( "Number of FPGA helpers is larger than the number of FPGA accelerators. "
-               << "Using one thread per accelerator (" << _numAccelerators << ")" );
-      _numFPGAThreads = _numAccelerators;
+      warning0( "Number of FPGA helper threads is larger than the number of FPGA accelerators." );
+      //         << "Using one thread per accelerator (" << _numAccelerators << ")" );
+      //_numFPGAThreads = _numAccelerators;
    }
 }
 
