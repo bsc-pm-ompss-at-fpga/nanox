@@ -101,7 +101,10 @@ void *FPGADevice::memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem
 {
    SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
    //verbose( "FPGADevice allocate memory:\t " << size << " bytes in allocator " << allocator );
-   return allocator->allocate( size );
+   allocator->lock();
+   void * ret = allocator->allocate( size );
+   allocator->unlock();
+   return ret;
 }
 
 void FPGADevice::memFree( uint64_t addr, SeparateMemoryAddressSpace &mem )
@@ -109,7 +112,9 @@ void FPGADevice::memFree( uint64_t addr, SeparateMemoryAddressSpace &mem )
    void * ptr = ( void * )( addr );
    SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
    //verbose( "FPGADevice free memory:\t " << ptr << " in allocator " << allocator );
+   allocator->lock();
    allocator->free( ptr );
+   allocator->unlock();
 }
 
 void FPGADevice::_canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *sizes,
