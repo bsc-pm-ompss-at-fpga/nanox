@@ -457,31 +457,34 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
          if ( !( condition->check() ) ) {
 
             //! If condition is not acomplished yet, release wd and get more work to do
+            WD * next = NULL;
 
-            //! First checking prefetching queue
-            WD * next = thread->getNextWD();
-            if ( next != NULL ) {
-                verbose("Got wd through getNextWD");
-            }
+            if ( thread->canGetWork() ) {
+               //! First checking prefetching queue
+               next = thread->getNextWD();
+               if ( next != NULL ) {
+                   verbose("Got wd through getNextWD");
+               }
 
-            if ( !thread->isSleeping() ) {
-               //! Second calling scheduler policy at block
-               if ( !next ) {
-                  memoryFence();
-                  if ( sys.getSchedulerStats()._readyTasks > 0 ) {
-                     if ( sys.getSchedulerConf().getSchedulerEnabled() )
-                        next = thread->getTeam()->getSchedulePolicy().atBlock( thread, current );
-            if ( next != NULL ) {
-                verbose("Got wd through atBlock");
-            }
+               if ( !thread->isSleeping() ) {
+                  //! Second calling scheduler policy at block
+                  if ( !next ) {
+                     memoryFence();
+                     if ( sys.getSchedulerStats()._readyTasks > 0 ) {
+                        if ( sys.getSchedulerConf().getSchedulerEnabled() )
+                           next = thread->getTeam()->getSchedulePolicy().atBlock( thread, current );
+               if ( next != NULL ) {
+                   verbose("Got wd through atBlock");
+               }
+                     }
                   }
                }
-            }
 
-            // Trigger a wakeup if there's more WDs in the queue
-            if ( next && thread->getTeam() != NULL && thread_manager->isGreedy()
-                  && thread->getTeam()->getSchedulePolicy().testDequeue() ) {
-               thread_manager->acquireOne();
+               // Trigger a wakeup if there's more WDs in the queue
+               if ( next && thread->getTeam() != NULL && thread_manager->isGreedy()
+                     && thread->getTeam()->getSchedulePolicy().testDequeue() ) {
+                  thread_manager->acquireOne();
+               }
             }
 
             //! Finally coming back to our Thread's WD (idle task)
@@ -616,22 +619,22 @@ struct HelperBehaviour
 {
    static WD * getWD ( BaseThread *thread, WD *current, int numSteal )
    {
+      if ( !thread->canGetWork() ) {
+         // Some task was previously executed
+         return NULL;
+      }
+
       WD * ret = thread->getTeam()->getSchedulePolicy().atIdle( thread, numSteal );
-      if ( ret != NULL && ret->started() ) {
-         //Avoid tasks which execution started as may require a context switch
-         //NOTE: Maybe only needed if ULT is enabled/supported
-         thread->getTeam()->getSchedulePolicy().queue( thread, *ret );
-         ret = NULL;
+      if ( ret != NULL ) {
+         // Disable getting more work
+         thread->disableGettingWork();
       }
       return ret;
    }
 
    static void switchWD ( BaseThread *thread, WD *current, WD *next )
    {
-      if ( Scheduler::inlineWork( next, false /*schedule*/ ) ) {
-         next->~WorkDescriptor();
-         delete[] ( char * )( next );
-      }
+      Scheduler::switchTo( next );
    }
 
    static bool exiting () { return false; }
@@ -651,6 +654,9 @@ void Scheduler::asyncWorkerLoop ()
 void Scheduler::helperWorkerLoop ()
 {
    idleLoop<HelperBehaviour>();
+
+   //NOTE: Maybe the getting work flag was disabled inside the idleLoop. Enable it again
+   myThread->enableGettingWork();
 }
 
 void Scheduler::preOutlineWorkWithThread ( BaseThread * thread, WD *wd )

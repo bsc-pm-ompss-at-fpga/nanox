@@ -116,7 +116,7 @@ void FPGAConfig::apply()
       // The current configuration disables the FPGA support
       if ( nanos_needs_fpga_fun ) {
          warning0( " FPGA tasks were compiled and FPGA was disabled, execution could have " <<
-                   "unexpected behavior and can even hang, check configuration parameters" );
+                   "unexpected behaviour and can even hang, check configuration parameters" );
       }
       _enableFPGA = false;
       _numAccelerators = 0;
@@ -138,6 +138,11 @@ void FPGAConfig::apply()
       warning0( "Number of FPGA helper threads is larger than the number of FPGA accelerators." );
       //         << "Using one thread per accelerator (" << _numAccelerators << ")" );
       //_numFPGAThreads = _numAccelerators;
+   }
+
+   if ( _enableFPGA && !_idleCallback && _hybridWorker ) {
+      warning0( " The use of FPGA idle callback is disabled, execution could have unexpected " <<
+                " behaviour and can ever hang if there is task nesting." );
    }
 }
 
