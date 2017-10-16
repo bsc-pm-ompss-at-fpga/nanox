@@ -23,13 +23,16 @@
 using namespace nanos;
 using namespace ext;
 
-//TODO: Get the value from the FPGAConfig
-unsigned int FPGAListener::_maxConcurrentThreads = 1;
-
 void FPGAListener::callback( BaseThread* self )
 {
-   // Try to atomically reserve an slot
-   if ( _count.fetchAndAdd() < _maxConcurrentThreads ) {
+   static int maxThreads = FPGAConfig::getMaxThreadsIdleCallback();
+
+   /*!
+    * Try to atomically reserve an slot
+    * NOTE: The order or if statements cannot be reversed as _count must be always increased to keep
+    *       the value coherent after the descrease.
+    */
+   if ( _count.fetchAndAdd() < maxThreads || maxThreads == -1 ) {
       PE * const selfPE = self->runningOn();
       WD * const selfWD = self->getCurrentWD();
       FPGAProcessor * const fpga = getFPGAProcessor();

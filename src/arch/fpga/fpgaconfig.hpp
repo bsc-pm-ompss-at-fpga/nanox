@@ -46,6 +46,7 @@ namespace ext {
          static int                       _maxPendingWD;
          static int                       _finishWDBurst;
          static bool                      _idleCallback;
+         static int                       _maxThreadsIdleCallback;
          static std::size_t               _allocatorPoolSize;
 
          /*! Parses the FPGA user options */
@@ -79,6 +80,7 @@ namespace ext {
          static int getMaxPendingWD() { return  _maxPendingWD; }
          static int getFinishWDBurst() { return _finishWDBurst; }
          static bool getIdleCallbackEnabled() { return _idleCallback; }
+         static int getMaxThreadsIdleCallback() { return _maxThreadsIdleCallback; }
 
          //! \brief Returns FPGA Allocator size in MB
          static std::size_t getAllocatorPoolSize() { return _allocatorPoolSize; }
