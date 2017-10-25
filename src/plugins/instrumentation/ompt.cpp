@@ -48,7 +48,7 @@ extern "C" {
    {
       fatal0( "There is no OMPT compliant tool loaded\n" );
       return 0;
-   } 
+   }
 
    #define OMPT_NANOS_STATES 5
    ompt_state_t nanos_state_values[OMPT_NANOS_STATES] = { ompt_state_first, ompt_state_idle, ompt_state_work_serial, ompt_state_work_parallel, ompt_state_undefined };
@@ -57,8 +57,8 @@ extern "C" {
    // Scheduler break point callback
    typedef void (*break_point_callback_t)( void );
 
-   void breakPointCallBack(void); 
-   void breakPointCallBack(void) { 
+   void breakPointCallBack(void);
+   void breakPointCallBack(void) {
       // fprintf(stderr, "sched. step, thread %p\n", nanos::myThread);
       nanos::myThread->setSteps(1);
    }
@@ -99,7 +99,7 @@ extern "C" {
          case ompt_event_parallel_end:
             ompt_nanos_event_parallel_end = (ompt_parallel_end_callback_t) callback;
             return 4;
-         case ompt_event_task_begin: 
+         case ompt_event_task_begin:
             ompt_nanos_event_task_begin = (ompt_task_begin_callback_t) callback;
             return 4;
          case ompt_event_task_end:
@@ -234,9 +234,9 @@ extern "C" {
       if ( myThread->isIdle() ) return ompt_state_idle;
 
       //! \note If we consider OmpSs running always in parallel there is only when
-      //! case in which we can run serially: first level team, running with one thread. 
+      //! case in which we can run serially: first level team, running with one thread.
       ThreadTeam *tt = myThread->getTeam();
-      if ( tt && tt->size() == 1 && tt->getLevel() == 0 ) 
+      if ( tt && tt->size() == 1 && tt->getLevel() == 0 )
          return ompt_state_work_serial;
       else if ( tt )
          return ompt_state_work_parallel;
@@ -272,7 +272,7 @@ extern "C" {
             rv = (ompt_parallel_id_t) 0;
          nanos::ompt::_lock.release();
       }
-      
+
       return rv;
    }
 
@@ -481,7 +481,7 @@ extern "C" {
 
 namespace nanos
 {
-   class InstrumentationOMPT: public Instrumentation 
+   class InstrumentationOMPT: public Instrumentation
    {
       private:
          ompt_task_id_t * _previousTask;
@@ -496,8 +496,10 @@ namespace nanos
          ompt_target_buffer_complete_callback_t    _completeBufferCallback;
 
          struct BufferInfo {
+            Lock lock;
+            Atomic<unsigned int> done;   ///< Counter of positions full filled in the buffer
             unsigned int begin;
-            unsigned int current;
+            unsigned int current;        ///< Next position to be full filled
             size_t size;
             unsigned int records;
             ompt_record_ompt_t *buffer;
@@ -505,14 +507,20 @@ namespace nanos
                buffer( NULL ) { }
          };
 
-         std::vector < BufferInfo > _devEventBuffers;
+         std::vector < BufferInfo* > _devEventBuffers;
 
 
       public:
          InstrumentationOMPT( ) : Instrumentation( *NEW InstrumentationContextDisabled()),
             _previousTask( NULL ), _deviceCount( 0 ), _requestBufferCallback( NULL ),
             _completeBufferCallback( NULL ) {}
-         ~InstrumentationOMPT() { }
+         ~InstrumentationOMPT() {
+            for ( std::vector< BufferInfo* >::iterator it = _devEventBuffers.begin();
+                  it != _devEventBuffers.end();
+                  it++ ) {
+               delete *it;
+            }
+         }
 
          static int getCurrentThreadId() {
              BaseThread *parent = myThread->getParent();
@@ -578,14 +586,14 @@ namespace nanos
                Event &e = events[i];
 // XXX: debug information
 #if 0
-               int thid = nanos::myThread? getCurrentThreadId():0; 
+               int thid = nanos::myThread? getCurrentThreadId():0;
                fprintf(stderr,"NANOS++ [%d]: (%d/%d) event %ld value %lu\n",
                      thid,
                      (int)i+1,
                      (int)count,
                      (long) e.getKey(),
                      (unsigned long) e.getValue()
-                     ); 
+                     );
 #endif
                switch ( e.getType() ) {
                   case NANOS_POINT:
@@ -670,7 +678,7 @@ namespace nanos
                      if ( e.getKey( ) == api )
                      {
                         nanos_event_value_t val = e.getValue();
-                        
+
                         // getting current team id
                         ThreadTeam *tt = myThread->getTeam();
                         ompt_parallel_id_t team_id = 0;
@@ -769,7 +777,7 @@ namespace nanos
                ompt_nanos_event_task_end((ompt_task_id_t) w.getId());
             }
          }
-         void threadStart( BaseThread &thread ) 
+         void threadStart( BaseThread &thread )
          {
             // Setting break point
             thread.setSteps (1);
@@ -825,11 +833,11 @@ namespace nanos
             //Use naive linear search, as we usually have a small number of accelerators
             //this will be enough, even faster than using a more complex structure
             BufferInfo *buffer = NULL;
-            for ( std::vector< BufferInfo >::iterator it = _devEventBuffers.begin();
+            for ( std::vector< BufferInfo* >::iterator it = _devEventBuffers.begin();
                   it != _devEventBuffers.end();
                   it++ ) {
-               if ( it->buffer == ( ompt_record_ompt_t *)targetBuffer ) {
-                  buffer = &(*it);
+               if ( (*it)->buffer == ( ompt_record_ompt_t *)targetBuffer ) {
+                  buffer = *it;
                   break;
                }
             }
@@ -846,11 +854,14 @@ namespace nanos
          void addDeviceEvent( const DeviceEvent &event ) {
             const DeviceInstrumentation *devInstr = event.getDeviceInstrumentation();
             int deviceId = devInstr->getId();
-            BufferInfo &buffer = _devEventBuffers[ deviceId ];
+            BufferInfo &buffer = *_devEventBuffers[ deviceId ];
+            buffer.lock++; //Lock the buffer to get an empty slot
+
             //Request buffer if it's not initialized
             if ( buffer.buffer == NULL ) {
                //buffer request
                _requestBufferCallback( (ompt_target_buffer_t**)&buffer.buffer, &buffer.size );
+               buffer.done = 0;
                buffer.begin = 0;
                buffer.current = 0;
                buffer.records = buffer.size / sizeof( ompt_record_ompt_t );
@@ -858,15 +869,22 @@ namespace nanos
 
             //Call to complete if no more records fit in current buffer
             if ( buffer.current == buffer.records ) {
+               //Wait until last writes end
+               while ( buffer.done.value() != buffer.records ) {}
+
                //There is no space to save the event -> call completion
                _completeBufferCallback( deviceId, ( ompt_target_buffer_t *) buffer.buffer,
                        buffer.size,
                      buffer.begin, buffer.current );
                //reset current pointer to recycle the buffer
+               buffer.done = buffer.begin;
                buffer.current = buffer.begin;
             }
+            unsigned int current = buffer.current++;
+            buffer.lock--; //Release the lock and use local variable
+
             //add event to buffer
-            ompt_record_ompt_t *omptEvent = &buffer.buffer[ buffer.current ];
+            ompt_record_ompt_t *omptEvent = &buffer.buffer[ current ];
             //Nanos device events are already conveniently set to match ompt spec
             omptEvent->type = ( ompt_event_t ) event.getEventType();
             omptEvent->time = event.getDeviceTime();
@@ -900,14 +918,15 @@ namespace nanos
                      ( auxWD != NULL ) ? auxWD->getId() : 0;
                   break;
             }
-            buffer.current++;
+
+            buffer.done++;
          }
          void createEventBuffer() {
-             _devEventBuffers.push_back( BufferInfo() );
+             _devEventBuffers.push_back( NEW BufferInfo() );
          }
 
          void completeDeviceBuffer( int deviceId ) {
-            BufferInfo &eventBuffer = _devEventBuffers[ deviceId ];
+            BufferInfo &eventBuffer = *_devEventBuffers[ deviceId ];
             if (eventBuffer.current != eventBuffer.begin) {
                _completeBufferCallback( deviceId, ( ompt_target_buffer_t *) eventBuffer.buffer,
                      eventBuffer.size, eventBuffer.begin, eventBuffer.current );
