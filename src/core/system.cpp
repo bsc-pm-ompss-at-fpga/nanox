@@ -1275,6 +1275,7 @@ int System::getNumWorkers( DeviceData *arch )
          n++;
       }
    }
+   warning0( "System::getNumWorkers( DeviceData *arch ) is deprecated: Workers may change the PE where they run" );
    return n;
 }
 
