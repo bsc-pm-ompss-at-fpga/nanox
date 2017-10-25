@@ -86,15 +86,15 @@ namespace nanos {
          WorkDescriptor * popBackWithConstraints ( BaseThread const *thread );
          template <typename Constraints>
          bool removeWDWithConstraints( BaseThread *thread, WorkDescriptor *toRem, WorkDescriptor **next );
-         
+
          /*! \brief Returns the lock object, for batch operations. */
          virtual Lock& getLock() = 0;
-         
+
          /*! \brief Pushes back WorkDescriptors, for batch operations.
           *  \note The lock must be acquired and release externally!
           */
          virtual void push_front( WD** wds, size_t numElems ) = 0;
-         
+
          /*! \brief Inserts WDs in the front, for batch operations.
           *  \note The lock must be acquired and release externally!
           */
@@ -141,12 +141,14 @@ namespace nanos {
           */
          ~WDDeque() {}
 
+         friend std::ostream& operator<< ( std::ostream& os, WDDeque const & obj );
+
          bool empty ( void ) const;
          size_t size() const;
 
          void push_front ( WorkDescriptor *wd );
          void push_back( WorkDescriptor *wd );
-         
+
          Lock& getLock();
          void push_front( WD** wds, size_t numElems );
          void push_back( WD** wds, size_t numElems );
@@ -243,7 +245,7 @@ namespace nanos {
          bool removeWD( BaseThread *thread, WorkDescriptor *toRem, WorkDescriptor **next );
 
    };
-   
+
    /*! \brief Class used to compare WDs by priority.
     *  \see WDPriorityQueue::push
     */
@@ -252,36 +254,36 @@ namespace nanos {
    {
       /*! \brief Type of the functor */
       typedef std::const_mem_fun_t<T, WD> PriorityValueFun;
-      
+
       PriorityValueFun _getter;
-      
+
       WDPriorityComparisonBase( PriorityValueFun functor ) : _getter( functor ) {}
    };
-   
+
    /*! \brief Class used to compare WDs by priority.
     */
    template <typename T>
    struct WDPriorityComparison : public WDPriorityComparisonBase<T>
    {
       typedef WDPriorityComparisonBase<T> Base;
-      
-      WDPriorityComparison( typename Base::PriorityValueFun functor ) 
+
+      WDPriorityComparison( typename Base::PriorityValueFun functor )
          : Base( functor ) {}
-      
+
       bool operator() ( const WD *wd1, const WD *wd2 ) const
       {
          return this->_getter( wd1 ) > this->_getter( wd2 );
       }
    };
-   
+
    /*! \brief Class used to compare WDs by priority reversely.
     */
    template <typename T>
    struct WDPriorityComparisonReverse : public WDPriorityComparisonBase<T>
    {
       typedef WDPriorityComparisonBase<T> Base;
-      
-      WDPriorityComparisonReverse( typename Base::PriorityValueFun functor ) 
+
+      WDPriorityComparisonReverse( typename Base::PriorityValueFun functor )
          : Base( functor ) {}
       bool operator() ( const WD *wd1, const WD *wd2 ) const
       {
@@ -315,7 +317,7 @@ namespace nanos {
           * in the above case.
           */
          bool              _optimise;
-         
+
          /*! \brief Revert insertion */
          bool              _reverse;
 
@@ -326,10 +328,10 @@ namespace nanos {
          /*! \brief Functor that will be used to get the priority or
           *  deadline */
          PriorityValueFun  _getter;
-         
+
          /*! \brief Max and min priorities found at the queue. */
          WD::PriorityType  _maxPriority, _minPriority;
-      
+
 
       private:
          /*! \brief WDPriorityQueue copy constructor (private)
@@ -338,16 +340,16 @@ namespace nanos {
          /*! \brief WDPriorityQueue copy assignment operator (private)
           */
          const WDPriorityQueue & operator= ( const WDPriorityQueue & );
-         
+
          /*! \brief Inserts a WD in the expected order.
           *  \param fifo Insert WDs with the same after the current ones?
           */
          void insertOrdered ( WorkDescriptor *wd, bool fifo = true );
          void insertOrdered ( WorkDescriptor ** wds, size_t numElems, bool fifo = true );
-         
+
          /*! \brief Performs upper bound reversely or not depending on the settings */
          WDPQ::BaseContainer::iterator upper_bound( const WD *wd );
-        
+
          /*! \brief Performs lower bound reversely or not depending on the settings */
          WDPQ::BaseContainer::iterator lower_bound( const WD *wd );
 
@@ -363,7 +365,7 @@ namespace nanos {
           */
          WDPriorityQueue( bool enableDeviceCounter = true, bool optimise = true, bool reverse = false,
                PriorityValueFun getter = std::mem_fun( &WD::getPriority ) );
-         
+
          /*! \brief WDPriorityQueue destructor
           */
          ~WDPriorityQueue() {}
@@ -373,7 +375,7 @@ namespace nanos {
 
          void push_back( WorkDescriptor *wd );
          void push_front( WorkDescriptor *wd );
-         
+
          Lock& getLock();
          void push_front( WD** wds, size_t numElems );
          void push_back( WD** wds, size_t numElems );
@@ -398,11 +400,11 @@ namespace nanos {
           * \note This method sets the lock upon entry (using LockBlock).
           */
          bool reorderWD( WorkDescriptor *wd );
-         
+
          /*! \brief Returns the highest priority, without blocking.
           */
          WD::PriorityType maxPriority() const;
-         
+
          /*! \brief Returns the lowest priority, without blocking.
           */
          WD::PriorityType minPriority() const;
@@ -414,4 +416,3 @@ namespace nanos {
 } // namespace nanos
 
 #endif
-

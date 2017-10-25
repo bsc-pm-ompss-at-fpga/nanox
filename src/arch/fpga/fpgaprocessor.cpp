@@ -293,7 +293,7 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
          --_runningTasks;
          if ( wd->isOutlined() ) {
             //Only delete tasks executed using outlineWorkDependent
-            Scheduler::postOutlineWork( wd, false, myThread );
+            Scheduler::postOutlineWork( wd, true /* schedule */, myThread );
             delete[] (char *) wd;
          } else {
             //Mark inline tasks as done, they will be finished from the Scheduler
