@@ -765,23 +765,27 @@ void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner, WD *
 {
    BaseThread *thread = owner;
    WD & next = previousWD ? *previousWD : thread->getThreadWD();
-   //NANOS_INSTRUMENT( InstrumentState inst2(NANOS_POST_OUTLINE_WORK, true); );
 
-   //std::cerr << "completing WD " << wd->getId() << " at thd " << owner->getId() << " thd addr " << owner << std::endl;
-   //if (schedule && thread->getNextWD() == NULL ) {
-   //     thread->setNextWD(thread->getTeam()->getSchedulePolicy().atBeforeExit(thread,*wd));
-   //}
+   //! \note Finish WD but do not wait output copies
+   wd->preFinish();
 
-   /* If WorkDescriptor has been submitted update statistics */
-   updateExitStats (*wd);
+   //! \note getting more work to do (only if not going to sleep)
+   if ( !getMyThreadSafe()->isSleeping() && schedule /*&& thread->getNextWD() == NULL*/ ) {
+      ThreadTeam *thread_team = thread->getTeam();
+      ensure( thread_team != NULL, "postOutlineWork called from a thread whitout a team when schedule is enabled" );
+      thread->addNextWD( thread_team->getSchedulePolicy().atBeforeExit( thread, *wd, schedule ) );
+   }
 
-   wd->finish();
+   //! \note If WorkDescriptor has been submitted update statistics
+   updateExitStats( *wd );
+
+   //! \note Finalizing and cleaning WorkDescriptor
    wd->done();
    wd->clear();
 
+   //! \note Wait output copies
+   wd->waitOutputCopies();
 
-   //std::cerr << "thd " << myThread->getId() << "exiting task(inlined) " << wd << ":" << wd->getId() <<
-   //       " to " << oldwd << ":" << oldwd->getId() << std::endl;
    debug( "exiting task(post outline) " << wd << ":" << std::dec << wd->getId() << " to " << &next << ":" << std::dec << next.getId() );
 
    /*
@@ -790,21 +794,6 @@ void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner, WD *
     */
    thread->setCurrentWD( next );
    NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, NULL, true) );
-
-   //std::cerr << "completed WD " << wd->getId() << " at thd " << owner->getId() << " thd addr " << owner << std::endl;
-   //NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( NULL, oldwd, false) );
-
-   // While we tie the inlined tasks this is not needed
-   // as we will always return to the current thread
-   #if 0
-   if ( oldwd->isTiedTo() != NULL )
-      switchToThread(oldwd->isTiedTo());
-   #endif
-
-   //ensure(oldwd->isTiedTo() == NULL || thread == oldwd->isTiedTo(),
-   //        "Violating tied rules " + toString<BaseThread*>(thread) + "!=" + toString<BaseThread*>(oldwd->isTiedTo()));
-
-   //NANOS_INSTRUMENT( inst2.close(); );
 }
 
 void Scheduler::outlineWork( BaseThread *currentThread, WD *wd ) {
