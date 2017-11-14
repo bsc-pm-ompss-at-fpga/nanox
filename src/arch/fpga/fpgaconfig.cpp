@@ -79,7 +79,7 @@ void FPGAConfig::prepare( Config &config )
    config.registerConfigOption( "fpga_freq", NEW Config::IntegerVar( _fpgaFreq ),
                                 "FPGA accelerator clock frequency in MHz (def: 100)" );
    config.registerEnvOption( "fpga_freq", "NX_FPGA_FREQ" );
-   config.registerArgOption( "fpga_freq", "nx-fpga-freq" );
+   config.registerArgOption( "fpga_freq", "fpga-freq" );
 
    config.registerConfigOption( "fpga_hybrid_worker", NEW Config::FlagOption( _hybridWorker ),
                                 "Allow FPGA helper thread to run smp tasks (def: enabled)" );
