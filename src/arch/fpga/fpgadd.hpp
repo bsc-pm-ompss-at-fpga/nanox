@@ -27,6 +27,8 @@
 namespace nanos {
 namespace ext {
 
+   const FPGADevice &getFPGADevice(int i);
+
    class FPGADD : public DD
    {
       friend class FPGAPlugin;
@@ -49,6 +51,17 @@ namespace ext {
          }
 
       public:
+         static const FPGADevice &getNthDevice (unsigned int i)
+         {
+            FPGADeviceMap aux = *_accDevices;
+            ensure( i<aux.size() , "Trying to use an unexisting FPGA Accelerator type. There's not enough number of types available." );
+
+            unsigned int j=0;
+            FPGADeviceMap::iterator it;
+            for ( j=0, it = aux.begin(); j<i && it != aux.end(); j++, it++ );
+            return *(it->second);
+         }         
+
          // constructors
          FPGADD( work_fct w , FPGADeviceType const t ) : DD( (*_accDevices)[t], w ) {
 #ifdef NANOS_DEBUG_ENABLED

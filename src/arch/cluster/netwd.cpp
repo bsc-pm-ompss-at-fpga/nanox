@@ -6,6 +6,7 @@
 #include "opencldevice_decl.hpp"
 #endif
 #ifdef FPGA_DEV
+#include "nanos-fpga.h"
 #include "fpgadd.hpp"
 #include "fpgadevice.hpp"
 #endif
@@ -36,8 +37,8 @@ void * local_nanos_ocl_factory( void *args )
 void * local_nanos_fpga_factory( void *args );
 void * local_nanos_fpga_factory( void *args )
 {
-   nanos_smp_args_t *smp = ( nanos_smp_args_t * ) args;
-   return ( void * )new ext::FPGADD( smp->outline );
+   nanos_fpga_args_t *fpga = ( nanos_fpga_args_t * ) args;
+   return ( void * )new ext::FPGADD( fpga->outline, ext::FPGADeviceType( fpga->acc_num < 0 ? 0 : fpga->acc_num ) );
 }
 #endif
 
@@ -104,7 +105,7 @@ void SerializedWDFields::setup( WD const &wd ) {
    }
 #endif
 #ifdef FPGA_DEV
-   else if ( wd.canRunIn( FPGA ) )
+   else if ( wd.canRunIn( getFPGADevice(0) ) )
    {
       _archId = 3;
    }
