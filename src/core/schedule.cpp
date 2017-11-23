@@ -824,7 +824,8 @@ void Scheduler::finishWork( WD * wd, bool schedule )
       BaseThread *thread = getMyThreadSafe();
       ThreadTeam *thread_team = thread->getTeam();
       if ( thread_team ) {
-         WD *prefetchedWD = thread_team->getSchedulePolicy().atBeforeExit( thread, *wd, schedule );
+         bool schedMore = schedule & thread->canGetWork();
+         WD *prefetchedWD = thread_team->getSchedulePolicy().atBeforeExit( thread, *wd, schedMore );
          if ( prefetchedWD ) {
             prefetchedWD->_mcontrol.preInit();
             thread->addNextWD( prefetchedWD );
