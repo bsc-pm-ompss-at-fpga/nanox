@@ -1123,8 +1123,13 @@ void Scheduler::exit ( void )
    /* update next WorkDescriptor (if any) */
    WD *next = thread->getNextWD();
 
-   if ( !next ) idleLoop<ExitBehaviour>();
-   else Scheduler::exitTo(next);
+   if ( !next && !thread->canGetWork() && thread->runningOn()->supportsUserLevelThreads() ) {
+      Scheduler::exitTo( &thread->getThreadWD() );
+   } else if ( !next ) {
+      idleLoop<ExitBehaviour>();
+   } else {
+      Scheduler::exitTo(next);
+   }
 
    fatal("A thread should never return from Scheduler::exit");
 }
