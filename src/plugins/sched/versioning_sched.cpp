@@ -433,6 +433,10 @@ namespace ext
             return 0;
          }
 
+         virtual bool isCheckingWDExecTime ()
+         {
+            return true;
+         }
 
          /*
           * Activate the device for the given WD.

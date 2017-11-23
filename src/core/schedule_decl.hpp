@@ -350,8 +350,8 @@ namespace nanos {
           */
          virtual bool testDequeue();
 
-         /*! \brief Returns if the scheduler needs WD run time */
-         virtual bool isCheckingWDRunTime()
+         /*! \brief Returns if the scheduler needs WD execution time */
+         virtual bool isCheckingWDExecTime()
          {
             return false;
          }
