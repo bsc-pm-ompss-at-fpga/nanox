@@ -767,15 +767,22 @@ void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner, WD *
    WD & next = previousWD ? *previousWD : thread->getThreadWD();
    //NANOS_INSTRUMENT( InstrumentState inst2(NANOS_POST_OUTLINE_WORK, true); );
 
-   //std::cerr << "completing WD " << wd->getId() << " at thd " << owner->getId() << " thd addr " << owner << std::endl;
-   //if (schedule && thread->getNextWD() == NULL ) {
-   //     thread->setNextWD(thread->getTeam()->getSchedulePolicy().atBeforeExit(thread,*wd));
-   //}
+   //! \note Finish WD but do not wait output copies
+   wd->preFinish();
+
+   //! \note getting more work to do (only if not going to sleep)
+   if ( !getMyThreadSafe()->isSleeping() && schedule /*&& thread->getNextWD() == NULL*/ ) {
+      ThreadTeam *thread_team = thread->getTeam();
+      ensure( thread_team != NULL, "postOutlineWork called from a thread whitout a team when schedule is enabled" );
+      thread->addNextWD( thread_team->getSchedulePolicy().atBeforeExit( thread, *wd, false /*schedule*/ ) );
+      //! NOTE: Argument 'schedule' defines whether the scheduling policy must be called and the atBeforeExit argument
+      //!       is set to false to prevent shedule tasks to current PE/thread
+   }
 
    /* If WorkDescriptor has been submitted update statistics */
    updateExitStats (*wd);
 
-   wd->finish();
+   wd->waitOutputCopies();
    wd->done();
    wd->clear();
 
