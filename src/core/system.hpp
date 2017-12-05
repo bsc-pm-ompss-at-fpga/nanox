@@ -707,6 +707,17 @@ inline SMPDevice &System::_getSMPDevice() {
    return _SMP;
 }
 
+inline ProcessingElement * System::getPEWithDevice( const Device &arch ) {
+   PE *target = NULL;
+   for ( PEMap::iterator it = _pes.begin(); it != _pes.end(); it++ ) {
+      if ( it->second->supports( arch ) ) {
+         target = it->second;
+         break;
+      }
+   }
+   return target;
+}
+
 } // namespace nanos
 
 #endif

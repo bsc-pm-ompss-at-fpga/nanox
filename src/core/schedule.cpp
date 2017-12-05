@@ -204,7 +204,7 @@ struct TestInputs {
 };
 
 template<class behaviour>
-inline void Scheduler::idleLoop ( bool exit )
+inline void Scheduler::idleLoop ()
 {
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
 
@@ -399,10 +399,10 @@ inline void Scheduler::idleLoop ( bool exit )
          // Also reset the number of empty calls
          num_empty_calls = 0;
          //if called from a multithread, don not start a new iteration
-         if ( !exit ) continue;
+         if ( !behaviour::mustExit() ) continue;
       }
       //exit if called from another architecture
-      if ( exit ) break;
+      if ( behaviour::mustExit() ) break;
 
       // Otherwise, getWD returned NULL, increase the counter
       ++num_empty_calls;
@@ -457,31 +457,34 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
          if ( !( condition->check() ) ) {
 
             //! If condition is not acomplished yet, release wd and get more work to do
+            WD * next = NULL;
 
-            //! First checking prefetching queue
-            WD * next = thread->getNextWD();
-            if ( next != NULL ) {
-                verbose("Got wd through getNextWD");
-            }
+            if ( thread->canGetWork() ) {
+               //! First checking prefetching queue
+               next = thread->getNextWD();
+               if ( next != NULL ) {
+                   verbose("Got wd through getNextWD");
+               }
 
-            if ( !thread->isSleeping() ) {
-               //! Second calling scheduler policy at block
-               if ( !next ) {
-                  memoryFence();
-                  if ( sys.getSchedulerStats()._readyTasks > 0 ) {
-                     if ( sys.getSchedulerConf().getSchedulerEnabled() )
-                        next = thread->getTeam()->getSchedulePolicy().atBlock( thread, current );
-            if ( next != NULL ) {
-                verbose("Got wd through atBlock");
-            }
+               if ( !thread->isSleeping() ) {
+                  //! Second calling scheduler policy at block
+                  if ( !next ) {
+                     memoryFence();
+                     if ( sys.getSchedulerStats()._readyTasks > 0 ) {
+                        if ( sys.getSchedulerConf().getSchedulerEnabled() )
+                           next = thread->getTeam()->getSchedulePolicy().atBlock( thread, current );
+               if ( next != NULL ) {
+                   verbose("Got wd through atBlock");
+               }
+                     }
                   }
                }
-            }
 
-            // Trigger a wakeup if there's more WDs in the queue
-            if ( next && thread->getTeam() != NULL && thread_manager->isGreedy()
-                  && thread->getTeam()->getSchedulePolicy().testDequeue() ) {
-               thread_manager->acquireOne();
+               // Trigger a wakeup if there's more WDs in the queue
+               if ( next && thread->getTeam() != NULL && thread_manager->isGreedy()
+                     && thread->getTeam()->getSchedulePolicy().testDequeue() ) {
+                  thread_manager->acquireOne();
+               }
             }
 
             //! Finally coming back to our Thread's WD (idle task)
@@ -581,6 +584,7 @@ struct WorkerBehaviour
    }
    static bool checkThreadRunning( WD *current) { return true; }
    static bool exiting() { return false; }
+   static bool mustExit () { return false; }
 };
 
 struct AsyncWorkerBehaviour
@@ -608,16 +612,51 @@ struct AsyncWorkerBehaviour
    }
 
    static bool exiting() { return false; }
+   static bool mustExit () { return false; }
 };
 
-void Scheduler::workerLoop ( bool exit )
+struct HelperBehaviour
 {
-   idleLoop<WorkerBehaviour>( exit );
+   static WD * getWD ( BaseThread *thread, WD *current, int numSteal )
+   {
+      if ( !thread->canGetWork() ) {
+         // Some task was previously executed
+         return NULL;
+      }
+
+      WD * ret = thread->getTeam()->getSchedulePolicy().atIdle( thread, numSteal );
+      if ( ret != NULL ) {
+         // Disable getting more work
+         thread->disableGettingWork();
+      }
+      return ret;
+   }
+
+   static void switchWD ( BaseThread *thread, WD *current, WD *next )
+   {
+      Scheduler::switchTo( next );
+   }
+
+   static bool exiting () { return false; }
+   static bool mustExit () { return true; }
+};
+
+void Scheduler::workerLoop ()
+{
+   idleLoop<WorkerBehaviour>();
 }
 
 void Scheduler::asyncWorkerLoop ()
 {
    idleLoop<AsyncWorkerBehaviour>();
+}
+
+void Scheduler::helperWorkerLoop ()
+{
+   idleLoop<HelperBehaviour>();
+
+   //NOTE: Maybe the getting work flag was disabled inside the idleLoop. Enable it again
+   myThread->enableGettingWork();
 }
 
 void Scheduler::preOutlineWorkWithThread ( BaseThread * thread, WD *wd )
@@ -728,15 +767,22 @@ void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner, WD *
    WD & next = previousWD ? *previousWD : thread->getThreadWD();
    //NANOS_INSTRUMENT( InstrumentState inst2(NANOS_POST_OUTLINE_WORK, true); );
 
-   //std::cerr << "completing WD " << wd->getId() << " at thd " << owner->getId() << " thd addr " << owner << std::endl;
-   //if (schedule && thread->getNextWD() == NULL ) {
-   //     thread->setNextWD(thread->getTeam()->getSchedulePolicy().atBeforeExit(thread,*wd));
-   //}
+   //! \note Finish WD but do not wait output copies
+   wd->preFinish();
+
+   //! \note getting more work to do (only if not going to sleep)
+   if ( !getMyThreadSafe()->isSleeping() && schedule /*&& thread->getNextWD() == NULL*/ ) {
+      ThreadTeam *thread_team = thread->getTeam();
+      ensure( thread_team != NULL, "postOutlineWork called from a thread whitout a team when schedule is enabled" );
+      thread->addNextWD( thread_team->getSchedulePolicy().atBeforeExit( thread, *wd, false /*schedule*/ ) );
+      //! NOTE: Argument 'schedule' defines whether the scheduling policy must be called and the atBeforeExit argument
+      //!       is set to false to prevent shedule tasks to current PE/thread
+   }
 
    /* If WorkDescriptor has been submitted update statistics */
    updateExitStats (*wd);
 
-   wd->finish();
+   wd->waitOutputCopies();
    wd->done();
    wd->clear();
 
@@ -750,7 +796,7 @@ void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner, WD *
     *       may not be the implicit thread WD
     */
    thread->setCurrentWD( next );
-   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, &next, true) );
+   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch(wd, NULL, true) );
 
    //std::cerr << "completed WD " << wd->getId() << " at thd " << owner->getId() << " thd addr " << owner << std::endl;
    //NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( NULL, oldwd, false) );
@@ -769,15 +815,10 @@ void Scheduler::postOutlineWork ( WD *wd, bool schedule, BaseThread *owner, WD *
 }
 
 void Scheduler::outlineWork( BaseThread *currentThread, WD *wd ) {
-   // TODO: Check if 'setCurrentWD' calls are redundant or if introduce some race/bug
-   WD * oldWD = currentThread->getCurrentWD();
    currentThread->setCurrentWD( *wd );
-
-   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldWD, wd, false) );
+   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( NULL, wd, false) );
+   wd->setOutlined( true );
    currentThread->runningOn()->outlineWorkDependent( *wd );
-
-   currentThread->setCurrentWD( *oldWD );
-   NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( wd, oldWD, false) );
 }
 
 void Scheduler::finishWork( WD * wd, bool schedule )
@@ -790,7 +831,8 @@ void Scheduler::finishWork( WD * wd, bool schedule )
       BaseThread *thread = getMyThreadSafe();
       ThreadTeam *thread_team = thread->getTeam();
       if ( thread_team ) {
-         WD *prefetchedWD = thread_team->getSchedulePolicy().atBeforeExit( thread, *wd, schedule );
+         bool schedMore = schedule & thread->canGetWork();
+         WD *prefetchedWD = thread_team->getSchedulePolicy().atBeforeExit( thread, *wd, schedMore );
          if ( prefetchedWD ) {
             prefetchedWD->_mcontrol.preInit();
             thread->addNextWD( prefetchedWD );
@@ -902,7 +944,7 @@ bool Scheduler::inlineWorkAsync ( WD *wd, bool schedule )
    //NANOS_INSTRUMENT( sys.getInstrumentation()->wdSwitch( oldwd, wd, false) );
 
    // Will return false in general
-   const bool done = thread->inlineWorkDependent( *wd );
+   const bool done = thread->runningOn()->inlineWorkDependent( *wd );
 
    // reload thread after running WD because wd may be not tied to thread if
    // both work descriptors were not tied to any thread
@@ -1036,6 +1078,7 @@ struct ExitBehaviour
       }
    }
    static bool exiting() { return true; }
+   static bool mustExit () { return false; }
 };
 
 void Scheduler::exitTo ( WD *to )
@@ -1087,8 +1130,13 @@ void Scheduler::exit ( void )
    /* update next WorkDescriptor (if any) */
    WD *next = thread->getNextWD();
 
-   if ( !next ) idleLoop<ExitBehaviour>();
-   else Scheduler::exitTo(next);
+   if ( !next && !thread->canGetWork() && thread->runningOn()->supportsUserLevelThreads() ) {
+      Scheduler::exitTo( &thread->getThreadWD() );
+   } else if ( !next ) {
+      idleLoop<ExitBehaviour>();
+   } else {
+      Scheduler::exitTo(next);
+   }
 
    fatal("A thread should never return from Scheduler::exit");
 }

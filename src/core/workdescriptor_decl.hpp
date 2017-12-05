@@ -215,8 +215,9 @@ typedef std::set<const Device *>  DeviceList;
             bool is_recoverable;   //!< Flags a task as recoverable, that is, it can be re-executed if it finished with errors.
             bool is_invalid;       //!< Flags an invalid workdescriptor. Used in resiliency when a task fails.
             bool is_runtime_task;  //!< Is the WD a task for doing runtime jobs?
+            bool is_outlined;      //!< Is the WD executed as an outline task?
          } WDFlags;
-         typedef enum { INIT, START, READY, BLOCKED } State;
+         typedef enum { INIT, START, READY, BLOCKED, DONE } State;
          typedef int PriorityType;
          typedef SingleSyncCond<EqualConditionChecker<int> >  components_sync_cond_t;
          typedef std::vector<TaskReduction *>        task_reduction_vector_t;  //< List of task reductions type
@@ -252,8 +253,6 @@ typedef std::set<const Device *>  DeviceList;
          unsigned long                 _versionGroupId;         //!< The way to link different implementations of a task into the same group
          double                        _executionTime;          //!< FIXME:scheduler data. WD starting wall-clock time, accounting data transfers
          double                        _estimatedExecTime;      //!< FIXME:scheduler data. WD estimated execution time, accounting data transfers
-         double                        _runTime;          //!< FIXME:scheduler data. WD starting wall-clock time, without data transfers
-         double                        _estimatedRunTime;      //!< FIXME:scheduler data. WD estimated execution time, without data transfers
          DOSubmit                     *_doSubmit;               //!< DependableObject representing this WD in its parent's depsendencies domain
          LazyInit<DOWait>              _doWait;                 //!< DependableObject used by this task to wait on dependencies
          DependenciesDomain           *_depsDomain;             //!< Dependences domain. Each WD has one where DependableObjects can be submitted            //!< Directory to mantain cache coherence
@@ -569,22 +568,6 @@ typedef std::set<const Device *>  DeviceList;
           */
          void setEstimatedExecutionTime( double time );
 
-         /*! \brief returns the running time of the WD, without data transfers
-          */
-         double getRunTime() const;
-
-         /*! \brief sets the running time of the WD, without data transfers
-          */
-         void setRunTime( double time );
-
-         /*! \brief returns the estimated execution time of the WD, without data transfers
-          */
-         double getEstimatedRunTime() const;
-
-         /*! \brief sets the estimated execution time of the WD, without data transfers
-          */
-         void setEstimatedRunTime( double time );
-
          /*! \brief Returns a pointer to the DOSubmit of the WD
           */
          DOSubmit * getDOSubmit();
@@ -763,6 +746,18 @@ typedef std::set<const Device *>  DeviceList;
          //         the commutative access map that the caller provides.
          int getConcurrencyLevel( std::map<WD**, WD*> &comm_accesses ) const;
          void addPresubmittedWDs( unsigned int numWDs, WD **wds );
+
+         //! \brief Returns whether a WorkDescriptor is executed (done or setDone have been called) or not.
+         bool isDone ( void ) const;
+
+         //! \brief Puts a WorkDescriptor in DONE state.
+         void setDone ( void );
+
+         //! \breif Returns whether a WorkDescriptor is executed outlined or not
+         bool isOutlined ( void ) const;
+
+         //! \breif Sets the outlined WorkDescriptor flag
+         void setOutlined ( bool flag );
    };
 
    typedef class WorkDescriptor WD;

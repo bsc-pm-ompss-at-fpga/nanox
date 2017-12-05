@@ -46,6 +46,7 @@ bool FPGAConfig::_hybridWorker = true;
 int FPGAConfig::_maxPendingWD = 4;
 int FPGAConfig::_finishWDBurst = 8;
 bool FPGAConfig::_idleCallback = true;
+int FPGAConfig::_maxThreadsIdleCallback = 1;
 std::size_t FPGAConfig::_allocatorPoolSize = 64*1024*1024; //Def. 64MB
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    bool FPGAConfig::_disableInst = false;
@@ -78,7 +79,7 @@ void FPGAConfig::prepare( Config &config )
    config.registerConfigOption( "fpga_freq", NEW Config::IntegerVar( _fpgaFreq ),
                                 "FPGA accelerator clock frequency in MHz (def: 100)" );
    config.registerEnvOption( "fpga_freq", "NX_FPGA_FREQ" );
-   config.registerArgOption( "fpga_freq", "nx-fpga-freq" );
+   config.registerArgOption( "fpga_freq", "fpga-freq" );
 
    config.registerConfigOption( "fpga_hybrid_worker", NEW Config::FlagOption( _hybridWorker ),
                                 "Allow FPGA helper thread to run smp tasks (def: enabled)" );
@@ -99,6 +100,11 @@ void FPGAConfig::prepare( Config &config )
       "Perform fpga operations using the IDLE event callback of Event Dispatcher (def: enabled)" );
    config.registerArgOption( "fpga_idle_callback", "fpga-idle-callback" );
 
+   config.registerConfigOption( "fpga_max_threads_callback", NEW Config::IntegerVar( _maxThreadsIdleCallback ),
+      "Max. number of threads concurrently working in the FPGA IDLE callback (def: 1)" );
+   config.registerEnvOption( "fpga_max_threads_callback", "NX_FPGA_MAX_THREADS_CALLBACK" );
+   config.registerArgOption( "fpga_max_threads_callback", "fpga-max-threads-callback" );
+
    config.registerConfigOption( "fpga_alloc_pool_size", NEW Config::SizeVar( _allocatorPoolSize ),
       "XDMA memory pool size (def: 64MB)" );
    config.registerEnvOption( "fpga_alloc_pool_size", "NX_FPGA_ALLOC_POOL_SIZE" );
@@ -116,7 +122,7 @@ void FPGAConfig::apply()
       // The current configuration disables the FPGA support
       if ( nanos_needs_fpga_fun ) {
          warning0( " FPGA tasks were compiled and FPGA was disabled, execution could have " <<
-                   "unexpected behavior and can even hang, check configuration parameters" );
+                   "unexpected behaviour and can even hang, check configuration parameters" );
       }
       _enableFPGA = false;
       _numAccelerators = 0;
@@ -135,9 +141,14 @@ void FPGAConfig::apply()
    if ( _numFPGAThreads < 0 ) {
       _numFPGAThreads = 1;
    } else if ( _numFPGAThreads > _numAccelerators ) {
-      warning0( "Number of FPGA helpers is larger than the number of FPGA accelerators. "
-               << "Using one thread per accelerator (" << _numAccelerators << ")" );
-      _numFPGAThreads = _numAccelerators;
+      warning0( "Number of FPGA helper threads is larger than the number of FPGA accelerators." );
+      //         << "Using one thread per accelerator (" << _numAccelerators << ")" );
+      //_numFPGAThreads = _numAccelerators;
+   }
+
+   if ( _enableFPGA && !_idleCallback && _hybridWorker ) {
+      warning0( " The use of FPGA idle callback is disabled, execution could have unexpected " <<
+                " behaviour and can ever hang if there is task nesting." );
    }
 }
 

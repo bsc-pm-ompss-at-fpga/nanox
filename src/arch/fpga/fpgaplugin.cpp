@@ -229,11 +229,13 @@ class FPGAPlugin : public ArchPlugin
             }
 
 #if NANOS_INSTRUMENTATION_ENABLED
-            //Finalize the HW instrumentation
-            status = xdmaFiniHWInstrumentation();
-            if (status) {
-               warning( " Error uninitializing the instrumentation support in the DMA library (status: "
-                  << status << ")" );
+            if ( !FPGAConfig::isInstrDisabled() ) {
+               //Finalize the HW instrumentation
+               status = xdmaFiniHWInstrumentation();
+               if (status) {
+                  warning( " Error uninitializing the instrumentation support in the DMA library" <<
+                     " (status: " << status << ")" );
+               }
             }
 #endif //NANOS_INSTRUMENTATION_ENABLED
 

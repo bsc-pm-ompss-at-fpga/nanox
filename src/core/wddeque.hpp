@@ -41,6 +41,19 @@ inline WDDeque::WDDeque( bool enableDeviceCounter ) : _dq(), _lock(), _nelems(0)
    }
 }
 
+inline std::ostream& operator<< ( std::ostream& os, WDDeque const & obj ) {
+   if ( !obj._dq.empty() ) {
+      WDDeque::BaseContainer::const_iterator it = obj._dq.begin();
+      WD * wd = (WD *)*it;
+      os << wd << ":" << wd->getId();
+      for ( it++; it != obj._dq.end(); it++ ) {
+         wd = (WD *)*it;
+         os << " | "<< wd << ":" << wd->getId();
+      }
+   }
+   return os;
+}
+
 inline bool WDDeque::empty ( void ) const
 {
    return _dq.empty();
@@ -148,7 +161,7 @@ inline WorkDescriptor * WDDeque::popFrontWithConstraints ( BaseThread const *thr
       bool has_tasks = false;
       for ( std::vector<const Device *>::const_iterator it = pe_devices.begin();
             it != pe_devices.end() && !has_tasks; it++ ) {
-         has_tasks = (_ndevs[ *it ].value() > 0); 
+         has_tasks = (_ndevs[ *it ].value() > 0);
       }
       if ( !has_tasks ) {
          return NULL;
@@ -221,7 +234,7 @@ inline WorkDescriptor * WDDeque::popBackWithConstraints ( BaseThread const *thre
       bool has_tasks = false;
       for ( std::vector<const Device *>::const_iterator it = pe_devices.begin();
             it != pe_devices.end() && !has_tasks; it++ ) {
-         has_tasks = (_ndevs[ *it ].value() > 0); 
+         has_tasks = (_ndevs[ *it ].value() > 0);
       }
       if ( !has_tasks ) {
          return NULL;
@@ -557,7 +570,7 @@ inline void WDPriorityQueue<T>::insertOrdered( WorkDescriptor *wd, bool fifo )
    // Find where to insert the wd
    WDPQ::BaseContainer::iterator it;
    T priority = wd->getPriority();
-   
+
    if ( fifo ) {
       // #637: Insert at the back if possible
       if ( ( _optimise ) && ( ( _dq.empty() ) || ( _dq.back()->getPriority() >= wd->getPriority() ) ) ){
@@ -574,7 +587,7 @@ inline void WDPriorityQueue<T>::insertOrdered( WorkDescriptor *wd, bool fifo )
          it = lower_bound( wd );
       }
    }
-   
+
    _dq.insert( it, wd );
    // If the wd was inserted at the end, it has lower priority than any other
    if( wd == _dq.back() )
@@ -591,7 +604,7 @@ inline void WDPriorityQueue<T>::insertOrdered( WorkDescriptor ** wds, size_t num
    WDPQ::BaseContainer::iterator it;
    WD* first = wds[0];
    T priority = first->getPriority();
-   
+
    if ( fifo ) {
       // #637: Insert at the back if possible
       if ( ( _optimise ) && ( ( _dq.empty() ) || ( _dq.back()->getPriority() >= priority ) ) ){
@@ -608,7 +621,7 @@ inline void WDPriorityQueue<T>::insertOrdered( WorkDescriptor ** wds, size_t num
          it = lower_bound( first );
       }
    }
-   
+
    _dq.insert( it, wds, wds + numElems );
    // If the wd was inserted at the end, it has lower priority than any other
    if( first == _dq.back() )
@@ -905,7 +918,7 @@ template<typename T>
 inline bool WDPriorityQueue<T>::reorderWD( WorkDescriptor *wd )
 {
    LockBlock l( _lock );
-   
+
    // Find the WD
    WDPQ::BaseContainer::iterator it =
       std::find( _dq.begin(), _dq.end(), wd );
@@ -1009,4 +1022,3 @@ inline bool WDPriorityQueue<T>::testDequeue()
 } // namespace nanos
 
 #endif
-

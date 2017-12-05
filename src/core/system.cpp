@@ -434,11 +434,7 @@ void System::config ()
    void * myself = dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
 
    //For more information see  #1214
-   if ((_compilerSuppliedFlags.prioritiesNeeded = dlsym(myself, "nanos_need_priorities_"))) {
-      warning0("Old mechanism to enable optional features has been detected. This mechanism will be"
-            " deprecated soon, we recommend you to update your OmpSs installation.");
-   }
-   _compilerSuppliedFlags.prioritiesNeeded = _compilerSuppliedFlags.prioritiesNeeded || nanos_needs_priorities_fun;
+   _compilerSuppliedFlags.prioritiesNeeded = nanos_needs_priorities_fun;
 
    // Close handle to myself
    dlclose( myself );
@@ -1161,23 +1157,36 @@ void System::waitOn( size_t numDataAccesses, DataAccess* dataAccesses )
 
 void System::inlineWork ( WD &work )
 {
+   PE * const selfPE = myThread->runningOn();
    SchedulePolicy* policy = getDefaultSchedulePolicy();
    policy->onSystemSubmit( work, SchedulePolicy::SYS_INLINE_WORK );
 
-   //! \todo choose actual (active) device...
-   if ( Scheduler::checkBasicConstraints( work, *myThread ) ) {
-      work._mcontrol.preInit();
-      work._mcontrol.initialize( *( myThread->runningOn() ) );
-      bool result;
-      do {
-         result = work._mcontrol.allocateTaskMemory();
-         if ( !result ) {
-            myThread->processTransfers();
-         }
-      } while( result == false );
-      Scheduler::inlineWork( &work, /*schedule*/ false );
+   if ( !Scheduler::checkBasicConstraints( work, *myThread ) ) {
+      /*! NOTE: myThread->runningOn() is not compatible with the WD,
+       *        look for a compatible PE and start running on it.
+       */
+      PE * const workPE = getPEWithDevice( *( work.getActiveDevice().getDevice() ) );
+      myThread->setRunningOn( workPE );
+      if ( !workPE ) {
+         fatal ( "Cannot find a compatible PE to execute inline a task" );
+      }
+      ensure( Scheduler::checkBasicConstraints( work, *myThread ),
+         "Trying to execute inline a task violating basic constraints" );
    }
-   else fatal ("System: Trying to execute inline a task violating basic constraints");
+
+   work._mcontrol.preInit();
+   work._mcontrol.initialize( *( myThread->runningOn() ) );
+   bool result;
+   do {
+      result = work._mcontrol.allocateTaskMemory();
+      if ( !result ) {
+         myThread->processTransfers();
+      }
+   } while( result == false );
+   Scheduler::inlineWork( &work, /*schedule*/ false );
+
+   // Switch back to the real thread PE
+   myThread->setRunningOn( selfPE );
 }
 
 //! \brief Returns an unocupied worker
@@ -1262,6 +1271,7 @@ int System::getNumWorkers( DeviceData *arch )
          n++;
       }
    }
+   warning0( "System::getNumWorkers( DeviceData *arch ) is deprecated: Workers may change the PE where they run" );
    return n;
 }
 

@@ -37,7 +37,10 @@ NANOS_API_DEF( void *, nanos_fpga_alloc_dma_mem, ( size_t len ) )
 
    ensure( nanos::ext::fpgaAllocator != NULL,
       "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
-    return nanos::ext::fpgaAllocator->allocate( len );
+   nanos::ext::fpgaAllocator->lock();
+   void * ret = nanos::ext::fpgaAllocator->allocate( len );
+   nanos::ext::fpgaAllocator->unlock();
+   return ret;
 }
 
 NANOS_API_DEF( void, nanos_fpga_free_dma_mem, ( void * buffer ) )
@@ -46,5 +49,7 @@ NANOS_API_DEF( void, nanos_fpga_free_dma_mem, ( void * buffer ) )
 
    ensure( nanos::ext::fpgaAllocator != NULL,
       "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
-    nanos::ext::fpgaAllocator->free( buffer );
+   nanos::ext::fpgaAllocator->lock();
+   nanos::ext::fpgaAllocator->free( buffer );
+   nanos::ext::fpgaAllocator->unlock();
 }

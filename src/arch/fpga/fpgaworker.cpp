@@ -32,15 +32,18 @@ bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
    static int const maxPendingWD = FPGAConfig::getMaxPendingWD();
    static int const finishBurst = FPGAConfig::getFinishWDBurst();
 
-   //check if we have reached maximum pending WD
-   //  finalize one (or some of them)
-   //FPGAThread *myThread = (FPGAThread*)getMyThreadSafe();
    FPGAProcessor * fpga = ( FPGAProcessor * )( thread->runningOn() );
+   WD * oldWd = thread->getCurrentWD();
    WD * wd;
    bool wdExecuted = false;
 
-   if ( fpga->getPendingWDs() > maxPendingWD ) {
+   //check if we have reached maximum pending WD
+   //  finalize one (or some of them)
+   if ( fpga->getPendingWDs() >= maxPendingWD ) {
       fpga->tryPostOutlineTasks( finishBurst );
+      if ( fpga->getPendingWDs() >= maxPendingWD ) {
+         return false;
+      }
    }
 
    // Check queue of tasks waiting for input copies
@@ -77,6 +80,7 @@ bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
       //waiting for some dependence to be released
       fpga->tryPostOutlineTasks();
    }
+   thread->setCurrentWD( *oldWd );
    return wdExecuted;
 }
 
@@ -135,12 +139,12 @@ void FPGAWorker::FPGAWorkerLoop() {
 
          spins = init_spins;
          if ( FPGAConfig::getHybridWorkerEnabled() ) {
-             //When spins go to 0 it means that there is no work for any fpga accelerator
-             // -> get an SMP task
-             BaseThread *tmpThread = myThread;
-             myThread = parent; //Parent should be already an smp thread
-             Scheduler::workerLoop( true );
-             myThread = tmpThread;
+            //When spins go to 0 it means that there is no work for any fpga accelerator
+            // -> get an SMP task
+            BaseThread *tmpThread = myThread;
+            myThread = parent; //Parent should be already an smp thread
+            Scheduler::helperWorkerLoop();
+            myThread = tmpThread;
          }
 
          //do not limit number of yields disregard of configuration options

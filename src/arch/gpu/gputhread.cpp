@@ -430,10 +430,6 @@ void GPUThread::raiseWDRunEvent ( WD * wd )
    //double tend = nanos::OS::getMonotonicTimeUs() - tstart;
 
    //std::cout << "Start  " << ( int ) tend << std::endl;
-
-   if ( sys.getDefaultSchedulePolicy()->isCheckingWDRunTime() ) {
-      wd->setRunTime( OS::getMonotonicTimeUs() );
-   }
 }
 
 unsigned int GPUThread::getPrefetchedWDsCount() const {

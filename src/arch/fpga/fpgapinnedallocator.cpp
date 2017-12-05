@@ -1,6 +1,7 @@
 #include "fpgapinnedallocator.hpp"
 #include "debug.hpp"
 #include "simpleallocator.hpp"
+#include "system_decl.hpp" //For debug0 macro
 
 using namespace nanos;
 using namespace nanos::ext;
@@ -30,6 +31,9 @@ FPGAPinnedAllocator::FPGAPinnedAllocator( size_t size )
       }
    }
    init( ( uint64_t )( addr ), size );
+
+   debug0( "New FPGAPinnedAllocator created with size: " << size/1024 << "KB, base_addr: " << addr <<
+      ", base_addr_phy: 0x" << std::hex << getBaseAddressPhy() << std::dec );
 }
 
 FPGAPinnedAllocator::~FPGAPinnedAllocator()

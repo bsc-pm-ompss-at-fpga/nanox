@@ -45,7 +45,7 @@ namespace nanos {
          static void exitHelper (WD *oldWD, WD *newWD, void *arg);
 
          template<class behaviour>
-         static void idleLoop ( bool exit = false );
+         static void idleLoop ( void );
 
       public:
          static bool tryPreOutlineWork ( WD *work );
@@ -69,8 +69,9 @@ namespace nanos {
          static void switchToThread ( BaseThread * thread );
          static void finishWork( WD * wd, bool schedule );
 
-         static void workerLoop ( bool exit = false );
+         static void workerLoop ( void );
          static void asyncWorkerLoop ( void );
+         static void helperWorkerLoop ( void );
          static void yield ( void );
 
          static void exit ( void );
@@ -286,7 +287,13 @@ namespace nanos {
           *  information to progressively relax the stealing conditions
           */
          virtual WD * atIdle        ( BaseThread *thread, int numSteal ) = 0;
+
+         /*! \brief \param schedule The core scheduler will set this parameter
+          *  0 if no WD should be returned.
+          *  Otherwise, a WD can be returned and it will be queued to local thread queue
+          */
          virtual WD * atBeforeExit  ( BaseThread *thread, WD &current, bool schedule );
+
          /*! \brief \see atIdle for an explanation of the numSteal
           *  parameter
           */
@@ -343,8 +350,8 @@ namespace nanos {
           */
          virtual bool testDequeue();
 
-         /*! \brief Returns if the scheduler needs WD run time */
-         virtual bool isCheckingWDRunTime()
+         /*! \brief Returns if the scheduler needs WD execution time */
+         virtual bool isCheckingWDExecTime()
          {
             return false;
          }

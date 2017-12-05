@@ -282,6 +282,11 @@ namespace nanos {
           */
          void executionSummary( void );
 
+         /*! \brief Returns a PE that has the Device architecture
+          *         If not such architecture is registered, returns NULL
+          */
+         ProcessingElement * getPEWithDevice( const Device &arch );
+
       public:
          /*! \brief System default constructor
           */

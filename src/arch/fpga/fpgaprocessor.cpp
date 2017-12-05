@@ -242,13 +242,12 @@ int FPGAProcessor::getPendingWDs() const {
 
 bool FPGAProcessor::inlineWorkDependent( WD &wd )
 {
-   verbose( "fpga inlineWorkDependent" );
-
    wd.start( WD::IsNotAUserLevelThread );
-   //FPGAProcessor* fpga = ( FPGAProcessor * ) this->runningOn();
 
-   FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
-   ( dd.getWorkFct() )( wd.getData() );
+   outlineWorkDependent( wd );
+   while ( !wd.isDone() ) {
+      myThread->idle();
+   }
 
    return true;
 }
@@ -292,7 +291,14 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
 #endif
          xtasksDeleteTask( &xHandle );
          --_runningTasks;
-         Scheduler::postOutlineWork( wd, false, myThread, myThread->getCurrentWD() );
+         if ( wd->isOutlined() ) {
+            //Only delete tasks executed using outlineWorkDependent
+            Scheduler::postOutlineWork( wd, true /* schedule */, myThread );
+            delete[] (char *) wd;
+         } else {
+            //Mark inline tasks as done, they will be finished from the Scheduler
+            wd->setDone();
+         }
       } else {
          ensure( xStat == XTASKS_PENDING, "Error trying to get a finished FPGA task" );
          break;

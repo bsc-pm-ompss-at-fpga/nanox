@@ -51,7 +51,11 @@ namespace ext {
       public:
          // constructors
          FPGADD( work_fct w , FPGADeviceType const t ) : DD( (*_accDevices)[t], w ) {
-            ensure( getDevice() != NULL, "Trying to use an unexisting FPGA Accelerator type." );
+#ifdef NANOS_DEBUG_ENABLED
+            if( getDevice() == NULL ) {
+               warning( "Creating a FPGADD with an unexisting FPGA Accelerator type: " << t );
+            }
+#endif
          }
 
          // copy constructors

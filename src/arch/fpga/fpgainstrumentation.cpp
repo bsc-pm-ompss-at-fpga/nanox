@@ -9,7 +9,7 @@ unsigned long long int FPGAInstrumentation::getDeviceTime() {
    uint64_t time;
    //TODO error checking
    xdmaGetDeviceTime(&time);
-   debug( "Init device time "  << time );
+   debug0( "Init device time "  << time );
    return (unsigned long long)time;
 }
 

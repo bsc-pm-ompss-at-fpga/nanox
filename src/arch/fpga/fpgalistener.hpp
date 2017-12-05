@@ -32,8 +32,7 @@ class FPGAListener : public EventListener {
        * This is needed to allow the SMPThread get ready FPGA WDs
        */
       FPGAProcessor          *_fpgaPE;
-      Atomic<unsigned int>    _count;     //!< Counter of threads in the listener instance
-      static unsigned int     _maxConcurrentThreads;  //!<  Max. value allowed for _count
+      Atomic<int>             _count;     //!< Counter of threads in the listener instance
 
       /*!
        * Returns the pointer to the FPGAProcessor associated to this listener

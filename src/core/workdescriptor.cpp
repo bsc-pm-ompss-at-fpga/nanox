@@ -39,7 +39,7 @@ void WorkDescriptor::init ()
    /* Initializing instrumentation context */
    NANOS_INSTRUMENT( sys.getInstrumentation()->wdCreate( this ) );
 
-   _executionTime = ( _numDevices == 1 ? 0.0 : OS::getMonotonicTimeUs() );
+   _executionTime = ( sys.getDefaultSchedulePolicy()->isCheckingWDExecTime() ? OS::getMonotonicTimeUs() : 0.0 );
 
    if ( getNumCopies() > 0 ) {
       pe->copyDataIn( *this );
@@ -129,10 +129,6 @@ void WorkDescriptor::start (ULTFlag isUserLevelThread, WorkDescriptor *previous)
    // Setting state to ready
    _state = READY; //! \bug This should disapear when handling properly states as flags (#904)
    _mcontrol.setCacheMetaData();
-
-   // Getting run time
-   _runTime = ( sys.getDefaultSchedulePolicy()->isCheckingWDRunTime() ? OS::getMonotonicTimeUs() : 0.0 );
-
 }
 
 
@@ -173,10 +169,6 @@ bool WorkDescriptor::isInputDataReady() {
       // Setting state to ready
       setReady();
       //_mcontrol.setCacheMetaData();
-
-      // Getting run time
-      _runTime = ( sys.getDefaultSchedulePolicy()->isCheckingWDRunTime() ? OS::getMonotonicTimeUs() : 0.0 );
-
    }
    return result;
 }
@@ -229,12 +221,14 @@ DeviceData & WorkDescriptor::activateDevice ( unsigned int deviceIdx )
 bool WorkDescriptor::canRunIn( const Device &device ) const
 {
    if ( _activeDeviceIdx != _numDevices ) return _devices[_activeDeviceIdx]->isCompatible( device );
+
    unsigned int i;
    for ( i = 0; i < _numDevices; i++ ) {
        if (_devices[i]->isCompatible( device )){
             return true;
        }
    }
+
    return false;
 }
 
@@ -273,9 +267,6 @@ void WorkDescriptor::waitOutputCopies ()
 
 void WorkDescriptor::finish ()
 {
-   // Getting run time
-   _runTime = ( sys.getDefaultSchedulePolicy()->isCheckingWDRunTime() ? OS::getMonotonicTimeUs() - _runTime : 0.0 );
-
    // At that point we are ready to copy data out
    if ( getNumCopies() > 0 ) {
       _mcontrol.copyDataOut( MemController::WRITE_BACK );
@@ -285,21 +276,18 @@ void WorkDescriptor::finish ()
    }
 
    // Getting execution time
-   _executionTime = ( _numDevices == 1 ? 0.0 : OS::getMonotonicTimeUs() - _executionTime );
+   _executionTime = ( sys.getDefaultSchedulePolicy()->isCheckingWDExecTime() ? OS::getMonotonicTimeUs() - _executionTime : 0.0 );
 }
 
 void WorkDescriptor::preFinish ()
 {
-   // Getting run time
-   _runTime = ( sys.getDefaultSchedulePolicy()->isCheckingWDRunTime() ? OS::getMonotonicTimeUs() - _runTime : 0.0 );
-
    // At that point we are ready to copy data out
    if ( getNumCopies() > 0 ) {
       _mcontrol.copyDataOut( MemController::WRITE_BACK );
    }
 
    // Getting execution time
-   _executionTime = ( _numDevices == 1 ? 0.0 : OS::getMonotonicTimeUs() - _executionTime );
+   _executionTime = ( sys.getDefaultSchedulePolicy()->isCheckingWDExecTime() ? OS::getMonotonicTimeUs() - _executionTime : 0.0 );
 }
 
 
@@ -315,6 +303,8 @@ bool WorkDescriptor::isOutputDataReady()
 
 void WorkDescriptor::done ()
 {
+   setDone();
+
    // Releasing commutative accesses
    releaseCommutativeAccesses();
 
