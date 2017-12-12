@@ -55,4 +55,3 @@ namespace ext {
    };
 } // namespace ext
 } // namespace nanos
-

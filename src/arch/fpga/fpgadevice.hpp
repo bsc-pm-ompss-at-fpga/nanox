@@ -57,7 +57,7 @@ namespace ext {
 
          virtual ~FPGADevice () {}
 
-         FPGADeviceType getFPGAType() { return _fpgaType; }
+         FPGADeviceType getFPGAType() const { return _fpgaType; }
 
          virtual void *memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem,
                  WD const *wd, unsigned int copyIdx);

@@ -38,7 +38,7 @@ void * local_nanos_fpga_factory( void *args );
 void * local_nanos_fpga_factory( void *args )
 {
    nanos_fpga_args_t *fpga = ( nanos_fpga_args_t * ) args;
-   return ( void * )new ext::FPGADD( fpga->outline, ext::FPGADeviceType( fpga->acc_num < 0 ? 0 : fpga->acc_num ) );
+   return ( void * )new ext::FPGADD( fpga->outline, fpga->acc_num );
 }
 #endif
 
@@ -70,7 +70,7 @@ std::size_t SerializedWDFields::getTotalSize( WD const &wd ) {
       totalDimensions += wd.getCopies()[i].getNumDimensions();
    }
    total_size = sizeof(SerializedWDFields) +
-      wd.getNumCopies() * sizeof( CopyData ) + 
+      wd.getNumCopies() * sizeof( CopyData ) +
       totalDimensions * sizeof( nanos_region_dimension_t ) +
       wd.getDataSize();
    return total_size;
@@ -89,6 +89,7 @@ void SerializedWDFields::setup( WD const &wd ) {
       _totalDimensions += wd.getCopies()[i].getNumDimensions();
    }
 
+   _archId = -1;
    if ( wd.canRunIn( getSMPDevice() ) ) {
       _archId = 0;
    }
@@ -105,12 +106,19 @@ void SerializedWDFields::setup( WD const &wd ) {
    }
 #endif
 #ifdef FPGA_DEV
-   else if ( wd.canRunIn( getFPGADevice(0) ) )
+   else
    {
-      _archId = 3;
+      for (FPGADeviceMap::iterator it = FPGADD::getDevicesMapBegin(); it != FPGADD::getDevicesMapEnd(); ++it) {
+         FPGADevice const * fpga = it->second;
+         if (wd.canRunIn( *fpga )) {
+            _archId = MAX_STATIC_ARCHS + (int)fpga->getFPGAType();
+            break;
+         }
+      }
    }
 #endif
-   else {
+
+   if ( _archId == -1 ) {
       fatal("unsupported architecture");
    }
 }
@@ -178,11 +186,11 @@ WD2Net::WD2Net( WD const &wd ) {
 
    CopyData *newCopies = ( CopyData * ) swd->getCopiesAddr();
    nanos_region_dimension_internal_t *dimensions = ( nanos_region_dimension_internal_t * ) swd->getDimensionsAddr();
-   
+
    uintptr_t dimensionIndex = 0;
    for (unsigned int i = 0; i < wd.getNumCopies(); i += 1) {
-      CopyData &cd = ( wd.getCopies()[i].getDeductedCD() != NULL ) 
-         ? *(wd.getCopies()[i].getDeductedCD()) 
+      CopyData &cd = ( wd.getCopies()[i].getDeductedCD() != NULL )
+         ? *(wd.getCopies()[i].getDeductedCD())
          : wd.getCopies()[i];
       new ( &newCopies[i] ) CopyData( cd );
       if ( newCopies[i].getDeductedCD() != NULL ) {
@@ -220,7 +228,7 @@ Net2WD::Net2WD( char *buffer, std::size_t buffer_size, RemoteWorkDescriptor **rw
    nanos_device_t dev = { NULL, (void *) &smp_args };
    switch (swd->getArchId()) {
       case 0: //SMP
-         dev.factory = local_nanos_smp_factory; 
+         dev.factory = local_nanos_smp_factory;
          break;
 #ifdef GPU_DEV
       case 1: //CUDA
@@ -233,12 +241,15 @@ Net2WD::Net2WD( char *buffer, std::size_t buffer_size, RemoteWorkDescriptor **rw
          break;
 #endif
 #ifdef FPGA_DEV
-      case 3: //FPGA
+      default: //FPGA (keep it the last one)
+         nanos_fpga_args_t fpga_args = { swd->getOutline(), (int)( swd->getArchId() - MAX_STATIC_ARCHS ) };
+         dev.arg = (void *) &fpga_args;
          dev.factory = local_nanos_fpga_factory;
          break;
-#endif
+#else
       default: //WTF
          break;
+#endif
    }
 
    int num_dimensions = swd->getTotalDimensions();

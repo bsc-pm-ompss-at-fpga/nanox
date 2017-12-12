@@ -20,11 +20,15 @@
 #include "gasnetapi_decl.hpp"
 #include "clusterplugin_decl.hpp"
 #include "smpdd.hpp"
+#include "remoteworkdescriptor_decl.hpp"
 
 #ifdef GPU_DEV
 //FIXME: GPU Support
 #include "gpudd.hpp"
 #include "gpudevice_decl.hpp"
+#endif
+#ifdef FPGA_DEV
+#include "fpgadd.hpp"
 #endif
 
 #include "system.hpp"
@@ -71,7 +75,15 @@ using namespace ext;
 
 #define _emitPtPEvents 1
 
-
+void GASNetAPI::allocArchRWDs(int a, int b) {
+   if (_rwgs != NULL && *_rwgs != NULL) {
+      return ;
+   }
+   _rwgs = new RemoteWorkDescriptor**[a];
+   for (int i=0; i<a; i++) {
+      _rwgs[i] = new RemoteWorkDescriptor*[b];
+   }
+} 
 
 GASNetAPI::WorkBufferManager::WorkBufferManager() : _buffers(), _lock() {
 }
@@ -869,8 +881,12 @@ void GASNetAPI::amRegionMetadata(gasnet_token_t token, void *arg, std::size_t ar
 
 void GASNetAPI::amSynchronizeDirectory(gasnet_token_t token, gasnet_handlerarg_t addrLo, gasnet_handlerarg_t addrHi ) {
    DisableAM c;
-   WorkDescriptor *wds[4];
-   unsigned int numWDs = 0;
+   unsigned int num_archs_dynamic=0; //FPGA archs
+#ifdef FPGA_DEV
+   num_archs_dynamic = FPGADD::getNumDevices();
+#endif
+   unsigned int total_archs = num_archs_dynamic + MAX_STATIC_ARCHS;
+   WorkDescriptor **wds = new WorkDescriptor*[total_archs];
    gasnet_node_t src_node;
    void * addr = (void *) MERGE_ARG( addrHi, addrLo );
    if (gasnet_AMGetMsgSource(token, &src_node) != GASNET_OK)
@@ -878,9 +894,10 @@ void GASNetAPI::amSynchronizeDirectory(gasnet_token_t token, gasnet_handlerarg_t
       fprintf(stderr, "gasnet: Error obtaining node information.\n");
    }
 
+   unsigned int numWDs=0;
+
    wds[numWDs] = getInstance()->_rwgs[src_node][0];
    numWDs += 1;
-
 #ifdef GPU_DEV
    wds[numWDs] = getInstance()->_rwgs[src_node][1];
    numWDs += 1;
@@ -889,10 +906,10 @@ void GASNetAPI::amSynchronizeDirectory(gasnet_token_t token, gasnet_handlerarg_t
    wds[numWDs] = getInstance()->_rwgs[src_node][2];
    numWDs += 1;
 #endif
-#ifdef FPGA_DEV
-   wds[numWDs] = getInstance()->_rwgs[src_node][3];
-   numWDs += 1;
-#endif
+   for (unsigned int i=MAX_STATIC_ARCHS; i<total_archs; i++) {
+      wds[numWDs] = getInstance()->_rwgs[src_node][i];
+      numWDs++;
+   }
    getInstance()->_net->notifySynchronizeDirectory( numWDs, wds, addr );
 }
 

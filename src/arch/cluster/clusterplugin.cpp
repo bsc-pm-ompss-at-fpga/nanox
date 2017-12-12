@@ -102,7 +102,12 @@ void ClusterPlugin::init()
          supported_archs[2] = &OpenCLDev;
          #endif
          #ifdef FPGA_DEV
-         supported_archs[3] = &FPGA;
+         unsigned int cnt = MAX_STATIC_ARCHS;
+         for (FPGADeviceMap::iterator it = FPGADD::getDevicesMapBegin();
+              it != FPGADD::getDevicesMapEnd(); ++it) {
+            supported_archs[cnt] = it->second;
+            ++cnt;
+         }
          #endif
 
          const Device * supported_archs_array[supported_archs.size()];
@@ -261,11 +266,14 @@ void ClusterPlugin::startSupportThreads() {
             sys.getNetwork()->enableCheckingForDataInOtherAddressSpaces();
          }
 
-         _gasnetApi->_rwgs = (GASNetAPI::ArchRWDs *) NEW GASNetAPI::ArchRWDs();
-         _gasnetApi->_rwgs[0][0] = getRemoteWorkDescriptor(0, 0);
-         _gasnetApi->_rwgs[0][1] = getRemoteWorkDescriptor(0, 1);
-         _gasnetApi->_rwgs[0][2] = getRemoteWorkDescriptor(0, 2);
-         _gasnetApi->_rwgs[0][3] = getRemoteWorkDescriptor(0, 3);
+         int num_devices = MAX_STATIC_ARCHS; //SMP + GPU + OpenCL
+#ifdef FPGA_DEV
+         num_devices+=FPGADD::getNumDevices();
+#endif
+         _gasnetApi->allocArchRWDs( 1, num_devices );
+         for ( int j = 0; j<num_devices; j++ ) {
+            _gasnetApi->_rwgs[0][j] = getRemoteWorkDescriptor( 0, j );
+         }
       }
    }
 }
