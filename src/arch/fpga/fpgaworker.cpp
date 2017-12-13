@@ -35,14 +35,14 @@ bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
    FPGAProcessor * fpga = ( FPGAProcessor * )( thread->runningOn() );
    WD * oldWd = thread->getCurrentWD();
    WD * wd;
-   bool wdExecuted = false;
+   bool ret = false;
 
    //check if we have reached maximum pending WD
    //  finalize one (or some of them)
    if ( fpga->getPendingWDs() >= maxPendingWD ) {
       fpga->tryPostOutlineTasks( finishBurst );
       if ( fpga->getPendingWDs() >= maxPendingWD ) {
-         return false;
+         return ret;
       }
    }
 
@@ -56,6 +56,7 @@ bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
    }
    // Check for tasks in the scheduler ready queue
    else if ( (wd = FPGAWorker::getFPGAWD( thread )) != NULL ) {
+      ret = true;
       Scheduler::prePreOutlineWork( wd );
       TEST_PRE_OUTLINE:
       if ( Scheduler::tryPreOutlineWork( wd ) ) {
@@ -64,9 +65,9 @@ bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
          //TODO: may need to increment copies version number here
          TEST_IN_READY:
          if ( wd->isInputDataReady() ) {
+            ret = true;
             Scheduler::outlineWork( thread, wd );
             //wd->submitOutputCopies();
-            wdExecuted = true;
          } else {
             // Task does not have input data in the memory device yet
             fpga->getWaitInTasks().push( wd );
@@ -81,7 +82,7 @@ bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
       fpga->tryPostOutlineTasks();
    }
    thread->setCurrentWD( *oldWd );
-   return wdExecuted;
+   return ret;
 }
 
 void FPGAWorker::FPGAWorkerLoop() {
