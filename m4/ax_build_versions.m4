@@ -108,9 +108,9 @@ AC_DEFUN([_ax_enable_version],[
     )],
     [version_enabled=${enableval}],
     [version_enabled=]version_default)
-  
+
   AC_MSG_RESULT([$version_enabled])
-  
+
   AS_IF([test x$version_enabled = xyes],[
     VERSIONS+="$1 "
   ])
@@ -118,12 +118,12 @@ AC_DEFUN([_ax_enable_version],[
   # Generate architecture library list (will be used in core/Makefile.am)
   config_libs=
   for arch in $ARCHITECTURES; do
-     AS_IF([test x"$arch" != x"mpi"],[
+     AS_IF([test x"$arch" != x"mpi" && test x"$arch" != x"fpga"],[
         AS_VAR_APPEND([config_libs],[" \$(abs_top_builddir)/src/arch/$arch/$1/lib$arch.la"])
      ])
   done
   AS_VAR_APPEND([config_libs],[" \$(abs_top_builddir)/src/arch/$OS/$1/libos.la \$(abs_top_builddir)/src/support/$1/libsupport.la"])
-  
+
   version_dir='${libdir}/$1'
   AM_CONDITIONAL(version_enabled, [test x$version_enabled = xyes])
   AC_SUBST(version_dir)
@@ -138,4 +138,3 @@ AC_DEFUN([_ax_enable_version],[
   AS_VAR_POPDEF([cxxflags])
   AS_VAR_POPDEF([config_libs])
 ])dnl check_version
-
