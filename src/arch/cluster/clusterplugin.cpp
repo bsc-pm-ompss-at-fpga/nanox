@@ -180,8 +180,8 @@ System::CachePolicyType ClusterPlugin::getCachePolicy ( void ) const {
    return _cachePolicy;
 }
 
-RemoteWorkDescriptor * ClusterPlugin::getRemoteWorkDescriptor( int archId ) {
-   RemoteWorkDescriptor *rwd = NEW RemoteWorkDescriptor( archId );
+RemoteWorkDescriptor * ClusterPlugin::getRemoteWorkDescriptor( unsigned int nodeId, int archId ) {
+   RemoteWorkDescriptor *rwd = NEW RemoteWorkDescriptor( nodeId );
    rwd->_mcontrol.preInit();
    rwd->_mcontrol.initialize( *_cpu );
    return rwd;
@@ -262,10 +262,10 @@ void ClusterPlugin::startSupportThreads() {
          }
 
          _gasnetApi->_rwgs = (GASNetAPI::ArchRWDs *) NEW GASNetAPI::ArchRWDs();
-         _gasnetApi->_rwgs[0][0] = getRemoteWorkDescriptor(0);
-         _gasnetApi->_rwgs[0][1] = getRemoteWorkDescriptor(1);
-         _gasnetApi->_rwgs[0][2] = getRemoteWorkDescriptor(2);
-         _gasnetApi->_rwgs[0][3] = getRemoteWorkDescriptor(3);
+         _gasnetApi->_rwgs[0][0] = getRemoteWorkDescriptor(0, 0);
+         _gasnetApi->_rwgs[0][1] = getRemoteWorkDescriptor(0, 1);
+         _gasnetApi->_rwgs[0][2] = getRemoteWorkDescriptor(0, 2);
+         _gasnetApi->_rwgs[0][3] = getRemoteWorkDescriptor(0, 3);
       }
    }
 }

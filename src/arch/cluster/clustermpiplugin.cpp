@@ -25,7 +25,6 @@
 #include "remoteworkdescriptor_decl.hpp"
 #include "basethread.hpp"
 #include "smpprocessor.hpp"
-#include "clusterthread_decl.hpp"
 #ifdef OpenCL_DEV
 #include "opencldd.hpp"
 #endif
@@ -145,10 +144,10 @@ int ClusterMPIPlugin::initNetwork(int *argc, char ***argv)
       }
       _gasnetApi->_rwgs = NEW GASNetAPI::ArchRWDs[ nodes ];
       for ( unsigned int idx = 0; idx < nodes; idx += 1 ) {
-         _gasnetApi->_rwgs[idx][0] = getRemoteWorkDescriptor(0);
-         _gasnetApi->_rwgs[idx][1] = getRemoteWorkDescriptor(1);
-         _gasnetApi->_rwgs[idx][2] = getRemoteWorkDescriptor(2);
-         _gasnetApi->_rwgs[idx][3] = getRemoteWorkDescriptor(3);
+         _gasnetApi->_rwgs[idx][0] = getRemoteWorkDescriptor(idx, 0);
+         _gasnetApi->_rwgs[idx][1] = getRemoteWorkDescriptor(idx, 1);
+         _gasnetApi->_rwgs[idx][2] = getRemoteWorkDescriptor(idx, 2);
+         _gasnetApi->_rwgs[idx][3] = getRemoteWorkDescriptor(idx, 3);
       }
       _clusterThread->addThreadsFromPEs( tmp_nodes.size(), &(tmp_nodes[0]) );
    }
@@ -192,8 +191,8 @@ System::CachePolicyType ClusterMPIPlugin::getCachePolicy ( void ) const {
    return _cachePolicy;
 }
 
-RemoteWorkDescriptor * ClusterMPIPlugin::getRemoteWorkDescriptor( int archId ) {
-   RemoteWorkDescriptor *rwd = NEW RemoteWorkDescriptor( archId );
+RemoteWorkDescriptor * ClusterMPIPlugin::getRemoteWorkDescriptor( int nodeId, int archId ) {
+   RemoteWorkDescriptor *rwd = NEW RemoteWorkDescriptor( nodeId );
    rwd->_mcontrol.preInit();
    rwd->_mcontrol.initialize( *_cpu );
    return rwd;
