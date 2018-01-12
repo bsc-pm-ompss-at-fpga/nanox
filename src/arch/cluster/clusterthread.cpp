@@ -186,11 +186,13 @@ bool ClusterThread::acceptsWDs( unsigned int archId ) const {
          presend_setting = sys.getNetwork()->getGpuPresend(); //FIXME
          break;
       default: //FPGA
+#ifdef FPGA_DEV
          if (FPGADD::getNumDevices() + MAX_STATIC_ARCHS > archId) {
             presend_setting = sys.getNetwork()->getGpuPresend(); //FIXME
-         } else {
-            fatal("Impossible path");
+            break;
          }
+#endif //FPGA_DEV
+         fatal("Impossible path");
          break;
    }
    return ( numRunningWDs(archId) < presend_setting );
