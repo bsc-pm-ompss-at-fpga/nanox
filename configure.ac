@@ -142,10 +142,12 @@ AX_CHECK_XDMA
 AX_CHECK_XTASKS
 AM_CONDITIONAL([FPGA_SUPPORT],[test "$xdma" = yes && test "$xtasks" = yes])
 AS_IF([test "$xdma" = yes && test "$xtasks" = yes],[
+  fpga=yes
   ARCHITECTURES="$ARCHITECTURES fpga"
   AC_DEFINE([FPGA_DEV],[],[Enables FPGA support])
   AC_SUBST([HAVE_FPGA], [FPGA])
 ], [
+  fpga=no
   AC_SUBST([HAVE_FPGA], [NO_FPGA])
 ])dnl
 

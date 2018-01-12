@@ -120,6 +120,11 @@ AC_DEFUN([_ax_enable_version],[
   for arch in $ARCHITECTURES; do
      AS_IF([test x"$arch" != x"mpi" && test x"$arch" != x"fpga"],[
         AS_VAR_APPEND([config_libs],[" \$(abs_top_builddir)/src/arch/$arch/$1/lib$arch.la"])
+
+        #Workarround to avoid undefined symbols in cluster code which depends on some FPGA symbols
+        AS_IF([test x"$arch" == x"cluster" && test x"$fpga" = x"yes"],[
+           AS_VAR_APPEND([config_libs],[" \$(abs_top_builddir)/src/arch/fpga/$1/libnanox-fpga-core.la"])
+        ])
      ])
   done
   AS_VAR_APPEND([config_libs],[" \$(abs_top_builddir)/src/arch/$OS/$1/libos.la \$(abs_top_builddir)/src/support/$1/libsupport.la"])
