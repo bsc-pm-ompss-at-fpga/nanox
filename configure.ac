@@ -140,6 +140,7 @@ AX_CHECK_DLB
 # Check for FPGA support
 AX_CHECK_XDMA
 AX_CHECK_XTASKS
+AM_CONDITIONAL([FPGA_SUPPORT],[test "$xdma" = yes && test "$xtasks" = yes])
 AS_IF([test "$xdma" = yes && test "$xtasks" = yes],[
   ARCHITECTURES="$ARCHITECTURES fpga"
   AC_DEFINE([FPGA_DEV],[],[Enables FPGA support])
