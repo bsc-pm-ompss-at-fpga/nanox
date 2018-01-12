@@ -25,6 +25,7 @@
 #include "remoteworkdescriptor_decl.hpp"
 #include "basethread.hpp"
 #include "smpprocessor.hpp"
+#include "clusterthread_decl.hpp"
 #ifdef OpenCL_DEV
 #include "opencldd.hpp"
 #endif
