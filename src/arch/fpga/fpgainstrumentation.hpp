@@ -21,19 +21,24 @@
 #define _NANOS_FPGA_INSTRUMENTATION
 
 #include "instrumentation.hpp"
+#include "fpgaprocessorinfo.hpp"
 
 namespace nanos {
 namespace ext {
    class FPGAInstrumentation : public DeviceInstrumentation {
       private:
-         std::string _deviceType;
+         std::string               _deviceType; //< Name to be shown in the trace
+         FPGAProcessorInfo const  *_deviceInfo; //< Reference to FPGA dependent information
       public:
-         FPGAInstrumentation() : DeviceInstrumentation() { }
-         FPGAInstrumentation( int id, std::string deviceType ) : DeviceInstrumentation( id ),
-         _deviceType( deviceType ) { }
+         FPGAInstrumentation() : DeviceInstrumentation(), _deviceType( "NULL" ), _deviceInfo( NULL ) { }
+
+         FPGAInstrumentation( int id, std::string deviceType, FPGAProcessorInfo const * const fpgaInfo ) :
+            DeviceInstrumentation( id ), _deviceType( deviceType ), _deviceInfo( fpgaInfo ) { }
 
          virtual void init() {}
+         //! \breif Returns the device time in ns
          virtual unsigned long long int getDeviceTime();
+         //! \brief Translates a raw device time in cycles to ns
          virtual unsigned long long int translateDeviceTime( unsigned long long int );
          virtual void startDeviceTrace() {}
          virtual void pauseDeviceTrace( bool pause ) {}

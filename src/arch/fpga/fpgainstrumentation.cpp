@@ -14,8 +14,7 @@ unsigned long long int FPGAInstrumentation::getDeviceTime() {
 }
 
 unsigned long long FPGAInstrumentation::translateDeviceTime( unsigned long long devTime ) {
-   //TODO get this value from clock status registers
-   unsigned int cycleTime = FPGAConfig::getCycleTime();
    //devTime is raw device time in cycles
-   return devTime * cycleTime;
+   //_deviceInfo->getFreq() returns Mhz (10^6 cycles/sec == 1 cycle/us)
+   return devTime * 1000 / _deviceInfo->getFreq();
 }
