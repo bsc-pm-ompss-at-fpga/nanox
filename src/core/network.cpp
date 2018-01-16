@@ -937,7 +937,13 @@ void Network::notifyRegionMetaData( CopyData *cd, unsigned int seq ) {
       }
       //std::cerr << " processing " << __FUNCTION__ << " " << seq << std::endl;
    }
+   //!NOTE: getRegionId only returns the key of reg_t and the id field must also be set to properly flush the
+   //       devices cache before sending the data to remote cluster nodes. In all performed tests, the id value
+   //       was 1 -> directly set the value insetead of calling the needed methods.
    sys.getHostMemory().getRegionId( *cd, reg, myThread->getCurrentWD(), 0 );
+   reg.id = 1;
+   ensure( reg.id == reg.key->obtainRegionId( *cd, *myThread->getCurrentWD(), 0 /*FIXME: Any value will work? Is it used?*/ ),
+      "Assumption that reg_t.id field is '1' seems not valid" );
 
    reg_t master_id = cd->getHostRegionId();
 
