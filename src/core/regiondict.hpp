@@ -376,7 +376,7 @@ unsigned int ContainerSparse< T >::getRegionNodeCount() const {
 template <class T>
 reg_t ContainerSparse< T >::addRegion( nanos_region_dimension_internal_t const region[] ) {
    reg_t id = _orig.addRegion( region );
-   if ( sys.getNetwork()->getNodeNum() > 0) { std::cerr << " ADDED REG " << id << std::endl; }
+//   if ( sys.getNetwork()->getNodeNum() > 0) { std::cerr << " ADDED REG " << id << std::endl; }
    return id;
 }
 
