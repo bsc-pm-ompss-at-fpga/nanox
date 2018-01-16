@@ -214,13 +214,15 @@ unsigned int BaseThread::getOsId() const {
 }
 
 
-void BaseThread::processTransfers ()
+bool BaseThread::processTransfers ()
 {
+   bool ret = false;
    if ( sys.getNetwork()->getNumNodes() > 1 ) {
       if ( this->_gasnetAllowAM ) {
       sys.getNetwork()->poll(0);
 
       if ( !_pendingRequests.empty() ) {
+         ret = true;
          std::set<void *>::iterator it = _pendingRequests.begin();
          while ( it != _pendingRequests.end() ) {
             GetRequest *req = (GetRequest *) (*it);
@@ -237,4 +239,5 @@ void BaseThread::processTransfers ()
       }
       }
    }
+   return ret;
 }

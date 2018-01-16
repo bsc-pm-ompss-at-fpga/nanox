@@ -26,6 +26,7 @@
 #include "basethread.hpp"
 #include "smpprocessor.hpp"
 #include "clusterthread_decl.hpp"
+#include "clusterconfig.hpp"
 
 #ifdef OpenCL_DEV
 #include "opencldd.hpp"
@@ -71,7 +72,8 @@ ClusterPlugin::ClusterPlugin() : ArchPlugin( "Cluster PE Plugin", 1 ),
 void ClusterPlugin::config( Config& cfg )
 {
    cfg.setOptionsSection( "Cluster Arch", "Cluster specific options" );
-   this->prepare( cfg );
+   this->prepare( cfg ); //TODO: Move all common options to ClusterConfig
+   ClusterConfig::prepare( cfg );
 }
 
 void ClusterPlugin::init()
@@ -235,7 +237,6 @@ void ClusterPlugin::prepare( Config& cfg ) {
    cfg.registerConfigOption ( "gasnet-segment", NEW Config::SizeVar ( _gasnetSegmentSize ), "GASNet segment size." );
    cfg.registerArgOption ( "gasnet-segment", "gasnet-segment-size" );
    cfg.registerEnvOption ( "gasnet-segment", "NX_GASNET_SEGMENT_SIZE" );
-
 }
 
 ProcessingElement * ClusterPlugin::createPE( unsigned id, unsigned uid ){

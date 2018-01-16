@@ -30,10 +30,10 @@ using namespace nanos;
 using namespace nanos::ext;
 
 
-void GPUMemoryTransferOutList::removeMemoryTransfer ()
+bool GPUMemoryTransferOutList::removeMemoryTransfer ()
 {
+   bool found = false;
    if ( !_pendingTransfersAsync.empty() ) {
-      bool found = false;
       for ( std::list<GPUMemoryTransfer *>::iterator it = _pendingTransfersAsync.begin();
             it != _pendingTransfersAsync.end(); it++ ) {
          _lock.acquire();
@@ -50,12 +50,15 @@ void GPUMemoryTransferOutList::removeMemoryTransfer ()
 
       if ( !found ) {
          _lock.acquire();
+         ensure( _pendingTransfersAsync.begin() != _pendingTransfersAsync.end(),
+            "Bad assumption in GPUMemoryTransferOutList::removeMemoryTransfer" );
          GPUMemoryTransfer * mt ( *_pendingTransfersAsync.begin() );
          _pendingTransfersAsync.erase( _pendingTransfersAsync.begin() );
          _lock.release();
          removeMemoryTransfer( mt );
       }
    }
+   return found;
 }
 
 void GPUMemoryTransferOutList::checkAddressForMemoryTransfer ( void * address )
@@ -111,8 +114,9 @@ void GPUMemoryTransferOutSyncList::clearRequestedMemoryTransfers ()
    _lock.release();
 }
 
-void GPUMemoryTransferOutSyncList::executeMemoryTransfers ()
+bool GPUMemoryTransferOutSyncList::executeMemoryTransfers ()
 {
+   bool ret = false;
    while ( !_pendingTransfersAsync.empty() ) {
       _lock.acquire();
       GPUMemoryTransfer * mt ( *_pendingTransfersAsync.begin() );
@@ -120,7 +124,9 @@ void GPUMemoryTransferOutSyncList::executeMemoryTransfers ()
       _lock.release();
 
       removeMemoryTransfer( mt );
+      ret = true;
    }
+   return ret;
 }
 
 
@@ -197,8 +203,9 @@ void GPUMemoryTransferOutAsyncList::executeRequestedMemoryTransfers ()
    executeMemoryTransfers( itemsToRemove );
 }
 
-void GPUMemoryTransferOutAsyncList::executeMemoryTransfers ( std::list<GPUMemoryTransfer *> &pendingTransfersAsync )
+bool GPUMemoryTransferOutAsyncList::executeMemoryTransfers ( std::list<GPUMemoryTransfer *> &pendingTransfersAsync )
 {
+   bool ret = false;
    while ( !_pendingTransfersAsync.empty() ) {
       _lock.acquire();
       GPUMemoryTransfer * mt ( *_pendingTransfersAsync.begin() );
@@ -206,7 +213,9 @@ void GPUMemoryTransferOutAsyncList::executeMemoryTransfers ( std::list<GPUMemory
       _lock.release();
 
       removeMemoryTransfer( mt );
+      ret = true;
    }
+   return ret;
 }
 
 void GPUMemoryTransferInAsyncList::removeMemoryTransfer ( GPUMemoryTransfer * mt )
@@ -243,8 +252,9 @@ void GPUMemoryTransferInAsyncList::removeMemoryTransfer ( GPUMemoryTransfer * mt
    thread->addEvent( evt );
 }
 
-void GPUMemoryTransferInAsyncList::executeMemoryTransfers ()
+bool GPUMemoryTransferInAsyncList::executeMemoryTransfers ()
 {
+   bool ret = false;
    while ( !_requestedTransfers.empty() ) {
       _lock.acquire();
       GPUMemoryTransfer * mt ( *_requestedTransfers.begin() );
@@ -252,5 +262,7 @@ void GPUMemoryTransferInAsyncList::executeMemoryTransfers ()
       _lock.release();
 
       removeMemoryTransfer( mt );
+      ret = true;
    }
+   return ret;
 }

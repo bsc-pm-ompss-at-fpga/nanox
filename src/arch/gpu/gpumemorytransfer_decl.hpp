@@ -66,9 +66,18 @@ namespace ext {
          virtual void addMemoryTransfer ( CopyDescriptor &hostAddress, void * deviceAddress, size_t len, size_t count, size_t ld ) {}
          //virtual void addMemoryTransfer ( CopyDescriptor &hostAddress ) {}
          virtual void removeMemoryTransfer ( CopyDescriptor &hostAddress ) {}
-         virtual void removeMemoryTransfer () {}
+
+         /*! \brief Execute one memory transfer from the list of pending transfers.
+          *         Requested transfers have priority (synchronous or asynchronous)
+             \return The function returns true if one transfer was executed, false otherwise
+          */
+         virtual bool removeMemoryTransfer () { return false; }
          virtual void checkAddressForMemoryTransfer ( void * address ) {}
-         virtual void executeMemoryTransfers () {}
+
+         /*! \brief  Execute all the memory transfers (synchronous)
+             \return The function returns true if some transfers were executed, false otherwise
+          */
+         virtual bool executeMemoryTransfers () { return false; }
          virtual void requestTransfer( void * address ) {}
          virtual void clearRequestedMemoryTransfers () {}
    };
@@ -98,7 +107,7 @@ namespace ext {
          /*! \brief Execute one memory transfer from the list of pending transfers.
           *         Requested transfers have priority (synchronous or asynchronous)
           */
-         virtual void removeMemoryTransfer ();
+         virtual bool removeMemoryTransfer ();
 
          /* \brief Check if the given address has pending transfer(s) and execute it/them (synchronous or asynchronous)
           */
@@ -126,7 +135,7 @@ namespace ext {
 
          /*! \brief Execute all the memory transfers (synchronous)
           */
-         void executeMemoryTransfers ();
+         bool executeMemoryTransfers ();
    };
 
    class GPUMemoryTransferOutAsyncList : public GPUMemoryTransferOutList
@@ -136,7 +145,7 @@ namespace ext {
           *  Each copy to the intermediate pinned buffer is overlapped with another copy
           *  from the device to host
           */
-         void executeMemoryTransfers ( std::list<GPUMemoryTransfer *> &pendingTransfersAsync );
+         bool executeMemoryTransfers ( std::list<GPUMemoryTransfer *> &pendingTransfersAsync );
 
       public:
          GPUMemoryTransferOutAsyncList() : GPUMemoryTransferOutList() {}
@@ -156,7 +165,7 @@ namespace ext {
 
          /*! \brief Execute all the requested memory transfers (asynchronous)
           */
-         void executeMemoryTransfers ();
+         bool executeMemoryTransfers ();
 
          /*! \brief Execute all the requested memory transfers (asynchronous)
           */
@@ -192,7 +201,7 @@ namespace ext {
 
          /*! \brief Execute all the requested memory transfers (asynchronous)
           */
-         void executeMemoryTransfers ();
+         bool executeMemoryTransfers ();
    };
 
 } // namespace nanos

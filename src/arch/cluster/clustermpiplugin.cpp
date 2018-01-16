@@ -26,6 +26,8 @@
 #include "basethread.hpp"
 #include "smpprocessor.hpp"
 #include "clusterthread_decl.hpp"
+#include "clusterconfig.hpp"
+
 #ifdef OpenCL_DEV
 #include "opencldd.hpp"
 #endif
@@ -69,7 +71,8 @@ ClusterMPIPlugin::ClusterMPIPlugin() : ArchPlugin( "Cluster PE Plugin", 1 ),
 void ClusterMPIPlugin::config( Config& cfg )
 {
    cfg.setOptionsSection( "Cluster Arch", "Cluster specific options" );
-   this->prepare( cfg );
+   this->prepare( cfg ); //TODO: Move all common options to ClusterConfig
+   ClusterConfig::prepare( cfg );
 }
 
 void ClusterMPIPlugin::init()

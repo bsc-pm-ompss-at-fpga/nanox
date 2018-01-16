@@ -249,7 +249,11 @@ namespace nanos {
          void unpause ();
 
          virtual void idle( bool debug = false ) {};
-         virtual void processTransfers();
+
+         /*! \brief  Process Network transfers.
+             \return The function return true if some useful work has been done, false otherwise
+          */
+         virtual bool processTransfers();
          virtual void yield() {};
 
          /*! \brief Called when the thread becomes blocked inside a SynchronizedCondition and it

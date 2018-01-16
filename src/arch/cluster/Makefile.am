@@ -22,6 +22,8 @@ include $(top_srcdir)/src/common.am
 devinclude_HEADERS = clustermpiplugin_fwd.hpp
 
 cluster_sources = \
+		clusterconfig.cpp \
+		clusterconfig.hpp \
 		clusterdevice_decl.hpp \
 		clusterdevice.cpp \
 		clusternode_fwd.hpp \

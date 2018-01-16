@@ -26,6 +26,8 @@
 #include "basethread.hpp"
 #include "smpthread.hpp"
 #include "netwd_decl.hpp"
+#include "clusterconfig.hpp"
+
 #ifdef OpenCL_DEV
 #include "opencldd.hpp"
 #endif
@@ -327,9 +329,13 @@ void ClusterThread::workerClusterLoop ()
 {
    BaseThread *parent = myThread;
    BaseThread *current_thread = ( myThread = myThread->getNextThread() );
+   const int init_spins = ( ( SMPMultiThread* ) parent )->getNumThreads();
+   int spins = init_spins;
 
    for ( ; ; ) {
       if ( !parent->isRunning() ) break;
+
+      bool isIdle = true;
 
       if ( parent != current_thread ) // if parent == myThread, then there are no "soft" threads and just do nothing but polling.
       {
@@ -344,6 +350,8 @@ void ClusterThread::workerClusterLoop ()
                thisNode->setActiveDevice( it->second );
                myClusterThread->clearCompletedWDs( arch_id );
                if ( myClusterThread->hasWaitingDataWDs( arch_id ) ) {
+                  isIdle = false; //< Cluster worker is not idle
+
                   WD * wd_waiting = myClusterThread->getWaitingDataWD( arch_id );
                   if ( wd_waiting->isInputDataReady() ) {
                      myClusterThread->addRunningWD( arch_id, wd_waiting );
@@ -398,6 +406,8 @@ void ClusterThread::workerClusterLoop ()
                   }
                } else {
                   if ( myClusterThread->hasAPendingWDToInit( arch_id ) ) {
+                     isIdle = false; //< Cluster worker is not idle
+
                      WD * wd = myClusterThread->getPendingInitWD( arch_id );
                      if ( Scheduler::tryPreOutlineWork(wd) ) {
                         current_thread->runningOn()->preOutlineWorkDependent( *wd );
@@ -418,8 +428,9 @@ void ClusterThread::workerClusterLoop ()
                      if ( myClusterThread->acceptsWDs( arch_id ) )
                      {
                         WD * wd = getClusterWD( current_thread );
-                        if ( wd )
-                        {
+                        if ( wd ) {
+                           isIdle = false; //< Cluster worker is not idle
+
                            Scheduler::prePreOutlineWork(wd);
                            if ( Scheduler::tryPreOutlineWork(wd) ) {
                               current_thread->runningOn()->preOutlineWorkDependent( *wd );
@@ -445,7 +456,27 @@ void ClusterThread::workerClusterLoop ()
          }
       }
       //sys.getNetwork()->poll(parent->getId());
-      myThread->processTransfers();
+      if ( myThread->processTransfers() ) {
+         isIdle = false; //< Worker has done some useful work in processTransfers -> It is not Idle
+      }
+
+      if ( !isIdle ) {
+         spins = init_spins;
+      } else if ( --spins == 0 ) {
+         //The worker is idle and the max. number of spins has been reached
+         spins = init_spins;
+
+         if ( ClusterConfig::getHybridWorkerEnabled() ) {
+            //Try to get one SMP task
+            BaseThread *tmpThread = myThread;
+            myThread = parent; //Parent should be already an smp thread
+            Scheduler::helperWorkerLoop();
+            myThread = tmpThread;
+         }
+
+         //TODO: Add yield stuff
+      }
+
       current_thread = ( myThread = myThread->getNextThread() );
    }
 

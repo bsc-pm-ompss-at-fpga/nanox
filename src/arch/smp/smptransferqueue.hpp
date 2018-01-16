@@ -112,11 +112,11 @@ void SMPTransferQueue::addTransfer( DeviceOps *ops, char *dst, char *src, std::s
    // NANOS_INSTRUMENT( sys.getInstrumentation()->raiseCloseBurstEvent( key, (nanos_event_value_t) 0 ); )
    _lock.release();
 }
-void SMPTransferQueue::tryExecuteOne() {
+bool SMPTransferQueue::tryExecuteOne() {
+   bool found = false;
    if ( !_transfers.empty() ) {
       if ( true /*_lock.tryAcquire()*/ ) {
          _lock.acquire();
-         bool found = false;
          SMPTransfer t;
          if ( !_transfers.empty() ) {
             found = true;
@@ -128,6 +128,7 @@ void SMPTransferQueue::tryExecuteOne() {
             t.execute();
       }
    }
+   return found;
 }
 
 } // namespace nanos

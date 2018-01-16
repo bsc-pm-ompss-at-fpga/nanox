@@ -325,12 +325,14 @@ void GPUThread::idle( bool debug )
    AsyncThread::idle();
 }
 
-void GPUThread::processTransfers()
+bool GPUThread::processTransfers()
 {
-   ( ( GPUProcessor * ) runningOn() )->getInTransferList()->executeMemoryTransfers();
-   ( ( GPUProcessor * ) runningOn() )->getOutTransferList()->removeMemoryTransfer();
+   bool ret = false;
+   ret |= ( ( GPUProcessor * ) runningOn() )->getInTransferList()->executeMemoryTransfers();
+   ret |= ( ( GPUProcessor * ) runningOn() )->getOutTransferList()->removeMemoryTransfer();
 
-   AsyncThread::processTransfers();
+   ret |= AsyncThread::processTransfers();
+   return ret;
 }
 
 

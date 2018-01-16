@@ -201,8 +201,8 @@ void SMPDevice::_getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem, Simpl
    sallocator->getFreeChunksList( list );
 }
 
-void SMPDevice::tryExecuteTransfer() {
-   _transferQueue.tryExecuteOne();
+bool SMPDevice::tryExecuteTransfer() {
+   return _transferQueue.tryExecuteOne();
 }
 
 } // namespace nanos

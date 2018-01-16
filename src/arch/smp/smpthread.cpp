@@ -131,10 +131,12 @@ void SMPThread::wakeup()
    _pthread.condSignal();
 }
 
-void SMPThread::processTransfers ()
+bool SMPThread::processTransfers ()
 {
-   BaseThread::processTransfers();
-   getSMPDevice().tryExecuteTransfer();
+   bool ret = false;
+   ret |= BaseThread::processTransfers();
+   ret |= getSMPDevice().tryExecuteTransfer();
+   return ret;
 }
 
 int SMPThread::getCpuId() const {
