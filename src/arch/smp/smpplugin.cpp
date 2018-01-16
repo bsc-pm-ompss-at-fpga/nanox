@@ -68,6 +68,7 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
                  , _memkindSupport( false )
                  , _memkindMemorySize( 1024*1024*1024 ) // 1Gb
                  , _asyncSMPTransfers( true )
+                 , _smpListener()
    {}
 
    SMPPlugin::~SMPPlugin() {
@@ -267,6 +268,9 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
          (*_cpusByCpuId)[ *it ] = cpu;
          count += 1;
       }
+
+      //Register the SMPListener in the EventDispatcher
+      sys.getEventDispatcher().addListenerAtIdle( _smpListener );
 
 #ifdef NANOS_DEBUG_ENABLED
       if ( sys.getVerbose() ) {

@@ -59,7 +59,6 @@ void SMPThread::runDependent ()
 
 void SMPThread::idle( bool debug )
 {
-   processTransfers();
    sys.getEventDispatcher().atIdle();
 }
 

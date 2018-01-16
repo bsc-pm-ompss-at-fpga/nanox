@@ -28,6 +28,7 @@
 #include "plugin.hpp"
 #include "smpprocessor.hpp"
 #include "os.hpp"
+#include "eventdispatcher_decl.hpp"
 
 #include "cpuset.hpp"
 #include <limits>
@@ -41,6 +42,22 @@ namespace ext {
 
 nanos::PE * smpProcessorFactory ( int id, int uid );
 
+//! \brief SMPListener to be registered in the EventDispatcher
+class SMPListener : public EventListener {
+   private:
+      //Disable copy constructor
+      SMPListener( const SMPListener &ref ) { }
+
+   public:
+      //Default constructor and destructor
+      SMPListener() { }
+      ~SMPListener() { }
+
+      //! \brief Callback executed when a worker become idle
+      void callback( BaseThread * thread ) {
+         getSMPDevice().tryExecuteTransfer();
+      }
+};
 
 class SMPPlugin : public SMPBasePlugin
 {
@@ -83,6 +100,7 @@ class SMPPlugin : public SMPBasePlugin
    bool                         _memkindSupport;
    std::size_t                  _memkindMemorySize;
    bool                         _asyncSMPTransfers;
+   SMPListener                  _smpListener;     /*! \brief SMPListener for idle events */
 
    public:
    SMPPlugin();

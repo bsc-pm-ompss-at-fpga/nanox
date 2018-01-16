@@ -65,7 +65,7 @@ ClusterPlugin::ClusterPlugin() : ArchPlugin( "Cluster PE Plugin", 1 ),
    _nodeMem( DEFAULT_NODE_MEM ), _allocFit( false ), _allowSharedThd( false ),
    _unalignedNodeMem( false ), _gpuPresend( 1 ), _smpPresend( 1 ),
    _cachePolicy( System::DEFAULT ), _remoteNodes( NULL ), _cpu( NULL ),
-   _clusterThread( NULL ), _gasnetSegmentSize( 0 ) {
+   _clusterThread( NULL ), _gasnetSegmentSize( 0 ), _clusterListener() {
 }
 
 void ClusterPlugin::config( Config& cfg )
@@ -145,6 +145,9 @@ void ClusterPlugin::init()
             fatal0("Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread");
          }
       }
+
+      //Register the EventListener in the EventDispatcher for atIdle events
+      sys.getEventDispatcher().addListenerAtIdle( _clusterListener );
    }
 }
 

@@ -28,6 +28,23 @@
 namespace nanos {
 namespace ext {
 
+//! \brief ClusterListener to be registered in the EventDispatcher
+class ClusterListener : public EventListener {
+   private:
+      //Disable copy constructor
+      ClusterListener( const ClusterListener &ref ) { }
+
+   public:
+      //Default constructor and destructor
+      ClusterListener() { }
+      ~ClusterListener() { }
+
+      //! \brief Callback executed when a worker become idle
+      void callback( BaseThread * thread ) {
+         thread->processTransfers();
+      }
+};
+
 class ClusterPlugin : public ArchPlugin
 {
       GASNetAPI *_gasnetApi;
@@ -48,6 +65,7 @@ class ClusterPlugin : public ArchPlugin
       ext::SMPProcessor *_cpu;
       ext::SMPMultiThread *_clusterThread;
       std::size_t _gasnetSegmentSize;
+      ClusterListener                  _clusterListener; /*! \brief Cluster listener for atIdle events */
 
    public:
       ClusterPlugin();
