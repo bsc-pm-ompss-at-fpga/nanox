@@ -23,14 +23,38 @@ namespace nanos {
 namespace ext {
 
 bool ClusterConfig::_hybridWorker = false;
+int ClusterConfig::_smpPresend = 1;
+int ClusterConfig::_gpuPresend = 1;
+int ClusterConfig::_oclPresend = 1;
+int ClusterConfig::_fpgaPresend = 1;
 
-void ClusterConfig::prepare( Config &config )
+void ClusterConfig::prepare( Config &cfg )
 {
-   //config.setOptionsSection( "Cluster Arch", "Cluster spefific options" );
+   //cfg.setOptionsSection( "Cluster Arch", "Cluster spefific options" );
 
-   config.registerConfigOption( "cluster_hybrid_worker", NEW Config::FlagOption( _hybridWorker ),
-                                "Allow Cluster helper thread to run SMP tasks when IDLE (def: disabled)" );
-   config.registerArgOption( "cluster_hybrid_worker", "cluster-hybrid-worker" );
+   cfg.registerConfigOption( "cluster_hybrid_worker", NEW Config::FlagOption( _hybridWorker ),
+      "Allow Cluster helper thread to run SMP tasks when IDLE (def: disabled)" );
+   cfg.registerArgOption( "cluster_hybrid_worker", "cluster-hybrid-worker" );
+
+   cfg.registerConfigOption ( "cluster-smp-presend", NEW Config::IntegerVar( _smpPresend ),
+      "Number of Tasks (SMP arch) to be sent to a remote node without waiting any completion." );
+   cfg.registerArgOption ( "cluster-smp-presend", "cluster-smp-presend" );
+   cfg.registerEnvOption ( "cluster-smp-presend", "NX_CLUSTER_SMP_PRESEND" );
+
+   cfg.registerConfigOption ( "cluster-gpu-presend", NEW Config::IntegerVar( _gpuPresend ),
+      "Number of Tasks (GPU arch) to be sent to a remote node without waiting any completetion." );
+   cfg.registerArgOption ( "cluster-gpu-presend", "cluster-gpu-presend" );
+   cfg.registerEnvOption ( "cluster-gpu-presend", "NX_CLUSTER_GPU_PRESEND" );
+
+   cfg.registerConfigOption ( "cluster-ocl-presend", NEW Config::IntegerVar( _oclPresend ),
+      "Number of Tasks (OpenCL arch) to be sent to a remote node without waiting any completion." );
+   cfg.registerArgOption ( "cluster-ocl-presend", "cluster-ocl-presend" );
+   cfg.registerEnvOption ( "cluster-ocl-presend", "NX_CLUSTER_OCL_PRESEND" );
+
+   cfg.registerConfigOption ( "cluster-fpga-presend", NEW Config::IntegerVar( _fpgaPresend ),
+      "Number of Tasks (FPGA arch) to be sent to a remote node without waiting any completion." );
+   cfg.registerArgOption ( "cluster-fpga-presend", "cluster-fpga-presend" );
+   cfg.registerEnvOption ( "cluster-fpga-presend", "NX_CLUSTER_FPGA_PRESEND" );
 }
 
 void ClusterConfig::apply() { }

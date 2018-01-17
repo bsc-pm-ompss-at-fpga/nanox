@@ -179,18 +179,18 @@ bool ClusterThread::acceptsWDs( unsigned int archId ) const {
    unsigned int presend_setting = 0;
    switch (archId) {
       case 0: //SMP
-         presend_setting = sys.getNetwork()->getSmpPresend();
+         presend_setting = ClusterConfig::getSmpPresend();
          break;
       case 1: //GPU
-         presend_setting = sys.getNetwork()->getGpuPresend();
+         presend_setting = ClusterConfig::getGpuPresend();
          break;
       case 2: //OCL
-         presend_setting = sys.getNetwork()->getGpuPresend(); //FIXME
+         presend_setting = ClusterConfig::getOclPresend();
          break;
       default: //FPGA
 #ifdef FPGA_DEV
          if (FPGADD::getNumDevices() + MAX_STATIC_ARCHS > archId) {
-            presend_setting = sys.getNetwork()->getGpuPresend(); //FIXME
+            presend_setting = ClusterConfig::getGpuPresend();
             break;
          }
 #endif //FPGA_DEV

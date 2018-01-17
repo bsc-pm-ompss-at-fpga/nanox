@@ -49,7 +49,7 @@ Network::Network () : _numNodes(1), _api((NetworkAPI *) 0), _nodeNum(0),
    _deferredWorkReqsLock(), _recvSeqN(0), _waitingPutRequestsLock(),
    _waitingPutRequests(), _receivedUnmatchedPutRequests(),
    _delayedBySeqNumberPutReqs(), _delayedBySeqNumberPutReqsLock(),
-   _forwardedRegions(NULL),_gpuPresend(1), _smpPresend(1),
+   _forwardedRegions(NULL),
    _metadataSequenceNumbers(NULL), _recvMetadataSeq(1), _syncReqs(),
    _syncReqsLock(), _nodeBarrierCounter(0), _parentWD(NULL) {}
 
@@ -952,21 +952,6 @@ void Network::notifyRegionMetaData( CopyData *cd, unsigned int seq ) {
    }
 
    if ( seq ) updateMetadataSequenceNumber( seq );
-}
-
-void Network::setGpuPresend(int p) {
-   _gpuPresend = p;
-}
-void Network::setSmpPresend(int p) {
-   _smpPresend = p;
-}
-
-int Network::getGpuPresend() const {
-   return _gpuPresend;
-}
-
-int Network::getSmpPresend() const {
-   return _smpPresend;
 }
 
 void Network::deleteDirectoryObject( GlobalRegionDictionary const *obj ) {

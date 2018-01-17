@@ -198,8 +198,6 @@ namespace nanos {
 
 
          RegionsForwarded *_forwardedRegions;
-         int _gpuPresend;
-         int _smpPresend;
          Atomic<unsigned int> *_metadataSequenceNumbers;
          Atomic<unsigned int> _recvMetadataSeq;
 
@@ -322,10 +320,6 @@ namespace nanos {
          void processWaitRequestPut( void *addr, unsigned int seqNumber );
          void processRequestsDelayedBySeqNumber();
          void processSendDataRequest( SendDataRequest *req ) ;
-         void setGpuPresend(int p);
-         void setSmpPresend(int p);
-         int getGpuPresend() const;
-         int getSmpPresend() const;
          void deleteDirectoryObject( GlobalRegionDictionary const *obj );
          unsigned int getMetadataSequenceNumber( unsigned int dest );
          unsigned int checkMetadataSequenceNumber( unsigned int dest );

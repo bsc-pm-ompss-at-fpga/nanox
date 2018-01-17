@@ -64,7 +64,7 @@ ClusterPlugin::ClusterPlugin() : ArchPlugin( "Cluster PE Plugin", 1 ),
    _gasnetApi( NEW GASNetAPI() ), _numPinnedSegments( 0 ), _pinnedSegmentAddrList( NULL ),
    _pinnedSegmentLenList( NULL ), _extraPEsCount( 0 ), _conduit(""),
    _nodeMem( DEFAULT_NODE_MEM ), _allocFit( false ), _allowSharedThd( false ),
-   _unalignedNodeMem( false ), _gpuPresend( 1 ), _smpPresend( 1 ),
+   _unalignedNodeMem( false ),
    _cachePolicy( System::DEFAULT ), _remoteNodes( NULL ), _cpu( NULL ),
    _clusterThread( NULL ), _gasnetSegmentSize( 0 ), _clusterListener() {
 }
@@ -83,8 +83,6 @@ void ClusterPlugin::init()
    _gasnetApi->setGASNetSegmentSize( _gasnetSegmentSize );
    _gasnetApi->setUnalignedNodeMemory( _unalignedNodeMem );
    sys.getNetwork()->initialize( _gasnetApi );
-   sys.getNetwork()->setGpuPresend(this->getGpuPresend() );
-   sys.getNetwork()->setSmpPresend(this->getSmpPresend() );
 
    unsigned int nodes = _gasnetApi->getNumNodes();
 
@@ -178,14 +176,6 @@ std::size_t ClusterPlugin::getNodeMem() const {
    return _nodeMem;
 }
 
-int ClusterPlugin::getSmpPresend() const {
-   return _smpPresend;
-}
-
-int ClusterPlugin::getGpuPresend() const {
-   return _gpuPresend;
-}
-
 System::CachePolicyType ClusterPlugin::getCachePolicy ( void ) const {
    return _cachePolicy;
 }
@@ -209,14 +199,6 @@ void ClusterPlugin::prepare( Config& cfg ) {
 
    cfg.registerConfigOption ( "cluster-alloc-fit", NEW Config::FlagOption( _allocFit ), "Allocate full objects.");
    cfg.registerArgOption( "cluster-alloc-fit", "cluster-alloc-fit" );
-
-   cfg.registerConfigOption ( "cluster-gpu-presend", NEW Config::IntegerVar ( _gpuPresend ), "Number of Tasks to be sent to a remote node without waiting waiting any completion (GPU)." );
-   cfg.registerArgOption ( "cluster-gpu-presend", "cluster-gpu-presend" );
-   cfg.registerEnvOption ( "cluster-gpu-presend", "NX_CLUSTER_GPU_PRESEND" );
-
-   cfg.registerConfigOption ( "cluster-smp-presend", NEW Config::IntegerVar ( _smpPresend ), "Number of Tasks to be sent to a remote node without waiting waiting any completion (SMP)." );
-   cfg.registerArgOption ( "cluster-smp-presend", "cluster-smp-presend" );
-   cfg.registerEnvOption ( "cluster-smp-presend", "NX_CLUSTER_SMP_PRESEND" );
 
    System::CachePolicyConfig *cachePolicyCfg = NEW System::CachePolicyConfig ( _cachePolicy );
    cachePolicyCfg->addOption("wt", System::WRITE_THROUGH );

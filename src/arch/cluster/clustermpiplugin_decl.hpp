@@ -42,8 +42,6 @@ class ClusterMPIPlugin : public ArchPlugin
       bool _allocFit;
       bool _allowSharedThd;
       bool _unalignedNodeMem;
-      int _gpuPresend;
-      int _smpPresend;
       System::CachePolicyType _cachePolicy;
       std::vector<ext::ClusterNode *> *_nodes;
       ext::SMPProcessor *_cpu;
@@ -57,8 +55,6 @@ class ClusterMPIPlugin : public ArchPlugin
 
       void prepare( Config& cfg );
       std::size_t getNodeMem() const;
-      int getGpuPresend() const;
-      int getSmpPresend() const;
       System::CachePolicyType getCachePolicy ( void ) const;
       RemoteWorkDescriptor * getRemoteWorkDescriptor( unsigned int nodeId, int archId );
       bool getAllocFit() const;
