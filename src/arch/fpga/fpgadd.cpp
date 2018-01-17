@@ -26,11 +26,6 @@ using namespace nanos::ext;
 
 FPGADeviceMap * FPGADD::_accDevices = NULL;
 
-const FPGADevice &nanos::ext::getFPGADevice(int i)
-{
-   return FPGADD::getNthDevice(i);
-}
-
 FPGADD * FPGADD::copyTo ( void *toAddr )
 {
    //Construct into a given address (toAddr) since we are copying

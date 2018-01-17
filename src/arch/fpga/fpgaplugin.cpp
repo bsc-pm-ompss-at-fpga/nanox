@@ -80,6 +80,10 @@ class FPGAPlugin : public ArchPlugin
        */
       void init()
       {
+         //Forward this initialization as it has to be done regardless fpga support is enabled.
+         //The reason is that cluster require this structure also without fpga tasks
+         FPGADD::init( &_fpgaDevices );
+
          //Check if the plugin has to be initialized
          if ( FPGAConfig::isDisabled() ) {
             debug0( "FPGA Arch support not needed or disabled. Skipping initialization" );
@@ -104,7 +108,6 @@ class FPGAPlugin : public ArchPlugin
          FPGAConfig::apply();
 
          //Initialize some variables
-         FPGADD::init( &_fpgaDevices );
          _fpgas.reserve( FPGAConfig::getFPGACount() );
          _helperThreads.reserve( FPGAConfig::getNumFPGAThreads() );
          _helperCores.reserve( FPGAConfig::getNumFPGAThreads() );
