@@ -265,16 +265,7 @@ void ClusterPlugin::startSupportThreads() {
 }
 
 void ClusterPlugin::startWorkerThreads( std::map<unsigned int, BaseThread *> &workers ) {
-   if ( _gasnetApi->getNodeNum() == 0 )
-   {
-      if ( _clusterThread ) {
-         for ( unsigned int thdIndex = 0; thdIndex < _clusterThread->getNumThreads(); thdIndex += 1 )
-         {
-            BaseThread *thd = _clusterThread->getThreadVector()[ thdIndex ];
-            workers.insert( std::make_pair( thd->getId(), thd ) );
-         }
-      }
-   } else {
+   if ( _clusterThread ) {
       workers.insert( std::make_pair( _clusterThread->getId(), _clusterThread ) );
    }
 }

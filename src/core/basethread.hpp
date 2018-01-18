@@ -194,13 +194,6 @@ namespace nanos {
    // team related methods
    inline void BaseThread::reserve() { _status.has_team = true; }
 
-   inline void BaseThread::enterTeam( TeamData *data )
-   {
-      if ( data != NULL ) _teamData = data;
-      else _teamData = _nextTeamData;
-      _status.has_team = true;
-   }
-
    inline bool BaseThread::hasTeam() const { return _status.has_team; }
 
    inline ThreadTeam * BaseThread::getTeam() const { return _teamData ? _teamData->getTeam() : NULL; }

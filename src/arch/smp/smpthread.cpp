@@ -174,3 +174,38 @@ void SMPMultiThread::initializeDependent( void ) {
    }
    myThread = tmpMyThread;
 }
+
+void SMPMultiThread::enterTeam( TeamData *data ) {
+   //Enter parent thread into the team
+   BaseThread::enterTeam( data );
+
+   //Enter all sub-threads into the team
+   for ( unsigned int i = 0; i < _threads.size(); i++ ) {
+      _threads[ i ]->enterTeam( data );
+   }
+}
+
+void SMPMultiThread::leaveTeam( void ) {
+   //Remove all sub-threads from the team without deleting the teamData as it is shared
+   BaseThread *tmpMyThread = myThread;
+   for ( unsigned int i = 0; i < _threads.size(); i++ ) {
+      //Change myThread so calls to myThread->... or getMythreadSafe()->...
+      //    work as expected
+      myThread = _threads[ i ];
+      myThread->leaveTeamNoDeleteTeamData();
+   }
+   myThread = tmpMyThread;
+
+   //Remove parent thread from the team and delete the teamData
+   BaseThread::leaveTeam();
+}
+
+void SMPMultiThread::setLeaveTeam( bool leave ) {
+   //Do it for each sub-thread
+   for ( unsigned int i = 0; i < _threads.size(); i++ ) {
+      _threads[ i ]->setLeaveTeam( leave );
+   }
+
+   //Do it for parent thread
+   BaseThread::setLeaveTeam( leave );
+}

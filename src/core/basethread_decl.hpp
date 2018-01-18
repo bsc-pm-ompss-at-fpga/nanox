@@ -306,9 +306,13 @@ namespace nanos {
 
          // team related methods
          void reserve();
-         void enterTeam( TeamData *data = NULL );
+         virtual void enterTeam( TeamData *data = NULL );
          bool hasTeam() const;
-         void leaveTeam();
+         virtual void leaveTeam();
+         void leaveTeamNoDeleteTeamData ();
+         bool isLeavingTeam () const;
+         virtual void setLeaveTeam ( bool leave );
+
 
          ThreadTeam * getTeam() const;
          TeamData * getTeamData() const;
@@ -343,10 +347,6 @@ namespace nanos {
          void enableGettingWork ();
 
          void disableGettingWork ();
-
-         bool isLeavingTeam () const;
-
-         void setLeaveTeam ( bool leave );
 
          ProcessingElement * runningOn() const;
 

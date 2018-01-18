@@ -317,15 +317,8 @@ class FPGAPlugin : public ArchPlugin
                ", in SMP processor: " << ( *it )->getId() );
             _helperThreads.push_back( fpgaHelper );
 
-            // Register each sub-thread of Multithread
-            for ( std::vector<BaseThread*>::const_iterator it2 = fpgaHelper->getThreadVector().begin();
-                  it2 != fpgaHelper->getThreadVector().end(); it2++ )
-            {
-               BaseThread * thd = *it2;
-               workers.insert( std::make_pair( thd->getId(), thd ) );
-            }
-
             //Push multithread into the team to let it steam tasks from other smp threads
+            //When the parent thread enters in a team, all sub-threads also enter the team
             workers.insert( std::make_pair( fpgaHelper->getId(), fpgaHelper ) );
          }
       }

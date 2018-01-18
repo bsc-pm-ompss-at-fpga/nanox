@@ -483,7 +483,6 @@ void ClusterThread::workerClusterLoop ()
    SMPMultiThread *parentM = ( SMPMultiThread * ) parent;
    for ( unsigned int i = 0; i < parentM->getNumThreads(); i += 1 ) {
       myThread = parentM->getThreadVector()[ i ];
-      myThread->leaveTeam();
       myThread->joined();
    }
    myThread = parent;
