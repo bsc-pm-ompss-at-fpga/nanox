@@ -61,6 +61,11 @@ namespace ext {
          FPGADeviceId getId() const {
             return _info.id;
          }
+
+         //! \brief Returs the working frequency of the device in MHz
+         double getFreq() const {
+            return _info.freq;
+         }
    };
 } // namespace ext
 } // namespace nanos

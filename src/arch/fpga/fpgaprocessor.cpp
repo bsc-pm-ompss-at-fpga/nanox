@@ -56,19 +56,19 @@ FPGAProcessor::FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpace
       std::string devNum = toString( _fpgaProcessorInfo.getId() );
 
       id = sys.getNumInstrumentAccelerators();
-      _devInstr = FPGAInstrumentation( id, std::string( "FPGA accelerator " ) + devNum );
+      _devInstr = FPGAInstrumentation( id, std::string( "FPGA accelerator " ) + devNum, &_fpgaProcessorInfo );
       sys.addDeviceInstrumentation( &_devInstr );
 
       id = sys.getNumInstrumentAccelerators();
-      _dmaInInstr = FPGAInstrumentation( id, std::string( "DMA in " ) + devNum );
+      _dmaInInstr = FPGAInstrumentation( id, std::string( "DMA in " ) + devNum, &_fpgaProcessorInfo );
       sys.addDeviceInstrumentation( &_dmaInInstr );
 
       id = sys.getNumInstrumentAccelerators();
-      _dmaOutInstr = FPGAInstrumentation( id, std::string( "DMA out " ) + devNum );
+      _dmaOutInstr = FPGAInstrumentation( id, std::string( "DMA out " ) + devNum, &_fpgaProcessorInfo );
       sys.addDeviceInstrumentation( &_dmaOutInstr );
 
       id = sys.getNumInstrumentAccelerators();
-      _submitInstrumentation = FPGAInstrumentation( id, std::string( "DMA submit " ) + devNum );
+      _submitInstrumentation = FPGAInstrumentation( id, std::string( "DMA submit " ) + devNum, &_fpgaProcessorInfo );
       sys.addDeviceInstrumentation( &_submitInstrumentation );
    }
 #endif
