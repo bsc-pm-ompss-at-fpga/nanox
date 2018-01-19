@@ -91,6 +91,16 @@ debug_libnanox_pe_cluster_aries_la_LIBADD=@gasnet_aries_libs@
 debug_libnanox_pe_cluster_aries_la_SOURCES=$(pe_cluster_sources)
 endif
 
+if gasnet_axiom_available
+debug_LTLIBRARIES += debug/libnanox-pe-cluster-axiom.la
+
+debug_libnanox_pe_cluster_axiom_la_CPPFLAGS=$(common_debug_CPPFLAGS) $(common_cluster_CPPFLAGS) @gasnet_axiom_inc@
+debug_libnanox_pe_cluster_axiom_la_CXXFLAGS=$(common_debug_CXXFLAGS)
+debug_libnanox_pe_cluster_axiom_la_LDFLAGS=$(AM_LDFLAGS) $(common_cluster_LDFLAGS) $(ld_plugin_flags) @gasnetlib@
+debug_libnanox_pe_cluster_axiom_la_LIBADD=@gasnet_axiom_libs@
+debug_libnanox_pe_cluster_axiom_la_SOURCES=$(pe_cluster_sources)
+endif
+
 if gasnet_mxm_available
 debug_LTLIBRARIES += debug/libnanox-pe-cluster-mxm.la
 debug_LTLIBRARIES += debug/libnanox-pe-clustermpi-mxm.la
@@ -181,6 +191,16 @@ instrumentation_debug_libnanox_pe_cluster_aries_la_CXXFLAGS=$(common_instrumenta
 instrumentation_debug_libnanox_pe_cluster_aries_la_LDFLAGS=$(AM_LDFLAGS) $(common_cluster_LDFLAGS) $(ld_plugin_flags) @gasnetlib@
 instrumentation_debug_libnanox_pe_cluster_aries_la_LIBADD=@gasnet_aries_libs@
 instrumentation_debug_libnanox_pe_cluster_aries_la_SOURCES=$(pe_cluster_sources)
+endif
+
+if gasnet_axiom_available
+instrumentation_debug_LTLIBRARIES += instrumentation-debug/libnanox-pe-cluster-axiom.la
+
+instrumentation_debug_libnanox_pe_cluster_axiom_la_CPPFLAGS=$(common_instrumentation_debug_CPPFLAGS) $(common_cluster_CPPFLAGS) @gasnet_axiom_inc@
+instrumentation_debug_libnanox_pe_cluster_axiom_la_CXXFLAGS=$(common_instrumentation_debug_CXXFLAGS)
+instrumentation_debug_libnanox_pe_cluster_axiom_la_LDFLAGS=$(AM_LDFLAGS) $(common_cluster_LDFLAGS) $(ld_plugin_flags) @gasnetlib@
+instrumentation_debug_libnanox_pe_cluster_axiom_la_LIBADD=@gasnet_axiom_libs@
+instrumentation_debug_libnanox_pe_cluster_axiom_la_SOURCES=$(pe_cluster_sources)
 endif
 
 if gasnet_mxm_available
@@ -275,6 +295,16 @@ instrumentation_libnanox_pe_cluster_aries_la_LIBADD=@gasnet_aries_libs@
 instrumentation_libnanox_pe_cluster_aries_la_SOURCES=$(pe_cluster_sources)
 endif
 
+if gasnet_axiom_available
+instrumentation_LTLIBRARIES += instrumentation/libnanox-pe-cluster-axiom.la
+
+instrumentation_libnanox_pe_cluster_axiom_la_CPPFLAGS=$(common_instrumentation_CPPFLAGS) $(common_cluster_CPPFLAGS) @gasnet_axiom_inc@
+instrumentation_libnanox_pe_cluster_axiom_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS)
+instrumentation_libnanox_pe_cluster_axiom_la_LDFLAGS=$(AM_LDFLAGS) $(common_cluster_LDFLAGS) $(ld_plugin_flags) @gasnetlib@
+instrumentation_libnanox_pe_cluster_axiom_la_LIBADD=@gasnet_axiom_libs@
+instrumentation_libnanox_pe_cluster_axiom_la_SOURCES=$(pe_cluster_sources)
+endif
+
 if gasnet_mxm_available
 instrumentation_LTLIBRARIES += instrumentation/libnanox-pe-cluster-mxm.la
 instrumentation_LTLIBRARIES += instrumentation/libnanox-pe-clustermpi-mxm.la
@@ -365,6 +395,16 @@ performance_libnanox_pe_cluster_aries_la_CXXFLAGS=$(common_performance_CXXFLAGS)
 performance_libnanox_pe_cluster_aries_la_LDFLAGS=$(AM_LDFLAGS) $(common_cluster_LDFLAGS) $(ld_plugin_flags) @gasnetlib@
 performance_libnanox_pe_cluster_aries_la_LIBADD=@gasnet_aries_libs@
 performance_libnanox_pe_cluster_aries_la_SOURCES=$(pe_cluster_sources)
+endif
+
+if gasnet_axiom_available
+performance_LTLIBRARIES += performance/libnanox-pe-cluster-axiom.la
+
+performance_libnanox_pe_cluster_axiom_la_CPPFLAGS=$(common_performance_CPPFLAGS) $(common_cluster_CPPFLAGS) @gasnet_axiom_inc@
+performance_libnanox_pe_cluster_axiom_la_CXXFLAGS=$(common_performance_CXXFLAGS)
+performance_libnanox_pe_cluster_axiom_la_LDFLAGS=$(AM_LDFLAGS) $(common_cluster_LDFLAGS) $(ld_plugin_flags) @gasnetlib@
+performance_libnanox_pe_cluster_axiom_la_LIBADD=@gasnet_axiom_libs@
+performance_libnanox_pe_cluster_axiom_la_SOURCES=$(pe_cluster_sources)
 endif
 
 if gasnet_mxm_available

@@ -59,6 +59,38 @@ AC_SUBST([DEB_RELEASE])
 : ${CFLAGS=""}
 : ${CXXFLAGS=""}
 
+# AXIOM
+AC_ARG_WITH(axiomhome,
+[AS_HELP_STRING([--with-axiomhome=PATH],
+                [specify root directory of AXIOM project])],
+  [
+    # Check if the user provided a valid PATH
+    AS_IF([test -d "$withval"],[
+      with_axiomhome=$withval
+      gasnet=yes
+      gasnet_path_provided=yes
+    ],[
+      with_axiomhome=~/axiom-evi
+    ])dnl
+  ],[
+      with_axiomhome=~/axiom-evi
+  ])
+AC_ARG_WITH(axiom-rootfs,
+[AS_HELP_STRING([--with-axiom-rootfs=PATH],
+                [specify the root filesystem directory of AXIOM project])],
+  [
+    # Check if the user provided a valid PATH
+    AS_IF([test -d "$withval"],[
+      with_axiom_rootfs=$withval
+      gasnet=yes
+      gasnet_path_provided=yes
+    ],[
+      with_axiomhome=~/zynq-rootfs
+    ])dnl
+  ],[
+      with_axiomhome=~/zynq-rootfs
+  ])
+
 # ------------------
 # Check for programs
 # ------------------
