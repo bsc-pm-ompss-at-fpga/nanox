@@ -36,13 +36,14 @@ namespace ext {
             DeviceInstrumentation( id ), _deviceType( deviceType ), _deviceInfo( fpgaInfo ) { }
 
          virtual void init() {}
-         //! \breif Returns the device time in ns
+         //! \breif Returns the device time in cycles
          virtual unsigned long long int getDeviceTime();
          //! \brief Translates a raw device time in cycles to ns
          virtual unsigned long long int translateDeviceTime( unsigned long long int );
          virtual void startDeviceTrace() {}
          virtual void pauseDeviceTrace( bool pause ) {}
          virtual void stopDeviceTrace() {}
+         //! \brief Returns the device name
          virtual const char* getDeviceType() { return _deviceType.c_str(); }
    };
 } //namespace ext
