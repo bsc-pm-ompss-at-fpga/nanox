@@ -63,7 +63,7 @@ namespace ext {
          }
 
          //! \brief Returs the working frequency of the device in MHz
-         size_t getFreq() const {
+         double getFreq() const {
             return _info.freq;
          }
    };
