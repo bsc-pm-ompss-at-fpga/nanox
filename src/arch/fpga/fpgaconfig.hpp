@@ -41,7 +41,6 @@ namespace ext {
          static int                       _numAccelerators; //! Number of accelerators used in the execution
          static int                       _numAcceleratorsSystem; //! Number of accelerators detected in the system
          static int                       _numFPGAThreads; //! Number of FPGA helper threads
-         static int                       _fpgaFreq;
          static bool                      _hybridWorker;
          static int                       _maxPendingWD;
          static int                       _finishWDBurst;
@@ -71,11 +70,6 @@ namespace ext {
          /*! \brief Returns if the FPGA support is disabled and won't be enabled in apply()
           */
          static bool isDisabled();
-
-         //! \brief Returns cycle time in ns
-         static unsigned int getCycleTime() {
-             return 1000/_fpgaFreq; //_fpgaFreq is in MHz
-         }
          static bool getHybridWorkerEnabled() { return _hybridWorker; }
          static int getMaxPendingWD() { return  _maxPendingWD; }
          static int getFinishWDBurst() { return _finishWDBurst; }

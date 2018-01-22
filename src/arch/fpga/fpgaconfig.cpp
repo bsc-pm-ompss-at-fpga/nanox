@@ -41,7 +41,6 @@ bool FPGAConfig::_forceDisableFPGA = false;
 int  FPGAConfig::_numAccelerators = -1;
 int  FPGAConfig::_numAcceleratorsSystem = -1;
 int  FPGAConfig::_numFPGAThreads = -1;
-int FPGAConfig::_fpgaFreq = 100; //default to 100MHz
 bool FPGAConfig::_hybridWorker = true;
 int FPGAConfig::_maxPendingWD = 4;
 int FPGAConfig::_finishWDBurst = 8;
@@ -75,11 +74,6 @@ void FPGAConfig::prepare( Config &config )
       "Defines de number of helper threads managing fpga accelerators (def: 1)");
    config.registerEnvOption( "fpga_helper_threads", "NX_FPGA_HELPER_THREADS" );
    config.registerArgOption( "fpga_helper_threads", "fpga-helper-threads" );
-
-   config.registerConfigOption( "fpga_freq", NEW Config::IntegerVar( _fpgaFreq ),
-                                "FPGA accelerator clock frequency in MHz (def: 100)" );
-   config.registerEnvOption( "fpga_freq", "NX_FPGA_FREQ" );
-   config.registerArgOption( "fpga_freq", "fpga-freq" );
 
    config.registerConfigOption( "fpga_hybrid_worker", NEW Config::FlagOption( _hybridWorker ),
                                 "Allow FPGA helper thread to run smp tasks (def: enabled)" );
