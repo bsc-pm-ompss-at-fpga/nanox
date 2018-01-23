@@ -83,7 +83,7 @@ void ClusterThread::RunningWDQueue::completeWD( void *remoteWdAddr ) {
 }
 
 ClusterThread::ClusterThread( WD &w, PE *pe, SMPMultiThread *parent, int device )
-   : BaseThread( (unsigned int) -1, w, pe, parent ), _clusterNode( device ), _lock() {
+   : BaseThread( parent->getOsId(), w, pe, parent ), _clusterNode( device ), _lock() {
    setCurrentWD( w );
    int other_archs=0;
 #ifdef FPGA_DEV

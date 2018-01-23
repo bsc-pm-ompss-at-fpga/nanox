@@ -28,7 +28,7 @@ using namespace nanos;
 using namespace nanos::ext;
 
 FPGAThread::FPGAThread( WD &wd, PE *pe, SMPMultiThread *parent ) :
-   BaseThread( ( unsigned int ) -1, wd, pe, parent)
+   BaseThread( parent->getOsId(), wd, pe, parent)
 {
    setCurrentWD( wd );
 }

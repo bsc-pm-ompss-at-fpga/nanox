@@ -523,14 +523,10 @@ namespace nanos
          }
 
          static int getCurrentThreadId() {
-             BaseThread *parent = myThread->getParent();
-             int id;
-             if ( parent != NULL ) {
-                 id = parent->getId();
-             } else {
-                 id = myThread->getId();
-             }
-             return id;
+            /*! NOTE: The thread ids may not be consecutive as each MultiThread uses several identifies.
+                      However all sub-threads use the osId of their parent.
+             */
+            return myThread->getOsId();
          }
 
          void initialize( void )
