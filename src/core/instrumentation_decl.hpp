@@ -778,10 +778,10 @@ namespace nanos {
 
          void init();
          //! Gets raw time from device clock
-         virtual unsigned long long int getDeviceTime() = 0;
+         virtual unsigned long long int getDeviceTime() const = 0;
          //! Translate a raw device timestamp to a us timestamp from an unspecified starting point
          virtual unsigned long long int translateDeviceTime(
-               unsigned long long int deviceTime ) = 0;
+               unsigned long long int deviceTime ) const = 0;
          virtual const char *getDeviceType() = 0;
          virtual void startDeviceTrace() = 0;
          virtual void pauseDeviceTrace( bool pause ) = 0;
