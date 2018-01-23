@@ -512,7 +512,7 @@ namespace nanos
 
       public:
          InstrumentationOMPT( ) : Instrumentation( *NEW InstrumentationContextDisabled()),
-            _previousTask( NULL ), _deviceCount( 0 ), _requestBufferCallback( NULL ),
+            _previousTask( NULL ), _threadActive( NULL ), _deviceCount( 0 ), _requestBufferCallback( NULL ),
             _completeBufferCallback( NULL ) {}
          ~InstrumentationOMPT() {
             for ( std::vector< BufferInfo* >::iterator it = _devEventBuffers.begin();
@@ -557,7 +557,8 @@ namespace nanos
                ompt_nanos_event_thread_end((ompt_thread_type_t) ompt_thread_initial, (ompt_thread_id_t) getCurrentThreadId());
             }
             if ( ompt_nanos_event_shutdown ) ompt_nanos_event_shutdown();
-            if ( _previousTask ) free ( _previousTask );
+            free( _threadActive );
+            free( _previousTask );
          }
          void disable( void ) {}
          void enable( void ) {}
@@ -761,6 +762,8 @@ namespace nanos
             ompt_task_id_t post = (ompt_task_id_t) w.getId();
 
             int thid = (int) getCurrentThreadId();
+            ensure( thid < _numThreads, "Wrong thid in addResumeTask" );
+
             if (!_threadActive[thid]) return;
 
             ompt_task_id_t pre = (ompt_task_id_t) _previousTask[thid];
@@ -770,6 +773,8 @@ namespace nanos
          void addSuspendTask( WorkDescriptor &w, bool last )
          {
             int thid = (int) getCurrentThreadId();
+            ensure( thid < _numThreads, "Wrong thid in addSuspendTask" );
+
             if (last) _previousTask[thid] = (ompt_task_id_t) 0;
             else _previousTask[thid] = (ompt_task_id_t) w.getId();
 
@@ -798,8 +803,8 @@ namespace nanos
          }
          void incrementMaxThreads( void ) {
             _numThreads++;
-            _previousTask = ( ompt_task_id_t* ) realloc( _previousTask, _numThreads );
-            _threadActive = ( int* ) realloc( _threadActive, _numThreads );
+            _previousTask = ( ompt_task_id_t* ) realloc( _previousTask, _numThreads*sizeof( ompt_task_id_t ) );
+            _threadActive = ( int* ) realloc( _threadActive, _numThreads*sizeof( int ) );
          }
 
          virtual void registerInstrumentDevice( DeviceInstrumentation *devInstr ) {
