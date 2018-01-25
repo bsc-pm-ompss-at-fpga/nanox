@@ -132,9 +132,12 @@ void ClusterPlugin::init()
             }
          }
       }
-      _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
+      _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessor();
       if ( _cpu ) {
-         _cpu->setNumFutureThreads( 1 );
+         if ( _gasnetApi->getNodeNum() == 0 || ClusterConfig::getSlaveNodeWorkerEnabled() ) {
+            _cpu->reserve();
+            _cpu->setNumFutureThreads( 1 );
+         }
       } else {
          if ( _allowSharedThd ) {
             _cpu = sys.getSMPPlugin()->getLastSMPProcessor();
@@ -239,12 +242,16 @@ void ClusterPlugin::startSupportThreads() {
             ( DD::work_fct ) ClusterThread::workerClusterLoop
          ) );
       } else {
-         _clusterThread = dynamic_cast<ext::SMPMultiThread *>(&_cpu->startMultiWorker(
-            0, NULL,
-            ( DD::work_fct )ClusterThread::workerClusterLoop
-         ) );
-         if ( sys.getPMInterface().getInternalDataSize() > 0 )
-            _clusterThread->getThreadWD().setInternalData(NEW char[sys.getPMInterface().getInternalDataSize()]);
+         if ( ClusterConfig::getSlaveNodeWorkerEnabled() ) {
+            _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker(
+               0, NULL, ( DD::work_fct )ClusterThread::workerClusterLoop )
+            );
+            if ( sys.getPMInterface().getInternalDataSize() > 0 ) {
+               _clusterThread->getThreadWD().setInternalData(
+                  NEW char[sys.getPMInterface().getInternalDataSize()]
+               );
+            }
+         }
          //_pmInterface->setupWD( smpRepThd->getThreadWD() );
          //setSlaveParentWD( &mainWD );
          if ( sys.getNumAccelerators() > 0 ) {

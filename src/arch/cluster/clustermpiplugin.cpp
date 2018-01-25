@@ -77,8 +77,11 @@ void ClusterMPIPlugin::config( Config& cfg )
 
 void ClusterMPIPlugin::init()
 {
-   _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
+   _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessor();
    if ( _cpu ) {
+      ensure0( ClusterConfig::getSlaveNodeWorkerEnabled(),
+         "Disabling cluster helper in slave nodes not implemented in ClusterMPIPlugin::init" );
+      _cpu->reserve();
       _cpu->setNumFutureThreads( 1 );
    } else {
       if ( _allowSharedThd ) {

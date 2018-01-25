@@ -139,6 +139,8 @@ class SMPPlugin : public SMPBasePlugin
 
    virtual ext::SMPProcessor *getFirstFreeSMPProcessor() const;
 
+   virtual ext::SMPProcessor *getLastFreeSMPProcessor();
+
    virtual ext::SMPProcessor *getLastFreeSMPProcessorAndReserve();
 
    virtual ext::SMPProcessor *getLastSMPProcessor();

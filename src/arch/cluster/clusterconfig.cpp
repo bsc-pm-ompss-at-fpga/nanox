@@ -23,6 +23,7 @@ namespace nanos {
 namespace ext {
 
 bool ClusterConfig::_hybridWorker = false;
+bool ClusterConfig::_slaveNodeWorker = true;
 int ClusterConfig::_smpPresend = 1;
 int ClusterConfig::_gpuPresend = 1;
 int ClusterConfig::_oclPresend = 1;
@@ -35,6 +36,10 @@ void ClusterConfig::prepare( Config &cfg )
    cfg.registerConfigOption( "cluster_hybrid_worker", NEW Config::FlagOption( _hybridWorker ),
       "Allow Cluster helper thread to run SMP tasks when IDLE (def: disabled)" );
    cfg.registerArgOption( "cluster_hybrid_worker", "cluster-hybrid-worker" );
+
+   cfg.registerConfigOption( "cluster_slave_worker", NEW Config::FlagOption( _slaveNodeWorker ),
+      "Enable Cluster helper thread in slave Nodes (def: enabled)" );
+   cfg.registerArgOption( "cluster_slave_worker", "cluster-slave-worker" );
 
    cfg.registerConfigOption ( "cluster-smp-presend", NEW Config::IntegerVar( _smpPresend ),
       "Number of Tasks (SMP arch) to be sent to a remote node without waiting any completion." );

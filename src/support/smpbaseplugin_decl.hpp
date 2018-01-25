@@ -33,6 +33,7 @@ class SMPBasePlugin : public ArchPlugin {
    public:
       SMPBasePlugin( const char *name, int version ) : ArchPlugin( name, version ) {}
       virtual ext::SMPProcessor *getFirstSMPProcessor() const = 0;
+      virtual ext::SMPProcessor *getLastFreeSMPProcessor() = 0;
       virtual ext::SMPProcessor *getLastFreeSMPProcessorAndReserve() = 0;
       virtual ext::SMPProcessor *getLastSMPProcessor() = 0;
       virtual ext::SMPProcessor *getFreeSMPProcessorByNUMAnodeAndReserve(int node) = 0;
