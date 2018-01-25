@@ -327,19 +327,12 @@ unsigned int ClusterMPIPlugin::getMaxPEs() const {
 }
 
 unsigned int ClusterMPIPlugin::getNumWorkers() const {
-   if ( _nodes ) {
-      return _nodes->size() - 1;
-   } else {
-      return 0;
-   }
+   return _clusterThread ? 1 : 0;
 }
 
 unsigned int ClusterMPIPlugin::getMaxWorkers() const {
-   if ( _nodes ) {
-      return _nodes->size() - 1;
-   } else {
-      return 0;
-   }
+   //NOTE: At most, the plugin will create 1 worker thread with several sub-threads
+   return 1;
 }
 
 bool ClusterMPIPlugin::unalignedNodeMemory() const {
