@@ -746,7 +746,7 @@ void RegionDictionary< Sparsity >::addRegionAndComputeIntersects( reg_t id, std:
 }
 
 template < template <class> class Sparsity>
-reg_t RegionDictionary< Sparsity >::obtainRegionId( CopyData &cd, WD const &wd, unsigned int idx ) {
+reg_t RegionDictionary< Sparsity >::obtainRegionId( CopyData &cd, WD const &wd ) {
    reg_t id = 0;
    CopyData *deductedCd = NULL;
    if ( this->getRegisteredObject() != NULL && !this->getRegisteredObject()->equalGeometry( cd ) ) {
@@ -763,7 +763,7 @@ reg_t RegionDictionary< Sparsity >::obtainRegionId( CopyData &cd, WD const &wd, 
          << " but I already have the object registered with " << this->getNumDimensions()
          << " dimensions. WD is : "
          << ( wd.getDescription() != NULL ? wd.getDescription() : "n/a" )
-         << " copy index: " << idx << " got reg object? " << this->getRegisteredObject() );
+         << " got reg object? " << this->getRegisteredObject() );
    }
    ensure( realCd.getNumDimensions() == this->getNumDimensions(), "ERROR" );
    ensure( this->getNumDimensions() > 0, "ERROR" );

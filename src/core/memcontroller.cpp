@@ -82,7 +82,7 @@ void MemController::preInit( ) {
    //    dicts.insert( _memCacheCopies[ index ]._reg.key );
    }
              for ( index = 0; index < _wd->getNumCopies(); index += 1 ) {
-                _memCacheCopies[ index ]._reg.id = _memCacheCopies[ index ]._reg.key->obtainRegionId( _wd->getCopies()[index], *_wd, index );
+                _memCacheCopies[ index ]._reg.id = _memCacheCopies[ index ]._reg.key->obtainRegionId( _wd->getCopies()[index], *_wd );
                 DirectoryEntryData *entry = ( DirectoryEntryData * ) _memCacheCopies[ index ]._reg.key->getRegionData( _memCacheCopies[ index ]._reg.id );
                 if ( entry == NULL ) {
                    entry = NEW DirectoryEntryData();
