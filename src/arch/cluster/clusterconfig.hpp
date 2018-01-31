@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2017 Barcelona Supercomputing Center                               */
+/*      Copyright 2018 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,57 +17,39 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef _NANOS_FPGA_PROCESSOR_INFO
-#define _NANOS_FPGA_PROCESSOR_INFO
-
-#include "debug.hpp"
-#include "libxtasks.h"
+#ifndef _NANOS_CLUSTER_CFG
+#define _NANOS_CLUSTER_CFG
+#include "config.hpp"
 
 namespace nanos {
 namespace ext {
 
-   typedef int FPGADeviceType;
-   typedef xtasks_acc_id   FPGADeviceId;
-
-   /*!
-    * The only purpose of this class is to wrap some device dependent info dependeing
-    * on an external library ir order to keep the system as clean as possible
-    * (not having to include/define xtasks types in system, etc)
-    */
-   class FPGAProcessorInfo
+   class ClusterConfig
    {
       private:
-         xtasks_acc_handle _handle;   /// Low level accelerator handle
-         xtasks_acc_info   _info;
+         static bool            _hybridWorker;    /*! \brief Enable/disable hybrid cluster worker */
+         static bool            _slaveNodeWorker; /*! \brief Enable/disable cluster worker in slave nodes */
+         static int             _smpPresend;      /*! \brief Max. number of tasks sent to remote node without waiting */
+         static int             _gpuPresend;      /*! \brief Max. number of tasks sent to remote node without waiting */
+         static int             _oclPresend;      /*! \brief Max. number of tasks sent to remote node without waiting */
+         static int             _fpgaPresend;     /*! \brief Max. number of tasks sent to remote node without waiting */
 
       public:
-         FPGAProcessorInfo( xtasks_acc_handle handle ) :
-            _handle( handle )
-         {
-            xtasks_stat sxt = xtasksGetAccInfo( _handle, &_info );
-            if ( sxt != XTASKS_SUCCESS ) {
-               ensure0( sxt == XTASKS_SUCCESS, "Cannot retrieve accelerator information" );
-            }
-         }
+         /*! Parses the Cluster user options */
+         static void prepare ( Config &config );
 
-         xtasks_acc_handle getHandle() const {
-            return _handle;
-         }
+         /*! Applies the configuration options
+          */
+         static void apply ( void );
 
-         FPGADeviceType getType() const {
-            return _info.type;
-         }
-
-         FPGADeviceId getId() const {
-            return _info.id;
-         }
-
-         //! \brief Returs the working frequency of the device in MHz
-         double getFreq() const {
-            return _info.freq;
-         }
+         static bool getHybridWorkerEnabled() { return _hybridWorker; }
+         static bool getSlaveNodeWorkerEnabled() { return _slaveNodeWorker; }
+         static int getSmpPresend() { return _smpPresend; }
+         static int getGpuPresend() { return _gpuPresend; }
+         static int getOclPresend() { return _oclPresend; }
+         static int getFpgaPresend() { return _fpgaPresend; }
    };
+
 } // namespace ext
 } // namespace nanos
-
-#endif
+#endif // _NANOS_CLUSTER_CFG

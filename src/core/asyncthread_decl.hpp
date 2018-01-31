@@ -96,7 +96,7 @@ namespace nanos {
 
          virtual void idle( bool dummy = false );
 
-         virtual void processTransfers ();
+         virtual bool processTransfers ();
 
          virtual void preRunWD ( WD * wd );
          virtual void runWD ( WD * wd );

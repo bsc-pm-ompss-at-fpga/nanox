@@ -30,7 +30,11 @@ class SMPTransferQueue {
    public:
    SMPTransferQueue();
    void addTransfer( DeviceOps *ops, char *dst, char *src, std::size_t len, std::size_t count, std::size_t ld, bool in );
-   void tryExecuteOne();
+
+   /*! \brief  Try to execute one pending transfer.
+       \return The function returns true if one transfer was executed, false otherwise
+    */
+   bool tryExecuteOne();
 };
 
 } // namespace nanos

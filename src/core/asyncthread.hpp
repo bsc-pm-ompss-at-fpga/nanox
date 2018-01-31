@@ -99,11 +99,14 @@ inline void AsyncThread::checkEvents( WD * wd )
    // AsyncThread::checkEvents( WD * wd )
 }
 
-inline void AsyncThread::processTransfers ()
+inline bool AsyncThread::processTransfers ()
 {
+   unsigned int localCounter = _pendingEventsCounter;
    disableGettingWork();
    checkEvents();
    enableGettingWork();
+   //NOTE: Return if some useful work has been done
+   return ( localCounter > _pendingEventsCounter || _pendingEventsCounter != 0 );
 }
 
 inline bool AsyncThread::canGetWork()

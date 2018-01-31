@@ -49,6 +49,8 @@ namespace ext {
          }
 
       public:
+         static unsigned int getNumDevices() { return _accDevices->size(); }
+
          // constructors
          FPGADD( work_fct w , FPGADeviceType const t ) : DD( (*_accDevices)[t], w ) {
 #ifdef NANOS_DEBUG_ENABLED
@@ -71,6 +73,9 @@ namespace ext {
          virtual size_t size ( void ) { return sizeof( FPGADD ); }
          virtual FPGADD *copyTo ( void *toAddr );
          virtual FPGADD *clone () const { return NEW FPGADD ( *this ); }
+
+         static FPGADeviceMap::iterator const getDevicesMapBegin () { return _accDevices->begin(); }
+         static FPGADeviceMap::iterator const getDevicesMapEnd () { return _accDevices->end(); }
    };
 
    inline const FPGADD & FPGADD::operator= ( const FPGADD &dd )

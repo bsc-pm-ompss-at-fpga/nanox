@@ -74,7 +74,7 @@ namespace ext {
 
          virtual void idle( bool debug );
 
-         void processTransfers();
+         bool processTransfers();
 
          unsigned int getCurrentKernelExecStreamIdx();
 

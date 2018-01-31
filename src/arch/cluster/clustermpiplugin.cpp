@@ -26,6 +26,8 @@
 #include "basethread.hpp"
 #include "smpprocessor.hpp"
 #include "clusterthread_decl.hpp"
+#include "clusterconfig.hpp"
+
 #ifdef OpenCL_DEV
 #include "opencldd.hpp"
 #endif
@@ -61,7 +63,7 @@ ClusterMPIPlugin::ClusterMPIPlugin() : ArchPlugin( "Cluster PE Plugin", 1 ),
    _gasnetApi( NEW GASNetAPI() ), _numPinnedSegments( 0 ), _pinnedSegmentAddrList( NULL ),
    _pinnedSegmentLenList( NULL ), _extraPEsCount( 0 ), _conduit(""),
    _nodeMem( DEFAULT_NODE_MEM ), _allocFit( false ), _allowSharedThd( false ),
-   _unalignedNodeMem( false ), _gpuPresend( 1 ), _smpPresend( 1 ),
+   _unalignedNodeMem( false ),
    _cachePolicy( System::DEFAULT ), _nodes( NULL ), _cpu( NULL ),
    _clusterThread( NULL ), _gasnetSegmentSize( 0 ) {
 }
@@ -69,13 +71,17 @@ ClusterMPIPlugin::ClusterMPIPlugin() : ArchPlugin( "Cluster PE Plugin", 1 ),
 void ClusterMPIPlugin::config( Config& cfg )
 {
    cfg.setOptionsSection( "Cluster Arch", "Cluster specific options" );
-   this->prepare( cfg );
+   this->prepare( cfg ); //TODO: Move all common options to ClusterConfig
+   ClusterConfig::prepare( cfg );
 }
 
 void ClusterMPIPlugin::init()
 {
-   _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
+   _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessor();
    if ( _cpu ) {
+      ensure0( ClusterConfig::getSlaveNodeWorkerEnabled(),
+         "Disabling cluster helper in slave nodes not implemented in ClusterMPIPlugin::init" );
+      _cpu->reserve();
       _cpu->setNumFutureThreads( 1 );
    } else {
       if ( _allowSharedThd ) {
@@ -96,8 +102,6 @@ int ClusterMPIPlugin::initNetwork(int *argc, char ***argv)
    _gasnetApi->setGASNetSegmentSize( _gasnetSegmentSize );
    _gasnetApi->setUnalignedNodeMemory( _unalignedNodeMem );
    sys.getNetwork()->initialize( _gasnetApi );
-   sys.getNetwork()->setGpuPresend( this->getGpuPresend() );
-   sys.getNetwork()->setSmpPresend( this->getSmpPresend() );
 
    unsigned int nodes = _gasnetApi->getNumNodes();
 
@@ -116,7 +120,12 @@ int ClusterMPIPlugin::initNetwork(int *argc, char ***argv)
       supported_archs[2] = &OpenCLDev;
 #endif
 #ifdef FPGA_DEV
-      supported_archs[3] = &FPGA;
+      unsigned int cnt = MAX_STATIC_ARCHS;
+      for (FPGADeviceMap::iterator it = FPGADD::getDevicesMapBegin();
+           it != FPGADD::getDevicesMapEnd(); ++it) {
+         supported_archs[cnt] = it->second;
+         ++cnt;
+      }
 #endif
 
       const Device * supported_archs_array[supported_archs.size()];
@@ -143,13 +152,18 @@ int ClusterMPIPlugin::initNetwork(int *argc, char ***argv)
             node_index += 1;
          }
       }
-      _gasnetApi->_rwgs = NEW GASNetAPI::ArchRWDs[ nodes ];
-      for ( unsigned int idx = 0; idx < nodes; idx += 1 ) {
-         _gasnetApi->_rwgs[idx][0] = getRemoteWorkDescriptor(0);
-         _gasnetApi->_rwgs[idx][1] = getRemoteWorkDescriptor(1);
-         _gasnetApi->_rwgs[idx][2] = getRemoteWorkDescriptor(2);
-         _gasnetApi->_rwgs[idx][3] = getRemoteWorkDescriptor(3);
+
+      int num_devices = MAX_STATIC_ARCHS; //SMP + GPU + OpenCL
+#ifdef FPGA_DEV
+      num_devices+=FPGADD::getNumDevices();
+#endif
+      _gasnetApi->allocArchRWDs( nodes,num_devices );
+      for ( int i = 0; i < ( int )( nodes ); i++ ) {
+         for ( int j = 0; j < num_devices; j++ ) {
+            _gasnetApi->_rwgs[i][j] = getRemoteWorkDescriptor( i, j );
+         }
       }
+
       _clusterThread->addThreadsFromPEs( tmp_nodes.size(), &(tmp_nodes[0]) );
    }
    return 0;
@@ -180,20 +194,12 @@ std::size_t ClusterMPIPlugin::getNodeMem() const {
    return _nodeMem;
 }
 
-int ClusterMPIPlugin::getSmpPresend() const {
-   return _smpPresend;
-}
-
-int ClusterMPIPlugin::getGpuPresend() const {
-   return _gpuPresend;
-}
-
 System::CachePolicyType ClusterMPIPlugin::getCachePolicy ( void ) const {
    return _cachePolicy;
 }
 
-RemoteWorkDescriptor * ClusterMPIPlugin::getRemoteWorkDescriptor( int archId ) {
-   RemoteWorkDescriptor *rwd = NEW RemoteWorkDescriptor( archId );
+RemoteWorkDescriptor * ClusterMPIPlugin::getRemoteWorkDescriptor( unsigned int nodeId, int archId ) {
+   RemoteWorkDescriptor *rwd = NEW RemoteWorkDescriptor( nodeId );
    rwd->_mcontrol.preInit();
    rwd->_mcontrol.initialize( *_cpu );
    return rwd;
@@ -211,14 +217,6 @@ void ClusterMPIPlugin::prepare( Config& cfg ) {
 
    cfg.registerConfigOption ( "cluster-alloc-fit", NEW Config::FlagOption( _allocFit ), "Allocate full objects.");
    cfg.registerArgOption( "cluster-alloc-fit", "cluster-alloc-fit" );
-
-   cfg.registerConfigOption ( "cluster-gpu-presend", NEW Config::IntegerVar ( _gpuPresend ), "Number of Tasks to be sent to a remote node without waiting waiting any completion (GPU)." );
-   cfg.registerArgOption ( "cluster-gpu-presend", "cluster-gpu-presend" );
-   cfg.registerEnvOption ( "cluster-gpu-presend", "NX_CLUSTER_GPU_PRESEND" );
-
-   cfg.registerConfigOption ( "cluster-smp-presend", NEW Config::IntegerVar ( _smpPresend ), "Number of Tasks to be sent to a remote node without waiting waiting any completion (SMP)." );
-   cfg.registerArgOption ( "cluster-smp-presend", "cluster-smp-presend" );
-   cfg.registerEnvOption ( "cluster-smp-presend", "NX_CLUSTER_SMP_PRESEND" );
 
    System::CachePolicyConfig *cachePolicyCfg = NEW System::CachePolicyConfig ( _cachePolicy );
    cachePolicyCfg->addOption("wt", System::WRITE_THROUGH );
@@ -329,19 +327,12 @@ unsigned int ClusterMPIPlugin::getMaxPEs() const {
 }
 
 unsigned int ClusterMPIPlugin::getNumWorkers() const {
-   if ( _nodes ) {
-      return _nodes->size() - 1;
-   } else {
-      return 0;
-   }
+   return _clusterThread ? 1 : 0;
 }
 
 unsigned int ClusterMPIPlugin::getMaxWorkers() const {
-   if ( _nodes ) {
-      return _nodes->size() - 1;
-   } else {
-      return 0;
-   }
+   //NOTE: At most, the plugin will create 1 worker thread with several sub-threads
+   return 1;
 }
 
 bool ClusterMPIPlugin::unalignedNodeMemory() const {

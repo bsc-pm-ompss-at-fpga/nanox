@@ -59,9 +59,9 @@ void GPUMemoryTransferOutAsyncList::addMemoryTransfer ( CopyDescriptor &hostAddr
    _lock.release();
 }
 
-void GPUMemoryTransferOutAsyncList::executeMemoryTransfers ()
+bool GPUMemoryTransferOutAsyncList::executeMemoryTransfers ()
 {
-   executeMemoryTransfers( _pendingTransfersAsync );
+   return executeMemoryTransfers( _pendingTransfersAsync );
 }
 
 

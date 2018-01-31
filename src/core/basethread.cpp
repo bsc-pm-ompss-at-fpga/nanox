@@ -138,20 +138,35 @@ int BaseThread::getCpuId() const {
    return _parent->getCpuId();
 }
 
+void BaseThread::enterTeam( TeamData *data )
+{
+   if ( data != NULL ) _teamData = data;
+   else _teamData = _nextTeamData;
+   _status.has_team = true;
+}
+
 void BaseThread::leaveTeam()
 {
    // It's allowed to make another thread leave the team as long as the target thread is blocked
    ensure( this == myThread || _status.is_waiting || _status.has_joined,
          "thread is not leaving team by itself" );
 
+   TeamData *td = _teamData;
+   leaveTeamNoDeleteTeamData();
+   if ( td ) {
+      //Remove thread's teamData
+      delete td;
+   }
+}
+
+void BaseThread::leaveTeamNoDeleteTeamData()
+{
    if ( _teamData )
    {
-      TeamData *td = _teamData;
       debug( "removing thread " << this << " with id " << toString<int>(getTeamId()) << " from " << _teamData->getTeam() );
 
-      td->getTeam()->removeThread( getTeamId() );
+      _teamData->getTeam()->removeThread( getTeamId() );
       _teamData = _teamData->getParentTeamData();
-      delete td;
    }
    _status.must_leave_team = false;
    _status.has_team = _teamData != NULL;
@@ -214,13 +229,15 @@ unsigned int BaseThread::getOsId() const {
 }
 
 
-void BaseThread::processTransfers ()
+bool BaseThread::processTransfers ()
 {
+   bool ret = false;
    if ( sys.getNetwork()->getNumNodes() > 1 ) {
       if ( this->_gasnetAllowAM ) {
       sys.getNetwork()->poll(0);
 
       if ( !_pendingRequests.empty() ) {
+         ret = true;
          std::set<void *>::iterator it = _pendingRequests.begin();
          while ( it != _pendingRequests.end() ) {
             GetRequest *req = (GetRequest *) (*it);
@@ -237,4 +254,5 @@ void BaseThread::processTransfers ()
       }
       }
    }
+   return ret;
 }

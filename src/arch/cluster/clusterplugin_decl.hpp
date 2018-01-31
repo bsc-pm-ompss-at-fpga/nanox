@@ -28,6 +28,23 @@
 namespace nanos {
 namespace ext {
 
+//! \brief ClusterListener to be registered in the EventDispatcher
+class ClusterListener : public EventListener {
+   private:
+      //Disable copy constructor
+      ClusterListener( const ClusterListener &ref ) { }
+
+   public:
+      //Default constructor and destructor
+      ClusterListener() { }
+      ~ClusterListener() { }
+
+      //! \brief Callback executed when a worker become idle
+      void callback( BaseThread * thread ) {
+         thread->processTransfers();
+      }
+};
+
 class ClusterPlugin : public ArchPlugin
 {
       GASNetAPI *_gasnetApi;
@@ -41,13 +58,12 @@ class ClusterPlugin : public ArchPlugin
       bool _allocFit;
       bool _allowSharedThd;
       bool _unalignedNodeMem;
-      int _gpuPresend;
-      int _smpPresend;
       System::CachePolicyType _cachePolicy;
       std::vector<ext::ClusterNode *> *_remoteNodes;
       ext::SMPProcessor *_cpu;
       ext::SMPMultiThread *_clusterThread;
       std::size_t _gasnetSegmentSize;
+      ClusterListener                  _clusterListener; /*! \brief Cluster listener for atIdle events */
 
    public:
       ClusterPlugin();
@@ -56,10 +72,8 @@ class ClusterPlugin : public ArchPlugin
 
       void prepare( Config& cfg );
       std::size_t getNodeMem() const;
-      int getGpuPresend() const;
-      int getSmpPresend() const;
       System::CachePolicyType getCachePolicy ( void ) const;
-      RemoteWorkDescriptor * getRemoteWorkDescriptor( int archId );
+      RemoteWorkDescriptor * getRemoteWorkDescriptor( unsigned int nodeId, int archId );
       bool getAllocFit() const;
       bool unalignedNodeMemory() const;
 
@@ -68,7 +82,7 @@ class ClusterPlugin : public ArchPlugin
       virtual void finalize();
 
       virtual ProcessingElement * createPE( unsigned id, unsigned uid );
-      virtual unsigned getNumThreads() const; 
+      virtual unsigned getNumThreads() const;
       void addPEs( PEMap &pes ) const;
       virtual void addDevices( DeviceList &devices ) const {}
       virtual unsigned int getNumPEs() const;

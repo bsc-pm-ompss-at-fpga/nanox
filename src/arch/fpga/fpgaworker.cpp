@@ -171,23 +171,12 @@ void FPGAWorker::FPGAWorkerLoop() {
    }
    //we may need to chech for remaining WD
 
-   //Let the threads exit the team
-
    SMPMultiThread *parentM = ( SMPMultiThread * ) parent;
    for ( unsigned int i = 0; i < parentM->getNumThreads(); i += 1 ) {
       myThread = parentM->getThreadVector()[ i ];
-
-      // Acquire the lock and leave it acquired to avoid any further access
-      currentThread = myThread;
-      //currentThread->_lock.acquire(); //NOTE: Not sure if can be deleted (if not, restore the class member)
-
-      myThread->leaveTeam();
       myThread->joined();
    }
    myThread = parent;
-   //let the parent thread leave the team
-   myThread->leaveTeam();
-   myThread->joined();
 }
 
 WD * FPGAWorker::getFPGAWD(BaseThread *thread) {

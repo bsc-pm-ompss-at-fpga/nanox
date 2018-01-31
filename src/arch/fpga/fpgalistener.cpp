@@ -29,7 +29,7 @@ void FPGAListener::callback( BaseThread* self )
 
    /*!
     * Try to atomically reserve an slot
-    * NOTE: The order or if statements cannot be reversed as _count must be always increased to keep
+    * NOTE: The order of if statements cannot be reversed as _count must be always increased to keep
     *       the value coherent after the descrease.
     */
    if ( _count.fetchAndAdd() < maxThreads || maxThreads == -1 ) {

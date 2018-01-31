@@ -80,6 +80,10 @@ class FPGAPlugin : public ArchPlugin
        */
       void init()
       {
+         //Forward this initialization as it has to be done regardless fpga support is enabled.
+         //The reason is that cluster require this structure also without fpga tasks
+         FPGADD::init( &_fpgaDevices );
+
          //Check if the plugin has to be initialized
          if ( FPGAConfig::isDisabled() ) {
             debug0( "FPGA Arch support not needed or disabled. Skipping initialization" );
@@ -104,7 +108,6 @@ class FPGAPlugin : public ArchPlugin
          FPGAConfig::apply();
 
          //Initialize some variables
-         FPGADD::init( &_fpgaDevices );
          _fpgas.reserve( FPGAConfig::getFPGACount() );
          _helperThreads.reserve( FPGAConfig::getNumFPGAThreads() );
          _helperCores.reserve( FPGAConfig::getNumFPGAThreads() );
@@ -314,15 +317,8 @@ class FPGAPlugin : public ArchPlugin
                ", in SMP processor: " << ( *it )->getId() );
             _helperThreads.push_back( fpgaHelper );
 
-            // Register each sub-thread of Multithread
-            for ( std::vector<BaseThread*>::const_iterator it2 = fpgaHelper->getThreadVector().begin();
-                  it2 != fpgaHelper->getThreadVector().end(); it2++ )
-            {
-               BaseThread * thd = *it2;
-               workers.insert( std::make_pair( thd->getId(), thd ) );
-            }
-
             //Push multithread into the team to let it steam tasks from other smp threads
+            //When the parent thread enters in a team, all sub-threads also enter the team
             workers.insert( std::make_pair( fpgaHelper->getId(), fpgaHelper ) );
          }
       }

@@ -26,6 +26,8 @@
 #include "basethread.hpp"
 #include "smpthread.hpp"
 #include "netwd_decl.hpp"
+#include "clusterconfig.hpp"
+
 #ifdef OpenCL_DEV
 #include "opencldd.hpp"
 #endif
@@ -81,8 +83,13 @@ void ClusterThread::RunningWDQueue::completeWD( void *remoteWdAddr ) {
 }
 
 ClusterThread::ClusterThread( WD &w, PE *pe, SMPMultiThread *parent, int device )
-   : BaseThread( (unsigned int) -1, w, pe, parent ), _clusterNode( device ), _lock() {
+   : BaseThread( parent->getOsId(), w, pe, parent ), _clusterNode( device ), _lock() {
    setCurrentWD( w );
+   int other_archs=0;
+#ifdef FPGA_DEV
+   other_archs = FPGADD::getNumDevices();
+#endif
+   _runningWDs = new RunningWDQueue[MAX_STATIC_ARCHS+other_archs];
 }
 
 ClusterThread::~ClusterThread() {
@@ -138,14 +145,25 @@ void ClusterThread::notifyOutlinedCompletionDependent( WD *completedWD ) {
    }
 #endif
 #ifdef FPGA_DEV
-   else if ( completedWD->canRunIn( FPGA ) )
+   else
    {
-      arch = 3;
+      bool canRun = false;
+      for (FPGADeviceMap::iterator it = FPGADD::getDevicesMapBegin();
+           it != FPGADD::getDevicesMapEnd(); ++it) {
+         if (completedWD->canRunIn(*it->second)) {
+            arch = it->first + MAX_STATIC_ARCHS;
+            canRun = true;
+         }
+      }
+      if (!canRun) {
+         fatal("Unsupported architecture");
+      }
    }
-#endif
+#else
    else {
       fatal("Unsupported architecture");
    }
+#endif
    _runningWDs[ arch ].completeWD( completedWD );
 }
 void ClusterThread::addRunningWD( unsigned int archId, WorkDescriptor *wd ) {
@@ -161,18 +179,21 @@ bool ClusterThread::acceptsWDs( unsigned int archId ) const {
    unsigned int presend_setting = 0;
    switch (archId) {
       case 0: //SMP
-         presend_setting = sys.getNetwork()->getSmpPresend();
+         presend_setting = ClusterConfig::getSmpPresend();
          break;
       case 1: //GPU
-         presend_setting = sys.getNetwork()->getGpuPresend();
+         presend_setting = ClusterConfig::getGpuPresend();
          break;
       case 2: //OCL
-         presend_setting = sys.getNetwork()->getGpuPresend(); //FIXME
+         presend_setting = ClusterConfig::getOclPresend();
          break;
-      case 3: //FPGA
-         presend_setting = sys.getNetwork()->getGpuPresend(); //FIXME
-         break;
-      default:
+      default: //FPGA
+#ifdef FPGA_DEV
+         if (FPGADD::getNumDevices() + MAX_STATIC_ARCHS > archId) {
+            presend_setting = ClusterConfig::getGpuPresend();
+            break;
+         }
+#endif //FPGA_DEV
          fatal("Impossible path");
          break;
    }
@@ -308,9 +329,13 @@ void ClusterThread::workerClusterLoop ()
 {
    BaseThread *parent = myThread;
    BaseThread *current_thread = ( myThread = myThread->getNextThread() );
+   const int init_spins = ( ( SMPMultiThread* ) parent )->getNumThreads();
+   int spins = init_spins;
 
    for ( ; ; ) {
       if ( !parent->isRunning() ) break;
+
+      bool isIdle = true;
 
       if ( parent != current_thread ) // if parent == myThread, then there are no "soft" threads and just do nothing but polling.
       {
@@ -325,6 +350,8 @@ void ClusterThread::workerClusterLoop ()
                thisNode->setActiveDevice( it->second );
                myClusterThread->clearCompletedWDs( arch_id );
                if ( myClusterThread->hasWaitingDataWDs( arch_id ) ) {
+                  isIdle = false; //< Cluster worker is not idle
+
                   WD * wd_waiting = myClusterThread->getWaitingDataWD( arch_id );
                   if ( wd_waiting->isInputDataReady() ) {
                      myClusterThread->addRunningWD( arch_id, wd_waiting );
@@ -379,6 +406,8 @@ void ClusterThread::workerClusterLoop ()
                   }
                } else {
                   if ( myClusterThread->hasAPendingWDToInit( arch_id ) ) {
+                     isIdle = false; //< Cluster worker is not idle
+
                      WD * wd = myClusterThread->getPendingInitWD( arch_id );
                      if ( Scheduler::tryPreOutlineWork(wd) ) {
                         current_thread->runningOn()->preOutlineWorkDependent( *wd );
@@ -399,8 +428,9 @@ void ClusterThread::workerClusterLoop ()
                      if ( myClusterThread->acceptsWDs( arch_id ) )
                      {
                         WD * wd = getClusterWD( current_thread );
-                        if ( wd )
-                        {
+                        if ( wd ) {
+                           isIdle = false; //< Cluster worker is not idle
+
                            Scheduler::prePreOutlineWork(wd);
                            if ( Scheduler::tryPreOutlineWork(wd) ) {
                               current_thread->runningOn()->preOutlineWorkDependent( *wd );
@@ -426,14 +456,33 @@ void ClusterThread::workerClusterLoop ()
          }
       }
       //sys.getNetwork()->poll(parent->getId());
-      myThread->processTransfers();
+      if ( myThread->processTransfers() ) {
+         isIdle = false; //< Worker has done some useful work in processTransfers -> It is not Idle
+      }
+
+      if ( !isIdle ) {
+         spins = init_spins;
+      } else if ( --spins == 0 ) {
+         //The worker is idle and the max. number of spins has been reached
+         spins = init_spins;
+
+         if ( ClusterConfig::getHybridWorkerEnabled() ) {
+            //Try to get one SMP task
+            BaseThread *tmpThread = myThread;
+            myThread = parent; //Parent should be already an smp thread
+            Scheduler::helperWorkerLoop();
+            myThread = tmpThread;
+         }
+
+         //TODO: Add yield stuff
+      }
+
       current_thread = ( myThread = myThread->getNextThread() );
    }
 
    SMPMultiThread *parentM = ( SMPMultiThread * ) parent;
    for ( unsigned int i = 0; i < parentM->getNumThreads(); i += 1 ) {
       myThread = parentM->getThreadVector()[ i ];
-      myThread->leaveTeam();
       myThread->joined();
    }
    myThread = parent;

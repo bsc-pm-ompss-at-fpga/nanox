@@ -166,11 +166,12 @@ namespace ext {
          bool _unalignedNodeMemory;
 
       public:
-         typedef RemoteWorkDescriptor *ArchRWDs[4]; //0: smp, 1: cuda, 2: opencl, 3: fpga
+         typedef RemoteWorkDescriptor **ArchRWDs; //0: smp, 1: cuda, 2: opencl, MAX_STATIC_ARCHS..: fpga
          ArchRWDs *_rwgs; //archs
 
          GASNetAPI();
          ~GASNetAPI();
+         void allocArchRWDs(int a, int b);
          void initialize ( Network *net );
          void finalize ();
          void finalizeNoBarrier ();
@@ -192,7 +193,7 @@ namespace ext {
          void sendRequestPut( unsigned int dest, uint64_t origAddr, unsigned int dataDest, uint64_t dstAddr, std::size_t len, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId, unsigned int metaSeq );
          void sendRequestPutStrided1D( unsigned int dest, uint64_t origAddr, unsigned int dataDest, uint64_t dstAddr, std::size_t len, std::size_t count, std::size_t ld, unsigned int wdId, WD const *wd, void *hostObject, reg_t hostRegId, unsigned int metaSeq );
          void sendRegionMetadata( unsigned int dest, CopyData *cd, unsigned int seq );
-
+      
          std::size_t getMaxGetStridedLen() const;
          std::size_t getTotalBytes();
          std::size_t getRxBytes();

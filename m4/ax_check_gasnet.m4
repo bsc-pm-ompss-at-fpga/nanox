@@ -114,9 +114,12 @@ AS_IF([test "x$gasnet" = xyes],[
   # compiler
 
   gasnet_available_conduits=
+  with_axiomhome=/home/afilguer/sources/axiom/axiom-evi
   _AX_CHECK_GASNET_CONDUIT(smp,$CXX)
   _AX_CHECK_GASNET_CONDUIT(udp,$CXX,-lamudp)
   _AX_CHECK_GASNET_CONDUIT(aries,$CXX,[-L/opt/cray/pmi/5.0.10-1.0000.11050.0.0.ari/lib64 -lpmi -L/opt/cray/ugni/6.0-1.0502.10863.8.29.ari/lib64 -lugni -Wl,--whole-archive,-lhugetlbfs,--no-whole-archive],-DGASNET_CONDUIT_ARIES)
+  _AX_CHECK_GASNET_CONDUIT(axiom,$CXX,-L$with_axiomhome/output/staging/usr/lib -laxiom_allocator -levi_lmm -laxiom_user_api -laxiom_run_api -laxiom_init_api,[-I$with_axiomhome/output/staging/usr/include/axiom],[-Wl,-T$with_axiomhome/output/target/usr/axiom-evi-allocator-lib/xs_map64.lds])
+  _AX_CHECK_GASNET_CONDUIT(axiom,$CXX,-L$with_axiom_rootfs/usr/lib -L$with_axiom_rootfs/usr/local/lib -laxiom_allocator -levi_lmm -laxiom_user_api -laxiom_run_api -laxiom_init_api,[-I$with_axiom_rootfs/usr/include/axiom -I$with_axiom_rootfs/usr/local/include/axiom],[-Wl,-T$with_axiom_rootfs/usr/axiom-evi-allocator-lib/xs_map64.lds])
 
   # set the appropiate LDFLAGS for conduits that require MPI
   AX_VAR_PUSHVALUE([LDFLAGS],[$LDFLAGS $mpilib])
@@ -174,7 +177,7 @@ AS_IF([test "x$gasnet_available_conduits" != x],[
   AC_SUBST([HAVE_GASNET], [NO_CLUSTER_DEV])
 ])
 
-m4_foreach_w([conduit_name],[smp udp mpi ibv mxm aries],[
+m4_foreach_w([conduit_name],[smp udp mpi ibv mxm aries axiom],[
   _AX_CONDUIT_SUBST(conduit_name)
 ])
 
@@ -194,6 +197,7 @@ AC_DEFUN([_AX_CHECK_GASNET_CONDUIT],
   AS_VAR_PUSHDEF([conduit_libs], [gasnet_$1_libs])
 
   conduit_prereq_libs="$PTHREAD_LIBS -lrt $3"
+  conduit_other_flags="$5"
   conduit_inc="-isystem $gasnetinc -I$gasnetinc/$1-conduit $4"
 
   AX_VAR_PUSHVALUE([CXX],[$2])
@@ -219,7 +223,7 @@ AC_DEFUN([_AX_CHECK_GASNET_CONDUIT],
                   [gasnet-$1-par],
                   [conduit_available=yes],
                   [conduit_available=no],
-                  [$conduit_prereq_libs])
+                  [$conduit_prereq_libs $conduit_other_flags])
     ])
   ])
 

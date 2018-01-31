@@ -73,7 +73,7 @@ namespace ext {
          }
 
          virtual bool isCluster() { return false; }
-         void processTransfers ();
+         bool processTransfers ();
 
          //virtual int checkStateDependent( int numPe ) {
          //   fatal( "SMPThread does not support checkStateDependent()" );
@@ -138,6 +138,11 @@ namespace ext {
          void addThreadsFromPEs(unsigned int representingPEsCount, PE **representingPEs);
          virtual bool canBlock() { return false;}
          virtual void initializeDependent( void );
+
+         //NOTE: In a MultiThread all sub-threads enter and leave the team with its parent
+         virtual void enterTeam( TeamData *data );
+         virtual void leaveTeam();
+         virtual void setLeaveTeam( bool leave );
    };
 } // namespace ext
 } // namespace nanos

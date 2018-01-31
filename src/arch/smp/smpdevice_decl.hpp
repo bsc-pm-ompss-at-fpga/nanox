@@ -71,7 +71,10 @@ namespace nanos {
 
          virtual void _getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem, SimpleAllocator::ChunkList &list );
 
-         void tryExecuteTransfer();
+         /*! \brief  Try to execute one pending transfer.
+             \return The function returns true if one transfer was executed, false otherwise
+          */
+         bool tryExecuteTransfer();
 
    };
 } // namespace nanos

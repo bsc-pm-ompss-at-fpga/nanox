@@ -68,6 +68,7 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
                  , _memkindSupport( false )
                  , _memkindMemorySize( 1024*1024*1024 ) // 1Gb
                  , _asyncSMPTransfers( true )
+                 , _smpListener()
    {}
 
    SMPPlugin::~SMPPlugin() {
@@ -267,6 +268,9 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
          (*_cpusByCpuId)[ *it ] = cpu;
          count += 1;
       }
+
+      //Register the SMPListener in the EventDispatcher
+      sys.getEventDispatcher().addListenerAtIdle( _smpListener );
 
 #ifdef NANOS_DEBUG_ENABLED
       if ( sys.getVerbose() ) {
@@ -528,7 +532,7 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
    }
 
 
-   ext::SMPProcessor * SMPPlugin::getLastFreeSMPProcessorAndReserve()
+   ext::SMPProcessor * SMPPlugin::getLastFreeSMPProcessor()
    {
       ensure( _cpus != NULL, "Uninitialized SMP plugin.");
       ext::SMPProcessor *target = NULL;
@@ -537,8 +541,16 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
             it++ ) {
          if ( (*it)->getNumThreads() == 0 && !(*it)->isReserved() && (*it)->isActive() ) {
             target = *it;
-            target->reserve();
          }
+      }
+      return target;
+   }
+
+   ext::SMPProcessor * SMPPlugin::getLastFreeSMPProcessorAndReserve()
+   {
+      ext::SMPProcessor *target = getLastFreeSMPProcessor();
+      if ( target ) {
+         target->reserve();
       }
       return target;
    }

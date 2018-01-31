@@ -249,7 +249,11 @@ namespace nanos {
          void unpause ();
 
          virtual void idle( bool debug = false ) {};
-         virtual void processTransfers();
+
+         /*! \brief  Process Network transfers.
+             \return The function return true if some useful work has been done, false otherwise
+          */
+         virtual bool processTransfers();
          virtual void yield() {};
 
          /*! \brief Called when the thread becomes blocked inside a SynchronizedCondition and it
@@ -302,9 +306,13 @@ namespace nanos {
 
          // team related methods
          void reserve();
-         void enterTeam( TeamData *data = NULL );
+         virtual void enterTeam( TeamData *data = NULL );
          bool hasTeam() const;
-         void leaveTeam();
+         virtual void leaveTeam();
+         void leaveTeamNoDeleteTeamData ();
+         bool isLeavingTeam () const;
+         virtual void setLeaveTeam ( bool leave );
+
 
          ThreadTeam * getTeam() const;
          TeamData * getTeamData() const;
@@ -339,10 +347,6 @@ namespace nanos {
          void enableGettingWork ();
 
          void disableGettingWork ();
-
-         bool isLeavingTeam () const;
-
-         void setLeaveTeam ( bool leave );
 
          ProcessingElement * runningOn() const;
 
