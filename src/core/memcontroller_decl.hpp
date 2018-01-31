@@ -85,6 +85,10 @@ public:
    bool isMemoryAllocated() const;
    void setCacheMetaData();
    bool ownsRegion( global_reg_t const &reg );
+
+   /*! \brief     Returns whether the controller has objects of the provided region key
+       \param[in] Region which key must be checked (id is ignored)
+    */
    bool hasObjectOfRegion( global_reg_t const &reg );
    bool containsAllCopies( MemController const &target ) const;
 };
