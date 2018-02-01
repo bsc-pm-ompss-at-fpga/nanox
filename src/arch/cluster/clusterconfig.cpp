@@ -28,6 +28,7 @@ int ClusterConfig::_smpPresend = 1;
 int ClusterConfig::_gpuPresend = 1;
 int ClusterConfig::_oclPresend = 1;
 int ClusterConfig::_fpgaPresend = 1;
+unsigned int ClusterConfig::_maxArchId = 3; //< 0: SMP, 1: CUDA, 2: OCL, 3: FPGA
 
 void ClusterConfig::prepare( Config &cfg )
 {

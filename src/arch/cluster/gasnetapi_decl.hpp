@@ -166,7 +166,7 @@ namespace ext {
          bool _unalignedNodeMemory;
 
       public:
-         typedef RemoteWorkDescriptor **ArchRWDs; //0: smp, 1: cuda, 2: opencl, MAX_STATIC_ARCHS..: fpga
+         typedef RemoteWorkDescriptor **ArchRWDs; //0: smp, 1: cuda, 2: opencl, 3..N: fpga
          ArchRWDs *_rwgs; //archs
 
          GASNetAPI();

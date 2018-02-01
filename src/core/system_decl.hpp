@@ -67,9 +67,6 @@ class ClusterMPIPlugin;
 }
 #endif
 
-/* Number of static architectures */
-#define MAX_STATIC_ARCHS 3 //SMP + GPU + OPENCL
-
 namespace nanos {
 
 // This class initializes/finalizes the library

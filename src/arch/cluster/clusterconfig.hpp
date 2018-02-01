@@ -33,6 +33,7 @@ namespace ext {
          static int             _gpuPresend;      /*! \brief Max. number of tasks sent to remote node without waiting */
          static int             _oclPresend;      /*! \brief Max. number of tasks sent to remote node without waiting */
          static int             _fpgaPresend;     /*! \brief Max. number of tasks sent to remote node without waiting */
+         static unsigned int    _maxArchId;       /*! \brief Max. cluster architecture identifier. Any id will be in [0, _maxArchId] */
 
       public:
          /*! Parses the Cluster user options */
@@ -48,6 +49,8 @@ namespace ext {
          static int getGpuPresend() { return _gpuPresend; }
          static int getOclPresend() { return _oclPresend; }
          static int getFpgaPresend() { return _fpgaPresend; }
+         static unsigned int getMaxClusterArchId() { return _maxArchId; }
+         static void setMaxClusterArchId( unsigned int const num ) { _maxArchId = num; }
    };
 
 } // namespace ext
