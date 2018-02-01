@@ -1,4 +1,5 @@
 #include "netwd_decl.hpp"
+#include "clusterconfig.hpp"
 #include "workdescriptor.hpp"
 #include "system_decl.hpp"
 #ifdef OpenCL_DEV
@@ -89,36 +90,39 @@ void SerializedWDFields::setup( WD const &wd ) {
       _totalDimensions += wd.getCopies()[i].getNumDimensions();
    }
 
-   _archId = -1;
+   _clusterArchId = -1;
    if ( wd.canRunIn( getSMPDevice() ) ) {
-      _archId = 0;
+      _clusterArchId = 0;
    }
 #ifdef GPU_DEV
    else if ( wd.canRunIn( GPU ) )
    {
-      _archId = 1;
+      _clusterArchId = 1;
    }
 #endif
 #ifdef OpenCL_DEV
    else if ( wd.canRunIn( OpenCLDev ) )
    {
-      _archId = 2;
+      _clusterArchId = 2;
    }
 #endif
 #ifdef FPGA_DEV
    else
    {
+      int archCode = 3;
       for (FPGADeviceMap::iterator it = FPGADD::getDevicesMapBegin(); it != FPGADD::getDevicesMapEnd(); ++it) {
          FPGADevice const * fpga = it->second;
          if (wd.canRunIn( *fpga )) {
-            _archId = MAX_STATIC_ARCHS + (int)fpga->getFPGAType();
+            _clusterArchId = archCode;
+            _archExtra = ( int )( fpga->getFPGAType() );
             break;
          }
+         archCode++;
       }
    }
 #endif
 
-   if ( _archId == -1 ) {
+   if ( _clusterArchId == -1 ) {
       fatal("unsupported architecture");
    }
 }
@@ -150,7 +154,11 @@ void (*SerializedWDFields::getXlateFunc() const)(void *, void*) {
 }
 
 unsigned int SerializedWDFields::getArchId() const {
-   return _archId;
+   return _clusterArchId;
+}
+
+int SerializedWDFields::getArchExtraInfo() const {
+   return _archExtra;
 }
 
 unsigned int SerializedWDFields::getWDId() const {
@@ -205,6 +213,11 @@ WD2Net::WD2Net( WD const &wd ) {
       newCopies[i].setHostRegionId( wd._mcontrol._memCacheCopies[i]._reg.id );
       dimensionIndex += cd.getNumDimensions();
    }
+#ifdef NANOS_DEBUG_ENABLED
+   if ( wd.getNumCopies() == 0 ) {
+      warning( "Sending a WD with 0 copies to a remote cluster node. Execution could generate wrong results." );
+   }
+#endif
 }
 
 WD2Net::~WD2Net() {
@@ -230,6 +243,7 @@ Net2WD::Net2WD( char *buffer, std::size_t buffer_size, RemoteWorkDescriptor **rw
    nanos_fpga_args_t fpga_args;
 #endif
 
+   ensure( swd->getArchId() <= ClusterConfig::getMaxClusterArchId(), "Wrong archId in Net2WD::Net2WD" );
    switch (swd->getArchId()) {
       case 0: //SMP
          dev.factory = local_nanos_smp_factory;
@@ -249,7 +263,7 @@ Net2WD::Net2WD( char *buffer, std::size_t buffer_size, RemoteWorkDescriptor **rw
          dev.factory = local_nanos_fpga_factory;
          //NOTE: Replace the arg option as FPGA uses its own args type
          fpga_args.outline = swd->getOutline();
-         fpga_args.acc_num = (int)( swd->getArchId() - MAX_STATIC_ARCHS );
+         fpga_args.acc_num = swd->getArchExtraInfo();
          dev.arg = (void *) &fpga_args;
          break;
 #else

@@ -85,11 +85,7 @@ void ClusterThread::RunningWDQueue::completeWD( void *remoteWdAddr ) {
 ClusterThread::ClusterThread( WD &w, PE *pe, SMPMultiThread *parent, int device )
    : BaseThread( parent->getOsId(), w, pe, parent ), _clusterNode( device ), _lock() {
    setCurrentWD( w );
-   int other_archs=0;
-#ifdef FPGA_DEV
-   other_archs = FPGADD::getNumDevices();
-#endif
-   _runningWDs = new RunningWDQueue[MAX_STATIC_ARCHS+other_archs];
+   _runningWDs = new RunningWDQueue[ClusterConfig::getMaxClusterArchId() + 1];
 }
 
 ClusterThread::~ClusterThread() {
@@ -148,12 +144,14 @@ void ClusterThread::notifyOutlinedCompletionDependent( WD *completedWD ) {
    else
    {
       bool canRun = false;
+      arch = 3;
       for (FPGADeviceMap::iterator it = FPGADD::getDevicesMapBegin();
            it != FPGADD::getDevicesMapEnd(); ++it) {
          if (completedWD->canRunIn(*it->second)) {
-            arch = it->first + MAX_STATIC_ARCHS;
             canRun = true;
+            break;
          }
+         arch++;
       }
       if (!canRun) {
          fatal("Unsupported architecture");
@@ -176,6 +174,7 @@ void ClusterThread::clearCompletedWDs( unsigned int archId ) {
    _runningWDs[archId].clearCompletedWDs( this );
 }
 bool ClusterThread::acceptsWDs( unsigned int archId ) const {
+   ensure( archId <= ClusterConfig::getMaxClusterArchId(), "Wrong archId in ClusterThread::acceptsWDs" );
    unsigned int presend_setting = 0;
    switch (archId) {
       case 0: //SMP
@@ -188,13 +187,7 @@ bool ClusterThread::acceptsWDs( unsigned int archId ) const {
          presend_setting = ClusterConfig::getOclPresend();
          break;
       default: //FPGA
-#ifdef FPGA_DEV
-         if (FPGADD::getNumDevices() + MAX_STATIC_ARCHS > archId) {
-            presend_setting = ClusterConfig::getGpuPresend();
-            break;
-         }
-#endif //FPGA_DEV
-         fatal("Impossible path");
+         presend_setting = ClusterConfig::getFpgaPresend();
          break;
    }
    return ( numRunningWDs(archId) < presend_setting );

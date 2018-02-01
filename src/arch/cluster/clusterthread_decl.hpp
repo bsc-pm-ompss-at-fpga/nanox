@@ -62,7 +62,7 @@ namespace ext {
 
       unsigned int                     _clusterNode; // Assigned Cluster device Id
       Lock _lock;
-      RunningWDQueue *_runningWDs; //0: SMP, 1: GPU, 2: OCL, MAX_STATIC_ARCHS..: FPGA
+      RunningWDQueue *_runningWDs; //0: SMP, 1: GPU, 2: OCL, 3..N: FPGA
 
       // disable copy constructor and assignment operator
       ClusterThread( const ClusterThread &th );

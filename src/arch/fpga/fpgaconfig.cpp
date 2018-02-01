@@ -107,11 +107,14 @@ void FPGAConfig::prepare( Config &config )
 
 void FPGAConfig::apply()
 {
-   //Auto-enable support if Mercurium requires it
-   _enableFPGA = _enableFPGA || nanos_needs_fpga_fun;
+   bool userWantsFpga = _enableFPGA;
+
+   // Enable support if Mercurium or user requires it
+   _enableFPGA = userWantsFpga || nanos_needs_fpga_fun;
 
    if ( _forceDisableFPGA || !_enableFPGA || _numAccelerators == 0 ||
-        _numAcceleratorsSystem <= 0 || ( _numFPGAThreads == 0 && !_idleCallback ) )
+      ( _numAcceleratorsSystem <= 0 && !userWantsFpga ) ||
+      ( _numFPGAThreads == 0 && !_idleCallback && !userWantsFpga ) )
    {
       // The current configuration disables the FPGA support
       if ( nanos_needs_fpga_fun ) {
@@ -125,7 +128,7 @@ void FPGAConfig::apply()
    } else if ( _numAccelerators < 0 || _numAccelerators > _numAcceleratorsSystem ) {
       // The number of accelerators available in the system has to be used
       if ( _numAccelerators > _numAcceleratorsSystem ) {
-         warning0( "The number of FPGA accelerators is larger than the accelerators in the system."
+         warning0( " The number of FPGA accelerators is larger than the accelerators in the system."
             << " Using " << _numAcceleratorsSystem << " accelerators." );
 
       }
@@ -135,7 +138,7 @@ void FPGAConfig::apply()
    if ( _numFPGAThreads < 0 ) {
       _numFPGAThreads = 1;
    } else if ( _numFPGAThreads > _numAccelerators ) {
-      warning0( "Number of FPGA helper threads is larger than the number of FPGA accelerators." );
+      warning0( " Number of FPGA helper threads is larger than the number of FPGA accelerators." );
       //         << "Using one thread per accelerator (" << _numAccelerators << ")" );
       //_numFPGAThreads = _numAccelerators;
    }

@@ -21,14 +21,12 @@
 #include "clusterplugin_decl.hpp"
 #include "smpdd.hpp"
 #include "remoteworkdescriptor_decl.hpp"
+#include "clusterconfig.hpp"
 
 #ifdef GPU_DEV
 //FIXME: GPU Support
 #include "gpudd.hpp"
 #include "gpudevice_decl.hpp"
-#endif
-#ifdef FPGA_DEV
-#include "fpgadd.hpp"
 #endif
 
 #include "system.hpp"
@@ -881,11 +879,7 @@ void GASNetAPI::amRegionMetadata(gasnet_token_t token, void *arg, std::size_t ar
 
 void GASNetAPI::amSynchronizeDirectory(gasnet_token_t token, gasnet_handlerarg_t addrLo, gasnet_handlerarg_t addrHi ) {
    DisableAM c;
-   unsigned int num_archs_dynamic=0; //FPGA archs
-#ifdef FPGA_DEV
-   num_archs_dynamic = FPGADD::getNumDevices();
-#endif
-   unsigned int total_archs = num_archs_dynamic + MAX_STATIC_ARCHS;
+   unsigned int total_archs = ClusterConfig::getMaxClusterArchId() + 1;
    WorkDescriptor **wds = new WorkDescriptor*[total_archs];
    gasnet_node_t src_node;
    void * addr = (void *) MERGE_ARG( addrHi, addrLo );
@@ -906,10 +900,12 @@ void GASNetAPI::amSynchronizeDirectory(gasnet_token_t token, gasnet_handlerarg_t
    wds[numWDs] = getInstance()->_rwgs[src_node][2];
    numWDs += 1;
 #endif
-   for (unsigned int i=MAX_STATIC_ARCHS; i<total_archs; i++) {
+#ifdef FPGA_DEV
+   for (unsigned int i=3; i<total_archs; i++) {
       wds[numWDs] = getInstance()->_rwgs[src_node][i];
       numWDs++;
    }
+#endif
    getInstance()->_net->notifySynchronizeDirectory( numWDs, wds, addr );
 }
 
