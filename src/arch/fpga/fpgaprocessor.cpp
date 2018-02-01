@@ -247,6 +247,9 @@ bool FPGAProcessor::inlineWorkDependent( WD &wd )
    outlineWorkDependent( wd );
    while ( !wd.isDone() ) {
       myThread->idle();
+      //! NOTE: FPGAProcessor::tryPostOutlineTasks must be directly called here because the fpga-idle-callback
+      //        may be disabled. Therefore, it won't be called inside myThread->idle() through the EventDispatcher
+      tryPostOutlineTasks();
    }
 
    return true;
