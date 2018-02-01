@@ -213,6 +213,11 @@ WD2Net::WD2Net( WD const &wd ) {
       newCopies[i].setHostRegionId( wd._mcontrol._memCacheCopies[i]._reg.id );
       dimensionIndex += cd.getNumDimensions();
    }
+#ifdef NANOS_DEBUG_ENABLED
+   if ( wd.getNumCopies() == 0 ) {
+      warning( "Sending a WD with 0 copies to a remote cluster node. Execution could generate wrong results." );
+   }
+#endif
 }
 
 WD2Net::~WD2Net() {
