@@ -226,6 +226,10 @@ Net2WD::Net2WD( char *buffer, std::size_t buffer_size, RemoteWorkDescriptor **rw
 
    nanos_smp_args_t smp_args = { swd->getOutline() };
    nanos_device_t dev = { NULL, (void *) &smp_args };
+#ifdef FPGA_DEV
+   nanos_fpga_args_t fpga_args;
+#endif
+
    switch (swd->getArchId()) {
       case 0: //SMP
          dev.factory = local_nanos_smp_factory;
@@ -242,9 +246,11 @@ Net2WD::Net2WD( char *buffer, std::size_t buffer_size, RemoteWorkDescriptor **rw
 #endif
 #ifdef FPGA_DEV
       default: //FPGA (keep it the last one)
-         nanos_fpga_args_t fpga_args = { swd->getOutline(), (int)( swd->getArchId() - MAX_STATIC_ARCHS ) };
-         dev.arg = (void *) &fpga_args;
          dev.factory = local_nanos_fpga_factory;
+         //NOTE: Replace the arg option as FPGA uses its own args type
+         fpga_args.outline = swd->getOutline();
+         fpga_args.acc_num = (int)( swd->getArchId() - MAX_STATIC_ARCHS );
+         dev.arg = (void *) &fpga_args;
          break;
 #else
       default: //WTF
