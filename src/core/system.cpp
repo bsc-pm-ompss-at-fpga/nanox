@@ -1511,7 +1511,7 @@ global_reg_t System::_registerMemoryChunk(void *addr, std::size_t len)
    cd.setDimensions( &dim );
    cd.setNumDimensions( 1 );
    global_reg_t reg;
-   getHostMemory().getRegionId( cd, reg, NULL, 0 );
+   getHostMemory().getRegion( cd, reg, NULL );
    return reg;
 }
 
@@ -1529,7 +1529,7 @@ global_reg_t System::_registerMemoryChunk_2dim(void *addr, std::size_t rows, std
    cd.setDimensions( &dim[0] );
    cd.setNumDimensions( 2 );
    global_reg_t reg;
-   getHostMemory().getRegionId( cd, reg, NULL, 0 );
+   getHostMemory().getRegion( cd, reg, NULL );
    return reg;
 }
 
@@ -1551,7 +1551,7 @@ void System::_distributeObject( global_reg_t &reg, unsigned int start_node, std:
       dims[ num_dims-1 ].accessed_length = size_per_node + (node_idx < rest_size);
       assigned_size += size_per_node + (node_idx < rest_size);
       global_reg_t fragmented_reg;
-      getHostMemory().getRegionId( cd, fragmented_reg, NULL, 0 );
+      getHostMemory().getRegion( cd, fragmented_reg, NULL );
       std::cerr << "fragment " << node_idx << " is "; fragmented_reg.key->printRegion(std::cerr, fragmented_reg.id); std::cerr << std::endl;
       fragmented_reg.key->addFixedRegion( fragmented_reg.id );
       unsigned int version = 0;
@@ -1600,7 +1600,7 @@ void System::stickToProducer(void *addr, std::size_t len)
       cd.setDimensions( &dim );
       cd.setNumDimensions( 1 );
       global_reg_t reg;
-      getHostMemory().getRegionId( cd, reg, NULL, 0 );
+      getHostMemory().getRegion( cd, reg, NULL );
       reg.key->setKeepAtOrigin( true );
    }
 }

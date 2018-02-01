@@ -937,14 +937,15 @@ void Network::notifyRegionMetaData( CopyData *cd, unsigned int seq ) {
       }
       //std::cerr << " processing " << __FUNCTION__ << " " << seq << std::endl;
    }
-   //!NOTE: getRegionId only returns the key of reg_t and the id field must also be set to properly flush the
-   //       devices cache before sending the data to remote cluster nodes.
-   sys.getHostMemory().getRegionId( *cd, reg, myThread->getCurrentWD(), 0 );
-   reg.id = reg.key->obtainRegionId( *cd, *myThread->getCurrentWD(), 0 /*FIXME: Any value will work? Is it used?*/ );
+
+   //Get the region key for the received copyData
+   sys.getHostMemory().getRegion( *cd, reg, myThread->getCurrentWD() );
+   //Obtain a local identifier for the region
+   reg.id = reg.key->obtainRegionId( *cd, *myThread->getCurrentWD() );
 
    reg_t master_id = cd->getHostRegionId();
-
    if ( master_id != 0 ) {
+      //! NOTE: Register the relation betwen the master id and the local id for the given key
       RegionDirectory::addMasterRegionId( reg.key, master_id, reg.id );
    }
 

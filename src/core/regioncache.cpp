@@ -998,15 +998,17 @@ void AllocatedChunk::printReferencingWDs() const {
 AllocatedChunk *RegionCache::tryGetAddress( global_reg_t const &reg, WD const &wd, unsigned int copyIdx ) {
    ChunkList results;
    AllocatedChunk *allocChunkPtr = NULL;
-   global_reg_t allocatedRegion;
+   //global_reg_t allocatedRegion;
 
    std::size_t allocSize = 0;
    uint64_t targetHostAddr = 0;
 
-   getAllocatableRegion( reg, allocatedRegion );
+   //getAllocatableRegion( reg, allocatedRegion );
 
-   targetHostAddr = allocatedRegion.getRealFirstAddress();
-   allocSize      = allocatedRegion.getDataSize();
+   //targetHostAddr = allocatedRegion.getRealFirstAddress();
+   //allocSize      = allocatedRegion.getDataSize();
+   targetHostAddr = reg.getRealFirstAddress();
+   allocSize      = reg.getDataSize();
 
    _chunks.getOrAddChunkDoNotFragment( targetHostAddr, allocSize, results );
    if ( results.size() != 1 ) {
@@ -1027,9 +1029,9 @@ AllocatedChunk *RegionCache::tryGetAddress( global_reg_t const &reg, WD const &w
          }
          if ( deviceMem != NULL ) {
             _allocatedBytes += allocSize;
-            *(results.front().second) = NEW AllocatedChunk( *this, (uint64_t) deviceMem, results.front().first->getAddress(), results.front().first->getLength(), allocatedRegion, reg.getRootedLocation() == this->getMemorySpaceId() );
+            *(results.front().second) = NEW AllocatedChunk( *this, (uint64_t) deviceMem, results.front().first->getAddress(), results.front().first->getLength(), reg /*allocatedRegion*/, reg.getRootedLocation() == this->getMemorySpaceId() );
             allocChunkPtr = *(results.front().second);
-            this->addToAllocatedRegionMap( allocatedRegion );
+            this->addToAllocatedRegionMap( reg /*allocatedRegion*/ );
             //*(results.front().second) = allocChunkPtr;
          } else {
             // I have not been able to allocate a chunk, just return NULL;
@@ -1153,15 +1155,15 @@ AllocatedChunk *RegionCache::invalidate( LockedObjects &srcRegions, Invalidation
 AllocatedChunk *RegionCache::getOrCreateChunk( LockedObjects &srcRegions, global_reg_t const &reg, WD const &wd, unsigned int copyIdx ) {
    ChunkList results;
    AllocatedChunk *allocChunkPtr = NULL;
-   global_reg_t allocatedRegion;
+   //global_reg_t allocatedRegion;
 
    std::size_t allocSize = 0;
    uint64_t targetHostAddr = 0;
 
-   getAllocatableRegion( reg, allocatedRegion );
+   //getAllocatableRegion( reg, allocatedRegion );
 
-   targetHostAddr = allocatedRegion.getRealFirstAddress();
-   allocSize      = allocatedRegion.getDataSize();
+   targetHostAddr = reg.getRealFirstAddress(); //allocatedRegion.getRealFirstAddress();
+   allocSize      = reg.getDataSize(); //allocatedRegion.getDataSize();
 
   //*myThread->_file << "-----------------------------------------" << std::endl;
   //*myThread->_file << " Max " << cd.getMaxSize() << std::endl;
@@ -1194,7 +1196,7 @@ AllocatedChunk *RegionCache::getOrCreateChunk( LockedObjects &srcRegions, global
          if ( deviceMem == NULL ) {
             /* Invalidate */
             //AllocatedChunk *invalidated_chunk = invalidate( wd._mcontrol._memCacheCopies[copyIdx], allocatedRegion, wd, copyIdx );
-            invalidate( srcRegions, wd._mcontrol._memCacheCopies[copyIdx]._invalControl, allocatedRegion, wd, copyIdx );
+            invalidate( srcRegions, wd._mcontrol._memCacheCopies[copyIdx]._invalControl, reg /*allocatedRegion*/, wd, copyIdx );
             //*(myThread->_file) << " allocatedRegion " ; allocatedRegion.key->printRegion(*(myThread->_file), allocatedRegion.id); *(myThread->_file) << " set chunkPtr to "  << results.front().second << std::endl;
             if ( wd._mcontrol._memCacheCopies[copyIdx]._invalControl.isInvalidating() ) {
                *(results.front().second) = (AllocatedChunk *) -2;
@@ -1205,9 +1207,9 @@ AllocatedChunk *RegionCache::getOrCreateChunk( LockedObjects &srcRegions, global
             }
          } else {
             _allocatedBytes += allocSize;
-            *(results.front().second) = NEW AllocatedChunk( *this, (uint64_t) deviceMem, results.front().first->getAddress(), results.front().first->getLength(), allocatedRegion, reg.getRootedLocation() == this->getMemorySpaceId() );
+            *(results.front().second) = NEW AllocatedChunk( *this, (uint64_t) deviceMem, results.front().first->getAddress(), results.front().first->getLength(), reg /*allocatedRegion*/, reg.getRootedLocation() == this->getMemorySpaceId() );
             allocChunkPtr = *(results.front().second);
-            this->addToAllocatedRegionMap( allocatedRegion );
+            this->addToAllocatedRegionMap( reg /*allocatedRegion*/ );
             allocChunkPtr->addReference( wd, 4 ); //getOrCreateChunk, invalidated
             allocChunkPtr->lock();
             //*(results.front().second) = allocChunkPtr;
@@ -1674,16 +1676,16 @@ bool RegionCache::prepareRegions( MemCacheCopy *memCopies, unsigned int numCopie
    std::pair<unsigned int, global_reg_t> regions_to_allocate_w_idx[numCopies];
    for ( unsigned int idx = 0; idx < numCopies; idx += 1 ) {
       MemCacheCopy &mcopy = memCopies[ idx ];
-      global_reg_t allocatable_region;
-      getAllocatableRegion( mcopy._reg, allocatable_region );
-      if ( regions_to_allocate.count( allocatable_region ) == 0 ) {
+      //global_reg_t allocatable_region;
+      //getAllocatableRegion( mcopy._reg, allocatable_region );
+      if ( regions_to_allocate.count( mcopy._reg /*allocatable_region*/ ) == 0 ) {
          regions_to_allocate_w_idx[ regions_to_allocate.size() ].first = idx;
-         regions_to_allocate_w_idx[ regions_to_allocate.size() ].second = allocatable_region;
-         regions_to_allocate.insert( allocatable_region );
+         regions_to_allocate_w_idx[ regions_to_allocate.size() ].second = mcopy._reg; //allocatable_region;
+         regions_to_allocate.insert( mcopy._reg /*allocatable_region*/ );
          mcopy._allocFrom = -1;
       } else {
          unsigned int alloc_idx = 0;
-         for (; alloc_idx < regions_to_allocate.size() && regions_to_allocate_w_idx[alloc_idx].second != allocatable_region; alloc_idx += 1 );
+         for (; alloc_idx < regions_to_allocate.size() && regions_to_allocate_w_idx[alloc_idx].second != mcopy._reg /*allocatable_region*/; alloc_idx += 1 );
          mcopy._allocFrom = alloc_idx;
       }
    }

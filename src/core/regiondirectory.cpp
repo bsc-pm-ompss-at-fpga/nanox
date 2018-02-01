@@ -645,82 +645,87 @@ void RegionDirectory::synchronize( WD &wd ) {
                continue;
             }
             if ( dict->getKeepAtOrigin() ) continue;
+            for (reg_t i = 1; i < dict->getMaxRegionId(); i++ ) {
+               DirectoryEntryData *entry = ( DirectoryEntryData * ) dict->getRegionData( i );
+               if ( !entry ) {
+                  //NOTE: Not sure if something has to be done in this case
+                  continue;
+               }
 
-            std::list< std::pair< reg_t, reg_t > > missingParts;
-            unsigned int version = 0;
-            //double tini = OS::getMonotonicTime();
-            /*reg_t lol =*/ dict->registerRegion(1, missingParts, version);
-            //double tfini = OS::getMonotonicTime();
-            //*myThread->_file << __FUNCTION__ << " addRegion time " << (tfini-tini) << std::endl;
-            //*myThread->_file << "Missing parts are: (want version) "<< version << " got " << lol << " { ";
-            //for ( std::list< std::pair< reg_t, reg_t > >::iterator mit = missingParts.begin(); mit != missingParts.end(); mit++ ) {
-            //   *myThread->_file <<"("<< mit->first << "," << mit->second << ") ";
-            //}
-            //*myThread->_file << "}"<<std::endl;
+               std::list< std::pair< reg_t, reg_t > > missingParts;
+               unsigned int version = 0;
+               //double tini = OS::getMonotonicTime();
+               /*reg_t lol =*/ dict->registerRegion(i, missingParts, version);
+               //double tfini = OS::getMonotonicTime();
+               //*myThread->_file << __FUNCTION__ << " addRegion time " << (tfini-tini) << std::endl;
+               //*myThread->_file << "Missing parts are: (want version) "<< version << " got " << lol << " { ";
+               //for ( std::list< std::pair< reg_t, reg_t > >::iterator mit = missingParts.begin(); mit != missingParts.end(); mit++ ) {
+               //   *myThread->_file <<"("<< mit->first << "," << mit->second << ") ";
+               //}
+               //*myThread->_file << "}"<<std::endl;
 
-            objects_to_clear.insert( std::make_pair( objectAddr, hb._bobjects ) );
+               objects_to_clear.insert( std::make_pair( objectAddr, hb._bobjects ) );
 
-            for ( std::list< std::pair< reg_t, reg_t > >::iterator mit = missingParts.begin(); mit != missingParts.end(); mit++ ) {
-               //*myThread->_file << "sync region " << mit->first << " : "<< ( void * ) dict->getRegionData( mit->first ) <<" with second reg " << mit->second << " : " << ( void * ) dict->getRegionData( mit->second )<< std::endl;
-               if ( mit->first == mit->second ) {
-                  global_reg_t reg( mit->first, dict );
-                  if ( !reg.isRooted() ) { //ignore regions rooted to a certain location
-                     if ( !reg.isLocatedIn( 0 ) ) {
-                        DeviceOps *thisOps = reg.getDeviceOps();
-                        if ( thisOps->addCacheOp( /* debug: */ &wd ) ) {
-                           DirectoryEntryData *entry = ( DirectoryEntryData * ) reg.key->getRegionData( reg.id  ); //synchronize
-                           if ( _VERBOSE_CACHE ) {
-                              *myThread->_file << "f SYNC REGION! "; reg.key->printRegion( *myThread->_file, reg.id );
-                              if ( entry ) *myThread->_file << " " << *entry << std::endl;
-                              else *myThread->_file << " nil " << std::endl;
+               for ( std::list< std::pair< reg_t, reg_t > >::iterator mit = missingParts.begin(); mit != missingParts.end(); mit++ ) {
+                  //*myThread->_file << "sync region " << mit->first << " : "<< ( void * ) dict->getRegionData( mit->first ) <<" with second reg " << mit->second << " : " << ( void * ) dict->getRegionData( mit->second )<< std::endl;
+                  if ( mit->first == mit->second ) {
+                     global_reg_t reg( mit->first, dict );
+                     if ( !reg.isRooted() ) { //ignore regions rooted to a certain location
+                        if ( !reg.isLocatedIn( 0 ) ) {
+                           DeviceOps *thisOps = reg.getDeviceOps();
+                           if ( thisOps->addCacheOp( /* debug: */ &wd ) ) {
+                              if ( _VERBOSE_CACHE ) {
+                                 *myThread->_file << "f SYNC REGION! "; reg.key->printRegion( *myThread->_file, reg.id );
+                                 if ( entry ) *myThread->_file << " " << *entry << std::endl;
+                                 else *myThread->_file << " nil " << std::endl;
+                              }
+                              //*myThread->_file << " reg is in: " << reg.getFirstLocation() << std::endl;
+                              outOps.addOutOp( 0 /* sync only non rooted objects */, reg.getFirstLocation(), reg, reg.getVersion(), thisOps, wd, (unsigned int)0xdeadbeef ); //Out op synchronize
+                              outOps.insertOwnOp( thisOps, reg, reg.getVersion()+1, 0 ); //increase version to invalidate the device copy
+                           } else {
+                              outOps.getOtherOps().insert( thisOps );
                            }
-                           //*myThread->_file << " reg is in: " << reg.getFirstLocation() << std::endl;
-                           outOps.addOutOp( 0 /* sync only non rooted objects */, reg.getFirstLocation(), reg, reg.getVersion(), thisOps, wd, (unsigned int)0xdeadbeef ); //Out op synchronize
-                           outOps.insertOwnOp( thisOps, reg, reg.getVersion()+1, 0 ); //increase version to invalidate the device copy
-                        } else {
-                           outOps.getOtherOps().insert( thisOps );
                         }
-                     }
-                     // another mechanism to inval data: else if ( reg.getNumLocations() > 1 ) {
-                     // another mechanism to inval data:    //*myThread->_file << " have too upgrade host region" << std::endl;
-                     // another mechanism to inval data:    reg.setLocationAndVersion( 0, reg.getVersion()+1 ); //increase version to invalidate the device copy
-                     // another mechanism to inval data: }
+                        // another mechanism to inval data: else if ( reg.getNumLocations() > 1 ) {
+                        // another mechanism to inval data:    //*myThread->_file << " have too upgrade host region" << std::endl;
+                        // another mechanism to inval data:    reg.setLocationAndVersion( 0, reg.getVersion()+1 ); //increase version to invalidate the device copy
+                        // another mechanism to inval data: }
 
-                     // aggregate the locations, later, we will invalidate the full object from those locations
-                     locations[dict].insert(reg.getLocations().begin(), reg.getLocations().end()); //this requires delayedCommit = yes in the ops object!! FIXME
-                  } else {
-                     //objects_to_clear.insert( std::make_pair( objectAddr, &hb._bobjects ) ); //FIXME: objects may be added later
-                     objects_to_clear.erase( objectAddr );
-                  }
-               } else {
-                  global_reg_t region_shape( mit->first, dict );
-                  global_reg_t data_source( mit->second, dict );
-                  if ( !data_source.isRooted() ) { //ignore regions rooted to a certain location
-                     if ( !data_source.isLocatedIn( 0 ) ) {
-                        //*myThread->_file << "FIXME: I should sync region! " << region_shape.id << " "; region_shape.key->printRegion( region_shape.id ); *myThread->_file << std::endl;
-                        //*myThread->_file << "FIXME: I should sync region! " << data_source.id << " "; data_source.key->printRegion( data_source.id ); *myThread->_file << std::endl;
-								DirectoryEntryData *regEntry = getDirectoryEntry( *region_shape.key, region_shape.id );
-								if ( regEntry == NULL ) {
-									regEntry = NEW DirectoryEntryData();
-									region_shape.key->setRegionData( region_shape.id, regEntry );
-								}
-								DeviceOps *thisOps = regEntry->getOps();
-                        if ( thisOps->addCacheOp( /* debug: */ &wd ) ) {
-                           DirectoryEntryData *entry = ( DirectoryEntryData * ) data_source.key->getRegionData( data_source.id  ); //synchronize
-                           if ( _VERBOSE_CACHE ) {
-                              *myThread->_file << " SYNC REGION! "; region_shape.key->printRegion( *myThread->_file, region_shape.id );
-                              if ( entry ) *myThread->_file << " " << *entry << std::endl;
-                              else *myThread->_file << " nil " << std::endl;
-                           }
-                           //*myThread->_file << " reg is in: " << reg.getFirstLocation() << std::endl;
-                           outOps.addOutOp( 0 /* sync only non rooted objects */, data_source.getFirstLocation(), region_shape, data_source.getVersion(), thisOps, wd, (unsigned int)0xdeadbeef ); //Out op synchronize
-                           outOps.insertOwnOp( thisOps, region_shape, data_source.getVersion()+1, 0 ); //increase version to invalidate the device copy
-                        } else {
-                           outOps.getOtherOps().insert( thisOps );
-                        }
+                        // aggregate the locations, later, we will invalidate the full object from those locations
+                        locations[dict].insert(reg.getLocations().begin(), reg.getLocations().end()); //this requires delayedCommit = yes in the ops object!! FIXME
+                     } else {
+                        //objects_to_clear.insert( std::make_pair( objectAddr, &hb._bobjects ) ); //FIXME: objects may be added later
+                        objects_to_clear.erase( objectAddr );
                      }
                   } else {
-                     objects_to_clear.erase( objectAddr );
+                     global_reg_t region_shape( mit->first, dict );
+                     global_reg_t data_source( mit->second, dict );
+                     if ( !data_source.isRooted() ) { //ignore regions rooted to a certain location
+                        if ( !data_source.isLocatedIn( 0 ) ) {
+                           //*myThread->_file << "FIXME: I should sync region! " << region_shape.id << " "; region_shape.key->printRegion( region_shape.id ); *myThread->_file << std::endl;
+                           //*myThread->_file << "FIXME: I should sync region! " << data_source.id << " "; data_source.key->printRegion( data_source.id ); *myThread->_file << std::endl;
+                           DirectoryEntryData *regEntry = getDirectoryEntry( *region_shape.key, region_shape.id );
+                           if ( regEntry == NULL ) {
+                              regEntry = NEW DirectoryEntryData();
+                              region_shape.key->setRegionData( region_shape.id, regEntry );
+                           }
+                           DeviceOps *thisOps = regEntry->getOps();
+                           if ( thisOps->addCacheOp( /* debug: */ &wd ) ) {
+                              if ( _VERBOSE_CACHE ) {
+                                 *myThread->_file << " SYNC REGION! "; region_shape.key->printRegion( *myThread->_file, region_shape.id );
+                                 if ( entry ) *myThread->_file << " " << *entry << std::endl;
+                                 else *myThread->_file << " nil " << std::endl;
+                              }
+                              //*myThread->_file << " reg is in: " << reg.getFirstLocation() << std::endl;
+                              outOps.addOutOp( 0 /* sync only non rooted objects */, data_source.getFirstLocation(), region_shape, data_source.getVersion(), thisOps, wd, (unsigned int)0xdeadbeef ); //Out op synchronize
+                              outOps.insertOwnOp( thisOps, region_shape, data_source.getVersion()+1, 0 ); //increase version to invalidate the device copy
+                           } else {
+                              outOps.getOtherOps().insert( thisOps );
+                           }
+                        }
+                     } else {
+                        objects_to_clear.erase( objectAddr );
+                     }
                   }
                }
             }
