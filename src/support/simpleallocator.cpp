@@ -75,20 +75,15 @@ void * SimpleAllocator::allocate( std::size_t size )
    return retAddr;
 }
 
-void * SimpleAllocator::allocateSizeAligned( std::size_t size )
+void * SimpleAllocator::alignedAllocate( std::size_t const alignment, std::size_t const size )
 {
    SegmentMap::iterator mapIter = _freeChunks.begin();
    void * retAddr = (void *) 0;
 
-   std::size_t alignedLen;
-   unsigned int count = 0;
-   while ( (size >> count) != 1 ) count++;
-   alignedLen = (1UL<<(count));
-
    while( mapIter != _freeChunks.end() && 
       mapIter->second < 
-      ( ( mapIter->first & ~(alignedLen-1) ) +
-        ( ( ( mapIter->first & (alignedLen-1) ) == 0 ) ? 0 : alignedLen ) +
+      ( ( mapIter->first & ~(alignment-1) ) +
+        ( ( ( mapIter->first & (alignment-1) ) == 0 ) ? 0 : alignment ) +
         size ) -
        mapIter->first )
    {
@@ -97,7 +92,7 @@ void * SimpleAllocator::allocateSizeAligned( std::size_t size )
    if ( mapIter != _freeChunks.end() ) {
       uint64_t chunkAddr = mapIter->first;
       std::size_t chunkSize = mapIter->second;
-      uint64_t targetAddr = ( mapIter->first & ~(alignedLen-1) ) + ( ( ( mapIter->first & (alignedLen-1) ) == 0 ) ? 0 : alignedLen ) ;
+      uint64_t targetAddr = ( mapIter->first & ~(alignment-1) ) + ( ( ( mapIter->first & (alignment-1) ) == 0 ) ? 0 : alignment ) ;
 
       //add the chunk with the new size (previous size - requested size)
       if (chunkSize > size) {

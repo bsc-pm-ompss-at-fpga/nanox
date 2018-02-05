@@ -60,7 +60,7 @@ namespace nanos {
          void unlock();
 
          void * allocate( std::size_t len );
-         void * allocateSizeAligned( std::size_t len );
+         void * alignedAllocate( std::size_t const alignment, std::size_t const len );
          std::size_t free( void *address );
 
          void canAllocate( std::size_t *sizes, unsigned int numChunks, std::size_t *remainingSizes ) const;
