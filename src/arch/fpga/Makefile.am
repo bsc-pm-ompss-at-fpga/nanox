@@ -102,9 +102,9 @@ debug_libnanox_pe_fpga_la_SOURCES=$(pe_fpga_sources)
 endif
 
 if is_instrumentation_debug_enabled
-instrumentation_debug_LTLIBRARIES += instrumentation_debug/libnanox-fpga-core.la \
-	instrumentation_debug/libnanox-fpga-api.la instrumentation_debug/libnanox-pe-fpga.la
-instrumentation_debug_fpga_core_LIBS = instrumentation_debug/libnanox-fpga-core.la
+instrumentation_debug_LTLIBRARIES += instrumentation-debug/libnanox-fpga-core.la \
+	instrumentation-debug/libnanox-fpga-api.la instrumentation-debug/libnanox-pe-fpga.la
+instrumentation_debug_fpga_core_LIBS = instrumentation-debug/libnanox-fpga-core.la
 
 instrumentation_debug_libnanox_fpga_core_la_CPPFLAGS=$(common_instrumentation_debug_CPPFLAGS) @xdmainc@ @xtasksinc@
 instrumentation_debug_libnanox_fpga_core_la_CXXFLAGS=$(common_instrumentation_debug_CXXFLAGS)
