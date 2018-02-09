@@ -46,6 +46,9 @@ namespace ext {
          Atomic<size_t>                _runningTasks;       //!< Tasks in the accelerator (running)
          FPGATasksQueue_t              _readyTasks;         //!< Tasks that are ready but are waiting for device memory
          FPGATasksQueue_t              _waitInTasks;        //!< Tasks that are ready but are waiting for input copies
+#ifdef NANOS_DEBUG_ENABLED
+         Atomic<size_t>                _totalTasks;         //!< Total (acumulative) tasks executed in the accelerator
+#endif
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          FPGAInstrumentation           _devInstr;
@@ -107,6 +110,13 @@ namespace ext {
          virtual void outlineWorkDependent (WD &work);
          virtual void preOutlineWorkDependent (WD &work);
          bool tryPostOutlineTasks( size_t max = 9999 );
+
+#ifdef NANOS_DEBUG_ENABLED
+         //! \breif Returns the number of tasks executed in the accelerator
+         size_t getNumTasks() const {
+            return _totalTasks.value();
+         }
+#endif
    };
 
    inline FPGAPinnedAllocator * FPGAProcessor::getAllocator() {

@@ -326,6 +326,21 @@ class FPGAPlugin : public ArchPlugin
       virtual ProcessingElement * createPE( unsigned id , unsigned uid ) {
          return NULL;
       }
+
+      virtual std::string getExecutionSummary() const {
+         std::string ret;
+#ifdef NANOS_DEBUG_ENABLED
+         for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas.begin();
+               it != _fpgas.end(); it++ )
+         {
+            FPGAProcessor* f = *it;
+            FPGAProcessorInfo info = f->getFPGAProcessorInfo();
+            ret += "=== FPGA " + toString( info.getId() ) + " [type: " +  toString( info.getType() ) + "][freq: ";
+            ret += toString( info.getFreq() ) + "] executed " + toString( f->getNumTasks() ) + " tasks\n";
+         }
+#endif
+         return ret;
+      }
 };
 
 }
