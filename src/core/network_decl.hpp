@@ -133,7 +133,7 @@ namespace nanos {
    {
       private:
          unsigned int _numNodes;
-         NetworkAPI *_api; 
+         NetworkAPI *_api;
          unsigned int _nodeNum;
 
          //std::string _masterHostname;
@@ -200,6 +200,64 @@ namespace nanos {
          RegionsForwarded *_forwardedRegions;
          Atomic<unsigned int> *_metadataSequenceNumbers;
          Atomic<unsigned int> _recvMetadataSeq;
+
+         /*! \brief Common interface to implement AsyncAction
+          *         The subclasses only have to implement the operator() method
+          */
+         class AsyncAction {
+            public:
+               AsyncAction() {}
+               virtual ~AsyncAction() {}
+               virtual void operator() () = 0;
+         };
+
+         class AsyncNotifyRegionMetaData : public AsyncAction {
+            private:
+               Network        *_net;
+               CopyData       _cd;
+               unsigned int    _seq;
+
+               // Disable copy constructor and assignment operator
+               AsyncNotifyRegionMetaData( AsyncNotifyRegionMetaData const &ref );
+               AsyncNotifyRegionMetaData& operator= ( AsyncNotifyRegionMetaData const &ref );
+
+            public:
+               AsyncNotifyRegionMetaData( Network *net, CopyData const &cd, unsigned int seq );
+               ~AsyncNotifyRegionMetaData();
+               virtual void operator() ();
+         };
+
+         class AsyncNotifyPut : public AsyncAction {
+            private:
+               Network        *_net;
+               unsigned int    _from;
+               unsigned int    _wdId;
+               std::size_t     _len;
+               std::size_t     _count;
+               std::size_t     _ld;
+               uint64_t        _realTag;
+               void           *_hostObject;
+               reg_t           _hostRegId;
+               unsigned int    _seq;
+
+               // Disable copy constructor and assignment operator
+               AsyncNotifyPut( AsyncNotifyPut const &ref );
+               AsyncNotifyPut& operator=( AsyncNotifyPut const &ref );
+
+            public:
+               AsyncNotifyPut( Network *net, unsigned int from, unsigned int wdId, std::size_t len, std::size_t count,
+                  std::size_t ld, uint64_t realTag, void *hostObject, reg_t hostRegId, unsigned int seq ) : _net( net ),
+                  _from( from ), _wdId( wdId ), _len( len ), _count( count ), _ld( ld ), _realTag( realTag ),
+                  _hostObject( hostObject ), _hostRegId( hostRegId ), _seq( seq ) {}
+               ~AsyncNotifyPut() {}
+               virtual void operator() ();
+         };
+         typedef std::list< AsyncAction* > AsyncActionList;
+
+         //! \breif Map of {seqNum -> action}. Each element represents an action that will be executed when _recvMetadataSeq == key
+         typedef std::map<unsigned int, AsyncActionList> ActionDelayedBySeqMap;
+         ActionDelayedBySeqMap _delayedBySeqRecvMetadata;
+         Lock                  _delayedBySeqRecvMetadataLock;
 
          class SyncWDs {
             unsigned int _numWDs;
@@ -319,6 +377,7 @@ namespace nanos {
          bool updatePutRequestSequenceNumber( unsigned int dest, unsigned int value );
          void processWaitRequestPut( void *addr, unsigned int seqNumber );
          void processRequestsDelayedBySeqNumber();
+         void processRequestsDelayedBySeqRecvMetadata();
          void processSendDataRequest( SendDataRequest *req ) ;
          void deleteDirectoryObject( GlobalRegionDictionary const *obj );
          unsigned int getMetadataSequenceNumber( unsigned int dest );
