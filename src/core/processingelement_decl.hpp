@@ -127,7 +127,12 @@ namespace ext {
          virtual bool isActive() const { return true; }
          void setActiveDevice( unsigned int devIdx );
          void setActiveDevice( const Device *dev );
-         unsigned int getActiveDevice() const;
+
+         //! \breif Returns the active device of the PE. If serveral are active, returns NULL
+         Device const * getActiveDevice() const;
+
+         //! \brief Returns whether the PE has one active device (true) or all of them are active (false)
+         bool hasActiveDevice() const;
 
          virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) = 0;
          virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) = 0;
