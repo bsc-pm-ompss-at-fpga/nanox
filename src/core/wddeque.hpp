@@ -157,11 +157,17 @@ inline WorkDescriptor * WDDeque::popFrontWithConstraints ( BaseThread const *thr
       return NULL;
 
    if ( _deviceCounter ) {
-      std::vector<const Device *> const &pe_devices = thread->runningOn()->getDeviceTypes();
       bool has_tasks = false;
-      for ( std::vector<const Device *>::const_iterator it = pe_devices.begin();
-            it != pe_devices.end() && !has_tasks; it++ ) {
-         has_tasks = (_ndevs[ *it ].value() > 0);
+      if ( thread->runningOn()->hasActiveDevice() ) {
+         //Only check the active device
+         has_tasks = (_ndevs[thread->runningOn()->getActiveDevice()].value() > 0);
+      } else {
+         //All devices are active, so look for work in any of them
+         std::vector<const Device *> const &pe_devices = thread->runningOn()->getDeviceTypes();
+         for ( std::vector<const Device *>::const_iterator it = pe_devices.begin();
+               it != pe_devices.end() && !has_tasks; it++ ) {
+            has_tasks = (_ndevs[ *it ].value() > 0);
+         }
       }
       if ( !has_tasks ) {
          return NULL;
@@ -230,11 +236,17 @@ inline WorkDescriptor * WDDeque::popBackWithConstraints ( BaseThread const *thre
       return NULL;
 
    if ( _deviceCounter ) {
-      std::vector<const Device *> const &pe_devices = thread->runningOn()->getDeviceTypes();
       bool has_tasks = false;
-      for ( std::vector<const Device *>::const_iterator it = pe_devices.begin();
-            it != pe_devices.end() && !has_tasks; it++ ) {
-         has_tasks = (_ndevs[ *it ].value() > 0);
+      if ( thread->runningOn()->hasActiveDevice() ) {
+         //Only check the active device
+         has_tasks = (_ndevs[thread->runningOn()->getActiveDevice()].value() > 0);
+      } else {
+         //All devices are active, so look for work in any of them
+         std::vector<const Device *> const &pe_devices = thread->runningOn()->getDeviceTypes();
+         for ( std::vector<const Device *>::const_iterator it = pe_devices.begin();
+               it != pe_devices.end() && !has_tasks; it++ ) {
+            has_tasks = (_ndevs[ *it ].value() > 0);
+         }
       }
       if ( !has_tasks ) {
          return NULL;
