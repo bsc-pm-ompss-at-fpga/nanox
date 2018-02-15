@@ -124,18 +124,20 @@ BaseThread * ClusterThread::getNextThread ()
 
 void ClusterThread::notifyOutlinedCompletionDependent( WD *completedWD ) {
    int arch = -1;
-   if ( completedWD->canRunIn( getSMPDevice() ) )
+   ensure( completedWD->hasActiveDevice(), "At this point, thw WD must have an active device" );
+   Device const &wdDevice = *( completedWD->getActiveDevice().getDevice() );
+   if ( wdDevice == getSMPDevice() )
    {
       arch = 0;
    }
 #ifdef GPU_DEV
-   else if ( completedWD->canRunIn( GPU ) )
+   else if ( wdDevice == GPU )
    {
       arch = 1;
    }
 #endif
 #ifdef OpenCL_DEV
-   else if ( completedWD->canRunIn( OpenCLDev ) )
+   else if ( wdDevice == OpenCLDev )
    {
       arch = 2;
    }
@@ -147,7 +149,7 @@ void ClusterThread::notifyOutlinedCompletionDependent( WD *completedWD ) {
       arch = 3;
       for (FPGADeviceMap::iterator it = FPGADD::getDevicesMapBegin();
            it != FPGADD::getDevicesMapEnd(); ++it) {
-         if (completedWD->canRunIn(*it->second)) {
+         if ( wdDevice == *it->second ) {
             canRun = true;
             break;
          }

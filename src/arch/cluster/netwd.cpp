@@ -91,17 +91,19 @@ void SerializedWDFields::setup( WD const &wd ) {
    }
 
    _clusterArchId = -1;
-   if ( wd.canRunIn( getSMPDevice() ) ) {
+   ensure( wd.hasActiveDevice(), "At this point, thw WD must have an active device" );
+   Device const &wdDevice = *( wd.getActiveDevice().getDevice() );
+   if ( wdDevice == getSMPDevice() ) {
       _clusterArchId = 0;
    }
 #ifdef GPU_DEV
-   else if ( wd.canRunIn( GPU ) )
+   else if ( wdDevice == GPU )
    {
       _clusterArchId = 1;
    }
 #endif
 #ifdef OpenCL_DEV
-   else if ( wd.canRunIn( OpenCLDev ) )
+   else if ( wdDevice == OpenCLDev )
    {
       _clusterArchId = 2;
    }
@@ -112,7 +114,7 @@ void SerializedWDFields::setup( WD const &wd ) {
       int archCode = 3;
       for (FPGADeviceMap::iterator it = FPGADD::getDevicesMapBegin(); it != FPGADD::getDevicesMapEnd(); ++it) {
          FPGADevice const * fpga = it->second;
-         if (wd.canRunIn( *fpga )) {
+         if ( wdDevice == *fpga ) {
             _clusterArchId = archCode;
             _archExtra = ( int )( fpga->getFPGAType() );
             break;
