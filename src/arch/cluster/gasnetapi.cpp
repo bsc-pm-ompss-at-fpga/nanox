@@ -129,6 +129,8 @@ GASNetAPI::GASNetAPI() : _net( 0 ),
    _pinnedAllocators(),
    _pinnedAllocatorsLocks(),
    _seqN( 0 ),
+   _runningCopies(),
+   _runningCopiesLock(),
    _dataSendRequests(),
    _freeBufferReqs(),
    _workDoneReqs(),
@@ -139,7 +141,8 @@ GASNetAPI::GASNetAPI() : _net( 0 ),
    _nodeBarrierCounter( 0 ),
    _GASNetSegmentSize( 0 ),
    _unalignedNodeMemory( false ),
-   _rwgs( 0 ) {
+   _rwgs( 0 )
+{
    _instance = this;
 }
 
@@ -545,7 +548,6 @@ void GASNetAPI::amPut( gasnet_token_t token,
 
    getInstance()->_rxBytes += len;
 
-   
    if ( _emitPtPEvents ) {
       NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); )
       NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = instr->getInstrumentationDictionary(); )
@@ -559,12 +561,24 @@ void GASNetAPI::amPut( gasnet_token_t token,
    {
       ::memcpy( realAddr, buf, len );
    }
-   if ( lastMsg )
+   std::map < void *, std::size_t > &copies = getInstance()->_runningCopies;
+   getInstance()->_runningCopiesLock.acquire();
+   std::map < void *, std::size_t >::iterator it = copies.find( realTag );
+   if ( it != copies.end() ) {
+      it->second += len;
+   } else {
+      it = copies.insert( std::make_pair < void *, std::size_t > ( realTag, len ) ).first;
+   }
+   if ( it->second == totalLen )
    {
+      copies.erase( it );
+      getInstance()->_runningCopiesLock.release();
       uintptr_t localAddr =  ( ( uintptr_t ) buf ) - ( ( uintptr_t ) realAddr - ( uintptr_t ) realTag );
       getInstance()->enqueueFreeBufferNotify( issueNode, ( void * ) localAddr, wd );
       void *hostObject = ( void * ) MERGE_ARG( hostObjectHi, hostObjectLo );
       getInstance()->_net->notifyPut( src_node, wdId, totalLen, 1, 0, (uint64_t) realTag, hostObject, hostRegId, (unsigned int) seq );
+   } else {
+      getInstance()->_runningCopiesLock.release();
    }
    VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " done." << std::endl; );
 }

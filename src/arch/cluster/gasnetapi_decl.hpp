@@ -64,6 +64,8 @@ namespace ext {
          std::vector< SimpleAllocator * > _pinnedAllocators;
          std::vector< Lock * > _pinnedAllocatorsLocks;
          Atomic<unsigned int> *_seqN;
+         std::map < void *, std::size_t > _runningCopies;
+         Lock _runningCopiesLock;
 
          class WorkBufferManager {
             std::map<unsigned int, char *> _buffers;
