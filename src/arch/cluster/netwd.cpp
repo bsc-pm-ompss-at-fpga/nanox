@@ -77,7 +77,7 @@ std::size_t SerializedWDFields::getTotalSize( WD const &wd ) {
    return total_size;
 }
 
-void SerializedWDFields::setup( WD const &wd ) {
+void SerializedWDFields::setup( WD const &wd, std::size_t expectedData, unsigned int seqNumber ) {
    _wdId =  wd.getId();
    _outline = wd.getActiveDevice().getWorkFct();
    _xlate =  wd.getTranslateArgs();
@@ -85,6 +85,8 @@ void SerializedWDFields::setup( WD const &wd ) {
    _numCopies = wd.getNumCopies();
    _descriptionAddr = wd.getDescription();
    _wd = &wd;
+   _expectedData = expectedData;
+   _seqNumber = seqNumber;
    _totalDimensions = 0;
    for (unsigned int i = 0; i < wd.getNumCopies(); i += 1) {
       _totalDimensions += wd.getCopies()[i].getNumDimensions();
@@ -181,11 +183,19 @@ const char *SerializedWDFields::getDescriptionAddr() const {
    return _descriptionAddr;
 }
 
-WD2Net::WD2Net( WD const &wd ) {
+std::size_t SerializedWDFields::getExpectedData() const {
+    return _expectedData;
+}
+
+unsigned int SerializedWDFields::getSeqNumber() const {
+    return _seqNumber;
+}
+
+WD2Net::WD2Net( WD const &wd, std::size_t expectedData, unsigned int seqNumber ) {
    _bufferSize = SerializedWDFields::getTotalSize( wd );
    _buffer = new char[ _bufferSize ];
    SerializedWDFields *swd = ( SerializedWDFields * ) _buffer;
-   swd->setup( wd );
+   swd->setup( wd, expectedData, seqNumber );
 
    if ( wd.getDataSize() > 0 )
    {
@@ -299,6 +309,8 @@ Net2WD::Net2WD( char *buffer, std::size_t buffer_size, RemoteWorkDescriptor **rw
 
    _wd->setHostId( swd->getWDId() );
    _wd->setRemoteAddr( swd->getWDAddr() );
+   _expectedData = swd->getExpectedData();
+   _seqNumber = swd->getSeqNumber();
 }
 
 Net2WD::~Net2WD() {
@@ -306,6 +318,14 @@ Net2WD::~Net2WD() {
 
 WD *Net2WD::getWD() {
    return _wd;
+}
+
+std::size_t Net2WD::getExpectedData() const {
+    return _expectedData;
+}
+
+unsigned int Net2WD::getSeqNumber() const {
+    return _seqNumber;
 }
 
 }

@@ -68,13 +68,19 @@ namespace ext {
          Lock _runningCopiesLock;
 
          class WorkBufferManager {
-            std::map<unsigned int, char *> _buffers;
+            struct WorkBuffer {
+               std::size_t _completed;
+               char * _buffer;
+               WorkBuffer( std::size_t completed, char *buffer ):
+                  _completed( completed ), _buffer( buffer ) {}
+            };
+            typedef std::map < unsigned int, WorkBuffer > BufferMap;
+            BufferMap _buffers;
             Lock _lock;
 
             public:
             WorkBufferManager();
-            char *_add(unsigned int wdId, unsigned int num, std::size_t totalLen, std::size_t thisLen, char *buff );
-            char *get(unsigned int wdId, std::size_t totalLen, std::size_t thisLen, char *buff );
+            char *add(unsigned int wdId, unsigned int num, std::size_t totalLen, std::size_t thisLen, char *buff );
          };
 
          class GASNetSendDataRequest : public SendDataRequest {
