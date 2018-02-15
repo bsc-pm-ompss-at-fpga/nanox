@@ -66,3 +66,6 @@ unsigned int ArchPlugin::getMaxWorkers() const {
    std::cerr << "Generic " << __FUNCTION__ << std::endl;
    return 0;
 }
+std::string ArchPlugin::getExecutionSummary() const {
+   return std::string();
+}

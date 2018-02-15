@@ -1438,6 +1438,21 @@ void System::executionSummary()
    output << "=== Application ended in " << seconds << " seconds" << std::endl;
    output << "=== " << getCreatedTasks() << " tasks have been executed" << std::endl;
    output << "==========================================================" << std::endl;
+
+   for ( ArchitecturePlugins::const_iterator it = _archs.begin(); it != _archs.end(); ++it ) {
+      std::string archOutput = (*it)->getExecutionSummary();
+      if (archOutput.length() > 0) {
+         std::string tmp = "============== ===========================================";
+         char const * name = (*it)->getName();
+         size_t nameLen = strlen(name);
+         tmp.replace(15 /*Position in tmp where the name will appear*/, nameLen, name);
+         tmp[15 + nameLen] = ' ';
+         output << tmp << std::endl;
+         output << archOutput;
+         output << "==========================================================" << std::endl;
+      }
+   }
+
    message0( output.str() );
 }
 

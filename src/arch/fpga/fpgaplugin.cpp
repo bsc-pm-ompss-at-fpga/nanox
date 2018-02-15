@@ -34,7 +34,6 @@
 #include "libxdma.h"
 #include "libxdma_version.h"
 #include "libxtasks.h"
-#include "libxtasks_version.h"
 
 //! Check that libxdma version is compatible
 #define LIBXDMA_MIN_MAJOR 1
@@ -46,13 +45,7 @@
 #endif
 
 //! Check that libxtasks version is compatible
-#define LIBXTASKS_MIN_MAJOR 3
-#define LIBXTASKS_MIN_MINOR 1
-#if !defined(LIBXTASKS_VERSION_MAJOR) || !defined(LIBXTASKS_VERSION_MINOR) || \
-    LIBXTASKS_VERSION_MAJOR < LIBXTASKS_MIN_MAJOR || \
-    (LIBXTASKS_VERSION_MAJOR == LIBXTASKS_MIN_MAJOR && LIBXTASKS_VERSION_MINOR < LIBXTASKS_MIN_MINOR)
-# error Installed libxtasks is not supported (use >= 3.1)
-#endif
+// NOTE: Done in fpgaprocessorinfo.hpp as it is compiled before this file
 
 namespace nanos {
 namespace ext {
@@ -325,6 +318,21 @@ class FPGAPlugin : public ArchPlugin
 
       virtual ProcessingElement * createPE( unsigned id , unsigned uid ) {
          return NULL;
+      }
+
+      virtual std::string getExecutionSummary() const {
+         std::string ret;
+#ifdef NANOS_DEBUG_ENABLED
+         for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas.begin();
+               it != _fpgas.end(); it++ )
+         {
+            FPGAProcessor* f = *it;
+            FPGAProcessorInfo info = f->getFPGAProcessorInfo();
+            ret += "=== FPGA " + toString( info.getId() ) + " [type: " +  toString( info.getType() ) + "][freq: ";
+            ret += toString( info.getFreq() ) + "] executed " + toString( f->getNumTasks() ) + " tasks\n";
+         }
+#endif
+         return ret;
       }
 };
 
