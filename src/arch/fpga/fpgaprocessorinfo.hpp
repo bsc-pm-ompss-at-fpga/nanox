@@ -22,6 +22,16 @@
 
 #include "debug.hpp"
 #include "libxtasks.h"
+#include "libxtasks_version.h"
+
+//! Check that libxtasks version is compatible
+#define LIBXTASKS_MIN_MAJOR 3
+#define LIBXTASKS_MIN_MINOR 1
+#if !defined(LIBXTASKS_VERSION_MAJOR) || !defined(LIBXTASKS_VERSION_MINOR) || \
+    LIBXTASKS_VERSION_MAJOR < LIBXTASKS_MIN_MAJOR || \
+    (LIBXTASKS_VERSION_MAJOR == LIBXTASKS_MIN_MAJOR && LIBXTASKS_VERSION_MINOR < LIBXTASKS_MIN_MINOR)
+# error Installed libxtasks is not supported (use >= 3.1)
+#endif
 
 namespace nanos {
 namespace ext {
