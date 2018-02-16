@@ -86,9 +86,8 @@ void ClusterMPIPlugin::init()
    } else {
       if ( _allowSharedThd ) {
          _cpu = sys.getSMPPlugin()->getLastSMPProcessor();
-         if ( !_cpu ) {
-            fatal0("Unable to get a cpu to run the cluster thread.");
-         }
+         ensure0( _cpu != NULL, "Unable to get a cpu to run the cluster thread." );
+         _cpu->setNumFutureThreads( _cpu->getNumFutureThreads() + 1 );
       } else {
          fatal0("Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread");
       }
@@ -251,6 +250,8 @@ void ClusterMPIPlugin::startSupportThreads() {
       0, NULL,
      ( DD::work_fct )ClusterThread::workerClusterLoop )
    );
+   debug0( "New Cluster Helper Thread created with id: " << _clusterThread->getId() <<
+      ", in SMP processor: " << _cpu->getId() );
    if ( sys.getNumAccelerators() > 0 ) {
       /* This works, but it could happen that the cluster is initialized before the accelerators, and this call could return 0 */
       sys.getNetwork()->enableCheckingForDataInOtherAddressSpaces();

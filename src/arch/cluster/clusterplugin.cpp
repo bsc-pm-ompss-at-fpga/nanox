@@ -142,9 +142,8 @@ void ClusterPlugin::init()
       } else {
          if ( _allowSharedThd ) {
             _cpu = sys.getSMPPlugin()->getLastSMPProcessor();
-            if ( !_cpu ) {
-               fatal0("Unable to get a cpu to run the cluster thread.");
-            }
+            ensure0( _cpu != NULL, "Unable to get a cpu to run the cluster thread." );
+            _cpu->setNumFutureThreads( _cpu->getNumFutureThreads() + 1 );
          } else {
             fatal0("Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread");
          }
@@ -265,6 +264,11 @@ void ClusterPlugin::startSupportThreads() {
          for ( int j = 0; j < num_devices; j++ ) {
             _gasnetApi->_rwgs[0][j] = getRemoteWorkDescriptor( 0, j );
          }
+      }
+
+      if ( _clusterThread != NULL ) {
+         debug0( "New Cluster Helper Thread created with id: " << _clusterThread->getId()
+            << ", in SMP processor: " << _cpu->getId() );
       }
    }
 }
