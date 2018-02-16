@@ -181,9 +181,8 @@ class FPGAPlugin : public ArchPlugin
                if ( core != NULL ) {
                   core->setNumFutureThreads( 1 );
                } else {
-                  core = sys.getSMPPlugin()->getFirstSMPProcessor();
+                  core = sys.getSMPPlugin()->getLastSMPProcessor();
                   core->setNumFutureThreads( core->getNumFutureThreads() + 1 );
-                  NANOS_INSTRUMENT( sys.getInstrumentation()->incrementMaxThreads(); );
                }
                _helperCores.push_back( core );
             }
