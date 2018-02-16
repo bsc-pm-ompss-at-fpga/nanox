@@ -272,6 +272,15 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
       //Register the SMPListener in the EventDispatcher
       sys.getEventDispatcher().addListenerAtIdle( _smpListener );
 
+      /*! NOTE: This SMPProcessor will be associated to the master thread. We need to mark
+       *        it as reserved to avoid that other architecture plugins reserve it.
+       *        Otherwise, SMP and the other will assume that the PE only runs one thread
+       *        and they won't notify the over-subscription to the instrumentation plugin.
+       */
+      SMPProcessor *masterPE = getFirstSMPProcessor();
+      masterPE->reserve();
+      masterPE->setNumFutureThreads( 1 /* Master thread */ );
+
 #ifdef NANOS_DEBUG_ENABLED
       if ( sys.getVerbose() ) {
          std::cerr << "Bindings: [ ";
