@@ -50,8 +50,9 @@ Network::Network () : _numNodes(1), _api((NetworkAPI *) 0), _nodeNum(0),
    _waitingPutRequests(), _receivedUnmatchedPutRequests(),
    _delayedBySeqNumberPutReqs(), _delayedBySeqNumberPutReqsLock(),
    _forwardedRegions(NULL),
-   _metadataSequenceNumbers(NULL), _recvMetadataSeq(1), _syncReqs(),
-   _syncReqsLock(), _nodeBarrierCounter(0), _parentWD(NULL) {}
+   _metadataSequenceNumbers(NULL), _recvMetadataSeq(1),
+   _delayedBySeqRecvMetadata(), _delayedBySeqRecvMetadataLock(),
+   _syncReqs(), _syncReqsLock(), _nodeBarrierCounter(0), _parentWD(NULL) {}
 
 Network::~Network () {}
 
@@ -124,6 +125,7 @@ void Network::poll( unsigned int id)
       //   ensure ( _api != NULL, "No network api loaded." );
       checkDeferredWorkReqs();
       processRequestsDelayedBySeqNumber();
+      processRequestsDelayedBySeqRecvMetadata();
       if ( _nodeNum != MASTER_NODE_NUM && myThread->getId() == 0 ) {
          processSyncRequests();
       }
@@ -372,7 +374,7 @@ void Network::setMasterHostname( char *name )
 //const std::string & Network::getMasterHostname() const
 const char * Network::getMasterHostname() const
 {
-   return _masterHostname; 
+   return _masterHostname;
 }
 
 
@@ -592,7 +594,7 @@ void Network::checkDeferredWorkReqs()
       }
       if ( dwd.second.first != NULL )
       {
-         if (dwd.first == _recvWdData.getReceivedWDsCount() ) 
+         if (dwd.first == _recvWdData.getReceivedWDsCount() )
          {
             _deferredWorkReqsLock.release();
             _recvWdData.addWD( dwd.second.first->getHostId(), dwd.second.first, dwd.second.second, _parentWD );
@@ -608,12 +610,15 @@ void Network::checkDeferredWorkReqs()
 }
 
 void Network::notifyPut( unsigned int from, unsigned int wdId, std::size_t len, std::size_t count, std::size_t ld, uint64_t realTag, void *hostObject, reg_t hostRegId, unsigned int metaSeq ) {
-   if ( metaSeq ) {
+   if ( metaSeq && _recvMetadataSeq < metaSeq ) {
       //std::cerr << " entering " << __FUNCTION__ << " " << metaSeq << " with current " << _recvMetadataSeq.value() << std::endl;
-      while( _recvMetadataSeq < metaSeq ) {
-      }
-      //std::cerr << " processing " << __FUNCTION__ << " " << metaSeq << std::endl;
+      _delayedBySeqRecvMetadataLock.lock();
+      AsyncActionList &list = _delayedBySeqRecvMetadata[metaSeq];
+      list.push_back( new AsyncNotifyPut( this, from, wdId, len, count, ld, realTag, hostObject, hostRegId, metaSeq ) );
+      _delayedBySeqRecvMetadataLock.release();
+      return;
    }
+   //std::cerr << " processing " << __FUNCTION__ << " " << metaSeq << std::endl;
    if ( doIHaveToCheckForDataInOtherAddressSpaces() ) {
       invalidateDataFromDevice( (uint64_t) realTag, len, count, ld, hostObject, hostRegId );
    }
@@ -691,7 +696,7 @@ void Network::processWaitRequestPut( void *addr, unsigned int seqNumber ) {
 
 void Network::processSendDataRequest( SendDataRequest *req ) {
    _waitingPutRequestsLock.acquire();
-   if ( _waitingPutRequests.find( req->getOrigAddr() ) != _waitingPutRequests.end() ) //we have to wait 
+   if ( _waitingPutRequests.find( req->getOrigAddr() ) != _waitingPutRequests.end() ) //we have to wait
    {
       _waitingPutRequestsLock.release();
       _delayedPutReqsLock.acquire();
@@ -729,6 +734,26 @@ void Network::processRequestsDelayedBySeqNumber() {
          }
       }
       _delayedBySeqNumberPutReqsLock.release();
+   }
+}
+
+void Network::processRequestsDelayedBySeqRecvMetadata() {
+   ActionDelayedBySeqMap::iterator it = _delayedBySeqRecvMetadata.begin();
+   if ( it != _delayedBySeqRecvMetadata.end() && it->first <= _recvMetadataSeq.value() ) {
+      _delayedBySeqRecvMetadataLock.lock();
+      it = _delayedBySeqRecvMetadata.begin();
+      if ( it != _delayedBySeqRecvMetadata.end() && it->first <= _recvMetadataSeq.value() ) {
+         AsyncActionList list = it->second;
+         _delayedBySeqRecvMetadata.erase( it );
+         _delayedBySeqRecvMetadataLock.release();
+         for ( AsyncActionList::iterator lit = list.begin(); lit != list.end(); lit++) {
+             AsyncAction  *act = *lit;
+             ( *act )();
+             delete act;
+         }
+      } else {
+         _delayedBySeqRecvMetadataLock.release();
+      }
    }
 }
 
@@ -832,7 +857,7 @@ void Network::getDataFromDevice( uint64_t addr, std::size_t len, std::size_t cou
                   if ( /*_VERBOSE_CACHE*/ 0 ) {
                      std::cerr << " SYNC REGION! "; reg.key->printRegion( std::cerr, reg.id );
                      if ( entry ) std::cerr << " " << *entry << std::endl;
-                     else std::cerr << " nil " << std::endl; 
+                     else std::cerr << " nil " << std::endl;
                   }
                   outOps.addOutOp( 0 /* sync to hostmem */, reg.getFirstLocation(), reg, reg.getVersion(), thisOps, myThread->getThreadWD(), (unsigned int)0xdeadbeef ); // OutOp Network::getDataFromDevice
                   outOps.insertOwnOp( thisOps, reg, reg.getVersion(), 0 );
@@ -844,11 +869,11 @@ void Network::getDataFromDevice( uint64_t addr, std::size_t len, std::size_t cou
          outOps.issue( NULL );
          while ( !outOps.isDataReady( myThread->getThreadWD()) ) { myThread->processTransfers(); }
          //(*myThread->_file) << "[net] ops completed, addr: " << (void *) addr << " len: " << len << " hostObject " << hostObject << " data is [" << *((double *)addr) << "]" <<std::endl;
-      } 
+      }
       //else {
       //   (*myThread->_file) << "[net] not issuing ops, host alredy syncd addr: " << (void *) addr << " len: " << len << " hostObject " << hostObject << " data is [" << *((double *)addr) << "]" <<std::endl;
       //}
-   } 
+   }
    //else {
    //  (*myThread->_file) << "[net] Unregistered addr: " << (void *) addr << " len: " << len << " hostObject " << hostObject << std::endl;
    //}
@@ -932,10 +957,12 @@ void GetRequestStrided::clear() {
 
 void Network::notifyRegionMetaData( CopyData *cd, unsigned int seq ) {
    global_reg_t reg;
-   if ( seq ) {
-      while( _recvMetadataSeq < seq ) {
-      }
-      //std::cerr << " processing " << __FUNCTION__ << " " << seq << std::endl;
+   if ( seq && _recvMetadataSeq < seq ) {
+      _delayedBySeqRecvMetadataLock.lock();
+      AsyncActionList &list = _delayedBySeqRecvMetadata[seq];
+      list.push_back( new AsyncNotifyRegionMetaData( this, *cd, seq ) );
+      _delayedBySeqRecvMetadataLock.release();
+      return;
    }
 
    //Get the region key for the received copyData
@@ -1014,4 +1041,25 @@ void Network::setParentWD(WD *wd) {
 
 void Network::notifyIdle( unsigned int node ) {
    sys.notifyIdle( node );
+}
+
+Network::AsyncNotifyRegionMetaData::AsyncNotifyRegionMetaData( Network *net, CopyData const &cd, unsigned int seq ) :
+   _net( net ), _cd( cd ), _seq( seq )
+{
+   nanos_region_dimension_internal_t *dimensions = NEW nanos_region_dimension_internal_t[ _cd.getNumDimensions() ];
+   std::memcpy(dimensions, _cd.getDimensions(), _cd.getNumDimensions() * sizeof( nanos_region_dimension_internal_t ) );
+   _cd.setDimensions( dimensions );
+}
+
+Network::AsyncNotifyRegionMetaData::~AsyncNotifyRegionMetaData() {
+   delete[] _cd.getDimensions();
+}
+
+void Network::AsyncNotifyRegionMetaData::operator() () {
+   _net->notifyRegionMetaData( &_cd, _seq );
+}
+
+
+void Network::AsyncNotifyPut::operator() () {
+   _net->notifyPut( _from, _wdId, _len, _count, _ld, _realTag, _hostObject, _hostRegId, _seq );
 }

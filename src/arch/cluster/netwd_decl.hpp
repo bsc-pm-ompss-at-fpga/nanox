@@ -16,9 +16,12 @@ namespace ext {
       std::size_t  _totalDimensions;
       const char  *_descriptionAddr;
       WD const    *_wd;
+      std::size_t _expectedData;
+      unsigned int   _seqNumber;
+
       public:
       static std::size_t getTotalSize( WD const &wd );
-      void setup( WD const &wd );
+      void setup( WD const &wd, std::size_t expectedData, unsigned int seqNumber );
       CopyData *getCopiesAddr() const;
       nanos_region_dimension_internal_t *getDimensionsAddr() const;
       char *getDataAddr() const;
@@ -32,6 +35,8 @@ namespace ext {
       WD const *getWDAddr() const;
       unsigned int getNumCopies() const;
       const char *getDescriptionAddr() const;
+      std::size_t getExpectedData() const;
+      unsigned int getSeqNumber() const;
    };
 
    class WD2Net {
@@ -42,7 +47,7 @@ namespace ext {
       WD2Net( WD2Net const &nwd );
       WD2Net &operator=( WD2Net const & );
       public:
-      WD2Net( WD const &wd );
+      WD2Net( WD const &wd, std::size_t expectedData, unsigned int seqNumber );
       ~WD2Net();
       char *getBuffer() const;
       std::size_t getBufferSize() const;
@@ -50,10 +55,14 @@ namespace ext {
 
    class Net2WD {
       WD *_wd;
+      std::size_t _expectedData;
+      unsigned int   _seqNumber;
       public:
       Net2WD( char *buffer, std::size_t buffer_size, RemoteWorkDescriptor **rwds );
       ~Net2WD();
       WD *getWD();
+      std::size_t getExpectedData() const;
+      unsigned int getSeqNumber() const;
    };
 } // namespace ext
 } // namespace nanos

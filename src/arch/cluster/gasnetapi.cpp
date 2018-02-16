@@ -86,34 +86,28 @@ void GASNetAPI::allocArchRWDs(int a, int b) {
 GASNetAPI::WorkBufferManager::WorkBufferManager() : _buffers(), _lock() {
 }
 
-char * GASNetAPI::WorkBufferManager::_add(unsigned int wdId, unsigned int num, std::size_t totalLen, std::size_t thisLen, char *buff ) {
-   char *ret = NULL;
+char * GASNetAPI::WorkBufferManager::add(unsigned int wdId, unsigned int num, std::size_t totalLen, std::size_t thisLen, char *buff ) {
+   char *wdBuffer;
+   std::size_t completed;
+
    _lock.acquire();
-   std::map<unsigned int, char *>::iterator it = _buffers.lower_bound( wdId );
+   BufferMap::iterator it = _buffers.lower_bound( wdId );
    if ( it == _buffers.end() || _buffers.key_comp()( wdId, it->first ) ) {
-      it = _buffers.insert( it, std::make_pair( wdId, NEW char[ totalLen ] ) );
+      it = _buffers.insert( it, std::make_pair (
+            wdId, WorkBuffer( 0, NEW char[ totalLen ] ) ) ) ;
    }
-   memcpy( &(it->second[ num * gasnet_AMMaxMedium() ]), buff, thisLen );
-   ret = it->second;
+   it->second._completed += thisLen;
+   wdBuffer = it->second._buffer;
+   completed = it->second._completed;
    _lock.release();
-   return ret;
+
+   memcpy( &wdBuffer[ num * gasnet_AMMaxMedium() ], buff, thisLen );
+   return completed == totalLen ? wdBuffer : NULL;
 }
 
-char *GASNetAPI::WorkBufferManager::get(unsigned int wdId, std::size_t totalLen, std::size_t thisLen, char *buff ) {
-   char *data = NULL;
-   if ( totalLen == thisLen ) {
-      /* message data comes in the work message, do not check for
-         entries because there will not be any. */
-      data = NEW char[ thisLen ];
-      memcpy( data, buff, thisLen );
-   } else {
-      /* num is the last message - 1 */
-      unsigned int num = totalLen / gasnet_AMMaxMedium();
-      /* assume we are done */
-      data = this->_add(wdId, num, totalLen, thisLen, buff);
-   }
-   return data;
-}
+//char *GASNetAPI::WorkBufferManager::get(unsigned int wdId, std::size_t totalLen, std::size_t thisLen, char *buff ) {
+//   return data;
+//}
 
 GASNetAPI *GASNetAPI::_instance = 0;
 
@@ -129,6 +123,8 @@ GASNetAPI::GASNetAPI() : _net( 0 ),
    _pinnedAllocators(),
    _pinnedAllocatorsLocks(),
    _seqN( 0 ),
+   _runningCopies(),
+   _runningCopiesLock(),
    _dataSendRequests(),
    _freeBufferReqs(),
    _workDoneReqs(),
@@ -139,7 +135,8 @@ GASNetAPI::GASNetAPI() : _net( 0 ),
    _nodeBarrierCounter( 0 ),
    _GASNetSegmentSize( 0 ),
    _unalignedNodeMemory( false ),
-   _rwgs( 0 ) {
+   _rwgs( 0 )
+{
    _instance = this;
 }
 
@@ -338,28 +335,7 @@ void GASNetAPI::amWork(gasnet_token_t token, void *arg, std::size_t argSize,
       gasnet_handlerarg_t expectedDataHi,
       gasnet_handlerarg_t seq )
 {
-   DisableAM c;
-   std::size_t totalArgSize = (std::size_t) MERGE_ARG( totalArgSizeHi, totalArgSizeLo );
-   std::size_t expectedData = (std::size_t) MERGE_ARG( expectedDataHi, expectedDataLo );
-   gasnet_node_t src_node;
-   if (gasnet_AMGetMsgSource(token, &src_node) != GASNET_OK)
-   {
-      fprintf(stderr, "gasnet: Error obtaining node information.\n");
-   }
-
-   char *work_data = getInstance()->_incomingWorkBuffers.get(wdId, totalArgSize, argSize, (char *) arg);
-   Net2WD nwd( work_data, totalArgSize, getInstance()->_rwgs[src_node] ); // FIXME
-
-   if ( _emitPtPEvents ) {
-      NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); )
-      NANOS_INSTRUMENT ( nanos_event_id_t id = (nanos_event_id_t) ( nwd.getWD()->getRemoteAddr() ) ; )
-      NANOS_INSTRUMENT ( instr->raiseClosePtPEvent( NANOS_AM_WORK, id, 0, 0, src_node ); )
-   }
-
-   getInstance()->_net->notifyWork(expectedData, nwd.getWD(), seq);
-
-   delete[] work_data;
-   VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " done." << std::endl; );
+   fatal( "Unexpected Message type" );
 }
 
 void GASNetAPI::amWorkData(gasnet_token_t token, void *buff, std::size_t len,
@@ -377,7 +353,30 @@ void GASNetAPI::amWorkData(gasnet_token_t token, void *buff, std::size_t len,
       fprintf(stderr, "gasnet: Error obtaining node information.\n");
    }
 
-   getInstance()->_incomingWorkBuffers._add(wdId, msgNum, totalLen, len, (char *) buff);
+   char * workData;
+   if ( len == totalLen ) {
+       //Optimization when WD arrives in a single packet
+       workData = ( char * )buff;
+   } else {
+       workData = getInstance()->_incomingWorkBuffers.add(
+               wdId, msgNum, totalLen, len, (char *) buff);
+   }
+   if ( workData != NULL ) {
+      Net2WD nwd( workData, totalLen, getInstance()->_rwgs[src_node] ); // FIXME
+
+      if ( _emitPtPEvents ) {
+         NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); )
+         NANOS_INSTRUMENT ( nanos_event_id_t id =
+               (nanos_event_id_t) ( nwd.getWD()->getRemoteAddr() ) ; )
+         NANOS_INSTRUMENT ( instr->raiseClosePtPEvent( NANOS_AM_WORK, id, 0, 0, src_node ); )
+      }
+
+      getInstance()->_net->notifyWork(nwd.getExpectedData(), nwd.getWD(), nwd.getSeqNumber());
+
+      if ( len != totalLen ) delete[] workData;
+      VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__
+            << " done." << std::endl; );
+   }
 
    //(myThread != NULL ? (*myThread->_file) : std::cerr)<<"UNSUPPORTED FOR NOW"<<std::endl;
    VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " done." << std::endl; );
@@ -545,7 +544,6 @@ void GASNetAPI::amPut( gasnet_token_t token,
 
    getInstance()->_rxBytes += len;
 
-   
    if ( _emitPtPEvents ) {
       NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); )
       NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = instr->getInstrumentationDictionary(); )
@@ -559,12 +557,24 @@ void GASNetAPI::amPut( gasnet_token_t token,
    {
       ::memcpy( realAddr, buf, len );
    }
-   if ( lastMsg )
+   std::map < void *, std::size_t > &copies = getInstance()->_runningCopies;
+   getInstance()->_runningCopiesLock.acquire();
+   std::map < void *, std::size_t >::iterator it = copies.find( realTag );
+   if ( it != copies.end() ) {
+      it->second += len;
+   } else {
+      it = copies.insert( std::make_pair < void *, std::size_t > ( realTag, len ) ).first;
+   }
+   if ( it->second == totalLen )
    {
+      copies.erase( it );
+      getInstance()->_runningCopiesLock.release();
       uintptr_t localAddr =  ( ( uintptr_t ) buf ) - ( ( uintptr_t ) realAddr - ( uintptr_t ) realTag );
       getInstance()->enqueueFreeBufferNotify( issueNode, ( void * ) localAddr, wd );
       void *hostObject = ( void * ) MERGE_ARG( hostObjectHi, hostObjectLo );
       getInstance()->_net->notifyPut( src_node, wdId, totalLen, 1, 0, (uint64_t) realTag, hostObject, hostRegId, (unsigned int) seq );
+   } else {
+      getInstance()->_runningCopiesLock.release();
    }
    VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " done." << std::endl; );
 }
@@ -1077,12 +1087,16 @@ void GASNetAPI::sendWorkMsg ( unsigned int dest, WorkDescriptor const &wd, std::
    std::size_t sent = 0;
    unsigned int msgCount = 0;
 
-   WD2Net nwd( wd );
+   WD2Net nwd( wd, expectedData, _seqN[ dest ]++ );
 
-   while ( (nwd.getBufferSize() - sent) > gasnet_AMMaxMedium() )
+   while ( (nwd.getBufferSize() - sent) > 0 )
    {
-   VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " send amWorkData" << std::endl; );
-      if ( gasnet_AMRequestMedium4( dest, 215, &(nwd.getBuffer()[ sent ]), gasnet_AMMaxMedium(),
+      int thisLen = gasnet_AMMaxMedium() < (nwd.getBufferSize() - sent) ?
+         gasnet_AMMaxMedium() : (nwd.getBufferSize() - sent);
+      VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr)
+            << __FUNCTION__ << " send amWorkData" << std::endl; );
+      if ( gasnet_AMRequestMedium4( dest, 215, &(nwd.getBuffer()[ sent ]),
+               thisLen,
                wd.getId(),
                msgCount, 
                ARG_LO( nwd.getBufferSize() ),
@@ -1090,31 +1104,11 @@ void GASNetAPI::sendWorkMsg ( unsigned int dest, WorkDescriptor const &wd, std::
       {
          fprintf(stderr, "gasnet: Error sending a message to node %d.\n", dest);
       }
-   VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " send amWorkData done" << std::endl; );
+   VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr)
+         << __FUNCTION__ << " send amWorkData done" << std::endl; );
       msgCount++;
-      sent += gasnet_AMMaxMedium();
+      sent += thisLen;
    }
-   //std::size_t expectedData = _sentWdData.getSentData( wdId );
-
-   //message("To node " << dest << " wd id " << wdId << " seq " << (_seqN[dest].value() + 1) << " expectedData=" << expectedData);
-   if ( _emitPtPEvents ) {
-      NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); )
-      NANOS_INSTRUMENT ( nanos_event_id_t id = (nanos_event_id_t) ( &wd ) ; )
-      NANOS_INSTRUMENT ( instr->raiseOpenPtPEvent( NANOS_AM_WORK, id, 0, 0, dest ); )
-   }
-
-   VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " send amWork" << std::endl; );
-   if (gasnet_AMRequestMedium6( dest, 205, &(nwd.getBuffer()[ sent ]), nwd.getBufferSize() - sent,
-            wd.getId(),
-            ARG_LO( nwd.getBufferSize() ),
-            ARG_HI( nwd.getBufferSize() ),
-            ARG_LO( expectedData ),
-            ARG_HI( expectedData ),
-            _seqN[dest]++ ) != GASNET_OK)
-   {
-      fprintf(stderr, "gasnet: Error sending a message to node %d.\n", dest);
-   }
-   VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " send amWork done" << std::endl; );
 }
 
 void GASNetAPI::sendWorkDoneMsg ( unsigned int dest, void const *remoteWdAddr )
