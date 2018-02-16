@@ -353,8 +353,14 @@ void GASNetAPI::amWorkData(gasnet_token_t token, void *buff, std::size_t len,
       fprintf(stderr, "gasnet: Error obtaining node information.\n");
    }
 
-   char * workData = getInstance()->_incomingWorkBuffers.add(
-         wdId, msgNum, totalLen, len, (char *) buff);
+   char * workData;
+   if ( len == totalLen ) {
+       //Optimization when WD arrives in a single packet
+       workData = ( char * )buff;
+   } else {
+       workData = getInstance()->_incomingWorkBuffers.add(
+               wdId, msgNum, totalLen, len, (char *) buff);
+   }
    if ( workData != NULL ) {
       Net2WD nwd( workData, totalLen, getInstance()->_rwgs[src_node] ); // FIXME
 
@@ -367,7 +373,7 @@ void GASNetAPI::amWorkData(gasnet_token_t token, void *buff, std::size_t len,
 
       getInstance()->_net->notifyWork(nwd.getExpectedData(), nwd.getWD(), nwd.getSeqNumber());
 
-      delete[] workData;
+      if ( len != totalLen ) delete[] workData;
       VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__
             << " done." << std::endl; );
    }
