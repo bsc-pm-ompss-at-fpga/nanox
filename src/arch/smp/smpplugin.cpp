@@ -279,7 +279,8 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
        */
       SMPProcessor *masterPE = getFirstSMPProcessor();
       masterPE->reserve();
-      masterPE->setNumFutureThreads( 1 /* Master thread */ );
+      //NOTE: Disabling next setter as no thread will be created in the PE, only a thread will be associated
+      //masterPE->setNumFutureThreads( 1 /* Master thread */ );
 
 #ifdef NANOS_DEBUG_ENABLED
       if ( sys.getVerbose() ) {
@@ -857,8 +858,8 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
    unsigned int SMPPlugin::getEstimatedNumWorkers() const
    {
       unsigned int count = 0;
-      /*if a certain number of workers was requested, pick the minimum between that value
-       * and the number of cpus and the support threads requested
+      /*if a certain number of workers was requested pick that value, otherwise
+       * pick the number of cpus minus the support threads requested
        */
       int active_cpus = 0;
       int reserved_cpus = 0;
@@ -872,6 +873,7 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
          count = _requestedWorkers;
       } else {
          count = active_cpus - reserved_cpus;
+         count += 1; //< First CPU is reserved in ::init() for the master worker thread
       }
       debug0( __FUNCTION__ << " called before creating the SMP workers, the estimated number of workers is: " << count);
       return count;
