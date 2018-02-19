@@ -62,8 +62,7 @@ namespace ext {
 ClusterMPIPlugin::ClusterMPIPlugin() : ArchPlugin( "Cluster PE Plugin", 1 ),
    _gasnetApi( NEW GASNetAPI() ), _numPinnedSegments( 0 ), _pinnedSegmentAddrList( NULL ),
    _pinnedSegmentLenList( NULL ), _extraPEsCount( 0 ), _conduit(""),
-   _nodeMem( DEFAULT_NODE_MEM ), _allocFit( false ), _allowSharedThd( false ),
-   _unalignedNodeMem( false ),
+   _nodeMem( DEFAULT_NODE_MEM ), _allocFit( false ), _unalignedNodeMem( false ),
    _cachePolicy( System::DEFAULT ), _nodes( NULL ), _cpu( NULL ),
    _clusterThread( NULL ), _gasnetSegmentSize( 0 ) {
 }
@@ -78,19 +77,21 @@ void ClusterMPIPlugin::config( Config& cfg )
 void ClusterMPIPlugin::init()
 {
    _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessor();
-   if ( _cpu ) {
-      ensure0( ClusterConfig::getSlaveNodeWorkerEnabled(),
-         "Disabling cluster helper in slave nodes not implemented in ClusterMPIPlugin::init" );
-      _cpu->reserve();
-      _cpu->setNumFutureThreads( 1 );
-   } else {
-      if ( _allowSharedThd ) {
-         _cpu = sys.getSMPPlugin()->getLastSMPProcessor();
-         ensure0( _cpu != NULL, "Unable to get a cpu to run the cluster thread." );
-         _cpu->setNumFutureThreads( _cpu->getNumFutureThreads() + 1 );
-      } else {
-         fatal0("Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread");
+   if ( _cpu == NULL && ClusterConfig::getSharedWorkerPeEnabled() ) {
+      //There is not a free CPU for cluster worker but it can run on a shared PE
+      _cpu = sys.getSMPPlugin()->getLastSMPProcessor();
+      ensure0( _cpu != NULL, "Unable to get a cpu to run the cluster thread." );
+   } else if ( _cpu == NULL ) {
+      fatal0( "Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread" );
+   }
+
+   //Will the found CPU be used to run a cluster worker?
+   if ( _gasnetApi->getNodeNum() == 0 || ClusterConfig::getSlaveNodeWorkerEnabled() ) {
+      if ( !_cpu->isReserved() ) {
+         //The cpu is free and will be used to exclusively run the cluster worker
+         _cpu->reserve();
       }
+      _cpu->setNumFutureThreads( _cpu->getNumFutureThreads() + 1 /* Cluster worker */ );
    }
 }
 
@@ -222,10 +223,6 @@ void ClusterMPIPlugin::prepare( Config& cfg ) {
    cfg.registerConfigOption ( "cluster-cache-policy", cachePolicyCfg, "Defines the cache policy for Cluster architectures: write-through / write-back (wb by default)" );
    cfg.registerEnvOption ( "cluster-cache-policy", "NX_CLUSTER_CACHE_POLICY" );
    cfg.registerArgOption( "cluster-cache-policy", "cluster-cache-policy" );
-
-   cfg.registerConfigOption ( "allow-shared-thread", NEW Config::FlagOption ( _allowSharedThd ), "Allow the cluster thread to share CPU with other threads." );
-   cfg.registerArgOption ( "allow-shared-thread", "cluster-allow-shared-thread" );
-   cfg.registerEnvOption ( "allow-shared-thread", "NX_CLUSTER_ALLOW_SHARED_THREAD" );
 
    cfg.registerConfigOption ( "cluster-unaligned-node-memory", NEW Config::FlagOption ( _unalignedNodeMem ), "Do not align node memory." );
    cfg.registerArgOption ( "cluster-unaligned-node-memory", "cluster-unaligned-node-memory" );

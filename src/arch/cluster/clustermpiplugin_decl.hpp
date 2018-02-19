@@ -40,7 +40,6 @@ class ClusterMPIPlugin : public ArchPlugin
       std::string _conduit;
       std::size_t _nodeMem;
       bool _allocFit;
-      bool _allowSharedThd;
       bool _unalignedNodeMem;
       System::CachePolicyType _cachePolicy;
       std::vector<ext::ClusterNode *> *_nodes;
