@@ -143,7 +143,7 @@ void FPGAConfig::apply()
       //_numFPGAThreads = _numAccelerators;
    }
 
-   if ( _enableFPGA && !_idleCallback && _hybridWorker ) {
+   if ( _numFPGAThreads > 0 && !_idleCallback && _hybridWorker ) {
       warning0( " The use of FPGA idle callback is disabled, execution could have unexpected " <<
                 " behaviour and can ever hang if there is task nesting." );
    }
