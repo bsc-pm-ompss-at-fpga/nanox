@@ -328,6 +328,7 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
          count = _requestedWorkers;
       } else {
          count = active_cpus - reserved_cpus;
+         count += 1; //< First CPU is reserved in ::init() for the master worker thread
       }
       return count + future_threads;
 
