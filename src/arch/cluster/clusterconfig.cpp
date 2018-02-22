@@ -29,6 +29,7 @@ int ClusterConfig::_gpuPresend = 1;
 int ClusterConfig::_oclPresend = 1;
 int ClusterConfig::_fpgaPresend = 1;
 unsigned int ClusterConfig::_maxArchId = 3; //< 0: SMP, 1: CUDA, 2: OCL, 3: FPGA
+bool ClusterConfig::_sharedWorkerPE = false;
 
 void ClusterConfig::prepare( Config &cfg )
 {
@@ -61,6 +62,12 @@ void ClusterConfig::prepare( Config &cfg )
       "Number of Tasks (FPGA arch) to be sent to a remote node without waiting any completion." );
    cfg.registerArgOption ( "cluster-fpga-presend", "cluster-fpga-presend" );
    cfg.registerEnvOption ( "cluster-fpga-presend", "NX_CLUSTER_FPGA_PRESEND" );
+
+   cfg.registerConfigOption ( "cluster_shared_pe", NEW Config::FlagOption ( _sharedWorkerPE ),
+      "Allow the cluster thread to share CPU with other threads (def: disabled)" );
+   cfg.registerArgOption ( "cluster_shared_pe", "cluster-allow-shared-thread" );
+   cfg.registerEnvOption ( "cluster_shared_pe", "NX_CLUSTER_ALLOW_SHARED_THREAD" );
+
 }
 
 void ClusterConfig::apply() { }

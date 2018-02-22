@@ -63,8 +63,7 @@ namespace ext {
 ClusterPlugin::ClusterPlugin() : ArchPlugin( "Cluster PE Plugin", 1 ),
    _gasnetApi( NEW GASNetAPI() ), _numPinnedSegments( 0 ), _pinnedSegmentAddrList( NULL ),
    _pinnedSegmentLenList( NULL ), _extraPEsCount( 0 ), _conduit(""),
-   _nodeMem( DEFAULT_NODE_MEM ), _allocFit( false ), _allowSharedThd( false ),
-   _unalignedNodeMem( false ),
+   _nodeMem( DEFAULT_NODE_MEM ), _allocFit( false ), _unalignedNodeMem( false ),
    _cachePolicy( System::DEFAULT ), _remoteNodes( NULL ), _cpu( NULL ),
    _clusterThread( NULL ), _gasnetSegmentSize( 0 ), _clusterListener() {
 }
@@ -133,21 +132,23 @@ void ClusterPlugin::init()
             }
          }
       }
+
       _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessor();
-      if ( _cpu ) {
-         if ( _gasnetApi->getNodeNum() == 0 || ClusterConfig::getSlaveNodeWorkerEnabled() ) {
+      if ( _cpu == NULL && ClusterConfig::getSharedWorkerPeEnabled() ) {
+         //There is not a free CPU for cluster worker but it can run on a shared PE
+         _cpu = sys.getSMPPlugin()->getLastSMPProcessor();
+         ensure0( _cpu != NULL, "Unable to get a cpu to run the cluster thread." );
+      } else if ( _cpu == NULL ) {
+         fatal0( "Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread" );
+      }
+
+      //Will the found CPU be used to run a cluster worker?
+      if ( _gasnetApi->getNodeNum() == 0 || ClusterConfig::getSlaveNodeWorkerEnabled() ) {
+         if ( !_cpu->isReserved() ) {
+            //The cpu is free and will be used to exclusively run the cluster worker
             _cpu->reserve();
-            _cpu->setNumFutureThreads( 1 );
          }
-      } else {
-         if ( _allowSharedThd ) {
-            _cpu = sys.getSMPPlugin()->getLastSMPProcessor();
-            if ( !_cpu ) {
-               fatal0("Unable to get a cpu to run the cluster thread.");
-            }
-         } else {
-            fatal0("Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread");
-         }
+         _cpu->setNumFutureThreads( _cpu->getNumFutureThreads() + 1 /* Cluster worker */ );
       }
 
       //Register the EventListener in the EventDispatcher for atIdle events
@@ -212,10 +213,6 @@ void ClusterPlugin::prepare( Config& cfg ) {
    cfg.registerEnvOption ( "cluster-cache-policy", "NX_CLUSTER_CACHE_POLICY" );
    cfg.registerArgOption( "cluster-cache-policy", "cluster-cache-policy" );
 
-   cfg.registerConfigOption ( "allow-shared-thread", NEW Config::FlagOption ( _allowSharedThd ), "Allow the cluster thread to share CPU with other threads." );
-   cfg.registerArgOption ( "allow-shared-thread", "cluster-allow-shared-thread" );
-   cfg.registerEnvOption ( "allow-shared-thread", "NX_CLUSTER_ALLOW_SHARED_THREAD" );
-
    cfg.registerConfigOption ( "cluster-unaligned-node-memory", NEW Config::FlagOption ( _unalignedNodeMem ), "Do not align node memory." );
    cfg.registerArgOption ( "cluster-unaligned-node-memory", "cluster-unaligned-node-memory" );
    cfg.registerEnvOption ( "cluster-unaligned-node-memory", "NX_CLUSTER_UNALIGNED_NODE_MEMORY" );
@@ -265,6 +262,11 @@ void ClusterPlugin::startSupportThreads() {
          for ( int j = 0; j < num_devices; j++ ) {
             _gasnetApi->_rwgs[0][j] = getRemoteWorkDescriptor( 0, j );
          }
+      }
+
+      if ( _clusterThread != NULL ) {
+         debug0( "New Cluster Helper Thread created with id: " << _clusterThread->getId()
+            << ", in SMP processor: " << _cpu->getId() );
       }
    }
 }
