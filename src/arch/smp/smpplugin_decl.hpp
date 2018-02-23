@@ -149,6 +149,8 @@ class SMPPlugin : public SMPBasePlugin
 
    virtual ext::SMPProcessor *getSMPProcessorByNUMAnode(int node, unsigned int idx) const;
 
+   virtual ext::SMPProcessor * getSMPProcessorById( unsigned int id ) const;
+
    void loadNUMAInfo ();
 
    unsigned getNodeOfPE ( unsigned pe );

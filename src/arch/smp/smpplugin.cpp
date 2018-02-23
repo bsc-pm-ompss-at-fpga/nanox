@@ -462,6 +462,8 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
             BaseThread *thd = &cpu->startWorker();
             _workers.push_back( (SMPThread *) thd );
             workers.insert( std::make_pair( thd->getId(), thd ) );
+            debug0( "New SMP Worker Thread created with id: " << thd->getId()
+                    << ", in SMP processor: " << cpu->getId() );
 
             workers_per_cpu[idx]++;
             num_cpus_with_current_limit++;
@@ -576,6 +578,21 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
             target = *it;
          }
       }
+      return target;
+   }
+
+   ext::SMPProcessor * SMPPlugin::getSMPProcessorById( unsigned int id ) const
+   {
+      ensure( _cpus != NULL, "Uninitialized SMP plugin.");
+      ensure( id < _cpusByCpuId->size(), "Invalid argument in SMPPlugin::getSMPProcessorById" );
+      ext::SMPProcessor *target = _cpusByCpuId->at( id );
+      /*for ( std::vector<ext::SMPProcessor *>::const_iterator it = _cpus->begin();
+            it != _cpus->end() && !target;
+            it++ ) {
+         if ( (*it)->getId() == id ) {
+            target = *it;
+         }
+      }*/
       return target;
    }
 
@@ -901,6 +918,9 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
    {
       SMPThread &thd = getFirstSMPProcessor()->associateThisThread( untie );
       _workers.push_back( &thd );
+      debug0( "Admit SMP worker thread with id: " << thd.getId() << " in processor: "
+            << getFirstSMPProcessor()->getId() );
+
       return thd;
    }
 

@@ -30,6 +30,7 @@ int ClusterConfig::_oclPresend = 1;
 int ClusterConfig::_fpgaPresend = 1;
 unsigned int ClusterConfig::_maxArchId = 3; //< 0: SMP, 1: CUDA, 2: OCL, 3: FPGA
 bool ClusterConfig::_sharedWorkerPE = false;
+int ClusterConfig::_bindingWorker = -1;
 
 void ClusterConfig::prepare( Config &cfg )
 {
@@ -68,6 +69,10 @@ void ClusterConfig::prepare( Config &cfg )
    cfg.registerArgOption ( "cluster_shared_pe", "cluster-allow-shared-thread" );
    cfg.registerEnvOption ( "cluster_shared_pe", "NX_CLUSTER_ALLOW_SHARED_THREAD" );
 
+   cfg.registerConfigOption ( "cluster_worker_binding", NEW Config::IntegerVar( _bindingWorker ),
+      "PE id where the cluster worker thread must run." );
+   cfg.registerArgOption ( "cluster_worker_binding", "cluster-worker-binding" );
+   cfg.registerEnvOption ( "cluster_worker_binding", "NX_CLUSTER_WORKER_BINDING" );
 }
 
 void ClusterConfig::apply() { }
