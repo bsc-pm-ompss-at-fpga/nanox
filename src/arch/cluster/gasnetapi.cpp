@@ -1091,6 +1091,12 @@ void GASNetAPI::sendWorkMsg ( unsigned int dest, WorkDescriptor const &wd, std::
 
    WD2Net nwd( wd, expectedData, _seqN[ dest ]++ );
 
+   if ( _emitPtPEvents ) {
+      NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); )
+      NANOS_INSTRUMENT ( nanos_event_id_t id = (nanos_event_id_t) ( &wd ) ; )
+      NANOS_INSTRUMENT ( instr->raiseOpenPtPEvent( NANOS_AM_WORK, id, 0, 0, dest ); )
+   }
+
    while ( (nwd.getBufferSize() - sent) > 0 )
    {
       int thisLen = gasnet_AMMaxMedium() < (nwd.getBufferSize() - sent) ?
