@@ -121,6 +121,16 @@ void ClusterNode::outlineWorkDependent ( WD &wd )
    ProcessingElement *pe = this;
    if (dd.getWorkFct() == NULL ) return;
 
+   NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); );
+   NANOS_INSTRUMENT ( static InstrumentationDictionary *id =
+         instr->getInstrumentationDictionary(); );
+   NANOS_INSTRUMENT ( static nanos_event_key_t taskOffloadKey =
+         id->getEventKey( "cluster-offload-task" ); );
+   NANOS_INSTRUMENT ( instr->raiseOpenBurstEvent(
+            taskOffloadKey, ( nanos_event_value_t ) wd.getId() ) );
+
    ( ( ClusterNode * ) pe )->incExecutedWDs();
    sys.getNetwork()->sendWorkMsg( ( ( ClusterNode * ) pe )->getClusterNodeNum(), wd );
+
+   NANOS_INSTRUMENT ( instr->raiseCloseBurstEvent( taskOffloadKey, 0 ) );
 }

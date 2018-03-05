@@ -327,6 +327,12 @@ void ClusterThread::workerClusterLoop ()
    const int init_spins = ( ( SMPMultiThread* ) parent )->getNumThreads();
    int spins = init_spins;
 
+   NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); );
+   NANOS_INSTRUMENT ( static InstrumentationDictionary *id =
+           instr->getInstrumentationDictionary(); );
+   NANOS_INSTRUMENT ( static nanos_event_key_t nodeSelectKey = 
+           id->getEventKey( "cluster-select-node" ); );
+
    for ( ; ; ) {
       if ( !parent->isRunning() ) break;
 
@@ -337,6 +343,9 @@ void ClusterThread::workerClusterLoop ()
          ClusterThread *myClusterThread = ( ClusterThread * ) current_thread;
          if ( myClusterThread->tryLock() ) {
             ClusterNode *thisNode = ( ClusterNode * ) current_thread->runningOn();
+
+            NANOS_INSTRUMENT ( instr->raiseOpenBurstEvent(
+                        nodeSelectKey, thisNode->getNodeNum() ); );
 
             ClusterNode::ClusterSupportedArchMap const &archs = thisNode->getSupportedArchs();
             for ( ClusterNode::ClusterSupportedArchMap::const_iterator it = archs.begin();
@@ -447,6 +456,7 @@ void ClusterThread::workerClusterLoop ()
                   }
                }
             }
+            NANOS_INSTRUMENT ( instr->raiseCloseBurstEvent( nodeSelectKey, 0 ); );
             myClusterThread->unlock();
          }
       }

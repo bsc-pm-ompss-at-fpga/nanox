@@ -399,6 +399,8 @@ void GASNetAPI::amWorkDone( gasnet_token_t token, gasnet_handlerarg_t addrLo, ga
       NANOS_INSTRUMENT ( instr->raiseClosePtPEvent( NANOS_AM_WORK_DONE, id, 0, 0, src_node ); )
    }
 
+   //NANOS_INSTRUMENT( WD *wd = (WD*)addr; )
+   NANOS_INSTRUMENT( InstrumentBurst( "cluster-finish-wd", ((WD*)addr)->getId() ); );
    sys.getNetwork()->notifyWorkDone( src_node, addr, peId );
    VERBOSE_AM( (myThread != NULL ? (*myThread->_file) : std::cerr) << __FUNCTION__ << " from "<< src_node <<" host wd addr "<< (void *) addr <<" done." << std::endl; );
 }
@@ -1088,6 +1090,12 @@ void GASNetAPI::sendWorkMsg ( unsigned int dest, WorkDescriptor const &wd, std::
    unsigned int msgCount = 0;
 
    WD2Net nwd( wd, expectedData, _seqN[ dest ]++ );
+
+   if ( _emitPtPEvents ) {
+      NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); )
+      NANOS_INSTRUMENT ( nanos_event_id_t id = (nanos_event_id_t) ( &wd ) ; )
+      NANOS_INSTRUMENT ( instr->raiseOpenPtPEvent( NANOS_AM_WORK, id, 0, 0, dest ); )
+   }
 
    while ( (nwd.getBufferSize() - sent) > 0 )
    {

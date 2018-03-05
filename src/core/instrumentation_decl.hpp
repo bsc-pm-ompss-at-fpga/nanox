@@ -680,6 +680,10 @@ namespace nanos {
             /* 73 */ registerEventKey("fpga-finish-task", "Finished FPGA task ID that is being processed", true, EVENT_ADVANCED);
             /* 74 */ registerEventKey("fpga-run-tasks", "Number of FPGA tasks submitted to the accels", true, EVENT_ADVANCED);
 
+            /* 75 */ registerEventKey("cluster-offload-task", "Task being offloaded to a remote node", EVENT_DEVELOPER);
+            /* 76 */ registerEventKey("cluster-select-node", "Remote node being selected for remote task offload", EVENT_DEVELOPER);
+            /* 77 */ registerEventKey("cluster-finish-wd", "Remote WD being finished", EVENT_DEVELOPER);
+
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }
 
