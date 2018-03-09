@@ -155,7 +155,7 @@ xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
    xtasks_stat status;
    xtasks_task_handle task;
 
-   NANOS_INSTRUMENT( InstrumentBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
 
    size_t numArgs = wd.getDataSize()/sizeof(uintptr_t);
    ensure( wd.getDataSize()%sizeof(uintptr_t) == 0,
@@ -298,7 +298,7 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          --_totalRunningTasks;
          instrumentPoint( "fpga-run-tasks", _totalRunningTasks.value() );
-         InstrumentBurst( "fpga-finish-task", wd->getId() );
+         InstrumentBurst instBurst( "fpga-finish-task", wd->getId() );
          readInstrCounters( wd, xHandle );
 #endif
          xtasksDeleteTask( &xHandle );
