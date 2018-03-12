@@ -54,14 +54,9 @@ class ClusterPlugin : public ArchPlugin
       std::size_t * _pinnedSegmentLenList;
       unsigned int _extraPEsCount;
       std::string _conduit;
-      std::size_t _nodeMem;
-      bool _allocFit;
-      bool _unalignedNodeMem;
-      System::CachePolicyType _cachePolicy;
       std::vector<ext::ClusterNode *> *_remoteNodes;
       ext::SMPProcessor *_cpu;
       ext::SMPMultiThread *_clusterThread;
-      std::size_t _gasnetSegmentSize;
       ClusterListener                  _clusterListener; /*! \brief Cluster listener for atIdle events */
 
    public:
@@ -69,12 +64,7 @@ class ClusterPlugin : public ArchPlugin
       virtual void config( Config& cfg );
       virtual void init();
 
-      void prepare( Config& cfg );
-      std::size_t getNodeMem() const;
-      System::CachePolicyType getCachePolicy ( void ) const;
       RemoteWorkDescriptor * getRemoteWorkDescriptor( unsigned int nodeId, int archId );
-      bool getAllocFit() const;
-      bool unalignedNodeMemory() const;
 
       virtual void startSupportThreads();
       virtual void startWorkerThreads( std::map<unsigned int, BaseThread *> &workers);

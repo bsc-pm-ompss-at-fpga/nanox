@@ -38,40 +38,17 @@
 #include "fpgadd.hpp"
 #endif
 
-#if defined(__SIZEOF_SIZE_T__)
-   #if  __SIZEOF_SIZE_T__ == 8
-
-#define DEFAULT_NODE_MEM (0x542000000ULL)
-#define MAX_NODE_MEM     (0x542000000ULL)
-
-   #elif __SIZEOF_SIZE_T__ == 4
-
-#define DEFAULT_NODE_MEM (0x40000000UL)
-#define MAX_NODE_MEM     (0x40000000UL)
-
-   #else
-      #error "Weird"
-   #endif
-#else
-   #error "I need to know the size of a size_t"
-#endif
-
-
 namespace nanos {
 namespace ext {
 
 ClusterPlugin::ClusterPlugin() : ArchPlugin( "Cluster PE Plugin", 1 ),
    _gasnetApi( NEW GASNetAPI() ), _numPinnedSegments( 0 ), _pinnedSegmentAddrList( NULL ),
    _pinnedSegmentLenList( NULL ), _extraPEsCount( 0 ), _conduit(""),
-   _nodeMem( DEFAULT_NODE_MEM ), _allocFit( false ), _unalignedNodeMem( false ),
-   _cachePolicy( System::DEFAULT ), _remoteNodes( NULL ), _cpu( NULL ),
-   _clusterThread( NULL ), _gasnetSegmentSize( 0 ), _clusterListener() {
+   _remoteNodes( NULL ), _cpu( NULL ), _clusterThread( NULL ), _clusterListener() {
 }
 
 void ClusterPlugin::config( Config& cfg )
 {
-   cfg.setOptionsSection( "Cluster Arch", "Cluster specific options" );
-   this->prepare( cfg ); //TODO: Move all common options to ClusterConfig
    ClusterConfig::prepare( cfg );
 }
 
@@ -79,8 +56,8 @@ void ClusterPlugin::init()
 {
    _gasnetApi->initialize( sys.getNetwork() );
    //sys.getNetwork()->setAPI(_gasnetApi);
-   _gasnetApi->setGASNetSegmentSize( _gasnetSegmentSize );
-   _gasnetApi->setUnalignedNodeMemory( _unalignedNodeMem );
+   _gasnetApi->setGASNetSegmentSize( ClusterConfig::getGasnetSegmentSize() );
+   _gasnetApi->setUnalignedNodeMemory( ClusterConfig::getUnaligMemEnabled() );
    sys.getNetwork()->initialize( _gasnetApi );
 
    unsigned int nodes = _gasnetApi->getNumNodes();
@@ -88,7 +65,7 @@ void ClusterPlugin::init()
    if ( nodes > 1 ) {
       if ( _gasnetApi->getNodeNum() == 0 ) {
          void *segmentAddr[ nodes ];
-         sys.getNetwork()->mallocSlaves( &segmentAddr[ 1 ], _nodeMem );
+         sys.getNetwork()->mallocSlaves( &segmentAddr[ 1 ], ClusterConfig::getNodeMem() );
          segmentAddr[ 0 ] = NULL;
 
          ClusterNode::ClusterSupportedArchMap supported_archs;
@@ -122,9 +99,9 @@ void ClusterPlugin::init()
          unsigned int node_index = 0;
          for ( unsigned int nodeC = 0; nodeC < nodes; nodeC++ ) {
             if ( nodeC != _gasnetApi->getNodeNum() ) {
-               memory_space_id_t id = sys.addSeparateMemoryAddressSpace( ext::Cluster, !( getAllocFit() ), 0 );
+               memory_space_id_t id = sys.addSeparateMemoryAddressSpace( ext::Cluster, !( ClusterConfig::getAllocFitEnabled() ), 0 );
                SeparateMemoryAddressSpace &nodeMemory = sys.getSeparateMemory( id );
-               nodeMemory.setSpecificData( NEW SimpleAllocator( ( uintptr_t ) segmentAddr[ nodeC ], _nodeMem ) );
+               nodeMemory.setSpecificData( NEW SimpleAllocator( ( uintptr_t ) segmentAddr[ nodeC ], ClusterConfig::getNodeMem() ) );
                nodeMemory.setNodeNumber( nodeC );
                nanos::ext::ClusterNode *node = new nanos::ext::ClusterNode( nodeC, id, supported_archs, supported_archs_array );
                (*_remoteNodes)[ node_index ] = node;
@@ -185,49 +162,11 @@ void ClusterPlugin::init()
 //    return _pinnedSegmentLenList[ idx ];
 // }
 
-std::size_t ClusterPlugin::getNodeMem() const {
-   return _nodeMem;
-}
-
-System::CachePolicyType ClusterPlugin::getCachePolicy ( void ) const {
-   return _cachePolicy;
-}
-
 RemoteWorkDescriptor * ClusterPlugin::getRemoteWorkDescriptor( unsigned int nodeId, int archId ) {
    RemoteWorkDescriptor *rwd = NEW RemoteWorkDescriptor( nodeId );
    rwd->_mcontrol.preInit();
    rwd->_mcontrol.initialize( *_cpu );
    return rwd;
-}
-
-bool ClusterPlugin::getAllocFit() const {
-   return _allocFit;
-}
-
-void ClusterPlugin::prepare( Config& cfg ) {
-   /* Cluster: memory size to be allocated on remote nodes */
-   cfg.registerConfigOption ( "node-memory", NEW Config::SizeVar ( _nodeMem ), "Sets the memory size that will be used on each node to send and receive data." );
-   cfg.registerArgOption ( "node-memory", "cluster-node-memory" );
-   cfg.registerEnvOption ( "node-memory", "NX_CLUSTER_NODE_MEMORY" );
-
-   cfg.registerConfigOption ( "cluster-alloc-fit", NEW Config::FlagOption( _allocFit ), "Allocate full objects.");
-   cfg.registerArgOption( "cluster-alloc-fit", "cluster-alloc-fit" );
-
-   System::CachePolicyConfig *cachePolicyCfg = NEW System::CachePolicyConfig ( _cachePolicy );
-   cachePolicyCfg->addOption("wt", System::WRITE_THROUGH );
-   cachePolicyCfg->addOption("wb", System::WRITE_BACK );
-   cachePolicyCfg->addOption("no", System::NONE );
-   cfg.registerConfigOption ( "cluster-cache-policy", cachePolicyCfg, "Defines the cache policy for Cluster architectures: write-through / write-back (wb by default)" );
-   cfg.registerEnvOption ( "cluster-cache-policy", "NX_CLUSTER_CACHE_POLICY" );
-   cfg.registerArgOption( "cluster-cache-policy", "cluster-cache-policy" );
-
-   cfg.registerConfigOption ( "cluster-unaligned-node-memory", NEW Config::FlagOption ( _unalignedNodeMem ), "Do not align node memory." );
-   cfg.registerArgOption ( "cluster-unaligned-node-memory", "cluster-unaligned-node-memory" );
-   cfg.registerEnvOption ( "cluster-unaligned-node-memory", "NX_CLUSTER_UNALIGNED_NODE_MEMORY" );
-
-   cfg.registerConfigOption ( "gasnet-segment", NEW Config::SizeVar ( _gasnetSegmentSize ), "GASNet segment size." );
-   cfg.registerArgOption ( "gasnet-segment", "gasnet-segment-size" );
-   cfg.registerEnvOption ( "gasnet-segment", "NX_GASNET_SEGMENT_SIZE" );
 }
 
 ProcessingElement * ClusterPlugin::createPE( unsigned id, unsigned uid ){
@@ -345,15 +284,6 @@ unsigned int ClusterPlugin::getMaxWorkers() const {
    //NOTE: At most, the plugin will create 1 worker thread with several sub-threads
    return 1;
 }
-
-bool ClusterPlugin::unalignedNodeMemory() const {
-   return _unalignedNodeMem;
-}
-
-// std::size_t ClusterPlugin::getGASNetSegmentSize() const {
-//    return _gasnetSegmentSize;
-// }
-
 
 }
 }

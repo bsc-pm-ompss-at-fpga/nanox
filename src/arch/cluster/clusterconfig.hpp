@@ -20,6 +20,7 @@
 #ifndef _NANOS_CLUSTER_CFG
 #define _NANOS_CLUSTER_CFG
 #include "config.hpp"
+#include "system_decl.hpp"
 
 namespace nanos {
 namespace ext {
@@ -36,14 +37,19 @@ namespace ext {
          static unsigned int    _maxArchId;       /*! \brief Max. cluster architecture identifier. Any id will be in [0, _maxArchId] */
          static bool            _sharedWorkerPE;  /*! \brief Enable/disable sharing PE for cluster worker */
          static int             _bindingWorker;   /*! \brief PE id where the cluster thread must run */
+         static std::size_t     _nodeMem;         /*! \brief Memory pool size in each node */
+         static bool            _allocFit;        /*! \brief Alloc objects in a fitted way */
+         static bool            _unalignedNodeMem;    /*! \brief Allow unaligned memory allocations? */
+         static System::CachePolicyType _cachePolicy; /*! \brief Cluster cache policy */
+         static std::size_t     _gasnetSegmentSize;   /*! \brief ??? */
 
       public:
          /*! Parses the Cluster user options */
-         static void prepare ( Config &config );
+         static void prepare( Config &config );
 
          /*! Applies the configuration options
           */
-         static void apply ( void );
+         static void apply( void );
 
          static bool getHybridWorkerEnabled() { return _hybridWorker; }
          static bool getSlaveNodeWorkerEnabled() { return _slaveNodeWorker; }
@@ -55,6 +61,11 @@ namespace ext {
          static void setMaxClusterArchId( unsigned int const num ) { _maxArchId = num; }
          static bool getSharedWorkerPeEnabled() { return _sharedWorkerPE; }
          static int getClusterWorkerBinding() { return _bindingWorker; }
+         static std::size_t getNodeMem() { return _nodeMem; }
+         static bool getAllocFitEnabled() { return _allocFit; }
+         static bool getUnaligMemEnabled() { return _unalignedNodeMem; }
+         static System::CachePolicyType getCachePolicy() { return _cachePolicy; }
+         static std::size_t getGasnetSegmentSize() { return _gasnetSegmentSize; }
    };
 
 } // namespace ext
