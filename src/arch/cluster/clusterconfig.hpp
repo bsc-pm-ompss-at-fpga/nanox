@@ -19,7 +19,7 @@
 
 #ifndef _NANOS_CLUSTER_CFG
 #define _NANOS_CLUSTER_CFG
-#include "config.hpp"
+#include "config_decl.hpp"
 #include "system_decl.hpp"
 
 namespace nanos {
@@ -42,6 +42,7 @@ namespace ext {
          static bool            _unalignedNodeMem;    /*! \brief Allow unaligned memory allocations? */
          static System::CachePolicyType _cachePolicy; /*! \brief Cluster cache policy */
          static std::size_t     _gasnetSegmentSize;   /*! \brief ??? */
+         static std::list<unsigned int> *_numWorkers; /*! \brief Number of cluster workers in each node */
 
       public:
          /*! Parses the Cluster user options */
@@ -66,6 +67,23 @@ namespace ext {
          static bool getUnaligMemEnabled() { return _unalignedNodeMem; }
          static System::CachePolicyType getCachePolicy() { return _cachePolicy; }
          static std::size_t getGasnetSegmentSize() { return _gasnetSegmentSize; }
+         static unsigned int getNumWorkersInNode( unsigned int idx ) {
+            unsigned int valList = 1;
+            if ( _numWorkers->size() == 1 ) {
+               //All nodes use the same value
+               valList = *_numWorkers->begin();
+            } else if ( _numWorkers->size() > 1 ) {
+               //Get the node value
+               std::list<unsigned int>::iterator it = _numWorkers->begin();
+               for (unsigned int i = 0; i <= idx && it != _numWorkers->end(); ++i) {
+                  valList = *it;
+                  ++it;
+               }
+            }
+            bool const slaveNode = idx != 0; //Master node has the idx 0
+            unsigned int const valSlaveNode = getSlaveNodeWorkerEnabled() ? valList : 0;
+            return slaveNode ? valSlaveNode : valList;
+         }
    };
 
 } // namespace ext

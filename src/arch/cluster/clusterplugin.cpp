@@ -44,7 +44,7 @@ namespace ext {
 ClusterPlugin::ClusterPlugin() : ArchPlugin( "Cluster PE Plugin", 1 ),
    _gasnetApi( NEW GASNetAPI() ), _numPinnedSegments( 0 ), _pinnedSegmentAddrList( NULL ),
    _pinnedSegmentLenList( NULL ), _extraPEsCount( 0 ), _conduit(""),
-   _remoteNodes( NULL ), _cpu( NULL ), _clusterThread( NULL ), _clusterListener() {
+   _remoteNodes( NULL ), _cpus(), _clusterThreads(), _clusterListener() {
 }
 
 void ClusterPlugin::config( Config& cfg )
@@ -54,6 +54,8 @@ void ClusterPlugin::config( Config& cfg )
 
 void ClusterPlugin::init()
 {
+   ClusterConfig::apply();
+
    _gasnetApi->initialize( sys.getNetwork() );
    //sys.getNetwork()->setAPI(_gasnetApi);
    _gasnetApi->setGASNetSegmentSize( ClusterConfig::getGasnetSegmentSize() );
@@ -110,30 +112,31 @@ void ClusterPlugin::init()
          }
       }
 
-      if ( ClusterConfig::getClusterWorkerBinding() != -1 ) {
-         //User wants the cluster thread to run in a specific CPU
-         _cpu = sys.getSMPPlugin()->getSMPProcessorById( ClusterConfig::getClusterWorkerBinding() );
-         if ( _cpu->isReserved() && !ClusterConfig::getSharedWorkerPeEnabled() ) {
-             fatal0( "Requested CPU for cluster thread is already reserved. Try use --cluster-allow-shared-thread or --binding-start" );
+      for ( unsigned int i = 0; i < ClusterConfig::getNumWorkersInNode( _gasnetApi->getNodeNum() ); ++i ) {
+         ext::SMPProcessor *cpu = NULL;
+         if ( ClusterConfig::getClusterWorkerBinding() != -1 ) {
+            //User wants the cluster thread to run in a specific CPU
+            cpu = sys.getSMPPlugin()->getSMPProcessorById( ClusterConfig::getClusterWorkerBinding() );
+            if ( cpu->isReserved() && !ClusterConfig::getSharedWorkerPeEnabled() ) {
+               fatal0( "Requested CPU for cluster thread is already reserved. Try use --cluster-allow-shared-thread or --binding-start" );
+            }
+         } else {
+            cpu = sys.getSMPPlugin()->getLastFreeSMPProcessor();
+            if ( cpu == NULL && ClusterConfig::getSharedWorkerPeEnabled() ) {
+               //There is not a free CPU for cluster worker but it can run on a shared PE
+               cpu = sys.getSMPPlugin()->getLastSMPProcessor();
+               ensure0( cpu != NULL, "Unable to get a cpu to run the cluster thread." );
+            } else if ( cpu == NULL ) {
+               fatal0( "Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread" );
+            }
          }
-      } else {
-         _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessor();
-         if ( _cpu == NULL && ClusterConfig::getSharedWorkerPeEnabled() ) {
-            //There is not a free CPU for cluster worker but it can run on a shared PE
-            _cpu = sys.getSMPPlugin()->getLastSMPProcessor();
-            ensure0( _cpu != NULL, "Unable to get a cpu to run the cluster thread." );
-         } else if ( _cpu == NULL ) {
-            fatal0( "Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread" );
-         }
-      }
 
-      //Will the found CPU be used to run a cluster worker?
-      if ( _gasnetApi->getNodeNum() == 0 || ClusterConfig::getSlaveNodeWorkerEnabled() ) {
-         if ( !_cpu->isReserved() ) {
+         if ( !cpu->isReserved() ) {
             //The cpu is free and will be used to exclusively run the cluster worker
-            _cpu->reserve();
+            cpu->reserve();
          }
-         _cpu->setNumFutureThreads( _cpu->getNumFutureThreads() + 1 /* Cluster worker */ );
+         cpu->setNumFutureThreads( cpu->getNumFutureThreads() + 1 /* Cluster worker */ );
+         _cpus.push_back( cpu );
       }
 
       //Register the EventListener in the EventDispatcher for atIdle events
@@ -163,9 +166,11 @@ void ClusterPlugin::init()
 // }
 
 RemoteWorkDescriptor * ClusterPlugin::getRemoteWorkDescriptor( unsigned int nodeId, int archId ) {
+   //NOTE Get the SMP core of one cluster worker or just one random SMP core. Reuse always the same core
+   static ext::SMPProcessor *cpu = _cpus.empty() ? sys.getSMPPlugin()->getLastSMPProcessor() : _cpus[0];
    RemoteWorkDescriptor *rwd = NEW RemoteWorkDescriptor( nodeId );
    rwd->_mcontrol.preInit();
-   rwd->_mcontrol.initialize( *_cpu );
+   rwd->_mcontrol.initialize( *cpu );
    return rwd;
 }
 
@@ -178,49 +183,48 @@ unsigned ClusterPlugin::getNumThreads() const {
 }
 
 void ClusterPlugin::startSupportThreads() {
-   if ( _gasnetApi->getNumNodes() > 1 )
-   {
+   for ( unsigned int i = 0; i < _cpus.size(); ++i ) {
+      ext::SMPProcessor *cpu = _cpus[i];
       if ( _gasnetApi->getNodeNum() == 0 ) {
-         _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker(
+         //Master node
+         _clusterThreads.push_back( dynamic_cast<ext::SMPMultiThread *>( &cpu->startMultiWorker(
             _gasnetApi->getNumNodes() - 1,
             ( ProcessingElement ** ) &( *_remoteNodes )[0],
             ( DD::work_fct ) ClusterThread::workerClusterLoop
-         ) );
+         ) ) );
       } else {
-         if ( ClusterConfig::getSlaveNodeWorkerEnabled() ) {
-            _clusterThread = dynamic_cast<ext::SMPMultiThread *>( &_cpu->startMultiWorker(
-               0, NULL, ( DD::work_fct )ClusterThread::workerClusterLoop )
+         //Slave nodes
+         _clusterThreads.push_back( dynamic_cast<ext::SMPMultiThread *>( &cpu->startMultiWorker(
+            0, NULL, ( DD::work_fct )ClusterThread::workerClusterLoop )
+         ) );
+         if ( sys.getPMInterface().getInternalDataSize() > 0 ) {
+            _clusterThreads[i]->getThreadWD().setInternalData(
+               NEW char[sys.getPMInterface().getInternalDataSize()]
             );
-            if ( sys.getPMInterface().getInternalDataSize() > 0 ) {
-               _clusterThread->getThreadWD().setInternalData(
-                  NEW char[sys.getPMInterface().getInternalDataSize()]
-               );
-            }
-         }
-         //_pmInterface->setupWD( smpRepThd->getThreadWD() );
-         //setSlaveParentWD( &mainWD );
-         if ( sys.getNumAccelerators() > 0 ) {
-            /* This works, but it could happen that the cluster is initialized before the accelerators, and this call could return 0 */
-            sys.getNetwork()->enableCheckingForDataInOtherAddressSpaces();
-         }
-
-         int num_devices = ClusterConfig::getMaxClusterArchId() + 1;
-         _gasnetApi->allocArchRWDs( 1, num_devices );
-         for ( int j = 0; j < num_devices; j++ ) {
-            _gasnetApi->_rwgs[0][j] = getRemoteWorkDescriptor( 0, j );
          }
       }
+      debug0( "New Cluster Helper Thread created with id: " << _clusterThreads[i]->getId()
+         << ", in SMP processor: " << cpu->getId() );
+   }
 
-      if ( _clusterThread != NULL ) {
-         debug0( "New Cluster Helper Thread created with id: " << _clusterThread->getId()
-            << ", in SMP processor: " << _cpu->getId() );
+   //NOTE The following code is executed here to ensure that the accelerators are already initialized.
+   if ( _gasnetApi->getNodeNum() > 0 ) {
+      //Do it only in the slave nodes
+      if ( sys.getNumAccelerators() > 0 ) {
+         sys.getNetwork()->enableCheckingForDataInOtherAddressSpaces();
+      }
+
+      int num_devices = ClusterConfig::getMaxClusterArchId() + 1;
+      _gasnetApi->allocArchRWDs( 1, num_devices );
+      for ( int j = 0; j < num_devices; j++ ) {
+         _gasnetApi->_rwgs[0][j] = getRemoteWorkDescriptor( 0, j );
       }
    }
 }
 
 void ClusterPlugin::startWorkerThreads( std::map<unsigned int, BaseThread *> &workers ) {
-   if ( _clusterThread ) {
-      workers.insert( std::make_pair( _clusterThread->getId(), _clusterThread ) );
+   for ( unsigned int i = 0; i < _clusterThreads.size(); ++i ) {
+      workers.insert( std::make_pair( _clusterThreads[i]->getId(), _clusterThreads[i] ) );
    }
 }
 
@@ -277,12 +281,7 @@ unsigned int ClusterPlugin::getMaxPEs() const {
 }
 
 unsigned int ClusterPlugin::getNumWorkers() const {
-   return _clusterThread ? 1 : 0;
-}
-
-unsigned int ClusterPlugin::getMaxWorkers() const {
-   //NOTE: At most, the plugin will create 1 worker thread with several sub-threads
-   return 1;
+   return _clusterThreads.size();
 }
 
 }

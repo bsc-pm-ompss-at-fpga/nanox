@@ -18,6 +18,7 @@
 /*************************************************************************************/
 
 #include "clusterconfig.hpp"
+#include "config.hpp"
 
 #if defined(__SIZEOF_SIZE_T__)
 #  if  __SIZEOF_SIZE_T__ == 8
@@ -50,6 +51,7 @@ bool ClusterConfig::_allocFit = false;
 bool ClusterConfig::_unalignedNodeMem = false;
 System::CachePolicyType ClusterConfig::_cachePolicy = System::DEFAULT;
 std::size_t ClusterConfig::_gasnetSegmentSize = 0;
+std::list<unsigned int> * ClusterConfig::_numWorkers = NULL;
 
 void ClusterConfig::prepare( Config &cfg )
 {
@@ -83,7 +85,7 @@ void ClusterConfig::prepare( Config &cfg )
    cfg.registerArgOption( "cluster_fpga_presend", "cluster-fpga-presend" );
    cfg.registerEnvOption( "cluster_fpga_presend", "NX_CLUSTER_FPGA_PRESEND" );
 
-   cfg.registerConfigOption( "cluster_shared_pe", NEW Config::FlagOption ( _sharedWorkerPE ),
+   cfg.registerConfigOption( "cluster_shared_pe", NEW Config::FlagOption( _sharedWorkerPE ),
       "Allow the cluster thread to share CPU with other threads (def: disabled)" );
    cfg.registerArgOption( "cluster_shared_pe", "cluster-allow-shared-thread" );
    cfg.registerEnvOption( "cluster_shared_pe", "NX_CLUSTER_ALLOW_SHARED_THREAD" );
@@ -94,7 +96,7 @@ void ClusterConfig::prepare( Config &cfg )
    cfg.registerEnvOption( "cluster_worker_binding", "NX_CLUSTER_WORKER_BINDING" );
 
    /* Cluster: memory size to be allocated on remote nodes */
-   cfg.registerConfigOption( "node_memory", NEW Config::SizeVar ( _nodeMem ),
+   cfg.registerConfigOption( "node_memory", NEW Config::SizeVar( _nodeMem ),
       "Sets the memory size that will be used on each node to send and receive data (def: ~21GB)" );
    cfg.registerArgOption( "node_memory", "cluster-node-memory" );
    cfg.registerEnvOption( "node_memory", "NX_CLUSTER_NODE_MEMORY" );
@@ -108,7 +110,7 @@ void ClusterConfig::prepare( Config &cfg )
       "Allocate full objects (def: false)" );
    cfg.registerArgOption( "cluster_alloc_fit", "cluster-alloc-fit" );
 
-   System::CachePolicyConfig *cachePolicyCfg = NEW System::CachePolicyConfig ( _cachePolicy );
+   System::CachePolicyConfig *cachePolicyCfg = NEW System::CachePolicyConfig( _cachePolicy );
    cachePolicyCfg->addOption("wt", System::WRITE_THROUGH );
    cachePolicyCfg->addOption("wb", System::WRITE_BACK );
    cachePolicyCfg->addOption("no", System::NONE );
@@ -117,15 +119,21 @@ void ClusterConfig::prepare( Config &cfg )
    cfg.registerEnvOption( "cluster_cache_policy", "NX_CLUSTER_CACHE_POLICY" );
    cfg.registerArgOption( "cluster_cache_policy", "cluster-cache-policy" );
 
-   cfg.registerConfigOption( "cluster_unaligned_node_memory", NEW Config::FlagOption ( _unalignedNodeMem ),
+   cfg.registerConfigOption( "cluster_unaligned_node_memory", NEW Config::FlagOption( _unalignedNodeMem ),
       "Do not align node memory (def: false)" );
    cfg.registerArgOption( "cluster_unaligned_node_memory", "cluster-unaligned-node-memory" );
    cfg.registerEnvOption( "cluster_unaligned_node_memory", "NX_CLUSTER_UNALIGNED_NODE_MEMORY" );
 
-   cfg.registerConfigOption( "gasnet_segment", NEW Config::SizeVar ( _gasnetSegmentSize ),
+   cfg.registerConfigOption( "gasnet_segment", NEW Config::SizeVar( _gasnetSegmentSize ),
       "GASNet segment size (def: 0)" );
    cfg.registerArgOption( "gasnet_segment", "gasnet-segment-size" );
    cfg.registerEnvOption( "gasnet_segment", "NX_GASNET_SEGMENT_SIZE" );
+
+   _numWorkers = new std::list<unsigned int>();
+   cfg.registerConfigOption( "cluster_num_workers", NEW Config::UintVarList( *_numWorkers ),
+      "Defines the number of cluster helper threads in each node. If only one value is provided, all nodes use it (def: 1)" );
+   cfg.registerArgOption( "cluster_num_workers", "cluster-helper-threads" );
+   cfg.registerEnvOption( "cluster_num_workers", "NX_CLUSTER_HELPER_THREADS" );
 }
 
 void ClusterConfig::apply() { }
