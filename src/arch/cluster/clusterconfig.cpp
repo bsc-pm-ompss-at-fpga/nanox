@@ -45,7 +45,8 @@ int ClusterConfig::_oclPresend = 1;
 int ClusterConfig::_fpgaPresend = 1;
 unsigned int ClusterConfig::_maxArchId = 3; //< 0: SMP, 1: CUDA, 2: OCL, 3: FPGA
 bool ClusterConfig::_sharedWorkerPE = false;
-int ClusterConfig::_bindingWorker = -1;
+int ClusterConfig::_bindingStart = -1;
+int ClusterConfig::_bindingStride = 1;
 std::size_t ClusterConfig::_nodeMem = DEFAULT_NODE_MEM;
 bool ClusterConfig::_allocFit = false;
 bool ClusterConfig::_unalignedNodeMem = false;
@@ -90,10 +91,15 @@ void ClusterConfig::prepare( Config &cfg )
    cfg.registerArgOption( "cluster_shared_pe", "cluster-allow-shared-thread" );
    cfg.registerEnvOption( "cluster_shared_pe", "NX_CLUSTER_ALLOW_SHARED_THREAD" );
 
-   cfg.registerConfigOption( "cluster_worker_binding", NEW Config::IntegerVar( _bindingWorker ),
-      "PE id where the cluster worker thread must run." );
+   cfg.registerConfigOption( "cluster_worker_binding", NEW Config::IntegerVar( _bindingStart ),
+      "PE id where the 1st cluster worker thread must run." );
    cfg.registerArgOption( "cluster_worker_binding", "cluster-worker-binding" );
    cfg.registerEnvOption( "cluster_worker_binding", "NX_CLUSTER_WORKER_BINDING" );
+
+   cfg.registerConfigOption( "cluster_binding_stride", NEW Config::IntegerVar( _bindingStride ),
+      "Stride between cluster threads. Ignored if no 'cluster-worker-binding' provided (def: 1)." );
+   cfg.registerArgOption( "cluster_binding_stride", "cluster-worker-binding-stride" );
+   cfg.registerEnvOption( "cluster_binding_stride", "NX_CLUSTER_WORKER_BINDING_STRIDE" );
 
    /* Cluster: memory size to be allocated on remote nodes */
    cfg.registerConfigOption( "node_memory", NEW Config::SizeVar( _nodeMem ),

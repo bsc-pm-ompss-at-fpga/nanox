@@ -36,7 +36,8 @@ namespace ext {
          static int             _fpgaPresend;     /*! \brief Max. number of tasks sent to remote node without waiting */
          static unsigned int    _maxArchId;       /*! \brief Max. cluster architecture identifier. Any id will be in [0, _maxArchId] */
          static bool            _sharedWorkerPE;  /*! \brief Enable/disable sharing PE for cluster worker */
-         static int             _bindingWorker;   /*! \brief PE id where the cluster thread must run */
+         static int             _bindingStart;    /*! \brief PE id where the first cluster thread must run */
+         static int             _bindingStride;   /*! \brief Stride between cluster threads */
          static std::size_t     _nodeMem;         /*! \brief Memory pool size in each node */
          static bool            _allocFit;        /*! \brief Alloc objects in a fitted way */
          static bool            _unalignedNodeMem;    /*! \brief Allow unaligned memory allocations? */
@@ -61,7 +62,8 @@ namespace ext {
          static unsigned int getMaxClusterArchId() { return _maxArchId; }
          static void setMaxClusterArchId( unsigned int const num ) { _maxArchId = num; }
          static bool getSharedWorkerPeEnabled() { return _sharedWorkerPE; }
-         static int getClusterWorkerBinding() { return _bindingWorker; }
+         static int getBindingStart() { return _bindingStart; }
+         static int getBindingStride() { return _bindingStride; }
          static std::size_t getNodeMem() { return _nodeMem; }
          static bool getAllocFitEnabled() { return _allocFit; }
          static bool getUnaligMemEnabled() { return _unalignedNodeMem; }

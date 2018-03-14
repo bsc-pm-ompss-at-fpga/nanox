@@ -114,9 +114,10 @@ void ClusterPlugin::init()
 
       for ( unsigned int i = 0; i < ClusterConfig::getNumWorkersInNode( _gasnetApi->getNodeNum() ); ++i ) {
          ext::SMPProcessor *cpu = NULL;
-         if ( ClusterConfig::getClusterWorkerBinding() != -1 ) {
+         if ( ClusterConfig::getBindingStart() != -1 ) {
             //User wants the cluster thread to run in a specific CPU
-            cpu = sys.getSMPPlugin()->getSMPProcessorById( ClusterConfig::getClusterWorkerBinding() );
+            int cpuId = ( ClusterConfig::getBindingStart() + ClusterConfig::getBindingStride()*i )%sys.getSMPPlugin()->getCpuCount();
+            cpu = sys.getSMPPlugin()->getSMPProcessorById( cpuId );
             if ( cpu->isReserved() && !ClusterConfig::getSharedWorkerPeEnabled() ) {
                fatal0( "Requested CPU for cluster thread is already reserved. Try use --cluster-allow-shared-thread or --binding-start" );
             }
