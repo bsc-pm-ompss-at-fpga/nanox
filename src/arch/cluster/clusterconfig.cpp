@@ -39,7 +39,7 @@ namespace ext {
 
 bool ClusterConfig::_hybridWorker = false;
 bool ClusterConfig::_hybridWorkerPlus = false;
-bool ClusterConfig::_slaveNodeWorker = true;
+bool ClusterConfig::_slaveNodeWorker = false;
 int ClusterConfig::_smpPresend = 1;
 int ClusterConfig::_gpuPresend = 1;
 int ClusterConfig::_oclPresend = 1;
@@ -68,7 +68,7 @@ void ClusterConfig::prepare( Config &cfg )
    cfg.registerArgOption( "cluster_hybrid_plus", "cluster-hybrid-worker-plus" );
 
    cfg.registerConfigOption( "cluster_slave_worker", NEW Config::FlagOption( _slaveNodeWorker ),
-      "Enable Cluster helper thread in slave Nodes (def: enabled)" );
+      "Enable Cluster helper thread in slave Nodes (def: disabled)" );
    cfg.registerArgOption( "cluster_slave_worker", "cluster-slave-worker" );
 
    cfg.registerConfigOption( "cluster_smp_presend", NEW Config::IntegerVar( _smpPresend ),
