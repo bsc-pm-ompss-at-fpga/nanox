@@ -29,6 +29,7 @@ namespace ext {
    {
       private:
          static bool            _hybridWorker;    /*! \brief Enable/disable hybrid cluster worker */
+         static bool            _hybridWorkerPlus;    /*! \brief Enable/disable calls to ED from cluster worker */
          static bool            _slaveNodeWorker; /*! \brief Enable/disable cluster worker in slave nodes */
          static int             _smpPresend;      /*! \brief Max. number of tasks sent to remote node without waiting */
          static int             _gpuPresend;      /*! \brief Max. number of tasks sent to remote node without waiting */
@@ -54,6 +55,7 @@ namespace ext {
          static void apply( void );
 
          static bool getHybridWorkerEnabled() { return _hybridWorker; }
+         static bool getHybridWorkerPlusEnabled() { return _hybridWorkerPlus; }
          static bool getSlaveNodeWorkerEnabled() { return _slaveNodeWorker; }
          static int getSmpPresend() { return _smpPresend; }
          static int getGpuPresend() { return _gpuPresend; }

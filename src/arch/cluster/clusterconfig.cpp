@@ -38,6 +38,7 @@ namespace nanos {
 namespace ext {
 
 bool ClusterConfig::_hybridWorker = false;
+bool ClusterConfig::_hybridWorkerPlus = false;
 bool ClusterConfig::_slaveNodeWorker = true;
 int ClusterConfig::_smpPresend = 1;
 int ClusterConfig::_gpuPresend = 1;
@@ -61,6 +62,10 @@ void ClusterConfig::prepare( Config &cfg )
    cfg.registerConfigOption( "cluster_hybrid_worker", NEW Config::FlagOption( _hybridWorker ),
       "Allow Cluster helper thread to run SMP tasks when IDLE (def: disabled)" );
    cfg.registerArgOption( "cluster_hybrid_worker", "cluster-hybrid-worker" );
+
+   cfg.registerConfigOption( "cluster_hybrid_plus", NEW Config::FlagOption( _hybridWorkerPlus ),
+      "Enable call to Event Dispatcher when the cluster helper thread is IDLE (def: disabled). It will also enable '--cluster-hybrid-worker'" );
+   cfg.registerArgOption( "cluster_hybrid_plus", "cluster-hybrid-worker-plus" );
 
    cfg.registerConfigOption( "cluster_slave_worker", NEW Config::FlagOption( _slaveNodeWorker ),
       "Enable Cluster helper thread in slave Nodes (def: enabled)" );
@@ -142,7 +147,10 @@ void ClusterConfig::prepare( Config &cfg )
    cfg.registerEnvOption( "cluster_num_workers", "NX_CLUSTER_HELPER_THREADS" );
 }
 
-void ClusterConfig::apply() { }
+void ClusterConfig::apply() {
+   //Also enable hybrid worker if hybrid worker plus is enabled
+   _hybridWorker |= _hybridWorkerPlus;
+}
 
 } // namespace ext
 } // namespace nanos
