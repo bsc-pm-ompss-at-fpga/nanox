@@ -133,13 +133,21 @@ void ClusterPlugin::init()
          }
       }
 
-      _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessor();
-      if ( _cpu == NULL && ClusterConfig::getSharedWorkerPeEnabled() ) {
-         //There is not a free CPU for cluster worker but it can run on a shared PE
-         _cpu = sys.getSMPPlugin()->getLastSMPProcessor();
-         ensure0( _cpu != NULL, "Unable to get a cpu to run the cluster thread." );
-      } else if ( _cpu == NULL ) {
-         fatal0( "Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread" );
+      if ( ClusterConfig::getClusterWorkerBinding() != -1 ) {
+         //User wants the cluster thread to run in a specific CPU
+         _cpu = sys.getSMPPlugin()->getSMPProcessorById( ClusterConfig::getClusterWorkerBinding() );
+         if ( _cpu->isReserved() && !ClusterConfig::getSharedWorkerPeEnabled() ) {
+             fatal0( "Requested CPU for cluster thread is already reserved. Try use --cluster-allow-shared-thread or --binding-start" );
+         }
+      } else {
+         _cpu = sys.getSMPPlugin()->getLastFreeSMPProcessor();
+         if ( _cpu == NULL && ClusterConfig::getSharedWorkerPeEnabled() ) {
+            //There is not a free CPU for cluster worker but it can run on a shared PE
+            _cpu = sys.getSMPPlugin()->getLastSMPProcessor();
+            ensure0( _cpu != NULL, "Unable to get a cpu to run the cluster thread." );
+         } else if ( _cpu == NULL ) {
+            fatal0( "Unable to get a cpu to run the cluster thread. Try using --cluster-allow-shared-thread" );
+         }
       }
 
       //Will the found CPU be used to run a cluster worker?
