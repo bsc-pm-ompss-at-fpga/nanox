@@ -41,6 +41,7 @@ namespace ext {
          private:
             // config variables
             static Atomic<int>      _deviceSeed; // Number of cluster devices assigned to threads
+            static bool             _clusterWorkerCalled; //< True iff ClusterNode::clusterWorker has been called
             unsigned int            _clusterNode; // Assigned cluster device Id
             unsigned int _executedWorkDesciptors;
             ClusterSupportedArchMap _supportedArchsById;
