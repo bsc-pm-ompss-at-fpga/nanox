@@ -249,6 +249,12 @@ inline std::string Config::PositiveHelpFormat::operator()()
    return "positive integer";
 }
 
+template<class ElementsHelpFormat>
+inline std::string Config::ListHelpFormat<ElementsHelpFormat>::operator()()
+{
+   return "list of type: " + _elemsHelpFormat();
+}
+
 template<typename T, class helpFormat, typename checkT>
 inline void Config::FuncOption<T,helpFormat,checkT>::setValue ( const T& value )
 {

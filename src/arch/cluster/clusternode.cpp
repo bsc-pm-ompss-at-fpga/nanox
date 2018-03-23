@@ -27,6 +27,7 @@
 using namespace nanos;
 using namespace nanos::ext;
 
+bool ClusterNode::_clusterWorkerCalled = false;
 
 ClusterNode::ClusterNode( int nodeId, memory_space_id_t memId,
    ClusterSupportedArchMap const &archs, const Device **archsArray ) :
@@ -96,6 +97,7 @@ unsigned int ClusterNode::getNodeNum() const {
 }
 
 void ClusterNode::clusterWorker() {
+   _clusterWorkerCalled = true;
    if ( sys.getNetwork()->getNodeNum() > 0 ) {
       Scheduler::workerLoop();
       exit(0);
@@ -112,6 +114,8 @@ bool ClusterNode::inlineWorkDependent ( WD &wd ) {
 }
 
 void ClusterNode::preOutlineWorkDependent ( WD &wd ) {
+   ensure( _clusterWorkerCalled, "Trying to send a WD to a remote node but 'ompss_nanox_main' has not been called." <<
+      " Has the application been compiled with the --cluster flag?" );
    wd.preStart(WorkDescriptor::IsNotAUserLevelThread);
 }
 

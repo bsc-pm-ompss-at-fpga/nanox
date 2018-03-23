@@ -330,7 +330,7 @@ void ClusterThread::workerClusterLoop ()
    NANOS_INSTRUMENT ( static Instrumentation *instr = sys.getInstrumentation(); );
    NANOS_INSTRUMENT ( static InstrumentationDictionary *id =
            instr->getInstrumentationDictionary(); );
-   NANOS_INSTRUMENT ( static nanos_event_key_t nodeSelectKey = 
+   NANOS_INSTRUMENT ( static nanos_event_key_t nodeSelectKey =
            id->getEventKey( "cluster-select-node" ); );
 
    for ( ; ; ) {
@@ -471,11 +471,20 @@ void ClusterThread::workerClusterLoop ()
          //The worker is idle and the max. number of spins has been reached
          spins = init_spins;
 
-         if ( ClusterConfig::getHybridWorkerEnabled() ) {
-            //Try to get one SMP task
+         static bool hybridEnabled = ClusterConfig::getHybridWorkerEnabled();
+         if ( hybridEnabled ) {
             BaseThread *tmpThread = myThread;
             myThread = parent; //Parent should be already an smp thread
+
+            //Try to get one SMP task
             Scheduler::helperWorkerLoop();
+
+            static bool eventDispEneabled = ClusterConfig::getHybridWorkerPlusEnabled();
+            if ( eventDispEneabled ) {
+               //Call the event dispatcher module
+               sys.getEventDispatcher().atIdle();
+            }
+
             myThread = tmpThread;
          }
 

@@ -47,34 +47,24 @@ class ClusterListener : public EventListener {
 
 class ClusterPlugin : public ArchPlugin
 {
-      GASNetAPI *_gasnetApi;
+      GASNetAPI                          *_gasnetApi;
 
-      unsigned int _numPinnedSegments;
-      void ** _pinnedSegmentAddrList;
-      std::size_t * _pinnedSegmentLenList;
-      unsigned int _extraPEsCount;
-      std::string _conduit;
-      std::size_t _nodeMem;
-      bool _allocFit;
-      bool _unalignedNodeMem;
-      System::CachePolicyType _cachePolicy;
-      std::vector<ext::ClusterNode *> *_remoteNodes;
-      ext::SMPProcessor *_cpu;
-      ext::SMPMultiThread *_clusterThread;
-      std::size_t _gasnetSegmentSize;
-      ClusterListener                  _clusterListener; /*! \brief Cluster listener for atIdle events */
+      unsigned int                        _numPinnedSegments;
+      void                              **_pinnedSegmentAddrList;
+      std::size_t                        *_pinnedSegmentLenList;
+      unsigned int                        _extraPEsCount;
+      std::string                         _conduit;
+      std::vector<ext::ClusterNode *>    *_remoteNodes;
+      std::vector<ext::SMPProcessor *>    _cpus;
+      std::vector<ext::SMPMultiThread *>  _clusterThreads;
+      ClusterListener                     _clusterListener; /*! \brief Cluster listener for atIdle events */
 
    public:
       ClusterPlugin();
       virtual void config( Config& cfg );
       virtual void init();
 
-      void prepare( Config& cfg );
-      std::size_t getNodeMem() const;
-      System::CachePolicyType getCachePolicy ( void ) const;
       RemoteWorkDescriptor * getRemoteWorkDescriptor( unsigned int nodeId, int archId );
-      bool getAllocFit() const;
-      bool unalignedNodeMemory() const;
 
       virtual void startSupportThreads();
       virtual void startWorkerThreads( std::map<unsigned int, BaseThread *> &workers);
@@ -87,7 +77,6 @@ class ClusterPlugin : public ArchPlugin
       virtual unsigned int getNumPEs() const;
       virtual unsigned int getMaxPEs() const;
       virtual unsigned int getNumWorkers() const;
-      virtual unsigned int getMaxWorkers() const;
 };
 
 } // namespace ext

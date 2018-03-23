@@ -297,6 +297,17 @@ namespace nanos {
                virtual std::string operator()();
          };
 
+         template<class ElementsHelpFormat>
+         class ListHelpFormat : public HelpFormat
+         {
+            private:
+               ElementsHelpFormat _elemsHelpFormat;
+            public:
+               virtual ~ListHelpFormat() {}
+
+               virtual std::string operator()();
+         };
+
          typedef class VarOption<int,IntegerHelpFormat>                         IntegerVar;
 
          typedef class VarOption<size_t,MetricHelpFormat,isMetric<size_t> >     SizeVar;
@@ -305,9 +316,10 @@ namespace nanos {
 
          typedef class VarOption<std::string, StringHelpFormat>                 StringVar;
 
-         typedef class ListOption<std::string, StringHelpFormat>                StringVarList;
+         typedef class ListOption<std::string, ListHelpFormat<StringHelpFormat> >
+                                                                                StringVarList;
 
-         typedef class ListOption< unsigned int, PositiveHelpFormat, isPositive<unsigned int> >
+         typedef class ListOption< unsigned int, ListHelpFormat<PositiveHelpFormat> >
                                                                                 UintVarList;
 
          typedef class VarOption<int,PositiveHelpFormat,isPositive<int> >       PositiveVar;

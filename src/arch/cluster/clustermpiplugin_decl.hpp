@@ -38,26 +38,16 @@ class ClusterMPIPlugin : public ArchPlugin
       std::size_t * _pinnedSegmentLenList;
       unsigned int _extraPEsCount;
       std::string _conduit;
-      std::size_t _nodeMem;
-      bool _allocFit;
-      bool _unalignedNodeMem;
-      System::CachePolicyType _cachePolicy;
       std::vector<ext::ClusterNode *> *_nodes;
       ext::SMPProcessor *_cpu;
       ext::SMPMultiThread *_clusterThread;
-      std::size_t _gasnetSegmentSize;
 
    public:
       ClusterMPIPlugin();
       virtual void config( Config& cfg );
       virtual void init();
 
-      void prepare( Config& cfg );
-      std::size_t getNodeMem() const;
-      System::CachePolicyType getCachePolicy ( void ) const;
       RemoteWorkDescriptor * getRemoteWorkDescriptor( unsigned int nodeId, int archId );
-      bool getAllocFit() const;
-      bool unalignedNodeMemory() const;
       virtual int initNetwork(int *argc, char ***argv);
 
 
