@@ -137,8 +137,8 @@ namespace nanos {
                   TeamData &tdata = (TeamData &) *myThread->getTeam()->getScheduleData();
                   if ( pred->getDepth() == 1 ) {
                      unsigned int memSpaceId = pred->isTiedToLocation();
-                     unsigned int node_num = memSpaceId > 0 ? sys.getSeparateMemory( memSpaceId ).getNodeNumber() : 0;
-                     q = (WDPriorityQueue<> *) tdata._topLevelQueues[node_num];
+                     unsigned int nodeNum = memSpaceId > 0 ? sys.getSeparateMemory( memSpaceId ).getNodeNumber() : 0;
+                     q = (WDPriorityQueue<> *) tdata._topLevelQueues[nodeNum];
                   } else {
                      q = (WDPriorityQueue<> *) tdata._childLevelsQueue;
                   }
@@ -165,10 +165,10 @@ namespace nanos {
                } else {
                   TeamData &data = ( TeamData & ) *thread->getTeam()->getScheduleData();
                   static unsigned int numNodes = data._topLevelQueues.size();
-                  unsigned int node_num = wd.isTiedLocation() ? wd.isTiedToLocation() :
+                  unsigned int nodeNum = wd.isTiedLocation() ? wd.isTiedToLocation() :
                      sys.getMemorySpaceIdOfClusterNode( ( _lastNodeNum.fetchAndAdd() )%numNodes );
-                  wd.tieToLocation( node_num );
-                  q = data._topLevelQueues[node_num];
+                  wd.tieToLocation( nodeNum );
+                  q = data._topLevelQueues[nodeNum];
                }
                q->push_front( &wd );
                sys.getThreadManager()->unblockThread( thread );
@@ -230,8 +230,8 @@ namespace nanos {
             {
                TeamData &tdata = (TeamData &) *myThread->getTeam()->getScheduleData();
                unsigned int memSpaceId = myThread->runningOn()->getMemorySpaceId();
-               unsigned int node_num = memSpaceId > 0 ? sys.getSeparateMemory( memSpaceId ).getNodeNumber() : 0;
-               return tdata._topLevelQueues[node_num]->testDequeue() || tdata._childLevelsQueue->testDequeue();
+               unsigned int nodeNum = memSpaceId > 0 ? sys.getSeparateMemory( memSpaceId ).getNodeNumber() : 0;
+               return tdata._topLevelQueues[nodeNum]->testDequeue() || tdata._childLevelsQueue->testDequeue();
             }
       };
 
@@ -254,8 +254,8 @@ namespace nanos {
          if ( wd == NULL ) {
             //! 2nd: Schedule the top level tasks
             unsigned int memSpaceId = thread->runningOn()->getMemorySpaceId();
-            unsigned int node_num = memSpaceId > 0 ? sys.getSeparateMemory( memSpaceId ).getNodeNumber() : 0;
-            wd = data._topLevelQueues[node_num]->pop_front( thread );
+            unsigned int nodeNum = memSpaceId > 0 ? sys.getSeparateMemory( memSpaceId ).getNodeNumber() : 0;
+            wd = data._topLevelQueues[nodeNum]->pop_front( thread );
          }
          return wd;
       }
