@@ -710,7 +710,6 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
             success = true;
          }
          applyCpuMask( workers );
-         sys.getThreadManager()->processMaskChanged();
       }
       return success;
    }
@@ -720,7 +719,6 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
       _cpuProcessMask.add( mask );
       _cpuActiveMask.add( mask );
       applyCpuMask( workers );
-      sys.getThreadManager()->processMaskChanged();
    }
 
    const CpuSet& SMPPlugin::getCpuActiveMask () const
@@ -752,6 +750,21 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
       applyCpuMask( workers );
    }
 
+   void SMPPlugin::enableCpu ( int cpuid, std::map<unsigned int, BaseThread *> &workers )
+   {
+      if ( _cpuSystemMask.isSet( cpuid ) && !_cpuActiveMask.isSet( cpuid ) ) {
+         _cpuActiveMask.set( cpuid );
+         applyCpuMask( workers );
+      }
+   }
+
+   void SMPPlugin::disableCpu ( int cpuid, std::map<unsigned int, BaseThread *> &workers )
+   {
+      if ( _cpuActiveMask.isSet( cpuid ) ) {
+         _cpuActiveMask.clear( cpuid );
+         applyCpuMask( workers );
+      }
+   }
 
    void SMPPlugin::updateActiveWorkers ( int nthreads, std::map<unsigned int, BaseThread *> &workers, ThreadTeam *team )
    {
@@ -876,20 +889,19 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
    unsigned int SMPPlugin::getEstimatedNumWorkers() const
    {
       unsigned int count = 0;
-      /*if a certain number of workers was requested pick that value, otherwise
+      /*if a certain number of workers was requested, pick that value, otherwise
        * pick the number of cpus minus the support threads requested
        */
-      int active_cpus = 0;
-      int reserved_cpus = 0;
-      for ( std::vector<SMPProcessor *>::iterator it = _cpus->begin(); it != _cpus->end(); it++ ) {
-         active_cpus += (*it)->isActive();
-         reserved_cpus += (*it)->isReserved();
-      }
-
-
       if ( _requestedWorkers > 0 ) {
          count = _requestedWorkers;
       } else {
+         int active_cpus = 0;
+         int reserved_cpus = 0;
+         for ( std::vector<SMPProcessor *>::iterator it = _cpus->begin(); it != _cpus->end(); it++ ) {
+            active_cpus += (*it)->isActive();
+            reserved_cpus += (*it)->isReserved();
+         }
+
          count = active_cpus - reserved_cpus;
          count += 1; //< First CPU is reserved in ::init() for the master worker thread
       }
@@ -918,9 +930,6 @@ nanos::PE * smpProcessorFactory ( int id, int uid )
    {
       SMPThread &thd = getFirstSMPProcessor()->associateThisThread( untie );
       _workers.push_back( &thd );
-      debug0( "Admit SMP worker thread with id: " << thd.getId() << " in processor: "
-            << getFirstSMPProcessor()->getId() );
-
       return thd;
    }
 

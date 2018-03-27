@@ -470,8 +470,6 @@ void System::start ()
          _regionCachePolicy = RegionCache::WRITE_THROUGH;
       } else if ( _regionCachePolicyStr.compare("writeback") == 0 ) {
          _regionCachePolicy = RegionCache::WRITE_BACK;
-      // } else if ( _regionCachePolicyStr.compare("fpga") == 0 ) {
-      //    _regionCachePolicy = RegionCache::FPGA;
       } else {
          warning0("Invalid option for region cache policy '" << _regionCachePolicyStr << "', using default value.");
       }
@@ -1341,9 +1339,6 @@ void System::endTeam ( ThreadTeam *team )
    }
 
    fatal_cond( team->size() > 0, "Trying to end a team with running threads");
-
-   // For OpenMP applications at the end of the parallel return the claimed cpus
-   _threadManager->returnClaimedCpus();
 
    delete team;
 }

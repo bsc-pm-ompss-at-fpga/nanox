@@ -1,4 +1,4 @@
-AC_INIT([nanox], [0.14a], [pm-tools@bsc.es])
+AC_INIT([nanox], [0.15a], [pm-tools@bsc.es])
 AC_LANG([C++])
 AC_CONFIG_SRCDIR([src/core/system.cpp])
 AC_DEFINE_UNQUOTED([NANOX_CONFIGURE_ARGS], ["$0 $@"], [Configure line])
@@ -22,7 +22,7 @@ AM_CONDITIONAL([SUPPORTED_SILENT_RULES], test x$supported_silent_rules = x1)
 
 # Nanos version check
 # Make sure build_version is double-quoted!
-AS_IF([test -d "$srcdir/.git"],[
+AS_IF([test -e "$srcdir/.git"],[
    # Git directory found
    AC_PATH_PROG([GIT], [git], [])
    AC_MSG_CHECKING([revision of git repository])
