@@ -154,22 +154,31 @@ namespace nanos {
             */
             virtual void queue ( BaseThread *thread, WD &wd )
             {
+               TeamData &data = ( TeamData & ) *thread->getTeam()->getScheduleData();
+               static unsigned int numNodes = data._topLevelQueues.size();
                BaseThread *targetThread = wd.isTiedTo();
                WDPool *q = NULL;
+
                if ( targetThread ) {
-                  targetThread->addNextWD(&wd);
+                  targetThread->addNextWD( &wd );
                   return;
                } else if ( wd.getDepth() > 1 ) {
-                  TeamData &data = ( TeamData & ) *thread->getTeam()->getScheduleData();
                   q = data._childLevelsQueue;
+               } else if ( wd.isTiedLocation() ) {
+                  unsigned int memSpaceId = wd.isTiedToLocation();
+                  unsigned int nodeNum = memSpaceId > 0 ? sys.getSeparateMemory( memSpaceId ).getNodeNumber() : 0;
+                  ensure( nodeNum < numNodes,
+                     "Trying to enqueue task in node '" << nodeNum << "' but only '" << numNodes << "' exist" );
+
+                  q = data._topLevelQueues[nodeNum];
                } else {
-                  TeamData &data = ( TeamData & ) *thread->getTeam()->getScheduleData();
-                  static unsigned int numNodes = data._topLevelQueues.size();
-                  unsigned int nodeNum = wd.isTiedLocation() ? wd.isTiedToLocation() :
-                     sys.getMemorySpaceIdOfClusterNode( ( _lastNodeNum.fetchAndAdd() )%numNodes );
-                  wd.tieToLocation( nodeNum );
+                  unsigned int nodeNum = ( _lastNodeNum.fetchAndAdd() )%numNodes;
+                  unsigned int memSpaceId = sys.getMemorySpaceIdOfClusterNode( nodeNum );
+
+                  wd.tieToLocation( memSpaceId );
                   q = data._topLevelQueues[nodeNum];
                }
+
                q->push_front( &wd );
                sys.getThreadManager()->unblockThread( thread );
             }
@@ -212,7 +221,7 @@ namespace nanos {
 
             bool reorderWD ( BaseThread *t, WD *wd )
             {
-              //! \bug FIXME flags of priority must be in queue
+               //! \bug FIXME flags of priority must be in queue
                if ( _usePriority || _useSmartPriority ) {
                   WDPriorityQueue<> *q = (WDPriorityQueue<> *) wd->getMyQueue();
                   return q? q->reorderWD( wd ) : true;
