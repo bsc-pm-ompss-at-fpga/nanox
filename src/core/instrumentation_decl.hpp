@@ -684,6 +684,10 @@ namespace nanos {
             /* 76 */ registerEventKey("cluster-select-node", "Remote node being selected for remote task offload", EVENT_DEVELOPER);
             /* 77 */ registerEventKey("cluster-finish-wd", "Remote WD being finished", EVENT_DEVELOPER);
 
+            /* 78 */ registerEventKey("device-copy-in", "Device is copying from host the input data of a WD", EVENT_USER);
+            /* 79 */ registerEventKey("device-copy-out", "Device is copying to host the output data of a WD", EVENT_USER);
+            /* 80 */ registerEventKey("device-task-execution", "Device is executing a WD", EVENT_USER);
+
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }
 
@@ -782,10 +786,9 @@ namespace nanos {
 
          void init();
          //! Gets raw time from device clock
-         virtual unsigned long long int getDeviceTime() const = 0;
+         virtual nanos_event_time_t getDeviceTime() const = 0;
          //! Translate a raw device timestamp to a us timestamp from an unspecified starting point
-         virtual unsigned long long int translateDeviceTime(
-               unsigned long long int deviceTime ) const = 0;
+         virtual nanos_event_time_t translateDeviceTime( nanos_event_time_t deviceTime ) const = 0;
          virtual const char *getDeviceType() = 0;
          virtual void startDeviceTrace() = 0;
          virtual void pauseDeviceTrace( bool pause ) = 0;
@@ -797,14 +800,6 @@ namespace nanos {
          int _id;   //! Instrumentation device ID
 
    };
-
-   //Event types that can be emmitted in the device
-   enum DeviceEventType {
-      TaskBegin = 3,
-      TaskEnd = 4,
-      TaskSwitch = 26,
-   };
-
 
 //! \class Instrumentation
 //! \brief Instrumentation main class is the core of the insrumentation behaviour.
@@ -1020,26 +1015,40 @@ namespace nanos {
 
          //TODO: This is the minimal event information for an event generated inside a device
          // We may add fields as needed
-         class DeviceEvent {
+         class DeviceEvent: public Event {
             private:
-               unsigned long long _deviceTime;     //! Raw device time
-               const WorkDescriptor *_wd;                //! WorkDescriptor which caused the event
-               const WorkDescriptor *_auxWd;             //! Aux workdescriptor used for events that require 2 tasks (previous, parent, etc)
-               DeviceInstrumentation *_deviceInstr;//! Device instrumentation context
-               DeviceEventType _type;               //! Type of device event
+               const nanos_event_time_t _deviceTime;        //! Raw device time
             public:
-               DeviceEvent( unsigned long long int time, DeviceEventType type,
-                     DeviceInstrumentation *devInstr, const WorkDescriptor *mainWd,
-                     const WorkDescriptor *auxWd = NULL):
-                  _deviceTime( time ), _wd( mainWd ), _auxWd( auxWd ),
-                  _deviceInstr( devInstr ), _type( type ) { }
+               /*! \brief DeviceEvent default constructor
+                */
+               DeviceEvent () : Event(), _deviceTime( ( nanos_event_time_t )( 0 ) ) {}
 
-               unsigned long long int getDeviceTime() const { return _deviceTime; }
-               const WorkDescriptor *getWD() const { return _wd; }
-               const WorkDescriptor *getAuxWD() const { return _auxWd; }
-               DeviceInstrumentation *getDeviceInstrumentation() const
-                  { return _deviceInstr; }
-               DeviceEventType getEventType() const { return _type; }
+               /*! \brief DeviceEvent constructor
+                */
+               DeviceEvent ( nanos_event_type_t type, nanos_event_key_t key, nanos_event_value_t value,
+                  const nanos_event_time_t time, nanos_event_domain_t ptp_domain, nanos_event_id_t ptp_id ) :
+                     Event( type, key, value, ptp_domain, ptp_id ), _deviceTime( time )
+               { }
+
+               nanos_event_time_t getDeviceTime() const { return _deviceTime; }
+         };
+
+         class DeviceBurst : public DeviceEvent {
+             private:
+               /*! \brief DeviceBurst event default constructor (private)
+                */
+               DeviceBurst();
+               /*! \brief DeviceBurst event copy constructor (private)
+                */
+               DeviceBurst( DeviceBurst &b );
+               /*! \brief Burst event copy constructor (private)
+                */
+               DeviceBurst& operator= ( DeviceBurst &b );
+             public:
+               /*! \brief DeviceBurst event constructor
+                */
+               DeviceBurst ( bool start, nanos_event_key_t key, nanos_event_value_t value, const nanos_event_time_t time )
+                  : DeviceEvent ( start? NANOS_BURST_START: NANOS_BURST_END, key, value, time, (nanos_event_domain_t) 0, (nanos_event_id_t) 0 ) { }
          };
 
 #ifndef NANOS_INSTRUMENTATION_ENABLED
@@ -1141,6 +1150,14 @@ namespace nanos {
           */
          virtual void addEventList ( unsigned int count, Event *events ) = 0;
 
+         /*! \brief Function executed each time runtime wants to add a device event
+          *
+          *  \param[in] ctx is the instrumentation context for the device which generated the events
+          *  \param[in] count is the number of events
+          *  \param[in] events is a vector of 'count' events
+          */
+         virtual void addDeviceEventList ( const DeviceInstrumentation& ctx, unsigned int count, DeviceEvent *events ) {}
+
          // CORE: high-level instrumentation interface (virtual functions)
 
          /*! \brief Used when creating a work descriptor (initializes instrumentation context associated to a WD)
@@ -1168,6 +1185,16 @@ namespace nanos {
           */
          void  createBurstEvent ( Event *e, nanos_event_key_t key, nanos_event_value_t value, InstrumentationContextData *icd = NULL );
 
+         /*! \brief Used by higher levels to create a BURST_START event for a device
+          *
+          *  \param[in,out] e is a device event reference, preallocated by the caller
+          *  \param[in] key is the key in the related  pair <key,value>
+          *  \param[in] value is the value in related pair <key,value>
+          *  \param[in] time is the RAW device timestamp when the burst started
+          */
+         void createDeviceBurstEvent ( DeviceEvent *e, const nanos_event_key_t key, const nanos_event_value_t value,
+                                       const nanos_event_time_t time, InstrumentationContextData *icd = NULL );
+
          /*! \brief Used by higher levels to create a BURST_END event
           *
           *  \param[in,out] e is an event reference, preallocated by the caller
@@ -1175,6 +1202,16 @@ namespace nanos {
           *  \param[in] value is the value in related pair <key,value>
           */
          void closeBurstEvent ( Event *e, nanos_event_key_t key, nanos_event_value_t value, InstrumentationContextData *icd = NULL );
+
+         /*! \brief Used by higher levels to create a BURST_END event for a device
+          *
+          *  \param[in,out] e is a device event reference, preallocated by the caller
+          *  \param[in] key is the key in the related  pair <key,value>
+          *  \param[in] value is the value in related pair <key,value>
+          *  \param[in] time is the RAW device timestamp when the burst finished
+          */
+         void closeDeviceBurstEvent ( DeviceEvent *e, const nanos_event_key_t key, const nanos_event_value_t value,
+                                       const nanos_event_time_t time, InstrumentationContextData *icd = NULL );
 
          /*! \brief Used by higher levels to create a STATE event
           *
@@ -1261,11 +1298,9 @@ namespace nanos {
 
          void raiseOpenStateAndBurst ( nanos_event_state_value_t state, nanos_event_key_t key, nanos_event_value_t val );
          void raiseCloseStateAndBurst ( nanos_event_key_t key, nanos_event_value_t value );
-         virtual void registerInstrumentDevice( DeviceInstrumentation *devInstr ) {}
 
-         virtual void addDeviceEvent( const DeviceEvent  &deviceEvent ) {
-            //warning( "Device events are not supported in current instrumentation plugin" );
-         }
+         void raiseDeviceBurstEvent ( const DeviceInstrumentation& ctx, nanos_event_key_t key, nanos_event_value_t val,
+                                      const nanos_event_time_t start, const nanos_event_time_t end );
 #endif
    };
 

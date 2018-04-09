@@ -323,7 +323,9 @@ inline DeviceInstrumentation * System::getDeviceInstrumentation( int accId ) {
 }
 
 inline void System::addDeviceInstrumentation( DeviceInstrumentation * dev ) {
-    _deviceInstrumentation.push_back( dev );
+   unsigned int id = _deviceInstrumentation.size();
+   _deviceInstrumentation.push_back( dev );
+   dev->setId( id );
 }
 
 inline unsigned int System::getNumInstrumentAccelerators() const {
