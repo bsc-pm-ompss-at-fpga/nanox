@@ -76,6 +76,11 @@ namespace ext {
          double getFreq() const {
             return _info.freq;
          }
+
+         //! \brief Returs the FPGA description
+         std::string getDescription() const {
+            return std::string( _info.description );
+         }
    };
 } // namespace ext
 } // namespace nanos

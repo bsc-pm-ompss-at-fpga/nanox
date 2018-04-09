@@ -32,8 +32,9 @@ namespace ext {
       public:
          FPGAInstrumentation() : DeviceInstrumentation(), _deviceType( "NULL" ), _deviceInfo( NULL ) { }
 
-         FPGAInstrumentation( std::string deviceType, FPGAProcessorInfo const * const fpgaInfo ) :
-            DeviceInstrumentation(), _deviceType( deviceType ), _deviceInfo( fpgaInfo ) { }
+         FPGAInstrumentation( FPGAProcessorInfo const &fpgaInfo ) :
+            DeviceInstrumentation(), _deviceType( "FPGA acc " + toString( fpgaInfo.getId() ) + " (" + fpgaInfo.getDescription() + ")" ),
+            _deviceInfo( &fpgaInfo ) { }
 
          virtual void init() {}
          //! \breif Returns the device time in cycles

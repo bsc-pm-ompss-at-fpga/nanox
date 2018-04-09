@@ -55,8 +55,7 @@ FPGAProcessor::FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpace
 {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    if ( !FPGAConfig::isInstrDisabled() ) {
-      std::string devNum = toString( _fpgaProcessorInfo.getId() );
-      _devInstr = FPGAInstrumentation( std::string( "FPGA accelerator " ) + devNum, &_fpgaProcessorInfo );
+      _devInstr = FPGAInstrumentation( _fpgaProcessorInfo );
       sys.addDeviceInstrumentation( &_devInstr );
    }
 #endif
