@@ -49,6 +49,8 @@ extern "C" {
    unsigned int nanos_extrae_num_nodes();
    void         nanos_ompitrace_instrumentation_barrier();
    void         Extrae_change_num_threads (unsigned nthreads);
+
+#ifdef EXTRAE_DEVICE_TRACING
    void         Extrae_register_device (const char *description, extrae_time_t (*get_device_time_fn)(void *), void *get_device_time_arg);
 
    //! \brief Aux function used to call Extrae_register_device
@@ -59,6 +61,7 @@ extern "C" {
       extrae_time_t t = ins->getDeviceTime();
       return ins->translateDeviceTime( t );
    }
+#endif //EXTRAE_DEVICE_TRACING
 }
 
 namespace nanos {
@@ -296,12 +299,13 @@ class InstrumentationExtrae: public Instrumentation
         /* Keep current number of threads */
         _maxThreads = sys.getSMPPlugin()->getNumThreads();
 
-
+#ifdef EXTRAE_DEVICE_TRACING
         /* Register the devices */
         for ( unsigned int id = 0; id < sys.getNumInstrumentAccelerators(); ++id ) {
            DeviceInstrumentation * devInstr = sys.getDeviceInstrumentation( id );
            Extrae_register_device( devInstr->getDeviceType(), nanos_get_device_time, ( void * )( devInstr ) );
         }
+#endif //EXTRAE_DEVICE_TRACING
       }
       void doLs(std::string dest)
       {
@@ -592,6 +596,7 @@ class InstrumentationExtrae: public Instrumentation
          Extrae_emit_CombinedEvents ( &ce );
       }
 
+#ifdef EXTRAE_DEVICE_TRACING
       virtual void addDeviceEventList( const DeviceInstrumentation& ctx, unsigned int count, DeviceEvent *events )
       {
          unsigned nEvents = 0;
@@ -667,6 +672,7 @@ class InstrumentationExtrae: public Instrumentation
 
          Extrae_nevent_device ( ctx.getId(), nEvents, types, values, timestamps );
       }
+#endif //EXTRAE_DEVICE_TRACING
 
       void addResumeTask( WorkDescriptor &w )
       {
