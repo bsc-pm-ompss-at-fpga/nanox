@@ -68,13 +68,17 @@ affinity_ready_sources=\
 versioning_sources=\
 	sched/versioning_sched.cpp \
 	$(END)
-	
+
 socket_sources=\
 	sched/socket_sched.cpp \
 	$(END)
 
 botlev_sources=\
 	sched/botlev_sched.cpp \
+	$(END)
+
+node_sources=\
+	sched/node_sched.cpp \
 	$(END)
 
 if is_debug_enabled
@@ -87,7 +91,8 @@ debug_LTLIBRARIES +=\
  debug/libnanox-sched-affinity-ready.la\
  debug/libnanox-sched-versioning.la\
  debug/libnanox-sched-socket.la\
- debug/libnanox-sched-botlev.la
+ debug/libnanox-sched-botlev.la\
+ debug/libnanox-sched-node.la
 
 debug_libnanox_sched_bf_la_CPPFLAGS=$(common_debug_CPPFLAGS)
 debug_libnanox_sched_bf_la_CXXFLAGS=$(common_debug_CXXFLAGS)
@@ -133,6 +138,11 @@ debug_libnanox_sched_botlev_la_CPPFLAGS=$(common_debug_CPPFLAGS)
 debug_libnanox_sched_botlev_la_CXXFLAGS=$(common_debug_CXXFLAGS)
 debug_libnanox_sched_botlev_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags)
 debug_libnanox_sched_botlev_la_SOURCES=$(botlev_sources)
+
+debug_libnanox_sched_node_la_CPPFLAGS=$(common_debug_CPPFLAGS)
+debug_libnanox_sched_node_la_CXXFLAGS=$(common_debug_CXXFLAGS)
+debug_libnanox_sched_node_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags)
+debug_libnanox_sched_node_la_SOURCES=$(node_sources)
 endif
 
 if is_instrumentation_debug_enabled
@@ -145,7 +155,8 @@ instrumentation_debug_LTLIBRARIES +=\
  instrumentation-debug/libnanox-sched-affinity-ready.la\
  instrumentation-debug/libnanox-sched-versioning.la\
  instrumentation-debug/libnanox-sched-socket.la\
- instrumentation-debug/libnanox-sched-botlev.la
+ instrumentation-debug/libnanox-sched-botlev.la\
+ instrumentation-debug/libnanox-sched-node.la
 
 instrumentation_debug_libnanox_sched_bf_la_CPPFLAGS=$(common_instrumentation_debug_CPPFLAGS)
 instrumentation_debug_libnanox_sched_bf_la_CXXFLAGS=$(common_instrumentation_debug_CXXFLAGS)
@@ -191,6 +202,11 @@ instrumentation_debug_libnanox_sched_botlev_la_CPPFLAGS=$(common_instrumentation
 instrumentation_debug_libnanox_sched_botlev_la_CXXFLAGS=$(common_instrumentation_debug_CXXFLAGS)
 instrumentation_debug_libnanox_sched_botlev_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags)
 instrumentation_debug_libnanox_sched_botlev_la_SOURCES=$(botlev_sources)
+
+instrumentation_debug_libnanox_sched_node_la_CPPFLAGS=$(common_instrumentation_debug_CPPFLAGS)
+instrumentation_debug_libnanox_sched_node_la_CXXFLAGS=$(common_instrumentation_debug_CXXFLAGS)
+instrumentation_debug_libnanox_sched_node_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags)
+instrumentation_debug_libnanox_sched_node_la_SOURCES=$(node_sources)
 endif
 
 if is_instrumentation_enabled
@@ -203,7 +219,8 @@ instrumentation_LTLIBRARIES +=\
  instrumentation/libnanox-sched-affinity-ready.la\
  instrumentation/libnanox-sched-versioning.la\
  instrumentation/libnanox-sched-socket.la\
- instrumentation/libnanox-sched-botlev.la
+ instrumentation/libnanox-sched-botlev.la\
+ instrumentation/libnanox-sched-node.la
 
 instrumentation_libnanox_sched_bf_la_CPPFLAGS=$(common_instrumentation_CPPFLAGS)
 instrumentation_libnanox_sched_bf_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS)
@@ -249,6 +266,11 @@ instrumentation_libnanox_sched_botlev_la_CPPFLAGS=$(common_instrumentation_CPPFL
 instrumentation_libnanox_sched_botlev_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS)
 instrumentation_libnanox_sched_botlev_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags)
 instrumentation_libnanox_sched_botlev_la_SOURCES=$(botlev_sources)
+
+instrumentation_libnanox_sched_node_la_CPPFLAGS=$(common_instrumentation_CPPFLAGS)
+instrumentation_libnanox_sched_node_la_CXXFLAGS=$(common_instrumentation_CXXFLAGS)
+instrumentation_libnanox_sched_node_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags)
+instrumentation_libnanox_sched_node_la_SOURCES=$(node_sources)
 endif
 
 if is_performance_enabled
@@ -261,7 +283,8 @@ performance_LTLIBRARIES +=\
  performance/libnanox-sched-affinity-ready.la\
  performance/libnanox-sched-versioning.la\
  performance/libnanox-sched-socket.la\
- performance/libnanox-sched-botlev.la
+ performance/libnanox-sched-botlev.la\
+ performance/libnanox-sched-node.la
 
 performance_libnanox_sched_bf_la_CPPFLAGS=$(common_performance_CPPFLAGS)
 performance_libnanox_sched_bf_la_CXXFLAGS=$(common_performance_CXXFLAGS)
@@ -307,6 +330,11 @@ performance_libnanox_sched_botlev_la_CPPFLAGS=$(common_performance_CPPFLAGS)
 performance_libnanox_sched_botlev_la_CXXFLAGS=$(common_performance_CXXFLAGS)
 performance_libnanox_sched_botlev_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags)
 performance_libnanox_sched_botlev_la_SOURCES=$(botlev_sources)
+
+performance_libnanox_sched_node_la_CPPFLAGS=$(common_performance_CPPFLAGS)
+performance_libnanox_sched_node_la_CXXFLAGS=$(common_performance_CXXFLAGS)
+performance_libnanox_sched_node_la_LDFLAGS=$(AM_LDFLAGS) $(ld_plugin_flags)
+performance_libnanox_sched_node_la_SOURCES=$(node_sources)
 endif
 
 ######################################################################################################
@@ -1190,14 +1218,14 @@ perfect_regions_sources=\
 	deps/basedependenciesdomain_decl.hpp \
 	deps/basedependenciesdomain.hpp \
 	$(END)
-		
+
 cregions_sources=\
 	deps/cregions_deps.cpp \
 	deps/basedependenciesdomain_decl.hpp \
 	deps/basedependenciesdomain.hpp \
 	$(END)
-	
-	
+
+
 cregions_nocache_sources=\
 	deps/cregions_deps_nocache.cpp \
 	deps/basedependenciesdomain_decl.hpp \

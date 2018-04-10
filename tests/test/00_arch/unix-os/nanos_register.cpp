@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2018 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,39 +17,34 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
+/*
+<testinfo>
+   test_generator="gens/core-generator"
+   test_generator_ENV=( "NX_TEST_MODE=performance"
+                        "NX_TEST_MAX_CPUS=1"
+                        "NX_TEST_SCHEDULE=bf"
+                        "NX_TEST_ARCH=smp" )
+</testinfo>
+*/
+
 #include "nanos-int.h"
+#include "compatibility.hpp"
 
-#ifndef _NANOS_WORK_SHARING_H
-#define _NANOS_WORK_SHARING_H
+static int error = 1;
 
-namespace nanos {
+extern "C"
+{
+   void my_init(void *arg);
+   void my_init(void *arg)
+   {
+      error = 0;
+   }
+}
 
-   class WorkSharing {
-      public:
+NANOS_REGISTER(nanos_init, nanos_init_desc_t, { my_init, 0 });
 
-         WorkSharing () {}
+int main ( int argc, char **argv )
+{
+   return error;
+}
 
-         virtual ~WorkSharing () {}
-
-         //! \brief create a loop descriptor
-         //! \return only one thread per loop will get 'true' (single like behaviour)
-         virtual bool create( nanos_ws_desc_t **wsd, nanos_ws_info_t *info ) = 0;
-
-         //! \brief Duplicates a WorkSharing Descriptor
-         virtual void duplicateWS ( nanos_ws_desc_t *orig, nanos_ws_desc_t **copy) = 0;
-
-         //! \brief Get next chunk of iterations
-         //! \return if there are more iterations to execute
-         virtual void nextItem( nanos_ws_desc_t *wsd, nanos_ws_item_t *wsi ) = 0 ;
-
-         //! \brief Get the number of chunks that remain to be executed
-         //! \return number of chunks
-         virtual int64_t getItemsLeft( nanos_ws_desc_t *wsd ) = 0 ;
-
-         //! \brief Get whether the WorkSharing needs to be fully instanced for all threads
-         virtual bool instanceOnCreation() = 0;
-   };
-
-} // namespace nanos
-
-#endif

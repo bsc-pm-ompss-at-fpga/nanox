@@ -200,8 +200,6 @@ namespace nanos {
          callback_t              _bpCallBack;    //!< Break point callback. We call it after _steps scheduler ops
          ThreadTeam             *_nextTeam;      //!< If thread has no team, which team should it join
 
-      public:
-         virtual void initializeDependent () = 0;
       private:
          virtual void runDependent () = 0;
 
@@ -238,6 +236,7 @@ namespace nanos {
          virtual void lock ();
          virtual void unlock ();
 
+         virtual void initializeDependent () = 0;
          virtual void start () = 0;
          virtual void finish ();
          void run();
