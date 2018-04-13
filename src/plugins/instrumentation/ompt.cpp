@@ -507,29 +507,6 @@ namespace nanos
 
          std::vector < BufferInfo* > _devEventBuffers;
 
-         //! \brief Translates the nanos_event_type_t to ompt_event_t
-         static ompt_event_t getOMPTEventType( nanos_event_type_t type ) {
-            ompt_event_t ret = ( ompt_event_t )( 0 );
-            switch ( type ) {
-               case NANOS_STATE_START:
-               case NANOS_STATE_END:
-               case NANOS_SUBSTATE_START:
-               case NANOS_SUBSTATE_END:
-               case NANOS_PTP_START:
-               case NANOS_PTP_END:
-               case NANOS_POINT:
-                  break; //< Previous event types are not supported yet
-               case NANOS_BURST_START:
-                  ret = ompt_event_task_begin;
-                  break;
-               case NANOS_BURST_END:
-                  ret = ompt_event_task_end;
-                  break;
-               default: break;
-            }
-            return ret;
-         }
-
       public:
          InstrumentationOMPT( ) : Instrumentation( *NEW InstrumentationContextDisabled()),
             _previousTask( NULL ), _threadActive( NULL ), _requestBufferCallback( NULL ),
@@ -869,6 +846,7 @@ namespace nanos
             int deviceId = ctx.getId();
             BufferInfo &buffer = *_devEventBuffers[ deviceId ];
             unsigned int eventIdx = 0; //< Index being handled of events array
+            ompt_thread_id_t threadId = ( ompt_thread_id_t )( getCurrentThreadId() );
 
             while ( eventIdx < count ) {
                buffer.lock++; //Lock the buffer to get an empty slot
@@ -896,32 +874,64 @@ namespace nanos
                   buffer.current = buffer.begin;
                }
                unsigned int current = buffer.current; //< Initial position to write in the buffer
-               unsigned int countCurrent = std::min( count - eventIdx, buffer.records - current );
+               //! NOTE: Each input event generate two OMPT events:
+               //!        - NANOS_BURST_START: ompt_event_task_begin + ompt_event_task_switch
+               //!        - NANOS_BURST_END: ompt_event_task_switch + ompt_event_task_end
+               unsigned int countCurrent = std::min( ( count - eventIdx )*2, buffer.records - current );
                buffer.current += countCurrent;
                buffer.lock--; //Release the lock and use local variable
 
-               for (unsigned int i = 0; i < countCurrent; ++i) {
+               for (unsigned int i = 0; i < countCurrent; i += 2) {
                   //add event to buffer
-                  ompt_record_ompt_t *omptEvent = &buffer.buffer[ current + i ];
-                  //Nanos device events are already conveniently set to match ompt spec
-                  omptEvent->type = ompt_event_task_switch; //getOMPTEventType( events[eventIdx].getType() );
-                  omptEvent->time = events[eventIdx].getDeviceTime();
-                  //Host thread that emits the event (TODO check)
-                  omptEvent->thread_id = ( ompt_thread_id_t )( getCurrentThreadId() );
-                  omptEvent->dev_task_id = events[eventIdx].getValue(); //< Event value should be the taskID
-
+                  nanos_event_value_t eventValue = events[eventIdx].getValue();
+                  nanos_event_time_t eventTime = events[eventIdx].getDeviceTime();
                   switch ( events[eventIdx].getType() ) {
-                     case NANOS_BURST_START:
-                        omptEvent->record.task_switch.first_task_id = 0;
-                        omptEvent->record.task_switch.second_task_id = events[eventIdx].getValue();
+                     case NANOS_BURST_START: {
+                        //set the ompt_event_task_begin information
+                        ompt_record_ompt_t *burstEvent = &buffer.buffer[ current + i ];
+                        burstEvent->type = ompt_event_task_begin;
+                        burstEvent->time = eventTime;
+                        burstEvent->thread_id = threadId;
+                        burstEvent->dev_task_id = eventValue; //< Event value should be the taskID
+                        burstEvent->record.new_task.parent_task_id = 1; //wd->getParent()->getId();
+                        burstEvent->record.new_task.parent_task_frame = NULL;
+                        burstEvent->record.new_task.new_task_id = eventValue;
+                        //NOTE: The codeptr_ofn field must be not NULL as Extrae stores a pair (task_id, codeptr) used to emit the task switches.
+                        //      Those switches will be ignored if the codeptr is NULL
+                        uintptr_t codeptr = ( uintptr_t )( 0xF0000000 + events[eventIdx].getKey() ); //wd->getActiveDevice().getWorkFct();
+                        burstEvent->record.new_task.codeptr_ofn = ( void * )( codeptr );
+
+                        //set the ompt_event_task_switch information
+                        ompt_record_ompt_t *switchEvent = burstEvent + 1;
+                        switchEvent->type = ompt_event_task_switch;
+                        switchEvent->time = eventTime;
+                        switchEvent->thread_id = threadId;
+                        switchEvent->dev_task_id = eventValue; //< Event value should be the taskID
+                        switchEvent->record.task_switch.first_task_id = 0;
+                        switchEvent->record.task_switch.second_task_id = eventValue;
                         break;
-                     case NANOS_BURST_END:
-                        omptEvent->record.task_switch.first_task_id = events[eventIdx].getValue();
-                        omptEvent->record.task_switch.second_task_id = 0;
+                     } case NANOS_BURST_END: {
+                        //set the ompt_event_task_switch information
+                        ompt_record_ompt_t *switchEvent = &buffer.buffer[ current + i ];
+                        switchEvent->type = ompt_event_task_switch;
+                        switchEvent->time = eventTime;
+                        switchEvent->thread_id = threadId;
+                        switchEvent->dev_task_id = eventValue; //< Event value should be the taskID
+                        switchEvent->record.task_switch.first_task_id = eventValue;
+                        switchEvent->record.task_switch.second_task_id = 0;
+
+                        //set the ompt_event_task_end information
+                        ompt_record_ompt_t *burstEvent = switchEvent + 1;
+                        burstEvent->type = ompt_event_task_end;
+                        burstEvent->time = eventTime;
+                        burstEvent->thread_id = threadId;
+                        burstEvent->dev_task_id = eventValue;
+                        burstEvent->record.task.task_id = eventValue;
                         break;
-                     default:
+                     } default: {
                         warning( "Found an unsupported event type in InstrumentationOMPT::addDeviceEventList" );
                         break;
+                     }
                   }
 
                   eventIdx++;
