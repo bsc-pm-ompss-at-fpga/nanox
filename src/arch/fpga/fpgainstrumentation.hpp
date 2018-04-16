@@ -33,7 +33,9 @@ namespace ext {
          FPGAInstrumentation() : DeviceInstrumentation(), _deviceType( "NULL" ), _deviceInfo( NULL ) { }
 
          FPGAInstrumentation( FPGAProcessorInfo const &fpgaInfo ) :
-            DeviceInstrumentation(), _deviceType( "FPGA acc " + toString( fpgaInfo.getId() ) + " (" + fpgaInfo.getDescription() + ")" ),
+            DeviceInstrumentation(),
+            _deviceType( "FPGA acc " + toString( sys.getNetwork()->getNodeNum() + 1 /*start in 1*/ ) + "." +
+                         toString( fpgaInfo.getId() + 1 /*start in 1*/ ) + " (" + fpgaInfo.getDescription() + ")" ),
             _deviceInfo( &fpgaInfo ) { }
 
          virtual void init() {}
