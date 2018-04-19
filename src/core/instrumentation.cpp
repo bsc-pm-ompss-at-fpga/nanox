@@ -49,7 +49,7 @@ void Instrumentation::returnPreviousStateEvent ( Event *e, InstrumentationContex
    if ( icd == NULL ) icd = myThread->getCurrentWD()->getInstrumentationContextData();
 
    /* Getting top of state stack: before pop (for stacked states backends) */
-   nanos_event_state_value_t state = _instrumentationContext.topState( icd ); 
+   nanos_event_state_value_t state = _instrumentationContext.topState( icd );
 
    /* Stack Pop */
    _instrumentationContext.popState( icd );
@@ -59,7 +59,7 @@ void Instrumentation::returnPreviousStateEvent ( Event *e, InstrumentationContex
       new (e) State(NANOS_STATE_END,state);
    } else {
       /* Getting top of state stack: after pop (for non-stacked states backends) */
-      state = _instrumentationContext.topState( icd ); 
+      state = _instrumentationContext.topState( icd );
       new (e) State(NANOS_STATE_START,state);
    }
 }
@@ -75,6 +75,18 @@ void Instrumentation::createBurstEvent ( Event *e, nanos_event_key_t key, nanos_
    _instrumentationContext.insertBurst( icd, *e );
 }
 
+void Instrumentation::createDeviceBurstEvent ( DeviceEvent *e, const nanos_event_key_t key, const nanos_event_value_t value,
+   const nanos_event_time_t time, InstrumentationContextData *icd )
+{
+   /* Recovering a state event in instrumentation context */
+   // if ( icd == NULL ) icd = myThread->getCurrentWD()->getInstrumentationContextData();
+
+   /* Creating burst  event */
+   new (e) DeviceBurst( true, key, value, time );
+
+   // _instrumentationContext.insertBurst( icd, *e );
+}
+
 void Instrumentation::closeBurstEvent ( Event *e, nanos_event_key_t key, nanos_event_value_t value, InstrumentationContextData *icd )
 {
    /* Recovering a state event in instrumentation context */
@@ -87,7 +99,7 @@ void Instrumentation::closeBurstEvent ( Event *e, nanos_event_key_t key, nanos_e
       /* Creating burst event */
       new (e) Event(*it);
       e->reverseType();
-      _instrumentationContext.removeBurst( icd, it ); 
+      _instrumentationContext.removeBurst( icd, it );
    }
    else {
       new (e) Burst( false, key, (nanos_event_value_t) value );
@@ -98,6 +110,19 @@ void Instrumentation::closeBurstEvent ( Event *e, nanos_event_key_t key, nanos_e
       new (e) Event(*it);
    }
 }
+
+void Instrumentation::closeDeviceBurstEvent ( DeviceEvent *e, const nanos_event_key_t key, const nanos_event_value_t value,
+   const nanos_event_time_t time, InstrumentationContextData *icd )
+{
+   /* Recovering a state event in instrumentation context */
+   // if ( icd == NULL ) icd = myThread->getCurrentWD()->getInstrumentationContextData();
+
+   /* Creating burst  event */
+   new (e) DeviceBurst( false, key, value, time );
+
+   //TODO Improve the code and make similar to closeBurstEvent?
+}
+
 void Instrumentation::createPointEvent ( Event *e, nanos_event_key_t key, nanos_event_value_t value )
 {
    /* Creating a point event */
@@ -128,7 +153,7 @@ void Instrumentation::createDeferredPointEvent ( WorkDescriptor &wd, unsigned in
    unsigned int i,ne=0; // Number of events
    Event *e = (Event *) alloca(sizeof(Event) * nkvs ); /* Event array */
 
-   InstrumentationContextData *icd = wd.getInstrumentationContextData();                                             
+   InstrumentationContextData *icd = wd.getInstrumentationContextData();
 
    /* Create point event */
    for ( i = 0; i < nkvs; i++ ) {
@@ -155,7 +180,7 @@ void Instrumentation::createDeferredPtPStart ( WorkDescriptor &wd, nanos_event_d
    createPtPStart( &e, domain, id, key, value, partner );
 
    /* Inserting event into deferred event list */
-   InstrumentationContextData *icd = wd.getInstrumentationContextData();                                             
+   InstrumentationContextData *icd = wd.getInstrumentationContextData();
    _instrumentationContext.insertDeferredEvent( icd, e );
 }
 
@@ -169,7 +194,7 @@ void Instrumentation::createDeferredPtPEnd ( WorkDescriptor &wd, nanos_event_dom
    createPtPEnd( &e, domain, id, key, value, partner );
 
    /* Inserting event into deferred event list */
-   InstrumentationContextData *icd = wd.getInstrumentationContextData();                                             
+   InstrumentationContextData *icd = wd.getInstrumentationContextData();
    _instrumentationContext.insertDeferredEvent( icd, e );
 }
 /* ************************************************************************** */
@@ -295,11 +320,27 @@ void Instrumentation::raiseCloseStateAndBurst ( nanos_event_key_t key, nanos_eve
 
    /* Create burst event */
    if ( key != 0 ) closeBurstEvent( &e[ne++], key, value );
- 
+
    if ( ne == 0 ) return;
 
    /* Spawning ne events: specific instrumentation call */
    addEventList ( ne, e );
+}
+
+void Instrumentation::raiseDeviceBurstEvent ( const DeviceInstrumentation& ctx, nanos_event_key_t key,
+   nanos_event_value_t val, const nanos_event_time_t start, const nanos_event_time_t end )
+{
+   if ( key == 0 ) return; // key == 0 means disabled event
+   DeviceEvent e[2]; // Event array
+
+   /* Create open event: BURST */
+   createDeviceBurstEvent( &e[0], key, val, start );
+
+   /* Create close event: BURST */
+   closeDeviceBurstEvent( &e[1], key, val, end );
+
+   /* Spawning event: specific instrumentation call */
+   addDeviceEventList( ctx, 2, e );
 }
 
 /* ************************************************************************** */
@@ -320,7 +361,7 @@ void Instrumentation::wdCreate( WorkDescriptor* newWD )
       nanos_event_value_t wd_id = newWD->getId();
       createBurstEvent( &e2, key, wd_id, icd );
    }
-   
+
    static nanos_event_key_t priorityKey = getInstrumentationDictionary()->getEventKey("wd-priority");
    nanos_event_value_t wd_priority = (nanos_event_value_t) newWD->getPriority() + 1;
    createBurstEvent( &e3, priorityKey, wd_priority, icd );
@@ -328,7 +369,7 @@ void Instrumentation::wdCreate( WorkDescriptor* newWD )
    static nanos_event_key_t numaNodeKey = getInstrumentationDictionary()->getEventKey("wd-numa-node");
    nanos_event_value_t wd_numa_node = (nanos_event_value_t) newWD->getNUMANode() + 1;
    createBurstEvent( &e4, numaNodeKey, wd_numa_node, icd );
- 
+
    /* Create event: STATE */
    if ( _emitStateEvents == true ) createStateEvent( &e1, NANOS_RUNTIME, icd );
 

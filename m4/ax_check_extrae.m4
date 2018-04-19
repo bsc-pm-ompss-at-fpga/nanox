@@ -94,6 +94,17 @@ AC_DEFUN([AX_CHECK_EXTRAE],
       ],[
          AC_MSG_ERROR([no (Extrae >= 2.4 needed)])
       ])
+
+      extrae_user_events_h="$with_extrae/include/extrae_user_events.h"
+      extrae_device_tracing="no"
+      AS_IF([test -e "$extrae_user_events_h"], [
+         # Check if headers contain the devices API
+         extrae_version=$(grep "Extrae_nevent_device" $extrae_user_events_h)
+         AS_IF([test -n "$extrae_version"], [
+            extrae_device_tracing="yes"
+            AC_DEFINE([EXTRAE_DEVICE_TRACING],[1],[Enables device tracing in Extrae instrumentation])
+         ])
+      ])
    ])
 
    AC_SUBST([MPITRACE_HOME])

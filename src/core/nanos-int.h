@@ -83,12 +83,12 @@ extern "C"
 typedef struct {
    /* Base address of the accessed range */
    void *address;
-   
+
    nanos_access_type_internal_t flags;
-   
+
    /* Number of dimensions */
    short dimension_count;
-   
+
    /* The first dimension will be the contiguous one, and its size and
     * offset must be expressed in bytes, not elements.
     */
@@ -101,7 +101,7 @@ typedef struct {
 #else
    nanos_region_dimension_internal_t const *dimensions;
 #endif
-   
+
    /* Offset of the first element */
    ptrdiff_t offset;
 } nanos_data_access_internal_t;
@@ -294,6 +294,7 @@ typedef enum { NANOS_STATE_START, NANOS_STATE_END, NANOS_SUBSTATE_START, NANOS_S
 
 typedef unsigned int         nanos_event_key_t; /**< Key (on key-value pair) */
 typedef unsigned long long   nanos_event_value_t; /**< Value (on key-value pair) */
+typedef unsigned long long   nanos_event_time_t;
 
 typedef enum { NANOS_NOT_CREATED, NANOS_NOT_RUNNING, NANOS_STARTUP, NANOS_SHUTDOWN, NANOS_ERROR, NANOS_IDLE,
                NANOS_RUNTIME, NANOS_RUNNING, NANOS_SYNCHRONIZATION, NANOS_SCHEDULING, NANOS_CREATION,
@@ -311,7 +312,7 @@ typedef struct {
    nanos_event_type_t   type;
    nanos_event_key_t    key;
    nanos_event_value_t  value;
-   nanos_event_domain_t domain; 
+   nanos_event_domain_t domain;
    nanos_event_id_t     id;
 } nanos_event_t;
 

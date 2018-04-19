@@ -52,9 +52,6 @@ namespace ext {
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          FPGAInstrumentation           _devInstr;
-         FPGAInstrumentation           _dmaInInstr;
-         FPGAInstrumentation           _dmaOutInstr;
-         FPGAInstrumentation           _submitInstrumentation;
          bool                          _dmaSubmitWarnShown; //!< Defines if the warning has already been shown
          static Atomic<size_t>         _totalRunningTasks;  //!< Global tasks counter between all processors
 #endif
@@ -62,8 +59,6 @@ namespace ext {
          // AUX functions
          xtasks_task_handle createAndSubmitTask( WD &wd );
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-         void dmaSubmitStart( const WD *wd );
-         void dmaSubmitEnd( const WD *wd );
          void readInstrCounters( WD * const wd, xtasks_task_handle & task );
 #endif
 

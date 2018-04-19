@@ -32,14 +32,17 @@ namespace ext {
       public:
          FPGAInstrumentation() : DeviceInstrumentation(), _deviceType( "NULL" ), _deviceInfo( NULL ) { }
 
-         FPGAInstrumentation( int id, std::string deviceType, FPGAProcessorInfo const * const fpgaInfo ) :
-            DeviceInstrumentation( id ), _deviceType( deviceType ), _deviceInfo( fpgaInfo ) { }
+         FPGAInstrumentation( FPGAProcessorInfo const &fpgaInfo ) :
+            DeviceInstrumentation(),
+            _deviceType( "FPGA acc " + toString( sys.getNetwork()->getNodeNum() + 1 /*start in 1*/ ) + "." +
+                         toString( fpgaInfo.getId() + 1 /*start in 1*/ ) + " (" + fpgaInfo.getDescription() + ")" ),
+            _deviceInfo( &fpgaInfo ) { }
 
          virtual void init() {}
          //! \breif Returns the device time in cycles
-         virtual unsigned long long int getDeviceTime() const;
-         //! \brief Translates a raw device time in cycles to ns
-         virtual unsigned long long int translateDeviceTime( unsigned long long int ) const;
+         virtual nanos_event_time_t getDeviceTime() const;
+         //! \brief Translates a raw device time (in cycles) to ns
+         virtual nanos_event_time_t translateDeviceTime( const nanos_event_time_t devTime ) const;
          virtual void startDeviceTrace() {}
          virtual void pauseDeviceTrace( bool pause ) {}
          virtual void stopDeviceTrace() {}

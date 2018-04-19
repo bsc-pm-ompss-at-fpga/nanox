@@ -49,6 +49,19 @@ extern "C" {
    unsigned int nanos_extrae_num_nodes();
    void         nanos_ompitrace_instrumentation_barrier();
    void         Extrae_change_num_threads (unsigned nthreads);
+
+#ifdef EXTRAE_DEVICE_TRACING
+   void         Extrae_register_device (const char *description, extrae_time_t (*get_device_time_fn)(void *), void *get_device_time_arg);
+
+   //! \brief Aux function used to call Extrae_register_device
+   extrae_time_t nanos_get_device_time ( void * device_instrumentation );
+   extrae_time_t nanos_get_device_time ( void * device_instrumentation )
+   {
+      nanos::DeviceInstrumentation * ins = ( nanos::DeviceInstrumentation * )( device_instrumentation );
+      extrae_time_t t = ins->getDeviceTime();
+      return ins->translateDeviceTime( t );
+   }
+#endif //EXTRAE_DEVICE_TRACING
 }
 
 namespace nanos {
@@ -61,7 +74,7 @@ namespace nanos {
    const extrae_type_t _eventBase       = 9200000;   /*!< event base (used in key/value pairs) */
 #endif
 
-class InstrumentationExtrae: public Instrumentation 
+class InstrumentationExtrae: public Instrumentation
 {
 #ifndef NANOS_INSTRUMENTATION_ENABLED
    public:
@@ -110,7 +123,7 @@ class InstrumentationExtrae: public Instrumentation
 
          pid = vfork();
          if ( pid == (pid_t) 0 ) {
-            int execret = execl ( "/usr/bin/scp", "scp", orig, dest.c_str(), (char *) NULL); 
+            int execret = execl ( "/usr/bin/scp", "scp", orig, dest.c_str(), (char *) NULL);
             if ( execret == -1 )
             {
                std::cerr << "Error calling /usr/bin/scp " << orig << " " << dest.c_str() << std::endl;
@@ -196,7 +209,7 @@ class InstrumentationExtrae: public Instrumentation
                   }
                   p_file.close();
                }
-               else std::cout << "Unable to open " << _listOfTraceFileNames << " file" << std::endl;  
+               else std::cout << "Unable to open " << _listOfTraceFileNames << " file" << std::endl;
 
                // copy pcf file too
                //{
@@ -258,17 +271,17 @@ class InstrumentationExtrae: public Instrumentation
         }
 #ifdef HAVE_MPI_H
         char *offload_trace_on = getenv("NX_OFFLOAD_INSTRUMENTATION");
-        if (offload_trace_on != NULL){ 
+        if (offload_trace_on != NULL){
            //MPI plugin init will initialize extrae...
            sys.loadPlugin("arch-mpi");
         } else {
 #endif
-            /* Regular SMP OMPItrace initialization */      
-            OMPItrace_init();      
+            /* Regular SMP OMPItrace initialization */
+            OMPItrace_init();
 #ifdef HAVE_MPI_H
         }
 #endif
-        
+
         Extrae_register_codelocation_type( 9200011, 9200021, "User Function Name", "User Function Location" );
 
         Extrae_register_stacked_type( (extrae_type_t) _eventState );
@@ -285,6 +298,14 @@ class InstrumentationExtrae: public Instrumentation
 
         /* Keep current number of threads */
         _maxThreads = sys.getSMPPlugin()->getNumThreads();
+
+#ifdef EXTRAE_DEVICE_TRACING
+        /* Register the devices */
+        for ( unsigned int id = 0; id < sys.getNumInstrumentAccelerators(); ++id ) {
+           DeviceInstrumentation * devInstr = sys.getDeviceInstrumentation( id );
+           Extrae_register_device( devInstr->getDeviceType(), nanos_get_device_time, ( void * )( devInstr ) );
+        }
+#endif //EXTRAE_DEVICE_TRACING
       }
       void doLs(std::string dest)
       {
@@ -296,7 +317,7 @@ class InstrumentationExtrae: public Instrumentation
          pid = vfork();
          if ( pid == (pid_t) 0 ) {
             dup2(2, 1);
-            int execret = execl ( "/bin/ls", "ls", dest.c_str(), (char *) NULL); 
+            int execret = execl ( "/bin/ls", "ls", dest.c_str(), (char *) NULL);
             if ( execret == -1 )
             {
                std::cerr << "Error calling /bin/ls " << dest.c_str() << std::endl;
@@ -335,7 +356,7 @@ class InstrumentationExtrae: public Instrumentation
          for ( itK = iD->beginKeyMap(); itK != iD->endKeyMap(); itK++ ) {
             InstrumentationKeyDescriptor *kD = itK->second;
             if ( kD->getId() == 0 ) continue;
-            extrae_type_t type = _eventBase+kD->getId(); 
+            extrae_type_t type = _eventBase+kD->getId();
             char *type_desc = ( char *) alloca(sizeof(char) * (kD->getDescription().size() + 1) );
             strncpy ( type_desc, kD->getDescription().c_str(), kD->getDescription().size()+1 );
             unsigned nval = kD->getSize();
@@ -348,7 +369,7 @@ class InstrumentationExtrae: public Instrumentation
                   size_t pos3 = description.find_first_of("@",pos2+1);
                   pos3 = (pos3 == std::string::npos ? description.length() : pos3-1);
                   int  line = atoi ( (description.substr(pos2+1, pos3)).c_str());
-                  Extrae_register_function_address ( 
+                  Extrae_register_function_address (
                      (void *) (itV->second)->getId(),
                      (char *) description.substr(0,pos1).c_str(),
                      (char *) description.substr(pos1+1,(pos2-pos1-1)).c_str(),
@@ -378,7 +399,7 @@ class InstrumentationExtrae: public Instrumentation
             extrae_value_t *values = (extrae_value_t *) alloca( sizeof(extrae_value_t) * nval );
             char **val_desc = (char **) alloca( sizeof(char *) * nval );
             unsigned int i = 0;
-            static std::string nanos_event_state_value_str[] = {"NOT CREATED", "NOT RUNNING", 
+            static std::string nanos_event_state_value_str[] = {"NOT CREATED", "NOT RUNNING",
                "STARTUP", "SHUTDOWN", "ERROR", "IDLE",
                "RUNTIME", "RUNNING", "SYNCHRONIZATION", "SCHEDULING", "CREATION",
                "DATA TRANSFER ISSUE", "CACHE ALLOC/FREE", "YIELD", "ACQUIRING LOCK", "CONTEXT SWITCH",
@@ -400,7 +421,7 @@ class InstrumentationExtrae: public Instrumentation
 
          //If offloading, MPI will finish the trace
          char *offload_trace_on = getenv("NX_OFFLOAD_INSTRUMENTATION");
-         if (offload_trace_on == NULL){ 
+         if (offload_trace_on == NULL){
             OMPItrace_fini();
          }
 
@@ -412,7 +433,7 @@ class InstrumentationExtrae: public Instrumentation
       void disable( void ) { Extrae_shutdown(); }
       void enable( void ) { Extrae_restart(); }
 
-      void addEventList ( unsigned int count, Event *events) 
+      void addEventList ( unsigned int count, Event *events)
       {
          extrae_combined_events_t ce;
          InstrumentationDictionary *iD = sys.getInstrumentation()->getInstrumentationDictionary();
@@ -424,7 +445,7 @@ class InstrumentationExtrae: public Instrumentation
          ce.UserFunction = EXTRAE_USER_FUNCTION_NONE;
          ce.nEvents = 0;
          ce.nCommunications = 0;
-  
+
          for (unsigned int i = 0; i < count; i++)
          {
             Event &e = events[i];
@@ -513,7 +534,7 @@ class InstrumentationExtrae: public Instrumentation
                case NANOS_BURST_START:
                   ckey = e.getKey();
                   cvalue = e.getValue();
-                  if (  ckey != 0 ) { 
+                  if (  ckey != 0 ) {
                      ce.Types[j] = _eventBase + ckey;
                      ce.Values[j++] = cvalue;
                   }
@@ -523,7 +544,7 @@ class InstrumentationExtrae: public Instrumentation
                   break;
                case NANOS_BURST_END:
                   ckey = e.getKey();
-                  if (  ckey != 0 ) { 
+                  if (  ckey != 0 ) {
                      ce.Types[j] = _eventBase + ckey;
                      ce.Values[j++] = 0; // end
                   }
@@ -574,6 +595,85 @@ class InstrumentationExtrae: public Instrumentation
 
          Extrae_emit_CombinedEvents ( &ce );
       }
+
+#ifdef EXTRAE_DEVICE_TRACING
+      virtual void addDeviceEventList( const DeviceInstrumentation& ctx, unsigned int count, DeviceEvent *events )
+      {
+         unsigned nEvents = 0;
+
+         for (unsigned int i = 0; i < count; i++)
+         {
+            DeviceEvent &e = events[i];
+            nanos_event_type_t type = e.getType();
+            nanos_event_key_t key = e.getKey();
+            switch ( type ) {
+               case NANOS_STATE_START:
+               case NANOS_STATE_END:
+               case NANOS_SUBSTATE_START:
+               case NANOS_SUBSTATE_END:
+               case NANOS_PTP_START:
+               case NANOS_PTP_END:
+               case NANOS_POINT:
+                  warning( "Unsupported event type in addDeviceEventList" );
+                  break;
+               case NANOS_BURST_START:
+               case NANOS_BURST_END:
+                  if ( key == 0 ) continue;
+                  nEvents++;
+                  break;
+               default: break;
+            }
+         }
+
+         extrae_type_t * types = (extrae_type_t *) alloca (nEvents * sizeof (extrae_type_t));
+         extrae_value_t * values = (extrae_value_t *) alloca (nEvents * sizeof (extrae_value_t));
+         extrae_time_t * timestamps = (extrae_time_t *) alloca (nEvents * sizeof (extrae_time_t));
+
+         int j = 0;
+         nanos_event_key_t ckey = 0;
+         extrae_value_t cvalue = 0;
+         extrae_time_t ctimestamp = 0;
+
+         for (unsigned int i = 0; i < count; i++)
+         {
+            DeviceEvent &e = events[i];
+            unsigned int type = e.getType();
+            switch ( type ) {
+               case NANOS_STATE_START:
+               case NANOS_STATE_END:
+               case NANOS_SUBSTATE_START:
+               case NANOS_SUBSTATE_END:
+               case NANOS_PTP_START:
+               case NANOS_PTP_END:
+               case NANOS_POINT:
+                  break; //< Previous event types are not supported yet
+               case NANOS_BURST_START:
+                  ckey = e.getKey();
+                  cvalue = e.getValue();
+                  ctimestamp = e.getDeviceTime();
+                  if ( ckey != 0 ) {
+                     types[j] = _eventBase + ckey;
+                     values[j] = cvalue;
+                     timestamps[j++] = ctx.translateDeviceTime( ctimestamp );
+                  }
+                  break;
+               case NANOS_BURST_END:
+                  ckey = e.getKey();
+                  ctimestamp = e.getDeviceTime();
+                  if (  ckey != 0 ) {
+                     types[j] = _eventBase + ckey;
+                     values[j] = 0; // end
+                     timestamps[j++] = ctx.translateDeviceTime( ctimestamp );
+                  }
+                  break;
+               default: break;
+            }
+         }
+
+         Extrae_nevent_device ( ctx.getId(), nEvents, types, values, timestamps );
+      }
+#endif //EXTRAE_DEVICE_TRACING
+
       void addResumeTask( WorkDescriptor &w )
       {
           Extrae_resume_virtual_thread ( w.getId() );

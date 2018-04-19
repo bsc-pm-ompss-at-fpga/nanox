@@ -55,24 +55,8 @@ FPGAProcessor::FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpace
 {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    if ( !FPGAConfig::isInstrDisabled() ) {
-      int id;
-      std::string devNum = toString( _fpgaProcessorInfo.getId() );
-
-      id = sys.getNumInstrumentAccelerators();
-      _devInstr = FPGAInstrumentation( id, std::string( "FPGA accelerator " ) + devNum, &_fpgaProcessorInfo );
+      _devInstr = FPGAInstrumentation( _fpgaProcessorInfo );
       sys.addDeviceInstrumentation( &_devInstr );
-
-      id = sys.getNumInstrumentAccelerators();
-      _dmaInInstr = FPGAInstrumentation( id, std::string( "DMA in " ) + devNum, &_fpgaProcessorInfo );
-      sys.addDeviceInstrumentation( &_dmaInInstr );
-
-      id = sys.getNumInstrumentAccelerators();
-      _dmaOutInstr = FPGAInstrumentation( id, std::string( "DMA out " ) + devNum, &_fpgaProcessorInfo );
-      sys.addDeviceInstrumentation( &_dmaOutInstr );
-
-      id = sys.getNumInstrumentAccelerators();
-      _submitInstrumentation = FPGAInstrumentation( id, std::string( "DMA submit " ) + devNum, &_fpgaProcessorInfo );
-      sys.addDeviceInstrumentation( &_submitInstrumentation );
    }
 #endif
 }
@@ -103,53 +87,6 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
    FPGAThread  &th = *NEW FPGAThread( helper, this, parent );
    return th;
 }
-
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-void FPGAProcessor::dmaSubmitStart( const WD *wd )
-{
-   if ( FPGAConfig::isInstrDisabled() ) return;
-
-   uint64_t timestamp;
-   xdma_status status;
-   status = xdmaGetDeviceTime( &timestamp );
-   if ( status != XDMA_SUCCESS ) {
-      if ( !_dmaSubmitWarnShown ) {
-         warning("Could not read accelerator " << getAccelId() <<
-                 " clock (dma submit start). [Warning only shown once]");
-         _dmaSubmitWarnShown = true;
-      }
-   } else {
-      Instrumentation *instr = sys.getInstrumentation();
-      instr->addDeviceEvent( Instrumentation::DeviceEvent(
-         timestamp, TaskBegin, &_submitInstrumentation, wd ) );
-      instr->addDeviceEvent( Instrumentation::DeviceEvent(
-         timestamp, TaskSwitch, &_submitInstrumentation, NULL, wd ) );
-   }
-}
-
-void FPGAProcessor::dmaSubmitEnd( const WD *wd )
-{
-   if ( FPGAConfig::isInstrDisabled() ) return;
-
-   uint64_t timestamp;
-   xdma_status status;
-   status = xdmaGetDeviceTime( &timestamp );
-   if ( status != XDMA_SUCCESS ) {
-      if ( !_dmaSubmitWarnShown ) {
-         warning("Could not read accelerator " << getAccelId() <<
-                 " clock (dma submit end). [Warning only shown once]");
-         _dmaSubmitWarnShown = true;
-      }
-   } else {
-      Instrumentation *instr = sys.getInstrumentation();
-      //FIXME: Emit the accelerator ID
-      instr->addDeviceEvent( Instrumentation::DeviceEvent(
-         timestamp, TaskSwitch, &_submitInstrumentation, wd, NULL ) );
-      instr->addDeviceEvent( Instrumentation::DeviceEvent(
-         timestamp, TaskEnd, &_submitInstrumentation, wd ) );
-   }
-}
-#endif  //NANOS_INSTRUMENTATION_ENABLED
 
 xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
    xtasks_stat status;
@@ -184,16 +121,11 @@ xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
       ensure( status == XTASKS_SUCCESS, "Error adding arguments to a FPGA task" );
    }
 
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-   dmaSubmitStart( &wd );
-#endif
    if ( xtasksSubmitTask( task ) != XTASKS_SUCCESS ) {
       //TODO: If error is XDMA_ENOMEM we can retry after a while
       fatal("Error sending a task to the FPGA");
    }
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-   dmaSubmitEnd( &wd );
-#endif
+
    return task;
 }
 
@@ -201,41 +133,20 @@ xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
 void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task ) {
    if ( FPGAConfig::isInstrDisabled() ) return;
 
-   Instrumentation * instr = sys.getInstrumentation();
+   static Instrumentation * ins     = sys.getInstrumentation();
+   static nanos_event_key_t inKey   = ins->getInstrumentationDictionary()->getEventKey( "device-copy-in" );
+   static nanos_event_key_t execKey = ins->getInstrumentationDictionary()->getEventKey( "device-task-execution" );
+   static nanos_event_key_t outKey  = ins->getInstrumentationDictionary()->getEventKey( "device-copy-out" );
+   nanos_event_value_t val = ( nanos_event_value_t )( wd->getId() );
 
    //Get the counters
    xtasks_ins_times * counters;
    xtasksGetInstrumentData( task, &counters );
 
-   //Task execution
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->inTransfer, TaskBegin, &_devInstr, wd ) );
-   //Beginning kernel execution is represented as a task switch from NULL to a WD
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->inTransfer, TaskSwitch, &_devInstr, NULL, wd ) );
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->computation, TaskSwitch, &_devInstr, wd, NULL ) );
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->computation, TaskEnd, &_devInstr, wd ) );
-
-   //DMA info
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->start, TaskBegin, &_dmaInInstr, wd ) );
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->start, TaskSwitch, &_dmaInInstr, NULL, wd ) );
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->inTransfer, TaskSwitch, &_dmaInInstr, wd, NULL ) );
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->inTransfer, TaskEnd, &_dmaInInstr, wd ) );
-
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->computation, TaskBegin, &_dmaOutInstr, wd ) );
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->computation, TaskSwitch, &_dmaOutInstr, NULL, wd ) );
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->outTransfer, TaskSwitch, &_dmaOutInstr, wd, NULL ) );
-   instr->addDeviceEvent(
-         Instrumentation::DeviceEvent( counters->outTransfer, TaskEnd, &_dmaOutInstr, wd ) );
+   //Raise the events
+   ins->raiseDeviceBurstEvent( _devInstr, inKey,   val, counters->start,       counters->inTransfer  );
+   ins->raiseDeviceBurstEvent( _devInstr, execKey, val, counters->inTransfer,  counters->computation );
+   ins->raiseDeviceBurstEvent( _devInstr, outKey,  val, counters->computation, counters->outTransfer );
 }
 #endif
 
