@@ -81,13 +81,6 @@ public:
       virtual void setupSignalHandlers() { _pthread.setupSignalHandlers(); }
    #endif
 
-
-
-   void switchTo( WD *work, SchedulerHelper *helper );
-   void exitTo( WD *work, SchedulerHelper *helper );
-
-   void switchHelperDependent( WD* oldWD, WD* newWD, void *arg );
-
    void switchToNextThread() { fatal( "GPUThread does not support switchToNextThread()" ); }
    BaseThread *getNextThread() { return this; }
    bool isCluster() { return false; }
