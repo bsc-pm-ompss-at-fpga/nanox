@@ -1685,7 +1685,7 @@ bool RegionCache::prepareRegions( MemCacheCopy *memCopies, unsigned int numCopie
          mcopy._allocFrom = -1;
       } else {
          unsigned int alloc_idx = 0;
-         for (; alloc_idx < regions_to_allocate.size() && regions_to_allocate_w_idx[alloc_idx].second != mcopy._reg /*allocatable_region*/; alloc_idx += 1 );
+         for (; alloc_idx < regions_to_allocate.size() && regions_to_allocate_w_idx[alloc_idx].second != mcopy._reg /*allocatable_region*/; alloc_idx += 1 ) {}
          mcopy._allocFrom = alloc_idx;
       }
    }
