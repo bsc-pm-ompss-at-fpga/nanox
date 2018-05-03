@@ -26,6 +26,30 @@
 
 namespace nanos {
 
+// Macro's to instrument the code and make it cleaner
+#define ASYNC_THREAD_CREATE_EVENT(x)   NANOS_INSTRUMENT( \
+		sys.getInstrumentation()->raiseOpenBurstEvent ( sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey( "async-thread" ), (x) ); )
+
+#define ASYNC_THREAD_CLOSE_EVENT       NANOS_INSTRUMENT( \
+		sys.getInstrumentation()->raiseCloseBurstEvent ( sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey( "async-thread" ), 0 ); )
+
+typedef enum {
+   ASYNC_THREAD_NULL_EVENT,                  /* 0 */
+   ASYNC_THREAD_INLINE_WORK_DEP_EVENT,       /* 1 */
+   ASYNC_THREAD_PRE_RUN_EVENT,               /* 2 */
+   ASYNC_THREAD_RUN_EVENT,                   /* 3 */
+   ASYNC_THREAD_POST_RUN_EVENT,              /* 4 */
+   ASYNC_THREAD_SCHEDULE_EVENT,              /* 5 */
+//   ASYNC_THREAD_WAIT_INPUTS_EVENT,           /* 5 */
+   ASYNC_THREAD_CHECK_WD_INPUTS_EVENT,       /* 6 */
+   ASYNC_THREAD_CHECK_WD_OUTPUTS_EVENT,      /* 7 */
+   ASYNC_THREAD_CP_DATA_IN_EVENT,            /* 8 */
+   ASYNC_THREAD_CP_DATA_OUT_EVENT,           /* 9 */
+   ASYNC_THREAD_CHECK_EVTS_EVENT,           /* 10 */
+   ASYNC_THREAD_PROCESS_EVT_EVENT,          /* 11 */   /* WARNING!! Value hard-coded in asyncthread.hpp */
+   ASYNC_THREAD_SYNCHRONIZE_EVENT,          /* 12 */
+} AsyncThreadState_t;
+
 inline void AsyncThread::checkEvents()
 {
    _recursiveCounter++;
