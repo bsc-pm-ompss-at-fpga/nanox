@@ -29,8 +29,7 @@
 #include "fpgapinnedallocator.hpp"
 #include "fpgainstrumentation.hpp"
 #include "simpleallocator.hpp"
-
-#include "libxtasks.h"
+#include "libxtasks_wrapper.hpp"
 
 using namespace nanos;
 using namespace nanos::ext;

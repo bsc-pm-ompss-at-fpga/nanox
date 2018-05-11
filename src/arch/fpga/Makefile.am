@@ -38,6 +38,8 @@ devinclude_HEADERS = \
 	fpgaworker.hpp \
 	fpgapinnedallocator.hpp \
 	fpgainstrumentation.hpp \
+	libxdma_wrapper.hpp \
+	libxtasks_wrapper.hpp \
 	$(END)
 
 fpga_api_sources = \
@@ -66,6 +68,8 @@ fpga_sources = \
 	fpgainstrumentation.cpp \
 	fpgalistener.hpp \
 	fpgalistener.cpp \
+	libxdma_wrapper.hpp \
+	libxtasks_wrapper.hpp \
 	$(END)
 
 pe_fpga_sources = \

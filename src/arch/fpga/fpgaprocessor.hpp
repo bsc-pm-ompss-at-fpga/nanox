@@ -30,8 +30,7 @@
 #include "fpgapinnedallocator.hpp"
 #include "fpgaprocessorinfo.hpp"
 #include "fpgainstrumentation.hpp"
-
-#include "libxtasks.h"
+#include "libxtasks_wrapper.hpp"
 
 namespace nanos {
 namespace ext {
