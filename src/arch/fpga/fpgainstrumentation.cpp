@@ -1,6 +1,6 @@
 #include "fpgainstrumentation.hpp"
 #include "fpgaconfig.hpp"
-#include "libxdma.h"
+#include "libxdma_wrapper.hpp"
 
 using namespace nanos;
 using namespace nanos::ext;

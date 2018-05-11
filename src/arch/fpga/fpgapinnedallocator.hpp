@@ -3,7 +3,7 @@
 
 #include "simpleallocator_decl.hpp"
 
-#include "libxdma.h"
+#include "libxdma_wrapper.hpp"
 
 namespace nanos {
 namespace ext {

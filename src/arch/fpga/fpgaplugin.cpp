@@ -30,22 +30,8 @@
 #include "fpgaworker.hpp"
 #include "fpgalistener.hpp"
 #include "fpgapinnedallocator.hpp"
-
-#include "libxdma.h"
-#include "libxdma_version.h"
-#include "libxtasks.h"
-
-//! Check that libxdma version is compatible
-#define LIBXDMA_MIN_MAJOR 1
-#define LIBXDMA_MIN_MINOR 1
-#if !defined(LIBXDMA_VERSION_MAJOR) || !defined(LIBXDMA_VERSION_MINOR) || \
-    LIBXDMA_VERSION_MAJOR < LIBXDMA_MIN_MAJOR || \
-    (LIBXDMA_VERSION_MAJOR == LIBXDMA_MIN_MAJOR && LIBXDMA_VERSION_MINOR < LIBXDMA_MIN_MINOR)
-# error Installed libxdma is not supported (use >= 1.1)
-#endif
-
-//! Check that libxtasks version is compatible
-// NOTE: Done in fpgaprocessorinfo.hpp as it is compiled before this file
+#include "libxdma_wrapper.hpp"
+#include "libxtasks_wrapper.hpp"
 
 namespace nanos {
 namespace ext {
