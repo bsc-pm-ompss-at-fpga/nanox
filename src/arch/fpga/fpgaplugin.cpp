@@ -44,6 +44,7 @@ class FPGAPlugin : public ArchPlugin
       std::vector< SMPProcessor* >   _helperCores;
       std::vector< FPGAListener* >   _fpgaListeners;
       FPGADeviceMap                  _fpgaDevices;
+      FPGACreateWDListener           _createWDListener;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -299,6 +300,7 @@ class FPGAPlugin : public ArchPlugin
             //When the parent thread enters in a team, all sub-threads also enter the team
             workers.insert( std::make_pair( fpgaHelper->getId(), fpgaHelper ) );
          }
+         sys.getEventDispatcher().addListenerAtIdle( _createWDListener );
       }
 
       virtual ProcessingElement * createPE( unsigned id , unsigned uid ) {
