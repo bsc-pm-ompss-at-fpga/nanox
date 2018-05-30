@@ -22,6 +22,7 @@
 #include "smpprocessor.hpp"
 #include "os.hpp"
 #include "openclevent.hpp"
+#include "asyncthread.hpp"
 #include <iostream>
 #include <algorithm>
 
