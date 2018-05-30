@@ -87,17 +87,23 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
    return th;
 }
 
-xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
+void FPGAProcessor::createAndSubmitTask( WD &wd, WD *parentWd ) {
    xtasks_stat status;
-   xtasks_task_handle task;
+   xtasks_task_handle task, parentTask = NULL;
 
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
+
+   if (parentWd != NULL) {
+      FPGADD &dd = ( FPGADD & )( parentWd->getActiveDevice() );
+      parentTask = ( xtasks_task_handle )( dd.getHandle() );
+   }
 
    size_t numArgs = wd.getDataSize()/sizeof(uintptr_t);
    ensure( wd.getDataSize()%sizeof(uintptr_t) == 0,
            "WD's data size is not multiple of uintptr_t (All args must be pointers)" );
 
-   status = xtasksCreateTask( (uintptr_t)&wd, _fpgaProcessorInfo.getHandle(), XTASKS_COMPUTE_ENABLE, &task );
+   status = xtasksCreateTask( (uintptr_t)&wd, _fpgaProcessorInfo.getHandle(), parentTask,
+      XTASKS_COMPUTE_ENABLE, &task );
    if ( status != XTASKS_SUCCESS ) {
       //TODO: If status == XTASKS_ENOMEM, block and wait untill mem is available
       fatal( "Cannot initialize FPGA task info (accId: " <<
@@ -125,7 +131,8 @@ xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
       fatal("Error sending a task to the FPGA");
    }
 
-   return task;
+   FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
+   dd.setHandle( task );
 }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
@@ -181,7 +188,7 @@ void FPGAProcessor::preOutlineWorkDependent ( WD &wd ) {
 void FPGAProcessor::outlineWorkDependent ( WD &wd )
 {
    //wd.start( WD::IsNotAUserLevelThread );
-   createAndSubmitTask( wd );
+   createAndSubmitTask( wd, wd.getParent() );
    ++_runningTasks;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    ++_totalRunningTasks;

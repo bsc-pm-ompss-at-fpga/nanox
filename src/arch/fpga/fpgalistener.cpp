@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2017 Barcelona Supercomputing Center                               */
+/*      Copyright 2018 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -52,9 +52,12 @@ void FPGAListener::callback( BaseThread* self )
    --_count;
 }
 
+static void fpgaFakeOutline( void * args ) {
+}
+
 void FPGACreateWDListener::callback( BaseThread* self )
 {
-   static int maxThreads = FPGAConfig::getMaxThreadsIdleCallback();
+   static int maxThreads = 1; //NOTE: The task creation order for the same accelerator must be ensured
    static unsigned int maxCreatedWD = 32; //TODO: Get the value from the FPGAConfig
 
    /*!
@@ -65,6 +68,11 @@ void FPGACreateWDListener::callback( BaseThread* self )
    if ( _count.fetchAndAdd() < maxThreads || maxThreads == -1 ) {
       unsigned int cnt = 0;
       xtasks_newtask *task = NULL;
+
+      //Info to undo the arguments translation
+      static uintptr_t const baseAddressVirt = fpgaAllocator->getBaseAddress();
+      static uintptr_t const baseAddressPhy = fpgaAllocator->getBaseAddressPhy();
+
       //TODO: Check if throttole policy allows the task creation
       while ( cnt++ < maxCreatedWD && xtasksTryGetNewTask( &task ) == XTASKS_SUCCESS ) {
          void *args[task->numArgs];
@@ -74,12 +82,17 @@ void FPGACreateWDListener::callback( BaseThread* self )
          for ( size_t i = 0; i < task->numArgs; ++i ) {
             numCopies += task->args[i].isInputCopy || task->args[i].isOutputCopy;
             numDeps += task->args[i].isInputDep || task->args[i].isOutputDep;
-            args[i] = task->args[i].value;
+
+            //Undo the translation done in FPGAProcessor::createAndSubmitTask
+            //Kernel physical address --> Kernel virtual address
+            uintptr_t argVirt = ( uintptr_t )( task->args[i].value ) - baseAddressPhy + baseAddressVirt;
+            args[i] = ( void * )( argVirt );
          }
 
          WD * createdWd = NULL;
          WD * parentWd = ( WD * )( ( uintptr_t )task->parentId );
-         nanos_fpga_args_t fpgaDeviceArgs = { .outline = NULL, .acc_num = ( int )( task->typeInfo ) };
+         void *data = NULL;
+         nanos_fpga_args_t fpgaDeviceArgs = { .outline = &fpgaFakeOutline, .acc_num = ( int )( task->typeInfo ) };
          nanos_device_t devicesInfo = { .factory = &nanos_fpga_factory, .arg = &fpgaDeviceArgs };
          // nanos_wd_props_t props = { .mandatory_creation = 1, .tied = 0, .clear_chunk = 0,
          //    .reserved0 = 0, .reserved1 = 0, .reserved2 = 0, .reserved3 = 0, .reserved4 = 0 };
@@ -90,11 +103,16 @@ void FPGACreateWDListener::callback( BaseThread* self )
          nanos_data_access_internal_t dependences[numDeps];
          nanos_region_dimension_t depsDimensions[numDeps]; //< 1 dimension per dependence
          ensure( translator != NULL || numCopies == 0, " If the WD has copies, the translate_args cannot be NULL" );
-         sys.createWD( &createdWd, 1 /*num_devices*/, &devicesInfo, task->numArgs*sizeof(void *), __alignof__(void *), &args[0],
-            parentWd, NULL /*props*/, NULL /*dyn_props*/, numCopies, &copies, numCopies /*1 dimension per copy*/, &copiesDimensions,
+         sys.createWD( &createdWd, 1 /*num_devices*/, &devicesInfo, task->numArgs*sizeof(void *), __alignof__(void *), &data,
+            parentWd, NULL /*props*/, NULL /*dyn_props*/, numCopies, numCopies > 0 ? &copies : NULL /*copies*/,
+            numCopies /*1 dimension per copy*/, numCopies > 0 ? &copiesDimensions: NULL /*dimensions*/,
             translator, NULL /*description*/, NULL /*slicer*/ );
          ensure( createdWd != NULL, " Cannot create a WD in FPGACreateWDListener" );
 
+         //Set the WD input data
+         memcpy(data, &args[0], task->numArgs*sizeof(void *));
+
+         //Set the copies and dependencies information
          for ( size_t aIdx = 0, cIdx = 0, dIdx = 0; aIdx < task->numArgs; ++aIdx ) {
             if (task->args[aIdx].isInputCopy || task->args[aIdx].isOutputCopy) {
                copiesDimensions[cIdx].size = 0; //TODO: Obtain this field
@@ -118,8 +136,8 @@ void FPGACreateWDListener::callback( BaseThread* self )
                dependences[dIdx].address = task->args[aIdx].value;
                dependences[dIdx].offset = 0;
                dependences[dIdx].dimensions = &depsDimensions[dIdx];
-               dependences[dIdx].flags.input = task->args[aIdx].isInputCopy;
-               dependences[dIdx].flags.output = task->args[aIdx].isOutputCopy;
+               dependences[dIdx].flags.input = task->args[aIdx].isInputDep;
+               dependences[dIdx].flags.output = task->args[aIdx].isOutputDep;
                dependences[dIdx].flags.can_rename = 0;
                dependences[dIdx].flags.concurrent = 0;
                dependences[dIdx].flags.commutative = 0;
@@ -130,7 +148,13 @@ void FPGACreateWDListener::callback( BaseThread* self )
 
          sys.setupWD( *createdWd, parentWd );
          if ( numDeps > 0 ) {
-            sys.submitWithDependencies( *createdWd, numDeps, ( DataAccess * )( dependences ) );
+            //NOTE: Cannot call system method as the task has to be submitted into parent WD not current WD
+            //sys.submitWithDependencies( *createdWd, numDeps, ( DataAccess * )( dependences ) );
+
+            SchedulePolicy* policy = sys.getDefaultSchedulePolicy();
+            policy->onSystemSubmit( *createdWd, SchedulePolicy::SYS_SUBMIT_WITH_DEPENDENCIES );
+
+            parentWd->submitWithDependencies( *createdWd, numDeps , ( DataAccess * )( dependences ) );
          } else {
             sys.submit( *createdWd );
          }
