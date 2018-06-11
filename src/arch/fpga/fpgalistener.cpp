@@ -17,6 +17,7 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
+#include "simpleallocator.hpp"
 #include "fpgalistener.hpp"
 #include "libxtasks_wrapper.hpp"
 #include "nanos-fpga.h"
