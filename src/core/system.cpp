@@ -1187,6 +1187,40 @@ void System::inlineWork ( WD &work )
    myThread->setRunningOn( selfPE );
 }
 
+void System::outlineWork ( WD &work )
+{
+   PE * const selfPE = myThread->runningOn();
+   SchedulePolicy* policy = getDefaultSchedulePolicy();
+   policy->onSystemSubmit( work, SchedulePolicy::SYS_INLINE_WORK );
+
+   if ( !Scheduler::checkBasicConstraints( work, *myThread ) ) {
+      /*! NOTE: myThread->runningOn() is not compatible with the WD,
+       *        look for a compatible PE and start running on it.
+       */
+      PE * const workPE = getPEWithDevice( *( work.getActiveDevice().getDevice() ) );
+      myThread->setRunningOn( workPE );
+      if ( !workPE ) {
+         fatal ( "Cannot find a compatible PE to execute inline a task" );
+      }
+      ensure( Scheduler::checkBasicConstraints( work, *myThread ),
+         "Trying to execute inline a task violating basic constraints" );
+   }
+
+   work._mcontrol.preInit();
+   work._mcontrol.initialize( *( myThread->runningOn() ) );
+   bool result;
+   do {
+      result = work._mcontrol.allocateTaskMemory();
+      if ( !result ) {
+         myThread->processTransfers();
+      }
+   } while( result == false );
+   Scheduler::outlineWork( myThread, &work );
+
+   // Switch back to the real thread PE
+   myThread->setRunningOn( selfPE );
+}
+
 //! \brief Returns an unocupied worker
 //!
 //! This function is called when creating a team. We must look for teamless workers and
