@@ -87,6 +87,13 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
    return th;
 }
 
+uintptr_t FPGAProcessor::getPhyAddr( const uintptr_t addr ) {
+   static FPGAPinnedAllocator * const allocator = getAllocator();
+   static uintptr_t const baseAddress = allocator->getBaseAddress();
+   static uintptr_t const baseAddressPhy = allocator->getBaseAddressPhy();
+   return baseAddressPhy + ( addr - baseAddress );
+}
+
 xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
    xtasks_stat status;
    xtasks_task_handle task;
@@ -105,18 +112,24 @@ xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
              ( status == XTASKS_ENOMEM ? "XTASKS_ENOMEM" : "XTASKS_ERROR" ) );
    }
 
-   uintptr_t * args = ( uintptr_t * )( wd.getData() );
-   static FPGAPinnedAllocator * const allocator = getAllocator();
-   static uintptr_t const baseAddress = allocator->getBaseAddress();
-   static uintptr_t const baseAddressPhy = allocator->getBaseAddressPhy();
-   xtasks_arg_val argValues[numArgs];
-   for ( size_t argIdx = 0; argIdx < numArgs; ++argIdx ) {
-      size_t  offset = args[argIdx] - baseAddress;
-      argValues[argIdx] = baseAddressPhy + offset;
+   //Build a map of flags for each copy
+   CopyData const * copies = wd.getCopies();
+   std::map<uintptr_t, xtasks_arg_flags> mapCopies;
+   for ( size_t cIdx = 0; cIdx < wd.getNumCopies(); ++cIdx ) {
+      xtasks_arg_flags copyFlags;
+      copyFlags = XTASKS_ARG_FLAG_COPY_IN & -( copies[cIdx].isInput() );
+      copyFlags |= XTASKS_ARG_FLAG_COPY_OUT & -( copies[cIdx].isOutput() );
+
+      uintptr_t copyValue = wd._mcontrol.getAddress( cIdx );
+      mapCopies[copyValue] = copyFlags;
    }
 
-   status = xtasksAddArgs( numArgs, XTASKS_GLOBAL, &argValues[0], task );
-   if ( status != XTASKS_SUCCESS ) {
+   uintptr_t * args = ( uintptr_t * )( wd.getData() );
+   for ( size_t argIdx = 0; argIdx < numArgs; ++argIdx ) {
+      uintptr_t argValue = args[argIdx];
+      //NOTE: If the argument is not a copy, the flags returned by mapCopies will be 0
+      xtasks_arg_flags argFlags = XTASKS_ARG_FLAG_GLOBAL | mapCopies[argValue];
+      status = xtasksAddArg( argIdx, argFlags, getPhyAddr( argValue ), task );
       ensure( status == XTASKS_SUCCESS, "Error adding arguments to a FPGA task" );
    }
 

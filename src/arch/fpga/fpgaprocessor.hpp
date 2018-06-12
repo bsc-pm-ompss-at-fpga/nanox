@@ -60,6 +60,7 @@ namespace ext {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          void readInstrCounters( WD * const wd, xtasks_task_handle & task );
 #endif
+         uintptr_t getPhyAddr( const uintptr_t addr );
 
       public:
 
