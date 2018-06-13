@@ -1190,6 +1190,7 @@ void System::inlineWork ( WD &work )
 void System::outlineWork ( WD &work )
 {
    PE * const selfPE = myThread->runningOn();
+   WD * selfWD = myThread->getCurrentWD();
    SchedulePolicy* policy = getDefaultSchedulePolicy();
    policy->onSystemSubmit( work, SchedulePolicy::SYS_INLINE_WORK );
 
@@ -1215,10 +1216,13 @@ void System::outlineWork ( WD &work )
          myThread->processTransfers();
       }
    } while( result == false );
+   Scheduler::prePreOutlineWork( &work );
+   Scheduler::preOutlineWork( &work );
    Scheduler::outlineWork( myThread, &work );
 
    // Switch back to the real thread PE
    myThread->setRunningOn( selfPE );
+   myThread->setCurrentWD( *selfWD );
 }
 
 //! \brief Returns an unocupied worker
