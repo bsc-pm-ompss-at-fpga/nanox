@@ -116,7 +116,7 @@
  *   - 5029: Adding implicit parameter to work descriptor flags.
  *   - 5030: Adding instrumentation support to wrap main function.
  *   - 5041: Adding mandatory taskwait to support devices tasks in final mode.
- *   - 5042: Adding API to synchronously outline tasks without caomputing its dependencies.
+ *   - 5042: Adding API to synchronously outline tasks instead of submitting them.
  * - nanos interface family: worksharing
  *   - 1000: First implementation of work-sharing services (create and next-item)
  * - nanos interface family: deps_api
@@ -215,14 +215,11 @@ NANOS_API_DECL(nanos_err_t, nanos_create_sliced_wd, ( nanos_wd_t *uwd, size_t nu
                                      nanos_wd_props_t *props, nanos_wd_dyn_props_t *dyn_props, size_t num_copies, nanos_copy_data_t **copies, size_t num_dimensions, nanos_region_dimension_internal_t **dimensions ));
 
 NANOS_API_DECL(nanos_err_t, nanos_submit, ( nanos_wd_t wd, size_t num_data_accesses, nanos_data_access_t *data_accesses, nanos_team_t team ));
+NANOS_API_DECL(nanos_err_t, nanos_outline, ( nanos_wd_t wd, size_t num_data_accesses, nanos_data_access_t *data_accesses, nanos_team_t team ));
 
 NANOS_API_DECL(nanos_err_t, nanos_create_wd_and_run_compact, ( nanos_const_wd_definition_t *const_data, nanos_wd_dyn_props_t *dyn_props,
                                                                size_t data_size, void * data, size_t num_data_accesses, nanos_data_access_t *data_accesses,
                                                                nanos_copy_data_t *copies, nanos_region_dimension_internal_t *dimensions, nanos_translate_args_t translate_args ));
-
-NANOS_API_DECL(nanos_err_t, nanos_create_wd_and_outline_compact, ( nanos_const_wd_definition_t *const_data, nanos_wd_dyn_props_t *dyn_props,
-   size_t data_size, void * data, size_t num_data_accesses, nanos_data_access_t *data_accesses,
-   nanos_copy_data_t *copies, nanos_region_dimension_internal_t *dimensions, nanos_translate_args_t translate_args ));
 
 NANOS_API_DECL(nanos_err_t, nanos_create_for, ( void ));
 

@@ -348,73 +348,24 @@ NANOS_API_DEF( nanos_err_t, nanos_create_wd_and_run_compact, ( nanos_const_wd_de
 }
 
 
-/*! \brief Creates a new WorkDescriptor and outlines it inmediately (executin still undeferred)
+/*! \brief Outline a WorkDescriptor into an asynchronous PE
  *
- *  \param const_data_ext
- *  \param dyn_props
- *  \param data_size
- *  \param data (must not be null)
- *  \param num_data_accesses
- *  \param data_accesses
- *  \param copies
- *  \param dimensions
- *  \param translate_args
  *  \sa nanos::WorkDescriptor
  */
-NANOS_API_DEF( nanos_err_t, nanos_create_wd_and_outline_compact, ( nanos_const_wd_definition_t *const_data_ext, nanos_wd_dyn_props_t *dyn_props,
-   size_t data_size, void * data, size_t num_data_accesses, nanos_data_access_t *data_accesses,
-   nanos_copy_data_t *copies, nanos_region_dimension_internal_t *dimensions, nanos_translate_args_t translate_args ) )
+NANOS_API_DEF(nanos_err_t, nanos_outline, ( nanos_wd_t uwd, size_t num_data_accesses, nanos_data_access_t *data_accesses, nanos_team_t team ))
 {
-   NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","create_wd_and_outline", NANOS_CREATION) );
-
-   nanos_const_wd_definition_internal_t *const_data = reinterpret_cast<nanos_const_wd_definition_internal_t*>(const_data_ext);
+   NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","outline",NANOS_SCHEDULING) );
 
    try {
-      if ( const_data->num_devices > 1 ) warning( "Multiple devices not yet supported. Using first one" );
+      ensure( uwd,"NULL WD received" );
 
-      //! \todo if multiple devices we need to choose one of them
+      WD * wd = ( WD * ) uwd;
 
-      WD wd( (DD*) const_data->devices[0].factory( const_data->devices[0].arg ), data_size, const_data->data_alignment,
-             data, const_data->num_copies, copies, NULL, (char *) const_data->description);
-
-      wd.setTranslateArgs( translate_args );
-      wd.forceParent( myThread->getCurrentWD() );
-
-      // Set WD's socket
-      wd.setNUMANode( sys.getUserDefinedNUMANode() );
-
-      wd.copyReductions (myThread->getCurrentWD() );
-
-      if ( wd.getNUMANode() >= (int)sys.getNumNumaNodes() )
-         throw NANOS_INVALID_PARAM;
-
-      // set properties
-      if ( const_data->props.tied ) wd.tied();
-      if ( dyn_props && dyn_props->tie_to ) {
-         if (dyn_props->tie_to == myThread) {
-            wd.tieTo( *( BaseThread * ) dyn_props->tie_to );
-         } else {
-            fatal ( "Tiedness violation" );
-         }
-         // Set priority
-         wd.setPriority( dyn_props->priority );
+      if ( sys.getVerboseCopies() ) {
+         *myThread->_file << "Outlining WD " << wd->getId() << " " << (wd->getDescription() == NULL ? "n/a" : wd->getDescription()) << std::endl;
       }
 
-      int pmDataSize = sys.getPMInterface().getInternalDataSize();
-      char pmData[pmDataSize];
-      if ( pmDataSize > 0 ) {
-        sys.getPMInterface().initInternalData( pmData );
-        wd.setInternalData(pmData, /* ownedByWD */ false);
-      }
-
-      int schedDataSize = sys.getDefaultSchedulePolicy()->getWDDataSize();
-      char schedData[schedDataSize];
-      if ( schedDataSize  > 0 ) {
-         sys.getDefaultSchedulePolicy()->initWDData( schedData );
-         wd.setSchedulerData( reinterpret_cast<ScheduleWDData*>( schedData ), /* ownedByWD */ false );
-      }
-
-      sys.setupWD( wd, myThread->getCurrentWD() );
+      sys.setupWD( *wd, myThread->getCurrentWD() );
 
       NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
 
@@ -427,10 +378,10 @@ NANOS_API_DEF( nanos_err_t, nanos_create_wd_and_outline_compact, ( nanos_const_w
       NANOS_INSTRUMENT ( nanos_event_value_t Values[4]; )
 
       NANOS_INSTRUMENT ( Keys[0] = create_wd_id; )
-      NANOS_INSTRUMENT ( Values[0] = (nanos_event_value_t) wd.getId(); )
+      NANOS_INSTRUMENT ( Values[0] = (nanos_event_value_t) wd->getId(); )
 
       NANOS_INSTRUMENT ( Keys[1] = create_wd_ptr; )
-      NANOS_INSTRUMENT ( Values[1] = (nanos_event_value_t) &wd; )
+      NANOS_INSTRUMENT ( Values[1] = (nanos_event_value_t) wd; )
 
       NANOS_INSTRUMENT ( Keys[2] = wd_num_deps; )
       NANOS_INSTRUMENT ( Values[2] = (nanos_event_value_t) num_data_accesses; )
@@ -440,17 +391,11 @@ NANOS_API_DEF( nanos_err_t, nanos_create_wd_and_outline_compact, ( nanos_const_w
 
       NANOS_INSTRUMENT( sys.getInstrumentation()->raisePointEvents(4, Keys, Values); )
 
-      NANOS_INSTRUMENT (sys.getInstrumentation()->raiseOpenPtPEvent( NANOS_WD_DOMAIN, (nanos_event_id_t) wd.getId(), 0, 0 ); )
-
-      // NOTE: Not waiting any data acces
-      // if ( data_accesses != NULL ) {
-      //    sys.waitOn( num_data_accesses, data_accesses );
-      // }
+      NANOS_INSTRUMENT (sys.getInstrumentation()->raiseOpenPtPEvent ( NANOS_WD_DOMAIN, (nanos_event_id_t) wd->getId(), 0, 0 );)
 
       NANOS_INSTRUMENT( InstrumentState inst1(NANOS_RUNTIME) );
-      sys.outlineWork( wd );
+      sys.outlineWork( *wd );
       NANOS_INSTRUMENT( inst1.close() );
-
    } catch ( nanos_err_t e) {
       return e;
    }
