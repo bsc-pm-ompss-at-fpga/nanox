@@ -1216,11 +1216,11 @@ void System::outlineWork ( WD &work )
          myThread->processTransfers();
       }
    } while( result == false );
-   Scheduler::prePreOutlineWork( &work );
    Scheduler::preOutlineWork( &work );
+   myThread->runningOn()->preOutlineWorkDependent( work );
    Scheduler::outlineWork( myThread, &work );
 
-   // Switch back to the real thread PE
+   // Switch back to the real thread PE and WD
    myThread->setRunningOn( selfPE );
    myThread->setCurrentWD( *selfWD );
 }
