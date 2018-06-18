@@ -352,14 +352,16 @@ NANOS_API_DEF( nanos_err_t, nanos_create_wd_and_run_compact, ( nanos_const_wd_de
  *
  *  \sa nanos::WorkDescriptor
  */
-NANOS_API_DEF(nanos_err_t, nanos_outline, ( nanos_wd_t uwd, size_t num_data_accesses, nanos_data_access_t *data_accesses, nanos_team_t team ))
+NANOS_API_DEF(nanos_err_t, nanos_outline, ( nanos_wd_t uwd, nanos_pe_t upe ))
 {
    NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","outline",NANOS_SCHEDULING) );
 
    try {
       ensure( uwd,"NULL WD received" );
+      //NOTE: Force upe to be not-NULL?
 
       WD * wd = ( WD * ) uwd;
+      PE * pe = ( PE * ) upe;
 
       if ( sys.getVerboseCopies() ) {
          *myThread->_file << "Outlining WD " << wd->getId() << " " << (wd->getDescription() == NULL ? "n/a" : wd->getDescription()) << std::endl;
@@ -372,9 +374,8 @@ NANOS_API_DEF(nanos_err_t, nanos_outline, ( nanos_wd_t uwd, size_t num_data_acce
       NANOS_INSTRUMENT ( static nanos_event_key_t create_wd_id = ID->getEventKey("create-wd-id"); )
       NANOS_INSTRUMENT ( static nanos_event_key_t create_wd_ptr = ID->getEventKey("create-wd-ptr"); )
       NANOS_INSTRUMENT ( static nanos_event_key_t wd_num_deps = ID->getEventKey("wd-num-deps"); )
-      NANOS_INSTRUMENT ( static nanos_event_key_t wd_deps_ptr = ID->getEventKey("wd-deps-ptr"); )
 
-      NANOS_INSTRUMENT ( nanos_event_key_t Keys[4]; )
+      NANOS_INSTRUMENT ( nanos_event_key_t Keys[3]; )
       NANOS_INSTRUMENT ( nanos_event_value_t Values[4]; )
 
       NANOS_INSTRUMENT ( Keys[0] = create_wd_id; )
@@ -384,17 +385,18 @@ NANOS_API_DEF(nanos_err_t, nanos_outline, ( nanos_wd_t uwd, size_t num_data_acce
       NANOS_INSTRUMENT ( Values[1] = (nanos_event_value_t) wd; )
 
       NANOS_INSTRUMENT ( Keys[2] = wd_num_deps; )
-      NANOS_INSTRUMENT ( Values[2] = (nanos_event_value_t) num_data_accesses; )
+      NANOS_INSTRUMENT ( Values[2] = (nanos_event_value_t) 0; )
 
-      NANOS_INSTRUMENT ( Keys[3] = wd_deps_ptr; );
-      NANOS_INSTRUMENT ( Values[3] = (nanos_event_value_t) data_accesses; )
-
-      NANOS_INSTRUMENT( sys.getInstrumentation()->raisePointEvents(4, Keys, Values); )
+      NANOS_INSTRUMENT( sys.getInstrumentation()->raisePointEvents(3, Keys, Values); )
 
       NANOS_INSTRUMENT (sys.getInstrumentation()->raiseOpenPtPEvent ( NANOS_WD_DOMAIN, (nanos_event_id_t) wd->getId(), 0, 0 );)
 
       NANOS_INSTRUMENT( InstrumentState inst1(NANOS_RUNTIME) );
-      sys.outlineWork( *wd );
+      if ( pe == NULL ) {
+         sys.outlineWork( *wd );
+      } else {
+         sys.outlineWork( *wd, *pe );
+      }
       NANOS_INSTRUMENT( inst1.close() );
    } catch ( nanos_err_t e) {
       return e;

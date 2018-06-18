@@ -21,22 +21,24 @@
 #define	NANOS_OPENCL_H
 
 //#include "CL/opencl.h"
-#include "nanos-int.h" 
+#include "nanos-int.h"
 #include "nanos_error.h"
 #ifdef	__cplusplus
 extern "C" {
 #endif
-    
+
 typedef struct {
     void (*outline) (void *);
 } nanos_opencl_args_t;
 
 //MPI
 NANOS_API_DECL(void *, nanos_opencl_factory, (void *args));
-    
-#define NANOS_OCL_DESC( args ) { nanos_opencl_factory, &( args ) } 
 
-NANOS_API_DECL(void*, nanos_create_current_kernel, (const char* kernel_name, const char* opencl_code, const char* compiler_opts)); 
+#define NANOS_OCL_DESC( args ) { nanos_opencl_factory, &( args ) }
+
+NANOS_API_DECL(nanos_err_t, nanos_find_opencl_pe, ( void *req, nanos_pe_t * pe ));
+
+NANOS_API_DECL(void*, nanos_create_current_kernel, (const char* kernel_name, const char* opencl_code, const char* compiler_opts));
 NANOS_API_DECL(nanos_err_t,nanos_opencl_set_bufferarg, (void* opencl_kernel, int arg_num, const void* pointer));
 NANOS_API_DECL(nanos_err_t,nanos_opencl_set_arg, (void* opencl_kernel, int arg_num, size_t size, const void* pointer));
 NANOS_API_DECL(nanos_err_t,nanos_exec_kernel, (void* opencl_kernel, int work_dim, size_t* ndr_local_size, size_t* ndr_global_size));
@@ -82,4 +84,3 @@ NANOS_API_DECL(void, nanos_opencl_deallocate_fortran, ( void * address ));
 #endif
 
 #endif	/* NANOS_OpenCL_H */
-

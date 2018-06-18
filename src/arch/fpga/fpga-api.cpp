@@ -21,6 +21,7 @@
 #include "nanos-fpga.h"
 #include "fpgadd.hpp"
 #include "fpgapinnedallocator.hpp"
+#include "fpgaprocessor.hpp"
 
 using namespace nanos;
 
@@ -52,4 +53,24 @@ NANOS_API_DEF( void, nanos_fpga_free_dma_mem, ( void * buffer ) )
    nanos::ext::fpgaAllocator->lock();
    nanos::ext::fpgaAllocator->free( buffer );
    nanos::ext::fpgaAllocator->unlock();
+}
+
+NANOS_API_DEF( nanos_err_t, nanos_find_fpga_pe, ( void *req, nanos_pe_t * pe ) )
+{
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "find_fpga_pe" ); );
+   *pe = NULL;
+
+   nanos_find_fpga_args_t * opts = ( nanos_find_fpga_args_t * )req;
+   for (size_t i = 0; i < nanos::ext::fpgaPEs->size(); i++) {
+      nanos::ext::FPGAProcessor * fpgaPE = nanos::ext::fpgaPEs->at(i);
+      nanos::ext::FPGADevice * fpgaDev = ( nanos::ext::FPGADevice * )( fpgaPE->getActiveDevice() );
+      if ( ( fpgaDev->getFPGAType() == opts->acc_num ) &&
+           ( !opts->check_free || !fpgaPE->isExecLockAcquired() ) &&
+           ( !opts->lock_pe || fpgaPE->tryAcquireExecLock() ) )
+      {
+         *pe = fpgaPE;
+         break;
+      }
+   }
+   return NANOS_OK;
 }

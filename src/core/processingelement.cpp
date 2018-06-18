@@ -31,17 +31,17 @@ using namespace nanos;
 
 
 ProcessingElement::ProcessingElement ( const Device *arch, unsigned int memSpaceId,
-   unsigned int clusterNode, unsigned int numaNode, bool inNumaNode, unsigned int socket, bool inSocket ) : 
-   Location( clusterNode, numaNode, inNumaNode, socket, inSocket ), 
+   unsigned int clusterNode, unsigned int numaNode, bool inNumaNode, unsigned int socket, bool inSocket ) :
+   Location( clusterNode, numaNode, inNumaNode, socket, inSocket ),
    _id ( sys.nextPEId() ), _devices( 1, arch ), _activeDevice( 0 ), _threads(), _memorySpaceId( memSpaceId )
 {
    _threads.reserve(8);
 }
 
 ProcessingElement::ProcessingElement ( const Device **archs, unsigned int numArchs, unsigned int memSpaceId,
-   unsigned int clusterNode, unsigned int numaNode, bool inNumaNode, unsigned int socket, bool inSocket ) : 
-   Location( clusterNode, numaNode, inNumaNode, socket, inSocket ), 
-   _id ( sys.nextPEId() ), _devices( numArchs, NULL ), _activeDevice( numArchs ), _threads(), _memorySpaceId( memSpaceId ) 
+   unsigned int clusterNode, unsigned int numaNode, bool inNumaNode, unsigned int socket, bool inSocket ) :
+   Location( clusterNode, numaNode, inNumaNode, socket, inSocket ),
+   _id ( sys.nextPEId() ), _devices( numArchs, NULL ), _activeDevice( numArchs ), _threads(), _memorySpaceId( memSpaceId )
 {
    _threads.reserve(8);
    for(unsigned int idx = 0; idx < numArchs; idx += 1) {
@@ -62,10 +62,10 @@ void ProcessingElement::copyDataOut( WorkDescriptor &work )
 void ProcessingElement::waitInputs( WorkDescriptor &work )
 {
    BaseThread * thread = getMyThreadSafe();
-   //while ( !work._ccontrol.dataIsReady() ) { 
-   while ( !work._mcontrol.isDataReady( work ) ) { 
+   //while ( !work._ccontrol.dataIsReady() ) {
+   while ( !work._mcontrol.isDataReady( work ) ) {
       thread->processTransfers();
-      thread->getTeam()->getSchedulePolicy().atSupport( thread ); 
+      thread->getTeam()->getSchedulePolicy().atSupport( thread );
    }
    //if( sys.getNetwork()->getNodeNum() == 0 && work._mcontrol.getMaxAffinityScore() > 0) {
    //   std::cerr << "WD " << work.getId() << " affinity score " << work._mcontrol.getAffinityScore() << " (max "<< work._mcontrol.getMaxAffinityScore() <<") and has transferred " << work._mcontrol.getAmountOfTransferredData() << " total wd data " << work._mcontrol.getTotalAmountOfData() << " dev: ";

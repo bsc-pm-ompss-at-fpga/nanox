@@ -1189,26 +1189,32 @@ void System::inlineWork ( WD &work )
 
 void System::outlineWork ( WD &work )
 {
-   PE * const selfPE = myThread->runningOn();
-   WD * selfWD = myThread->getCurrentWD();
-   SchedulePolicy* policy = getDefaultSchedulePolicy();
-   policy->onSystemSubmit( work, SchedulePolicy::SYS_INLINE_WORK );
-
+   PE * workPE = myThread->runningOn();
    if ( !Scheduler::checkBasicConstraints( work, *myThread ) ) {
       /*! NOTE: myThread->runningOn() is not compatible with the WD,
        *        look for a compatible PE and start running on it.
        */
-      PE * const workPE = getPEWithDevice( *( work.getActiveDevice().getDevice() ) );
-      myThread->setRunningOn( workPE );
+      workPE = getPEWithDevice( *( work.getActiveDevice().getDevice() ) );
       if ( !workPE ) {
-         fatal ( "Cannot find a compatible PE to execute inline a task" );
+         fatal ( "Cannot find a compatible PE to outline a task" );
       }
-      ensure( Scheduler::checkBasicConstraints( work, *myThread ),
-         "Trying to execute inline a task violating basic constraints" );
    }
+   outlineWork( work, *workPE );
+}
+
+void System::outlineWork ( WD &work, PE &pe )
+{
+   PE * const selfPE = myThread->runningOn();
+   WD * selfWD = myThread->getCurrentWD();
+   SchedulePolicy* policy = getDefaultSchedulePolicy();
+   policy->onSystemSubmit( work, SchedulePolicy::SYS_OUTLINE_WORK );
+
+   myThread->setRunningOn( &pe );
+   ensure( Scheduler::checkBasicConstraints( work, *myThread ),
+      "Trying to outline a task violating basic constraints" );
 
    work._mcontrol.preInit();
-   work._mcontrol.initialize( *( myThread->runningOn() ) );
+   work._mcontrol.initialize( pe );
    bool result;
    do {
       result = work._mcontrol.allocateTaskMemory();
@@ -1217,7 +1223,7 @@ void System::outlineWork ( WD &work )
       }
    } while( result == false );
    Scheduler::preOutlineWork( &work );
-   myThread->runningOn()->preOutlineWorkDependent( work );
+   pe.preOutlineWorkDependent( work );
    Scheduler::outlineWork( myThread, &work );
 
    // Switch back to the real thread PE and WD

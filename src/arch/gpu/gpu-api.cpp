@@ -29,6 +29,11 @@ NANOS_API_DEF(void *, nanos_gpu_factory, ( void *args ))
    return ( void * ) NEW ext::GPUDD( smp->outline );
 }
 
+NANOS_API_DEF( nanos_err_t, nanos_find_gpu_pe, ( void *req, nanos_pe_t * pe ) )
+{
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "find_gpu_pe" ); );
+   return NANOS_UNIMPLEMENTED;
+}
 
 NANOS_API_DEF( cudaStream_t, nanos_get_kernel_execution_stream, ( void ) )
 {
@@ -54,4 +59,3 @@ NANOS_API_DEF( void, nanos_free_pinned_cuda, ( void * address ) )
 {
    return sys.getPinnedAllocatorCUDA().free( address );
 }
-

@@ -46,6 +46,8 @@ extern "C" {
 NANOS_API_DECL(void *, nanos_gpu_factory,( void *args ));
 #define NANOS_GPU_DESC( args ) { nanos_gpu_factory, &( args ) }
 
+NANOS_API_DECL(nanos_err_t, nanos_find_gpu_pe, ( void *req, nanos_pe_t * pe ));
+
 NANOS_API_DECL(cudaStream_t, nanos_get_kernel_execution_stream,());
 
 NANOS_API_DECL(cublasHandle_t, nanos_get_cublas_handle,());

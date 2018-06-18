@@ -32,6 +32,11 @@ NANOS_API_DEF(void *, nanos_mpi_factory, (void *args)) {
     return (void *) NEW ext::MPIDD(mpi->outline,mpi->assignedComm,mpi->assignedRank);
 }
 
+NANOS_API_DEF(nanos_err_t, nanos_find_mpi_pe, ( void *req, nanos_pe_t * pe )) {
+    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "find_mpi_pe" ); );
+    return NANOS_UNIMPLEMENTED;
+}
+
 NANOS_API_DEF(void *, nanos_mpi_fortran_factory, (void *args)) {
     nanos_mpi_args_t *mpi = (nanos_mpi_args_t *) args;
     //Fortran will write a 4byte integer into assignedComm, so this is "safe"
@@ -69,7 +74,7 @@ void deep_booster_alloc(MPI_Comm comm, int number_of_hosts, int process_per_host
 void deep_booster_alloc_(MPI_Fint* comm, int* number_of_hosts, int* process_per_host, MPI_Fint *intercomm) {
     MPI_Comm c_comm=MPI_Comm_f2c(*comm);
     MPI_Comm dummy_intercomm;
-    nanos::ext::MPIRemoteNode::DEEPBoosterAlloc(c_comm, *number_of_hosts, *process_per_host, &dummy_intercomm, true, NULL, 0, NULL); 
+    nanos::ext::MPIRemoteNode::DEEPBoosterAlloc(c_comm, *number_of_hosts, *process_per_host, &dummy_intercomm, true, NULL, 0, NULL);
     MPI_Fint f_intercomm=MPI_Comm_c2f(dummy_intercomm);
     *intercomm=f_intercomm;
 }
@@ -106,7 +111,7 @@ void deep_booster_alloc_nonstrict(MPI_Comm comm, int number_of_hosts, int proces
 void deep_booster_alloc_nonstrict_(MPI_Fint* comm, int* number_of_hosts, int* process_per_host, MPI_Fint *intercomm, int* provided) {
     MPI_Comm c_comm=MPI_Comm_f2c(*comm);
     MPI_Comm dummy_intercomm;
-    nanos::ext::MPIRemoteNode::DEEPBoosterAlloc(c_comm, *number_of_hosts, *process_per_host, &dummy_intercomm, false, provided, 0, NULL); 
+    nanos::ext::MPIRemoteNode::DEEPBoosterAlloc(c_comm, *number_of_hosts, *process_per_host, &dummy_intercomm, false, provided, 0, NULL);
     MPI_Fint f_intercomm=MPI_Comm_c2f(dummy_intercomm);
     *intercomm=f_intercomm;
 }
@@ -185,7 +190,7 @@ NANOS_API_DEF(int, nanos_mpi_recv_datastruct, (void *buf, int count, MPI_Datatyp
         return nanos::ext::MPIRemoteNode::nanosMPIRecvDatastruct(buf,count,*datatype,dest,comm,MPI_STATUS_IGNORE);
 }
 
-NANOS_API_DEF(int, nanos_mpi_type_create_struct, ( int count, int array_of_blocklengths[],  
+NANOS_API_DEF(int, nanos_mpi_type_create_struct, ( int count, int array_of_blocklengths[],
         MPI_Aint array_of_displacements[], MPI_Datatype array_of_types[], MPI_Datatype **newtype, int taskId)){
     return nanos::ext::MPIRemoteNode::nanosMPITypeCreateStruct(count, array_of_blocklengths,
             array_of_displacements, array_of_types, newtype, taskId);
@@ -199,8 +204,8 @@ NANOS_API_DEF(int, nanos_mpi_type_get_struct, ( int taskId, MPI_Datatype **newty
 NANOS_API_DEF(MPI_Datatype, ompss_get_mpi_type, (int type)) {
     MPI_Datatype result = MPI_DATATYPE_NULL;
     switch(type) {
-        case mpitype_ompss_char: 
-            result = MPI_CHAR; 
+        case mpitype_ompss_char:
+            result = MPI_CHAR;
             break;
         case mpitype_ompss_wchar_t:
             result = MPI_WCHAR;

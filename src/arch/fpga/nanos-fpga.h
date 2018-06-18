@@ -22,6 +22,7 @@
 #define _NANOS_FPGA_H
 
 #include "nanos-int.h"
+#include "nanos_error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,10 +33,17 @@ extern "C" {
         int acc_num;
     } nanos_fpga_args_t;
 
+    typedef struct {
+        int acc_num;
+        bool check_free;
+        bool lock_pe;
+    } nanos_find_fpga_args_t;
+
 
 NANOS_API_DECL( void *, nanos_fpga_factory, ( void *args ) );
 NANOS_API_DECL( void *, nanos_fpga_alloc_dma_mem, ( size_t len) );
 NANOS_API_DECL( void, nanos_fpga_free_dma_mem, ( void * address ) );
+NANOS_API_DECL( nanos_err_t, nanos_find_fpga_pe, ( void *req, nanos_pe_t * pe ) );
 
 #ifdef __cplusplus
 }

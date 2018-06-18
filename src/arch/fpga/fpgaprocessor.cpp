@@ -38,6 +38,8 @@ using namespace nanos::ext;
 Atomic<size_t> FPGAProcessor::_totalRunningTasks( 0 );
 #endif
 
+std::vector< FPGAProcessor* > *nanos::ext::fpgaPEs;
+
 /*
  * TODO: Support the case where each thread may manage a different number of accelerators
  *       jbosch: This should be supported using different MultiThreads each one with a subset of accels
@@ -64,7 +66,7 @@ FPGAProcessor::~FPGAProcessor()
 {
    ensure( _runningTasks.value() == 0, "There are running task in one FPGAProcessor" );
    ensure( _readyTasks.empty(), "Queue of FPGA ready tasks is not empty in one FPGAProcessor" );
-   ensure( _waitInTasks.empty(),  "Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
+   ensure( _waitInTasks.empty(), "Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
 }
 
 WorkDescriptor & FPGAProcessor::getWorkerWD () const
@@ -240,4 +242,12 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
       }
    }
    return ret;
+}
+
+bool FPGAProcessor::tryAcquireExecLock() {
+   return _execLock.tryAcquire();
+}
+
+void FPGAProcessor::releaseExecLock() {
+   return _execLock.release();
 }

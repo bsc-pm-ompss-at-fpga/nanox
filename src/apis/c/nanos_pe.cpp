@@ -18,7 +18,7 @@
 /*************************************************************************************/
 
 /*! \file nanos_pe.cpp
- *  \brief 
+ *  \brief
  */
 #include "nanos.h"
 #include "basethread.hpp"
@@ -72,4 +72,40 @@ NANOS_API_DEF(nanos_err_t, nanos_get_node_num, ( unsigned int * node ))
 NANOS_API_DEF(int, nanos_get_num_nodes, ())
 {
    return sys.getNetwork()->getNumNodes();
+}
+
+/*! \brief Looks a SMP PE
+ *
+ *  \param [in]  req Architecture (SMP) specific info and/or requirements
+ *  \param [out] pe  PE Handler
+ */
+NANOS_API_DEF( nanos_err_t, nanos_find_smp_pe, ( void *req, nanos_pe_t * upe ) )
+{
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "find_smp_pe" ) );
+   //*pe = sys.getPEWithDevice( getSMPDevice() );
+   return NANOS_UNIMPLEMENTED;
+}
+
+/*! \brief Try lock the execution of WD in a PE
+ *
+ *  \param pe PE Handler
+ */
+NANOS_API_DEF( bool, nanos_try_lock_pe, ( nanos_pe_t upe ) )
+{
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "try_lock_pe" ) );
+   PE * pe = ( PE * )upe;
+   return pe == NULL ? false : pe->tryAcquireExecLock();
+}
+
+/*! \brief Release the execution lock of a PE
+ *
+ *  \param pe PE Handler
+ */
+NANOS_API_DEF( void, nanos_unlock_pe, ( nanos_pe_t upe ) )
+{
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "unlock_pe" ) );
+   PE * pe = ( PE * )upe;
+   if (pe) {
+      pe->releaseExecLock();
+   }
 }
