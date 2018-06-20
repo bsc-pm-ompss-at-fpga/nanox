@@ -43,6 +43,7 @@ class FPGAPlugin : public ArchPlugin
       std::vector< SMPProcessor* >   _helperCores;
       std::vector< FPGAListener* >   _fpgaListeners;
       FPGADeviceMap                  _fpgaDevices;
+      std::string                    _executionSummary;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -186,6 +187,10 @@ class FPGAPlugin : public ArchPlugin
          if ( FPGAConfig::isEnabled() ) { //cleanup only if we have initialized
             int status;
 
+            // Generate the execution summary before deleting the information
+            //NOTE: It will be later retrieved using the getExecutionSummary
+            generateExecutionSummary();
+
             // Join and delete FPGA Helper threads
             //NOTE: As they are in the workers list, they are deleted during the System::finish()
 
@@ -307,19 +312,21 @@ class FPGAPlugin : public ArchPlugin
          return NULL;
       }
 
-      virtual std::string getExecutionSummary() const {
-         std::string ret;
+      void generateExecutionSummary() {
 #ifdef NANOS_DEBUG_ENABLED
          for ( std::vector<FPGAProcessor*>::const_iterator it = fpgaPEs->begin();
                it != fpgaPEs->end(); it++ )
          {
             FPGAProcessor* f = *it;
             FPGAProcessorInfo info = f->getFPGAProcessorInfo();
-            ret += "=== FPGA " + toString( info.getId() ) + " [type: " +  toString( info.getType() ) + "][freq: ";
-            ret += toString( info.getFreq() ) + "] executed " + toString( f->getNumTasks() ) + " tasks\n";
+            _executionSummary += "=== FPGA " + toString( info.getId() ) + " [type: " +  toString( info.getType() ) + "][freq: ";
+            _executionSummary += toString( info.getFreq() ) + "] executed " + toString( f->getNumTasks() ) + " tasks\n";
          }
 #endif
-         return ret;
+      }
+
+      virtual std::string getExecutionSummary() const {
+         return _executionSummary;
       }
 };
 
