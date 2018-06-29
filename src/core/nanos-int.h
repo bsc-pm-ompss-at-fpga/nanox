@@ -175,6 +175,7 @@ typedef nanos::CopyData nanos_copy_data_t;
 /* C++ types hidden as void * */
 typedef void * nanos_thread_t;
 typedef void * nanos_wd_t;
+typedef void * nanos_pe_t;
 
 /* SlicerCompoundWD data structure */
 typedef struct {

@@ -30,22 +30,8 @@
 #include "fpgaworker.hpp"
 #include "fpgalistener.hpp"
 #include "fpgapinnedallocator.hpp"
-
-#include "libxdma.h"
-#include "libxdma_version.h"
-#include "libxtasks.h"
-
-//! Check that libxdma version is compatible
-#define LIBXDMA_MIN_MAJOR 1
-#define LIBXDMA_MIN_MINOR 1
-#if !defined(LIBXDMA_VERSION_MAJOR) || !defined(LIBXDMA_VERSION_MINOR) || \
-    LIBXDMA_VERSION_MAJOR < LIBXDMA_MIN_MAJOR || \
-    (LIBXDMA_VERSION_MAJOR == LIBXDMA_MIN_MAJOR && LIBXDMA_VERSION_MINOR < LIBXDMA_MIN_MINOR)
-# error Installed libxdma is not supported (use >= 1.1)
-#endif
-
-//! Check that libxtasks version is compatible
-// NOTE: Done in fpgaprocessorinfo.hpp as it is compiled before this file
+#include "libxdma_wrapper.hpp"
+#include "libxtasks_wrapper.hpp"
 
 namespace nanos {
 namespace ext {
@@ -53,11 +39,11 @@ namespace ext {
 class FPGAPlugin : public ArchPlugin
 {
    private:
-      std::vector< FPGAProcessor* >  _fpgas;
       std::vector< SMPMultiThread* > _helperThreads;
       std::vector< SMPProcessor* >   _helperCores;
       std::vector< FPGAListener* >   _fpgaListeners;
       FPGADeviceMap                  _fpgaDevices;
+      std::string                    _executionSummary;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -101,7 +87,8 @@ class FPGAPlugin : public ArchPlugin
          FPGAConfig::apply();
 
          //Initialize some variables
-         _fpgas.reserve( FPGAConfig::getFPGACount() );
+         fpgaPEs = NEW std::vector< FPGAProcessor * >();
+         fpgaPEs->reserve( FPGAConfig::getFPGACount() );
          _helperThreads.reserve( FPGAConfig::getNumFPGAThreads() );
          _helperCores.reserve( FPGAConfig::getNumFPGAThreads() );
 
@@ -172,7 +159,7 @@ class FPGAPlugin : public ArchPlugin
                debug0( "New FPGAProcessor created with id: " << info.getId() << ", memSpaceId: " <<
                        memSpaceId << ", fpgaType: " << fpgaType );
                FPGAProcessor *fpga = NEW FPGAProcessor( info, memSpaceId, fpgaDevice );
-               _fpgas.push_back( fpga );
+               fpgaPEs->push_back( fpga );
             }
 
             //Reserve some SMP cores to run the helper threads
@@ -200,11 +187,17 @@ class FPGAPlugin : public ArchPlugin
          if ( FPGAConfig::isEnabled() ) { //cleanup only if we have initialized
             int status;
 
+            // Generate the execution summary before deleting the information
+            //NOTE: It will be later retrieved using the getExecutionSummary
+            generateExecutionSummary();
+
             // Join and delete FPGA Helper threads
             //NOTE: As they are in the workers list, they are deleted during the System::finish()
 
             // Delete FPGA Processors
             //NOTE: As they are in the PEs map, they are deleted during the System::finish()
+            delete fpgaPEs;
+            fpgaPEs = NULL;
 
             // Delete FPGADevices
             FPGADD::fini();
@@ -256,7 +249,7 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual unsigned getNumPEs() const {
-         return _fpgas.size();
+         return fpgaPEs->size();
       }
 
       virtual unsigned getNumThreads() const {
@@ -268,8 +261,8 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual void addPEs( PEMap &pes ) const {
-         for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas.begin();
-               it != _fpgas.end(); it++ )
+         for ( std::vector<FPGAProcessor*>::const_iterator it = fpgaPEs->begin();
+               it != fpgaPEs->end(); it++ )
          {
             pes.insert( std::make_pair( (*it)->getId(), *it) );
          }
@@ -285,8 +278,8 @@ class FPGAPlugin : public ArchPlugin
 
       virtual void startSupportThreads () {
          if ( !FPGAConfig::getIdleCallbackEnabled() ) return;
-         for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas.begin();
-               it != _fpgas.end(); it++ )
+         for ( std::vector<FPGAProcessor*>::const_iterator it = fpgaPEs->begin();
+               it != fpgaPEs->end(); it++ )
          {
             // Register Event Listener
             FPGAListener* l = new FPGAListener( *it );
@@ -302,7 +295,7 @@ class FPGAPlugin : public ArchPlugin
             // Starting the SMP (multi)Thread
             //NOTE: Assuming that all threads send to all accelerators
             SMPMultiThread * fpgaHelper = dynamic_cast< ext::SMPMultiThread * >(
-               &(*it)->startMultiWorker( _fpgas.size(), (ProcessingElement **) &_fpgas[0],
+               &(*it)->startMultiWorker( fpgaPEs->size(), (ProcessingElement **) &fpgaPEs->at(0),
                ( DD::work_fct )FPGAWorker::FPGAWorkerLoop )
             );
             debug0( "New FPGA Helper Thread created with id: " << fpgaHelper->getId() <<
@@ -319,19 +312,21 @@ class FPGAPlugin : public ArchPlugin
          return NULL;
       }
 
-      virtual std::string getExecutionSummary() const {
-         std::string ret;
+      void generateExecutionSummary() {
 #ifdef NANOS_DEBUG_ENABLED
-         for ( std::vector<FPGAProcessor*>::const_iterator it = _fpgas.begin();
-               it != _fpgas.end(); it++ )
+         for ( std::vector<FPGAProcessor*>::const_iterator it = fpgaPEs->begin();
+               it != fpgaPEs->end(); it++ )
          {
             FPGAProcessor* f = *it;
             FPGAProcessorInfo info = f->getFPGAProcessorInfo();
-            ret += "=== FPGA " + toString( info.getId() ) + " [type: " +  toString( info.getType() ) + "][freq: ";
-            ret += toString( info.getFreq() ) + "] executed " + toString( f->getNumTasks() ) + " tasks\n";
+            _executionSummary += "=== FPGA " + toString( info.getId() ) + " [type: " +  toString( info.getType() ) + "][freq: ";
+            _executionSummary += toString( info.getFreq() ) + "] executed " + toString( f->getNumTasks() ) + " tasks\n";
          }
 #endif
-         return ret;
+      }
+
+      virtual std::string getExecutionSummary() const {
+         return _executionSummary;
       }
 };
 

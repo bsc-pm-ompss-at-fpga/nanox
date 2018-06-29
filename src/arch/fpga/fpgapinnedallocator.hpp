@@ -3,7 +3,7 @@
 
 #include "simpleallocator_decl.hpp"
 
-#include "libxdma.h"
+#include "libxdma_wrapper.hpp"
 
 namespace nanos {
 namespace ext {
@@ -27,7 +27,7 @@ namespace ext {
          uint64_t getBaseAddressPhy() const;
    };
 
-   //! |brief Pointer to the fpgaAllocator instance
+   //! \brief Pointer to the fpgaAllocator instance
    extern FPGAPinnedAllocator    *fpgaAllocator;
 
 } // namespace ext

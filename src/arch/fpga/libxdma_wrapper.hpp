@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2018 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -18,35 +17,19 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef _NANOS_FPGA_H
-#define _NANOS_FPGA_H
+#ifndef _NANOS_FPGA_LIBXDMA_WRAPPER
+#define _NANOS_FPGA_LIBXDMA_WRAPPER
 
-#include "nanos-int.h"
-#include "nanos_error.h"
+#include "libxdma.h"
+#include "libxdma_version.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif //__cplusplus
+//! Check that libxdma version is compatible
+#define LIBXDMA_MIN_MAJOR 1
+#define LIBXDMA_MIN_MINOR 1
+#if !defined(LIBXDMA_VERSION_MAJOR) || !defined(LIBXDMA_VERSION_MINOR) || \
+    LIBXDMA_VERSION_MAJOR < LIBXDMA_MIN_MAJOR || \
+    (LIBXDMA_VERSION_MAJOR == LIBXDMA_MIN_MAJOR && LIBXDMA_VERSION_MINOR < LIBXDMA_MIN_MINOR)
+# error Installed libxdma is not supported (use >= 1.1)
+#endif
 
-    typedef struct {
-        void (*outline) (void *);
-        int acc_num;
-    } nanos_fpga_args_t;
-
-    typedef struct {
-        int acc_num;
-        bool check_free;
-        bool lock_pe;
-    } nanos_find_fpga_args_t;
-
-
-NANOS_API_DECL( void *, nanos_fpga_factory, ( void *args ) );
-NANOS_API_DECL( void *, nanos_fpga_alloc_dma_mem, ( size_t len) );
-NANOS_API_DECL( void, nanos_fpga_free_dma_mem, ( void * address ) );
-NANOS_API_DECL( nanos_err_t, nanos_find_fpga_pe, ( void *req, nanos_pe_t * pe ) );
-
-#ifdef __cplusplus
-}
-#endif //__cplusplus
-
-#endif //_NANOS_FPGA_H
+#endif //_NANOS_FPGA_PROCESSOR_INFO

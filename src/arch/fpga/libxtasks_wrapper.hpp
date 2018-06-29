@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2018 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -18,35 +17,19 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef _NANOS_FPGA_H
-#define _NANOS_FPGA_H
+#ifndef _NANOS_FPGA_LIBXTASKS_WRAPPER
+#define _NANOS_FPGA_LIBXTASKS_WRAPPER
 
-#include "nanos-int.h"
-#include "nanos_error.h"
+#include "libxtasks.h"
+#include "libxtasks_version.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif //__cplusplus
+//! Check that libxtasks version is compatible
+#define LIBXTASKS_MIN_MAJOR 3
+#define LIBXTASKS_MIN_MINOR 5
+#if !defined(LIBXTASKS_VERSION_MAJOR) || !defined(LIBXTASKS_VERSION_MINOR) || \
+    LIBXTASKS_VERSION_MAJOR < LIBXTASKS_MIN_MAJOR || \
+    (LIBXTASKS_VERSION_MAJOR == LIBXTASKS_MIN_MAJOR && LIBXTASKS_VERSION_MINOR < LIBXTASKS_MIN_MINOR)
+# error Installed libxtasks is not supported (use >= 3.5)
+#endif
 
-    typedef struct {
-        void (*outline) (void *);
-        int acc_num;
-    } nanos_fpga_args_t;
-
-    typedef struct {
-        int acc_num;
-        bool check_free;
-        bool lock_pe;
-    } nanos_find_fpga_args_t;
-
-
-NANOS_API_DECL( void *, nanos_fpga_factory, ( void *args ) );
-NANOS_API_DECL( void *, nanos_fpga_alloc_dma_mem, ( size_t len) );
-NANOS_API_DECL( void, nanos_fpga_free_dma_mem, ( void * address ) );
-NANOS_API_DECL( nanos_err_t, nanos_find_fpga_pe, ( void *req, nanos_pe_t * pe ) );
-
-#ifdef __cplusplus
-}
-#endif //__cplusplus
-
-#endif //_NANOS_FPGA_H
+#endif //_NANOS_FPGA_PROCESSOR_INFO

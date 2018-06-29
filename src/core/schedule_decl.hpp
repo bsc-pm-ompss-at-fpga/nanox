@@ -239,7 +239,7 @@ namespace nanos {
    {
       public:
          typedef enum {
-            SYS_SUBMIT, SYS_SUBMIT_WITH_DEPENDENCIES, SYS_INLINE_WORK
+            SYS_SUBMIT, SYS_SUBMIT_WITH_DEPENDENCIES, SYS_INLINE_WORK, SYS_OUTLINE_WORK
          } SystemSubmitFlag;
 
       private:

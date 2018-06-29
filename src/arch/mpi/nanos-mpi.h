@@ -21,7 +21,7 @@
 #define _NANOS_MPI_H_
 
 #include <mpi.h>
-#include "nanos-int.h" 
+#include "nanos-int.h"
 #include "nanos_error.h"
 
 #define MPI_Init nanos_mpi_init
@@ -42,47 +42,49 @@ extern "C" {
     //MPI
     NANOS_API_DECL(void *, nanos_mpi_factory, (void *args));
     NANOS_API_DECL(void *, nanos_mpi_fortran_factory, (void *args));
-    
-#define NANOS_MPI_DESC( args ) { nanos_mpi_factory, &( args ) } 
-#define NANOS_MPI_FORTRAN_DESC( args ) { nanos_mpi_fortran_factory, &( args ) } 
-    
+
+    NANOS_API_DECL(nanos_err_t, nanos_find_mpi_pe, ( void *req, nanos_pe_t * pe ));
+
+#define NANOS_MPI_DESC( args ) { nanos_mpi_factory, &( args ) }
+#define NANOS_MPI_FORTRAN_DESC( args ) { nanos_mpi_fortran_factory, &( args ) }
+
     //This functions can may be called by the user (_ are subroutines in fortran...)
     void deep_booster_alloc (MPI_Comm comm, int number_of_hosts, int process_per_host, MPI_Comm *intercomm);
     void deep_booster_alloc_ (MPI_Fint* comm, int* number_of_hosts, int* process_per_host, MPI_Fint* intercomm);
     void deep_booster_alloc_offset (MPI_Comm comm, int number_of_hosts, int process_per_host, MPI_Comm *intercomm, int offset);
-    void deep_booster_alloc_offset_ (MPI_Fint* comm, int* number_of_hosts, int* process_per_host, MPI_Fint* intercomm, int* offset);   
+    void deep_booster_alloc_offset_ (MPI_Fint* comm, int* number_of_hosts, int* process_per_host, MPI_Fint* intercomm, int* offset);
     void deep_booster_alloc_list(MPI_Comm comm, int number_of_hosts, int* process_per_host_list, MPI_Comm *intercomm);
-    void deep_booster_alloc_list_(MPI_Fint* comm, int* number_of_hosts, int* process_per_host_list,MPI_Fint *intercomm);  
-    
+    void deep_booster_alloc_list_(MPI_Fint* comm, int* number_of_hosts, int* process_per_host_list,MPI_Fint *intercomm);
+
     void deep_booster_alloc_nonstrict (MPI_Comm comm, int number_of_hosts, int process_per_host, MPI_Comm *intercomm, int* provided);
     void deep_booster_alloc_nonstrict_ (MPI_Fint* comm, int* number_of_hosts, int* process_per_host, MPI_Fint* intercomm, int* provided);
     void deep_booster_alloc_offset_nonstrict (MPI_Comm comm, int number_of_hosts, int process_per_host, MPI_Comm *intercomm, int offset, int* provided);
-    void deep_booster_alloc_offset_nonstrict_ (MPI_Fint* comm, int* number_of_hosts, int* process_per_host, MPI_Fint* intercomm, int* offset, int* provided);   
+    void deep_booster_alloc_offset_nonstrict_ (MPI_Fint* comm, int* number_of_hosts, int* process_per_host, MPI_Fint* intercomm, int* offset, int* provided);
     void deep_booster_alloc_list_nonstrict (MPI_Comm comm, int number_of_hosts, int* process_per_host_list, MPI_Comm *intercomm, int* provided);
     void deep_booster_alloc_list_nonstrict_ (MPI_Fint* comm, int* number_of_hosts, int* process_per_host_list,MPI_Fint *intercomm, int* provided);
-    
-    
+
+
     void deep_booster_free (MPI_Comm *intercomm);
     void deep_booster_free_ (MPI_Fint *intercomm);
     void deep_booster_free_single (MPI_Comm *intercomm, int rank);
     void deep_booster_free_single_ (MPI_Fint *intercomm, int* rank);
     int nanos_mpi_finalize(void);
     void nanos_mpi_finalizef_(void);
-    
+
     //Called by user but no need to do an special interface for fortran
     NANOS_API_DECL(nanos_err_t, nanos_mpi_init, (int* argc, char*** argv));
     NANOS_API_DECL(nanos_err_t, nanos_mpi_init_thread, (int* argc, char*** argv, int required, int *provided));
     NANOS_API_DECL(void, nanos_mpi_initf, (void));
-    
+
     NANOS_API_DECL(int, nanos_mpi_send_taskinit, (void *buf, int count, int dest, MPI_Comm comm));
     NANOS_API_DECL(int, nanos_mpi_send_taskend, (void *buf, int count, int disconnect, MPI_Comm comm));
     NANOS_API_DECL(int, nanos_mpi_send_datastruct, (void *buf, int count, MPI_Datatype* datatype, int dest, MPI_Comm comm));
-    NANOS_API_DECL(int, nanos_mpi_recv_datastruct, (void *buf, int count, MPI_Datatype* datatype, int dest, MPI_Comm comm));       
-    NANOS_API_DECL(int, nanos_mpi_type_create_struct, ( int count, int array_of_blocklengths[], MPI_Aint array_of_displacements[],  
+    NANOS_API_DECL(int, nanos_mpi_recv_datastruct, (void *buf, int count, MPI_Datatype* datatype, int dest, MPI_Comm comm));
+    NANOS_API_DECL(int, nanos_mpi_type_create_struct, ( int count, int array_of_blocklengths[], MPI_Aint array_of_displacements[],
             MPI_Datatype array_of_types[], MPI_Datatype **newtype, int taskId));
     NANOS_API_DECL(int, nanos_mpi_type_get_struct, ( int taskId, MPI_Datatype **newtype));
-    NANOS_API_DECL(MPI_Datatype, ompss_get_mpi_type, (int type));    
-    NANOS_API_DECL(int, nanos_mpi_get_parent, (MPI_Comm* parent_out));    
+    NANOS_API_DECL(MPI_Datatype, ompss_get_mpi_type, (int type));
+    NANOS_API_DECL(int, nanos_mpi_get_parent, (MPI_Comm* parent_out));
     NANOS_API_DECL(int, ompss_mpi_get_function_index_host, (void* func_pointer));
     NANOS_API_DECL(int, ompss_mpi_get_function_index_dev, (void* func_pointer));
 

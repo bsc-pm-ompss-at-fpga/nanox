@@ -316,6 +316,8 @@ namespace nanos {
          void submitWithDependencies (WD& work, size_t numDataAccesses, DataAccess* dataAccesses);
          void waitOn ( size_t numDataAccesses, DataAccess* dataAccesses);
          void inlineWork ( WD &work );
+         void outlineWork ( WD &work );
+         void outlineWork ( WD &work, PE &pe );
 
          void createWD (WD **uwd, size_t num_devices, nanos_device_t *devices,
                         size_t data_size, size_t data_align, void ** data, WD *uwg,

@@ -134,6 +134,11 @@ namespace ext {
          //! \brief Returns whether the PE has one active device (true) or all of them are active (false)
          bool hasActiveDevice() const;
 
+         //! \brief Try to acquire the exeucution lock
+         virtual bool tryAcquireExecLock() { return false; }
+         //! \brief Release the exeucution lock
+         virtual void releaseExecLock() {}
+
          virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) = 0;
          virtual void exitHelperDependent( WD* oldWD, WD* newWD, void *arg ) = 0;
          virtual bool inlineWorkDependent (WD &work) = 0;
