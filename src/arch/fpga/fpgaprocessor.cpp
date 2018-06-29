@@ -187,6 +187,13 @@ bool FPGAProcessor::inlineWorkDependent( WD &wd )
 }
 
 void FPGAProcessor::preOutlineWorkDependent ( WD &wd ) {
+   //NOTE: Check again that the task can be outlined to the accel as it may come from system::outline
+   static unsigned int const maxPendingWD = FPGAConfig::getMaxPendingWD();
+   while ( _runningTasks >= maxPendingWD ) {
+      //TODO: Check if at this point is better to create a SynchronizedCondition
+      tryPostOutlineTasks();
+   }
+
    wd.preStart(WorkDescriptor::IsNotAUserLevelThread);
 #ifdef NANOS_DEBUG_ENABLED
    ++_totalTasks;
