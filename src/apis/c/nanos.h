@@ -116,6 +116,7 @@
  *   - 5029: Adding implicit parameter to work descriptor flags.
  *   - 5030: Adding instrumentation support to wrap main function.
  *   - 5041: Adding mandatory taskwait to support devices tasks in final mode.
+ *   - 5042: Adding APIs to find, lock and outline WDs to PEs instead of submiting them as usual.
  * - nanos interface family: worksharing
  *   - 1000: First implementation of work-sharing services (create and next-item)
  * - nanos interface family: deps_api
@@ -199,9 +200,13 @@ NANOS_API_DECL(void, nanos_set_wd_priority, (nanos_wd_t wd, int p));
 
 NANOS_API_DECL(nanos_err_t, nanos_get_wd_description, ( const char **description, nanos_wd_t wd ));
 
+NANOS_API_DECL( bool, nanos_try_lock_pe, ( nanos_pe_t pe ) );
+NANOS_API_DECL( void, nanos_unlock_pe, ( nanos_pe_t pe ) );
+
 /* Finder functions */
 NANOS_API_DECL(nanos_slicer_t, nanos_find_slicer, ( const char * slicer ));
 NANOS_API_DECL(nanos_ws_t, nanos_find_worksharing, ( const char * label ) );
+NANOS_API_DECL(nanos_err_t, nanos_find_smp_pe, ( void *req, nanos_pe_t * pe ));
 
 NANOS_API_DECL(nanos_err_t, nanos_create_wd_compact, ( nanos_wd_t *wd, nanos_const_wd_definition_t *const_data, nanos_wd_dyn_props_t *dyn_props,
                                                        size_t data_size, void ** data, nanos_wg_t wg, nanos_copy_data_t **copies, nanos_region_dimension_internal_t **dimensions ));
@@ -214,6 +219,7 @@ NANOS_API_DECL(nanos_err_t, nanos_create_sliced_wd, ( nanos_wd_t *uwd, size_t nu
                                      nanos_wd_props_t *props, nanos_wd_dyn_props_t *dyn_props, size_t num_copies, nanos_copy_data_t **copies, size_t num_dimensions, nanos_region_dimension_internal_t **dimensions ));
 
 NANOS_API_DECL(nanos_err_t, nanos_submit, ( nanos_wd_t wd, size_t num_data_accesses, nanos_data_access_t *data_accesses, nanos_team_t team ));
+NANOS_API_DECL(nanos_err_t, nanos_outline, ( nanos_wd_t wd, nanos_pe_t pe ));
 
 NANOS_API_DECL(nanos_err_t, nanos_create_wd_and_run_compact, ( nanos_const_wd_definition_t *const_data, nanos_wd_dyn_props_t *dyn_props,
                                                                size_t data_size, void * data, size_t num_data_accesses, nanos_data_access_t *data_accesses,

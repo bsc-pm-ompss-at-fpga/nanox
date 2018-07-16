@@ -38,6 +38,8 @@ using namespace nanos::ext;
 Atomic<size_t> FPGAProcessor::_totalRunningTasks( 0 );
 #endif
 
+std::vector< FPGAProcessor* > *nanos::ext::fpgaPEs;
+
 /*
  * TODO: Support the case where each thread may manage a different number of accelerators
  *       jbosch: This should be supported using different MultiThreads each one with a subset of accels
@@ -64,7 +66,7 @@ FPGAProcessor::~FPGAProcessor()
 {
    ensure( _runningTasks.value() == 0, "There are running task in one FPGAProcessor" );
    ensure( _readyTasks.empty(), "Queue of FPGA ready tasks is not empty in one FPGAProcessor" );
-   ensure( _waitInTasks.empty(),  "Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
+   ensure( _waitInTasks.empty(), "Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
 }
 
 WorkDescriptor & FPGAProcessor::getWorkerWD () const
@@ -85,6 +87,13 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
    ensure( helper.canRunIn( getSMPDevice() ), "Incompatible worker thread" );
    FPGAThread  &th = *NEW FPGAThread( helper, this, parent );
    return th;
+}
+
+uintptr_t FPGAProcessor::getPhyAddr( const uintptr_t addr ) {
+   static FPGAPinnedAllocator * const allocator = getAllocator();
+   static uintptr_t const baseAddress = allocator->getBaseAddress();
+   static uintptr_t const baseAddressPhy = allocator->getBaseAddressPhy();
+   return baseAddressPhy + ( addr - baseAddress );
 }
 
 void FPGAProcessor::createAndSubmitTask( WD &wd, WD *parentWd ) {
@@ -111,18 +120,24 @@ void FPGAProcessor::createAndSubmitTask( WD &wd, WD *parentWd ) {
              ( status == XTASKS_ENOMEM ? "XTASKS_ENOMEM" : "XTASKS_ERROR" ) );
    }
 
-   uintptr_t * args = ( uintptr_t * )( wd.getData() );
-   static FPGAPinnedAllocator * const allocator = getAllocator();
-   static uintptr_t const baseAddress = allocator->getBaseAddress();
-   static uintptr_t const baseAddressPhy = allocator->getBaseAddressPhy();
-   xtasks_arg_val argValues[numArgs];
-   for ( size_t argIdx = 0; argIdx < numArgs; ++argIdx ) {
-      size_t  offset = args[argIdx] - baseAddress;
-      argValues[argIdx] = baseAddressPhy + offset;
+   //Build a map of flags for each copy
+   CopyData const * copies = wd.getCopies();
+   std::map<uintptr_t, xtasks_arg_flags> mapCopies;
+   for ( size_t cIdx = 0; cIdx < wd.getNumCopies(); ++cIdx ) {
+      xtasks_arg_flags copyFlags;
+      copyFlags = XTASKS_ARG_FLAG_COPY_IN & -( copies[cIdx].isInput() );
+      copyFlags |= XTASKS_ARG_FLAG_COPY_OUT & -( copies[cIdx].isOutput() );
+
+      uintptr_t copyValue = wd._mcontrol.getAddress( cIdx );
+      mapCopies[copyValue] = copyFlags;
    }
 
-   status = xtasksAddArgs( numArgs, XTASKS_GLOBAL, &argValues[0], task );
-   if ( status != XTASKS_SUCCESS ) {
+   uintptr_t * args = ( uintptr_t * )( wd.getData() );
+   for ( size_t argIdx = 0; argIdx < numArgs; ++argIdx ) {
+      uintptr_t argValue = args[argIdx];
+      //NOTE: If the argument is not a copy, the flags returned by mapCopies will be 0
+      xtasks_arg_flags argFlags = XTASKS_ARG_FLAG_GLOBAL | mapCopies[argValue];
+      status = xtasksAddArg( argIdx, argFlags, getPhyAddr( argValue ), task );
       ensure( status == XTASKS_SUCCESS, "Error adding arguments to a FPGA task" );
    }
 
@@ -179,6 +194,13 @@ bool FPGAProcessor::inlineWorkDependent( WD &wd )
 }
 
 void FPGAProcessor::preOutlineWorkDependent ( WD &wd ) {
+   //NOTE: Check again that the task can be outlined to the accel as it may come from system::outline
+   static unsigned int const maxPendingWD = FPGAConfig::getMaxPendingWD();
+   while ( _runningTasks >= maxPendingWD ) {
+      //TODO: Check if at this point is better to create a SynchronizedCondition
+      tryPostOutlineTasks();
+   }
+
    wd.preStart(WorkDescriptor::IsNotAUserLevelThread);
 #ifdef NANOS_DEBUG_ENABLED
    ++_totalTasks;
@@ -234,4 +256,12 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
       }
    }
    return ret;
+}
+
+bool FPGAProcessor::tryAcquireExecLock() {
+   return _execLock.tryAcquire();
+}
+
+void FPGAProcessor::releaseExecLock() {
+   return _execLock.release();
 }

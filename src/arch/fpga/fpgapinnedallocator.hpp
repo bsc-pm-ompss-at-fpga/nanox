@@ -27,7 +27,7 @@ namespace ext {
          uint64_t getBaseAddressPhy() const;
    };
 
-   //! |brief Pointer to the fpgaAllocator instance
+   //! \brief Pointer to the fpgaAllocator instance
    extern FPGAPinnedAllocator    *fpgaAllocator;
 
 } // namespace ext

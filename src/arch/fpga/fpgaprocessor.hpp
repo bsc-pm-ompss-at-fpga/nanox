@@ -41,6 +41,7 @@ namespace ext {
          typedef Queue< WD * > FPGATasksQueue_t;
 
       private:
+         Lock                          _execLock;           //!< Used to restrict the execution of tasks in this PE
          FPGAProcessorInfo             _fpgaProcessorInfo;  //!< Accelerator information
          Atomic<size_t>                _runningTasks;       //!< Tasks in the accelerator (running)
          FPGATasksQueue_t              _readyTasks;         //!< Tasks that are ready but are waiting for device memory
@@ -60,6 +61,7 @@ namespace ext {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          void readInstrCounters( WD * const wd, xtasks_task_handle & task );
 #endif
+         uintptr_t getPhyAddr( const uintptr_t addr );
 
       public:
 
@@ -105,6 +107,10 @@ namespace ext {
          virtual void preOutlineWorkDependent (WD &work);
          bool tryPostOutlineTasks( size_t max = 9999 );
 
+         virtual bool tryAcquireExecLock();
+         virtual void releaseExecLock();
+         bool isExecLockAcquired();
+
 #ifdef NANOS_DEBUG_ENABLED
          //! \breif Returns the number of tasks executed in the accelerator
          size_t getNumTasks() const {
@@ -116,6 +122,11 @@ namespace ext {
    inline FPGAPinnedAllocator * FPGAProcessor::getAllocator() {
       return ( FPGAPinnedAllocator * )( sys.getSeparateMemory(getMemorySpaceId()).getSpecificData() );
    }
+
+   inline bool FPGAProcessor::isExecLockAcquired() { return _execLock.getState() == NANOS_LOCK_BUSY; }
+
+   //! \brief Pointer to the vector of FPGA PEs
+   extern std::vector< FPGAProcessor* > * fpgaPEs;
 
 } // namespace ext
 } // namespace nanos

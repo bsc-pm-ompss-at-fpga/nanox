@@ -31,7 +31,12 @@ NANOS_API_DEF(void *, nanos_opencl_factory, (void *args)) {
     return (void *) new ext::OpenCLDD(opencl->outline);
 }
 
-NANOS_API_DEF(void*, nanos_create_current_kernel, (const char* kernel_name,const char* opencl_code,const char* compiler_opts)){  
+NANOS_API_DEF(nanos_err_t, nanos_find_opencl_pe, ( void *req, nanos_pe_t * pe )) {
+    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "find_opencl_pe" ); );
+    return NANOS_UNIMPLEMENTED;
+}
+
+NANOS_API_DEF(void*, nanos_create_current_kernel, (const char* kernel_name,const char* opencl_code,const char* compiler_opts)){
     nanos::ext::OpenCLProcessor *pe=( nanos::ext::OpenCLProcessor * ) getMyThreadSafe()->runningOn();
     return pe->createKernel(kernel_name,opencl_code,compiler_opts);
 }
@@ -86,10 +91,10 @@ NANOS_API_DEF(void, nanos_opencl_allocate_fortran, ( ptrdiff_t size, void* ptr )
    (*(void**)ptr) = nanos::ext::OpenCLProcessor::getSharedMemAllocator().allocate(size);
 }
 
-void ompss_opencl_free ( void * address ) 
+void ompss_opencl_free ( void * address )
 {
    nanos::ext::OpenCLProcessor::getSharedMemAllocator().free(address);
-} 
+}
 
 void nanos_free_opencl( void * address )
 {

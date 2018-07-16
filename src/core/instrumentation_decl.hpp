@@ -447,6 +447,14 @@ namespace nanos {
             registerEventValue("api","task_reduction_get_thread_storage","nanos_task_reduction_get_thread_storage()");
             registerEventValue("api","fpga_alloc_dma_mem","nanos_fpga_alloc_dma_mem()");
             registerEventValue("api","fpga_free_dma_mem","nanos_fpga_free_dma_mem()");
+            registerEventValue("api","outline","nanos_outline()");
+            registerEventValue("api","find_smp_pe","nanos_find_smp_pe()");
+            registerEventValue("api","find_gpu_pe","nanos_find_gpu_pe()");
+            registerEventValue("api","find_opencl_pe","nanos_find_ocl_pe()");
+            registerEventValue("api","find_mpi_pe","nanos_find_mpi_pe()");
+            registerEventValue("api","find_fpga_pe","nanos_find_fpga_pe()");
+            registerEventValue("api","try_lock_pe","nanos_try_lock_pe()");
+            registerEventValue("api","unlock_pe","nanos_unlock_pe()");
 
             /* 02 */ registerEventKey("wd-id","Work Descriptor id:", true, EVENT_DEVELOPER, true);
 
