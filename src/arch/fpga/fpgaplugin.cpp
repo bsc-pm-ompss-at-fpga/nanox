@@ -59,9 +59,9 @@ class FPGAPlugin : public ArchPlugin
        */
       void init()
       {
-         //Forward this initialization as it has to be done regardless fpga support is enabled.
-         //The reason is that cluster require this structure also without fpga tasks
+         //Forward these initializations as they have to be done regardless fpga support is enabled.
          FPGADD::init( &_fpgaDevices );
+         fpgaPEs = NEW std::vector< FPGAProcessor * >();
 
          //Check if the plugin has to be initialized
          if ( FPGAConfig::isDisabled() ) {
@@ -87,7 +87,6 @@ class FPGAPlugin : public ArchPlugin
          FPGAConfig::apply();
 
          //Initialize some variables
-         fpgaPEs = NEW std::vector< FPGAProcessor * >();
          fpgaPEs->reserve( FPGAConfig::getFPGACount() );
          _helperThreads.reserve( FPGAConfig::getNumFPGAThreads() );
          _helperCores.reserve( FPGAConfig::getNumFPGAThreads() );
