@@ -24,6 +24,7 @@
 #include <vector_types.h>
 
 #include "nanos-int.h"
+#include "nanos_error.h"
 
 #ifdef NANOS_GPU_USE_CUDA32
 #include <cublas_api.h>
