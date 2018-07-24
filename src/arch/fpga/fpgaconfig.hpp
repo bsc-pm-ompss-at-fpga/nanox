@@ -47,6 +47,7 @@ namespace ext {
          static bool                      _idleCallback;
          static int                       _maxThreadsIdleCallback;
          static std::size_t               _allocatorPoolSize;
+         static std::size_t               _allocAlign;
 
          /*! Parses the FPGA user options */
          static void prepare ( Config &config );
@@ -81,6 +82,8 @@ namespace ext {
 
          //! \brief Sets the number of FPGAs
          static void setFPGASystemCount ( int numFPGAs );
+
+         static int getAllocAlign() { return _allocAlign; }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          //! \brief Returns if the instrumentation using the HW timer is disabled

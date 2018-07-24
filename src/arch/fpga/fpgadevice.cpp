@@ -101,8 +101,12 @@ void *FPGADevice::memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem
 {
    SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
    //verbose( "FPGADevice allocate memory:\t " << size << " bytes in allocator " << allocator );
+   std::size_t align = FPGAConfig::getAllocAlign();
+
    allocator->lock();
-   void * ret = allocator->allocate( size );
+   //Force the allocated sizes to be multiples of align
+   //This prevents allocation of unaligned chunks
+   void * ret = allocator->allocate( ( size + align - 1 ) & ( ~( align - 1 ) ) );
    allocator->unlock();
    return ret;
 }
