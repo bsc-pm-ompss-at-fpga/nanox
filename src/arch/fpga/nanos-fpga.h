@@ -44,6 +44,7 @@ NANOS_API_DECL( void *, nanos_fpga_factory, ( void *args ) );
 NANOS_API_DECL( void *, nanos_fpga_alloc_dma_mem, ( size_t len) );
 NANOS_API_DECL( void, nanos_fpga_free_dma_mem, ( void * address ) );
 NANOS_API_DECL( nanos_err_t, nanos_find_fpga_pe, ( void *req, nanos_pe_t * pe ) );
+NANOS_API_DECL( void *, nanos_fpga_get_phy_address, ( void * address ) );
 
 #ifdef __cplusplus
 }
