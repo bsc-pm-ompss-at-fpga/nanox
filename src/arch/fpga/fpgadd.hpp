@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2018 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -31,6 +30,9 @@ namespace ext {
    {
       friend class FPGAPlugin;
       protected:
+         //! \breif Task handle from xTasks library for the WD
+         void const               *_xtasksHandle;
+
          //! \breif Map with the available accelerators types in the system
          static FPGADeviceMap     *_accDevices;
 
@@ -49,10 +51,8 @@ namespace ext {
          }
 
       public:
-         static unsigned int getNumDevices() { return _accDevices->size(); }
-
          // constructors
-         FPGADD( work_fct w , FPGADeviceType const t ) : DD( (*_accDevices)[t], w ) {
+         FPGADD( work_fct w , FPGADeviceType const t ) : DD( (*_accDevices)[t], w ), _xtasksHandle( NULL ) {
 #ifdef NANOS_DEBUG_ENABLED
             if( getDevice() == NULL ) {
                warning( "Creating a FPGADD with an unexisting FPGA Accelerator type: " << t );
@@ -61,7 +61,7 @@ namespace ext {
          }
 
          // copy constructors
-         FPGADD( const FPGADD &dd ) : DD( dd ) { }
+         FPGADD( const FPGADD &dd ) : DD( dd ), _xtasksHandle( dd._xtasksHandle ) { }
 
          // assignment operator
          const FPGADD & operator= ( const FPGADD &wd );
@@ -74,6 +74,11 @@ namespace ext {
          virtual FPGADD *copyTo ( void *toAddr );
          virtual FPGADD *clone () const { return NEW FPGADD ( *this ); }
 
+         // getter and setter for the xTasks handle
+         void setHandle ( void const * handle ) { _xtasksHandle = handle; }
+         void const * getHandle () { return _xtasksHandle; }
+
+         static unsigned int getNumDevices() { return _accDevices->size(); }
          static FPGADeviceMap::iterator const getDevicesMapBegin () { return _accDevices->begin(); }
          static FPGADeviceMap::iterator const getDevicesMapEnd () { return _accDevices->end(); }
    };

@@ -57,7 +57,7 @@ namespace ext {
 #endif
 
          // AUX functions
-         xtasks_task_handle createAndSubmitTask( WD &wd );
+         void createAndSubmitTask( WD &wd, WD *parentWd );
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          void readInstrCounters( WD * const wd, xtasks_task_handle & task );
 #endif
