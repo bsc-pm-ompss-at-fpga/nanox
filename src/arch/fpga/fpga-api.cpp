@@ -22,6 +22,7 @@
 #include "fpgadd.hpp"
 #include "fpgapinnedallocator.hpp"
 #include "fpgaprocessor.hpp"
+#include "simpleallocator.hpp"
 
 using namespace nanos;
 
@@ -85,3 +86,12 @@ NANOS_API_DEF( void *, nanos_fpga_get_phy_address, ( void * buffer ) )
    uintptr_t phyBuffer = ( uintptr_t )( buffer ) + offset;
    return ( void * )( phyBuffer );
 }
+
+NANOS_API_DEF( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_wd_t wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue ))
+{
+   nanos::ext::FPGAProcessor * fpgaPE = ( nanos::ext::FPGAProcessor * )myThread->runningOn();
+   fpgaPE->setTaskArg( *( WD * )wd, argIdx, isInput, isOutput, argValue );
+
+   return NANOS_OK;
+}
+
