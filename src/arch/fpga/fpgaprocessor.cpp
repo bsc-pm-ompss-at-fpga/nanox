@@ -96,51 +96,52 @@ uintptr_t FPGAProcessor::getPhyAddr( const uintptr_t addr ) {
    return baseAddressPhy + ( addr - baseAddress );
 }
 
-xtasks_task_handle FPGAProcessor::createAndSubmitTask( WD &wd ) {
+void FPGAProcessor::createTask( WD &wd, WD *parentWd ) {
    xtasks_stat status;
    xtasks_task_handle task;
-
-   NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
-
-   size_t numArgs = wd.getDataSize()/sizeof(uintptr_t);
-   ensure( wd.getDataSize()%sizeof(uintptr_t) == 0,
-           "WD's data size is not multiple of uintptr_t (All args must be pointers)" );
 
    status = xtasksCreateTask( (uintptr_t)&wd, _fpgaProcessorInfo.getHandle(), XTASKS_COMPUTE_ENABLE, &task );
    if ( status != XTASKS_SUCCESS ) {
       //TODO: If status == XTASKS_ENOMEM, block and wait untill mem is available
       fatal( "Cannot initialize FPGA task info (accId: " <<
-             _fpgaProcessorInfo.getId() << ", #args: " << numArgs << "): " <<
+             _fpgaProcessorInfo.getId() << "): " <<
              ( status == XTASKS_ENOMEM ? "XTASKS_ENOMEM" : "XTASKS_ERROR" ) );
    }
 
-   //Build a map of flags for each copy
-   CopyData const * copies = wd.getCopies();
-   std::map<uintptr_t, xtasks_arg_flags> mapCopies;
-   for ( size_t cIdx = 0; cIdx < wd.getNumCopies(); ++cIdx ) {
-      xtasks_arg_flags copyFlags;
-      copyFlags = XTASKS_ARG_FLAG_COPY_IN & -( copies[cIdx].isInput() );
-      copyFlags |= XTASKS_ARG_FLAG_COPY_OUT & -( copies[cIdx].isOutput() );
+   FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
+   dd.setHandle( task );
+}
 
-      uintptr_t copyValue = wd._mcontrol.getAddress( cIdx );
-      mapCopies[copyValue] = copyFlags;
+void FPGAProcessor::setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue ) {
+   xtasks_task_handle task;
+
+   FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
+   task = (xtasks_task_handle)dd.getHandle();
+
+   xtasks_arg_flags argFlags = XTASKS_ARG_FLAG_GLOBAL;
+   argFlags |= XTASKS_ARG_FLAG_COPY_IN & -( isInput );
+   argFlags |= XTASKS_ARG_FLAG_COPY_OUT & -( isOutput );
+
+   if ( xtasksAddArg( argIdx, argFlags, argValue, task ) != XTASKS_SUCCESS ) {
+      fatal("Error adding argument to a task");
    }
 
-   uintptr_t * args = ( uintptr_t * )( wd.getData() );
-   for ( size_t argIdx = 0; argIdx < numArgs; ++argIdx ) {
-      uintptr_t argValue = args[argIdx];
-      //NOTE: If the argument is not a copy, the flags returned by mapCopies will be 0
-      xtasks_arg_flags argFlags = XTASKS_ARG_FLAG_GLOBAL | mapCopies[argValue];
-      status = xtasksAddArg( argIdx, argFlags, getPhyAddr( argValue ), task );
-      ensure( status == XTASKS_SUCCESS, "Error adding arguments to a FPGA task" );
-   }
+}
+
+void FPGAProcessor::submitTask( WD &wd ) {
+   //xtasks_stat status;
+   xtasks_task_handle task;
+
+   FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
+   task = ( xtasks_task_handle )dd.getHandle();
+
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
 
    if ( xtasksSubmitTask( task ) != XTASKS_SUCCESS ) {
       //TODO: If error is XDMA_ENOMEM we can retry after a while
       fatal("Error sending a task to the FPGA");
    }
 
-   return task;
 }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
@@ -203,16 +204,19 @@ void FPGAProcessor::preOutlineWorkDependent ( WD &wd ) {
 void FPGAProcessor::outlineWorkDependent ( WD &wd )
 {
    //wd.start( WD::IsNotAUserLevelThread );
-   createAndSubmitTask( wd );
+   createTask( wd, wd.getParent() );
+
+   //set flag to allow new update
+   FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
+   ( dd.getWorkFct() )( wd.getData() );
+
    ++_runningTasks;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    ++_totalRunningTasks;
    instrumentPoint( "fpga-run-tasks", _totalRunningTasks.value() );
 #endif
 
-   //set flag to allow new update
-   FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
-   ( dd.getWorkFct() )( wd.getData() );
+   submitTask( wd );
 }
 
 bool FPGAProcessor::tryPostOutlineTasks( size_t max )
