@@ -456,6 +456,7 @@ namespace nanos {
             registerEventValue("api","try_lock_pe","nanos_try_lock_pe()");
             registerEventValue("api","unlock_pe","nanos_unlock_pe()");
             registerEventValue("api","nanos_fpga_get_phy_address","nanos_fpga_get_phy_address()");
+            registerEventValue("api","nanos_fpga_set_task_arg","nanos_fpga_set_task_arg()");
 
             /* 02 */ registerEventKey("wd-id","Work Descriptor id:", true, EVENT_DEVELOPER, true);
 
