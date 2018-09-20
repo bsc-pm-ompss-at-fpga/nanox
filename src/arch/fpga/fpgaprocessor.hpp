@@ -96,6 +96,8 @@ namespace ext {
 
          FPGATasksQueue_t & getReadyTasks() { return _readyTasks; }
          FPGATasksQueue_t & getWaitInTasks() { return _waitInTasks; }
+         
+         void setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue );
 
          virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {
             fatal("switchHelperDependent is not implemented in the FPGAProcessor");
@@ -106,7 +108,6 @@ namespace ext {
          virtual void exitTo( WD *work, SchedulerHelper *helper ) {}
          virtual void outlineWorkDependent (WD &work);
          virtual void preOutlineWorkDependent (WD &work);
-         virtual void setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue );
          bool tryPostOutlineTasks( size_t max = 9999 );
 
          virtual bool tryAcquireExecLock();
