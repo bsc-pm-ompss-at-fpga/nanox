@@ -118,13 +118,10 @@ void FPGAProcessor::setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutp
    FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
    task = (xtasks_task_handle)dd.getHandle();
 
-   //Build a map of flags for each copy
-   xtasks_arg_flags copyFlags;
-   copyFlags = XTASKS_ARG_FLAG_COPY_IN & -( isInput );
-   copyFlags |= XTASKS_ARG_FLAG_COPY_OUT & -( isOutput );
+   xtasks_arg_flags argFlags = XTASKS_ARG_FLAG_GLOBAL;
+   argFlags |= XTASKS_ARG_FLAG_COPY_IN & -( isInput );
+   argFlags |= XTASKS_ARG_FLAG_COPY_OUT & -( isOutput );
 
-   //NOTE: If the argument is not a copy, the flags returned by mapCopies will be 0
-   xtasks_arg_flags argFlags = XTASKS_ARG_FLAG_GLOBAL | copyFlags;
    xtasksAddArg( argIdx, argFlags, argValue, task );
 
 }
