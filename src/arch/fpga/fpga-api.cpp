@@ -89,6 +89,8 @@ NANOS_API_DEF( void *, nanos_fpga_get_phy_address, ( void * buffer ) )
 
 NANOS_API_DEF( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_wd_t wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue ))
 {
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_set_task_arg" ); );
+
    nanos::ext::FPGAProcessor * fpgaPE = ( nanos::ext::FPGAProcessor * )myThread->runningOn();
    fpgaPE->setTaskArg( *( WD * )wd, argIdx, isInput, isOutput, argValue );
 
