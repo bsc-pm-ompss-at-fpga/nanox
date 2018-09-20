@@ -122,7 +122,9 @@ void FPGAProcessor::setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutp
    argFlags |= XTASKS_ARG_FLAG_COPY_IN & -( isInput );
    argFlags |= XTASKS_ARG_FLAG_COPY_OUT & -( isOutput );
 
-   xtasksAddArg( argIdx, argFlags, argValue, task );
+   if ( xtasksAddArg( argIdx, argFlags, argValue, task ) != XTASKS_SUCCESS ) {
+      fatal("Error adding argument to a task");
+   }
 
 }
 
