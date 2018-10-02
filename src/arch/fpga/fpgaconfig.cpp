@@ -47,6 +47,7 @@ int FPGAConfig::_finishWDBurst = 8;
 bool FPGAConfig::_idleCallback = true;
 int FPGAConfig::_maxThreadsIdleCallback = 1;
 std::size_t FPGAConfig::_allocatorPoolSize = 64*1024*1024; //Def. 64MB
+std::size_t FPGAConfig::_allocAlign = 16;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    bool FPGAConfig::_disableInst = false;
 #endif //NANOS_INSTRUMENTATION_ENABLED
@@ -103,6 +104,11 @@ void FPGAConfig::prepare( Config &config )
       "XDMA memory pool size (def: 64MB)" );
    config.registerEnvOption( "fpga_alloc_pool_size", "NX_FPGA_ALLOC_POOL_SIZE" );
    config.registerArgOption( "fpga_alloc_pool_size", "fpga-alloc-pool-size" );
+
+   config.registerConfigOption( "fpga_alloc_align", NEW Config::SizeVar( _allocAlign ),
+         "FPGA allocation alignment (def: 16)" );
+   config.registerEnvOption( "fpga_alloc_align", "NX_FPGA_ALLOC_ALIGN" );
+   config.registerArgOption( "fpga_alloc_align", "fpga-alloc-align" );
 }
 
 void FPGAConfig::apply()

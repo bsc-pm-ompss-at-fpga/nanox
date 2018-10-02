@@ -57,7 +57,8 @@ namespace ext {
 #endif
 
          // AUX functions
-         void createAndSubmitTask( WD &wd, WD *parentWd );
+         void createTask( WD &wd, WD *parentWd );
+         void submitTask( WD &wd );
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          void readInstrCounters( WD * const wd, xtasks_task_handle & task );
 #endif
@@ -95,6 +96,8 @@ namespace ext {
 
          FPGATasksQueue_t & getReadyTasks() { return _readyTasks; }
          FPGATasksQueue_t & getWaitInTasks() { return _waitInTasks; }
+         
+         void setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue );
 
          virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {
             fatal("switchHelperDependent is not implemented in the FPGAProcessor");
