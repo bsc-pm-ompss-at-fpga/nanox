@@ -74,6 +74,8 @@ class FPGAPlugin : public ArchPlugin
          if ( sxt != XTASKS_SUCCESS ) {
             fatal0( "Error initializing xTasks library, returned status: " << sxt );
          }
+         //FIXME: initialize  adefault instrumentation anyway in order not to crash when instrumentation is not enabled
+         xtasksInitHWIns(1);
 
          //Check the number of accelerators in the system
          size_t numAccel;
@@ -106,7 +108,7 @@ class FPGAPlugin : public ArchPlugin
 
 #if NANOS_INSTRUMENTATION_ENABLED
             //Init the instrumentation
-            sxd = xdmaInitHWInstrumentation();
+            sxd = xdmaInitHWInstrumentation(); //not sure if this is really needed
             if ( sxd != XDMA_SUCCESS ) {
                FPGAConfig::forceDisableInstr();
                warning0( " Error initializing the FPGA instrumentation support (status: " << sxd << ")." <<
@@ -115,6 +117,7 @@ class FPGAPlugin : public ArchPlugin
                );
                warning0( " Disabling all events generated using the FPGA instrumentation timer." );
             }
+            xtasksInitHWIns(FPGAConfig::getNumInstrEvents());
 #endif //NANOS_INSTRUMENTATION_ENABLED
 
             //Create the FPGAPinnedAllocator and set the global shared variable that points to it

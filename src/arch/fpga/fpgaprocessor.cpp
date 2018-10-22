@@ -25,6 +25,7 @@
 #include "fpgaworker.hpp"
 #include "fpgaprocessorinfo.hpp"
 #include "instrumentationmodule_decl.hpp"
+#include "instrumentation.hpp"
 #include "smpprocessor.hpp"
 #include "fpgapinnedallocator.hpp"
 #include "fpgainstrumentation.hpp"
@@ -149,19 +150,34 @@ void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task 
    if ( FPGAConfig::isInstrDisabled() ) return;
 
    static Instrumentation * ins     = sys.getInstrumentation();
-   static nanos_event_key_t inKey   = ins->getInstrumentationDictionary()->getEventKey( "device-copy-in" );
-   static nanos_event_key_t execKey = ins->getInstrumentationDictionary()->getEventKey( "device-task-execution" );
-   static nanos_event_key_t outKey  = ins->getInstrumentationDictionary()->getEventKey( "device-copy-out" );
-   nanos_event_value_t val = ( nanos_event_value_t )( wd->getId() );
+   size_t maxEvents = FPGAConfig::getNumInstrEvents();
+   xtasks_ins_event *events = NEW xtasks_ins_event[maxEvents];
+   Instrumentation::DeviceEvent *deviceEvents = NEW Instrumentation::DeviceEvent[maxEvents];
 
-   //Get the counters
-   xtasks_ins_times * counters;
-   xtasksGetInstrumentData( task, &counters );
+   xtasksGetInstrumentData( task, events, maxEvents );
 
-   //Raise the events
-   ins->raiseDeviceBurstEvent( _devInstr, inKey,   val, counters->start,       counters->inTransfer  );
-   ins->raiseDeviceBurstEvent( _devInstr, execKey, val, counters->inTransfer,  counters->computation );
-   ins->raiseDeviceBurstEvent( _devInstr, outKey,  val, counters->computation, counters->outTransfer );
+   unsigned int readEv;
+   for ( readEv = 0;
+           readEv < maxEvents && events[readEv].eventId != XTASKS_LAST_EVENT_ID;
+           readEv++ )
+   {
+       //Emit extrae events
+       xtasks_ins_event &event = events[readEv];
+       if (event.value != 0) {
+           ins->createDeviceBurstEvent( &deviceEvents[readEv],
+                   event.eventId & ((1ULL<<32)-1),
+                   event.value,
+                   event.timestamp );
+       } else {
+           ins->closeDeviceBurstEvent( &deviceEvents[readEv],
+                   event.eventId & ((1ULL<<32)-1),
+                   event.value,
+                   event.timestamp );
+       }
+   }
+   ins->addDeviceEventList( _devInstr, readEv, deviceEvents );
+   delete[] events;
+   delete[] deviceEvents;
 }
 #endif
 
