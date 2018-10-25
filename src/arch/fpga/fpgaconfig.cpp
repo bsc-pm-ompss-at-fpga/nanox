@@ -101,7 +101,7 @@ void FPGAConfig::prepare( Config &config )
    config.registerArgOption( "fpga_max_threads_callback", "fpga-max-threads-callback" );
 
    config.registerConfigOption( "fpga_alloc_pool_size", NEW Config::SizeVar( _allocatorPoolSize ),
-      "XDMA memory pool size (def: 64MB)" );
+      "FPGA device memory pool size (def: 64MB)" );
    config.registerEnvOption( "fpga_alloc_pool_size", "NX_FPGA_ALLOC_POOL_SIZE" );
    config.registerArgOption( "fpga_alloc_pool_size", "fpga-alloc-pool-size" );
 

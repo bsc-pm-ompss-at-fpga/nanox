@@ -79,12 +79,7 @@ NANOS_API_DEF( nanos_err_t, nanos_find_fpga_pe, ( void *req, nanos_pe_t * pe ) )
 NANOS_API_DEF( void *, nanos_fpga_get_phy_address, ( void * buffer ) )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_get_phy_address" ); );
-
-   ensure( nanos::ext::fpgaAllocator != NULL,
-      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
-   static uintptr_t offset = nanos::ext::fpgaAllocator->getBaseAddressPhy() - ( uintptr_t )( nanos::ext::fpgaAllocator->getBaseAddress() );
-   uintptr_t phyBuffer = ( uintptr_t )( buffer ) + offset;
-   return ( void * )( phyBuffer );
+   return buffer;
 }
 
 NANOS_API_DEF( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_wd_t wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue ))
@@ -96,4 +91,3 @@ NANOS_API_DEF( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_wd_t wd, size_t arg
 
    return NANOS_OK;
 }
-
