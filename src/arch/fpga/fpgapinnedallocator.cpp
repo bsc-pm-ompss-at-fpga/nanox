@@ -49,3 +49,21 @@ xtasks_mem_handle FPGAPinnedAllocator::getBufferHandle()
 {
    return _handle;
 }
+
+void nanos::ext::fpgaCopyDataToFPGA(xtasks_mem_handle handle, size_t offset, size_t len, void *ptr)
+{
+   xtasks_stat stat = xtasksMemcpy( handle, offset, len, ptr, XTASKS_HOST_TO_ACC );
+   if ( stat != XTASKS_SUCCESS ) {
+      //NOTE: Cannot put the ensure directly, as compiler will claim about unused stat var in performance
+      ensure( false, "Error in xtasksMemcpy of FPGADevice::_copyIn" );
+   }
+}
+
+void nanos::ext::fpgaCopyDataFromFPGA(xtasks_mem_handle handle, size_t offset, size_t len, void *ptr)
+{
+   xtasks_stat stat = xtasksMemcpy( handle, offset, len, ptr, XTASKS_ACC_TO_HOST );
+   if ( stat != XTASKS_SUCCESS ) {
+      //NOTE: Cannot put the ensure directly, as compiler will claim about unused stat var in performance
+      ensure( false, "Error in xtasksMemcpy of FPGADevice::_copyOut" );
+   }
+}

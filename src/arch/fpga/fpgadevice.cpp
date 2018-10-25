@@ -24,7 +24,6 @@
 #include "simpleallocator.hpp"
 #include "fpgapinnedallocator.hpp"
 #include "instrumentation_decl.hpp"
-#include "libxtasks_wrapper.hpp"
 
 using namespace nanos;
 using namespace nanos::ext;
@@ -41,11 +40,7 @@ void FPGADevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
    FPGAPinnedAllocator *allocator = (FPGAPinnedAllocator *) mem.getSpecificData();
    //NOTE: Copies are synchronous so we don't need to register them in the DeviceOps
    size_t offset = devAddr - allocator->getBaseAddress();
-   xtasks_stat stat = xtasksMemcpy( allocator->getBufferHandle(), offset, len, (void *)hostAddr, XTASKS_HOST_TO_ACC );
-   if ( stat != XTASKS_SUCCESS ) {
-      //NOTE: Cannot put the ensure directly, as compiler will claim about unused stat var in performance
-      ensure( false, "Error in xtasksMemcpy of FPGADevice::_copyIn" );
-   }
+   fpgaCopyDataToFPGA( allocator->getBufferHandle(), offset, len, (void *)hostAddr );
 }
 
 void FPGADevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
@@ -56,11 +51,7 @@ void FPGADevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
    FPGAPinnedAllocator *allocator = (FPGAPinnedAllocator *) mem.getSpecificData();
    //NOTE: Copies are synchronous so we don't need to register them in the DeviceOps
    size_t offset = devAddr - allocator->getBaseAddress();
-   xtasks_stat stat = xtasksMemcpy( allocator->getBufferHandle(), offset, len, (void *)hostAddr, XTASKS_ACC_TO_HOST );
-   if ( stat != XTASKS_SUCCESS ) {
-      //NOTE: Cannot put the ensure directly, as compiler will claim about unused stat var in performance
-      ensure( false, "Error in xtasksMemcpy of FPGADevice::_copyOut" );
-   }
+   fpgaCopyDataFromFPGA( allocator->getBufferHandle(), offset, len, (void *)hostAddr );
 }
 
 bool FPGADevice::_copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len,
@@ -136,6 +127,7 @@ void FPGADevice::_canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *siz
    SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
    allocator->canAllocate( sizes, numChunks, remainingSizes );
 }
+
 void FPGADevice::_getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem,
    SimpleAllocator::ChunkList &list )
 {

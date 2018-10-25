@@ -8,7 +8,6 @@
 namespace nanos {
 namespace ext {
 
-
    class FPGAPinnedAllocator : public SimpleAllocator
    {
       private:
@@ -25,6 +24,16 @@ namespace ext {
 
    //! \brief Pointer to the fpgaAllocator instance
    extern FPGAPinnedAllocator    *fpgaAllocator;
+
+   /*! \brief Copies data from the user memory to the FPGA device memory
+    *         fpgaAllocator[offset .. offset+len] = ptr[0 .. len]
+    */
+   void fpgaCopyDataToFPGA(xtasks_mem_handle handle, size_t offset, size_t len, void *ptr);
+
+   /*! \brief Copies data from the FPGA device memory to the user memory
+    *         ptr[offset .. offset+len] = fpgaAllocator[0 .. len]
+    */
+   void fpgaCopyDataFromFPGA(xtasks_mem_handle handle, size_t offset, size_t len, void *ptr);
 
 } // namespace ext
 } // namespace nanos
