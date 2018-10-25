@@ -717,6 +717,13 @@ namespace nanos {
           */
          nanos_event_key_t registerEventKey ( const char *key, const char *description="", bool abort_when_registered=true, nanos_event_level_t level=EVENT_ENABLED, bool stacked=false );
 
+         
+         /*! \brief Inserts an event with a given event ID into the keymap
+          */
+         inline nanos_event_key_t registerEventKey (
+               const char *key, nanos_event_key_t eventId, const char *description="",
+               bool abort_when_registered=true, nanos_event_level_t level=EVENT_ENABLED, bool stacked=false );
+
          /*! \brief Gets a key into (from) the keyMap
           */
          nanos_event_key_t getEventKey ( const std::string &key );

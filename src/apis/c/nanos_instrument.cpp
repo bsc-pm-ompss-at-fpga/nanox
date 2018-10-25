@@ -69,6 +69,20 @@ NANOS_API_DEF(nanos_err_t, nanos_instrument_register_key, ( nanos_event_key_t *e
    return NANOS_OK;
 }
 
+NANOS_API_DEF(nanos_err_t, nanos_instrument_register_key_with_key, ( nanos_event_key_t event_key, const char *key, const char *description, bool abort_when_registered ) )
+{
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   try
+   {
+      sys.getInstrumentation()->getInstrumentationDictionary()->registerEventKey(key, event_key, description, abort_when_registered);
+
+   } catch ( nanos_err_t err) {
+      return err;
+   }
+#endif
+   return NANOS_OK;
+}
+
 NANOS_API_DEF(nanos_err_t, nanos_instrument_register_value, ( nanos_event_value_t *event_value, const char *key, const char *value, const char *description, bool abort_when_registered ))
 {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
@@ -320,6 +334,62 @@ NANOS_API_DEF(nanos_err_t, nanos_instrument_end_burst_with_val,(nanos_string_t k
  #endif
    return NANOS_OK;
 }
+
+NANOS_API_DEF(nanos_err_t, nanos_instrument_burst_begin,
+      (nanos_event_key_t key, nanos_event_value_t value) )
+{
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   try
+   {
+      nanos_event_t e;
+      e.key = key;
+      e.value = value;
+      e.type = NANOS_BURST_START;
+      nanos_instrument_events( 1, &e );
+   } catch ( nanos_err_t err ) {
+      return err;
+   }
+#endif
+   return NANOS_OK;
+
+}
+
+NANOS_API_DEF(nanos_err_t, nanos_instrument_burst_end,
+      (nanos_event_key_t key, nanos_event_value_t value) )
+{
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   try
+   {
+      nanos_event_t e;
+      e.key = key;
+      e.value = value;
+      e.type = NANOS_BURST_END;
+      nanos_instrument_events( 1, &e );
+   } catch ( nanos_err_t err ) {
+      return err;
+   }
+#endif
+   return NANOS_OK;
+}
+
+NANOS_API_DEF(nanos_err_t, nanos_instrument_point_event,
+      (nanos_event_key_t key, nanos_event_value_t value))
+{
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   try
+   {
+      nanos_event_t e;
+      e.key = key;
+      e.value = value;
+      e.type = NANOS_POINT;
+      nanos_instrument_events( 1, &e );
+   } catch ( nanos_err_t err ) {
+      return err;
+   }
+#endif
+   return NANOS_OK;
+}
+
 /*!
  * \}
  */ 

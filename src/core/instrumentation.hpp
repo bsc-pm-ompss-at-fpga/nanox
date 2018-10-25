@@ -98,7 +98,6 @@ inline nanos_event_value_t InstrumentationKeyDescriptor::registerValue ( const c
    return valueDescriptor->getId();
 }
 
-
 inline void InstrumentationKeyDescriptor::registerValue ( const std::string &value, nanos_event_value_t val,
                                                           const std::string &description, bool abort_when_registered )
 {
@@ -199,6 +198,36 @@ inline nanos_event_key_t InstrumentationDictionary::registerEventKey ( const cha
          it = _keyMap.find( key );
          if ( it == _keyMap.end() ) {
             keyDescriptor = NEW InstrumentationKeyDescriptor ( (nanos_event_key_t) _totalKeys++, description, level, stacked );
+            _keyMap.insert( std::make_pair( key, keyDescriptor ) );
+         }
+         else {
+            if ( abort_when_registered ) fatal0("Event Key was already registered (lock taken)\n");
+            keyDescriptor = it->second;
+         }
+      }
+   }
+   else {
+      if ( abort_when_registered ) fatal0("Event Key was already registered (lock not taken)\n");
+      keyDescriptor = it->second;
+   }
+
+   return keyDescriptor->getId();
+}
+
+inline nanos_event_key_t InstrumentationDictionary::registerEventKey (
+      const char *key, nanos_event_key_t eventId, const char *description,
+      bool abort_when_registered, nanos_event_level_t  level, bool stacked )
+{
+   InstrumentationKeyDescriptor *keyDescriptor = NULL;
+
+   KeyMapIterator it = _keyMap.find( key );
+
+   if ( it == _keyMap.end() ) {
+      {
+         LockBlock lock( _lock );
+         it = _keyMap.find( key );
+         if ( it == _keyMap.end() ) {
+            keyDescriptor = NEW InstrumentationKeyDescriptor ( eventId, description, level, stacked );
             _keyMap.insert( std::make_pair( key, keyDescriptor ) );
          }
          else {
