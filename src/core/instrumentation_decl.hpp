@@ -1068,6 +1068,16 @@ namespace nanos {
                   : DeviceEvent ( start? NANOS_BURST_START: NANOS_BURST_END, key, value, time, (nanos_event_domain_t) 0, (nanos_event_id_t) 0 ) { }
          };
 
+         class DevicePoint: public DeviceEvent {
+            private:
+               DevicePoint();
+               DevicePoint( DevicePoint &dp );
+               DevicePoint & operator= ( DevicePoint &dp );
+            public:
+               DevicePoint ( nanos_event_key_t key, nanos_event_value_t value, const nanos_event_time_t time )
+                  : DeviceEvent( NANOS_POINT, key, value, time, ( nanos_event_domain_t ) 0, ( nanos_event_id_t ) 0 ) {}
+         };
+
 #ifndef NANOS_INSTRUMENTATION_ENABLED
       public:
          Instrumentation () {}
@@ -1254,6 +1264,8 @@ namespace nanos {
           *  \param[in] value is a vector of nkvs  values
           */
          void createPointEvent ( Event *e, nanos_event_key_t key, nanos_event_value_t value );
+
+         void createDevicePointEvent ( Event *e, const nanos_event_key_t key, const nanos_event_value_t value, const nanos_event_time_t time);
 
          /*! \brief Used by higher levels to create a PTP_START event
           *

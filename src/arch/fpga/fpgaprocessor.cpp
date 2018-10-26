@@ -158,22 +158,27 @@ void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task 
 
    unsigned int readEv;
    for ( readEv = 0;
-           readEv < maxEvents && events[readEv].eventId != XTASKS_LAST_EVENT_ID;
+           readEv < maxEvents && events[readEv].eventType != XTASKS_EVENT_TYPE_LAST;
            readEv++ )
    {
-       //Emit extrae events
-       xtasks_ins_event &event = events[readEv];
-       if (event.value != 0) {
-           ins->createDeviceBurstEvent( &deviceEvents[readEv],
-                   event.eventId & ((1ULL<<32)-1),
-                   event.value,
-                   event.timestamp );
-       } else {
-           ins->closeDeviceBurstEvent( &deviceEvents[readEv],
-                   event.eventId & ((1ULL<<32)-1),
-                   event.value,
-                   event.timestamp );
-       }
+      //Emit extrae events
+      xtasks_ins_event &event = events[readEv];
+      switch ( event.eventType ) {
+         case XTASKS_EVENT_TYPE_BURST_OPEN:
+            ins->createDeviceBurstEvent( &deviceEvents[readEv],
+                  event.eventId, event.value, event.timestamp );
+            break;
+         case XTASKS_EVENT_TYPE_BURST_CLOSE:
+            ins->closeDeviceBurstEvent( &deviceEvents[readEv],
+                  event.eventId, event.value, event.timestamp );
+            break;
+         case XTASKS_EVENT_TYPE_POINT:
+            ins->createDevicePointEvent( &deviceEvents[readEv],
+                  event.eventId, event.value, event.timestamp );
+            break;
+         default:
+            warning("Ignoring unknown fpga event type");
+      }
    }
    ins->addDeviceEventList( _devInstr, readEv, deviceEvents );
    delete[] events;

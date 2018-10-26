@@ -613,9 +613,9 @@ class InstrumentationExtrae: public Instrumentation
                case NANOS_SUBSTATE_END:
                case NANOS_PTP_START:
                case NANOS_PTP_END:
-               case NANOS_POINT:
                   warning( "Unsupported event type in addDeviceEventList" );
                   break;
+               case NANOS_POINT:
                case NANOS_BURST_START:
                case NANOS_BURST_END:
                   if ( key == 0 ) continue;
@@ -645,8 +645,17 @@ class InstrumentationExtrae: public Instrumentation
                case NANOS_SUBSTATE_END:
                case NANOS_PTP_START:
                case NANOS_PTP_END:
-               case NANOS_POINT:
                   break; //< Previous event types are not supported yet
+               case NANOS_POINT:
+                  ckey = e.getKey();
+                  cvalue = e.getValue();
+                  ctimestamp = e.getDeviceTime();
+                  if ( ckey != 0 ) {
+                     types[j] = _eventBase + ckey;
+                     values[j] = cvalue;
+                     timestamps[j++] = ctx.translateDeviceTime( ctimestamp );
+                  }
+                  break;
                case NANOS_BURST_START:
                   ckey = e.getKey();
                   cvalue = e.getValue();

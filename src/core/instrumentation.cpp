@@ -130,6 +130,11 @@ void Instrumentation::createPointEvent ( Event *e, nanos_event_key_t key, nanos_
 
 }
 
+void Instrumentation::createDevicePointEvent( Event *e, const nanos_event_key_t key, const nanos_event_value_t value, const nanos_event_time_t time )
+{
+    new ( e ) DevicePoint( key, value, time );
+}
+
 void Instrumentation::createPtPStart ( Event *e, nanos_event_domain_t domain, nanos_event_id_t id,
                                        nanos_event_key_t keys, nanos_event_value_t values, unsigned int partner )
 {
