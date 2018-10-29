@@ -66,7 +66,6 @@ actions taken in this ticket.
 The runtime relies on some underlying libraries to support the communication with
 FPGA and other low-level operations. Therefore, you need to have installed the
 following libraries before building Nanos++ RTL to enable the FPGA support:
-  - [libxdma](https://pm.bsc.es/gitlab/ompss-at-fpga/xdma)
   - [libxtasks](https://pm.bsc.es/gitlab/ompss-at-fpga/xtasks)
 
 ### Instructions

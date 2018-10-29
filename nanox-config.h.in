@@ -43,10 +43,6 @@
 #define @HAVE_DLB@
 #endif
 
-#ifndef @HAVE_XDMA@
-#define @HAVE_XDMA@
-#endif
-
 #ifndef @HAVE_XTASKS@
 #define @HAVE_XTASKS@
 #endif
