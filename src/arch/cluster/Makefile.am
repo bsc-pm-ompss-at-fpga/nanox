@@ -66,8 +66,8 @@ common_cluster_LIBS =
 ## CLuster uses FPGA symbols so must be linked against FPGA core lib and FPGA support libs.
 if FPGA_SUPPORT
 common_cluster_CPPFLAGS += @xtasksinc@
-common_cluster_LDFLAGS += @xdmalib@ @xtaskslib@
-common_cluster_LIBS += @xdmalibs@ @xtaskslibs@
+common_cluster_LDFLAGS += @xtaskslib@
+common_cluster_LIBS += @xtaskslibs@
 endif
 
 noinst_LTLIBRARIES =

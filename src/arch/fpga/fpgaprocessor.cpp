@@ -89,13 +89,6 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
    return th;
 }
 
-uintptr_t FPGAProcessor::getPhyAddr( const uintptr_t addr ) {
-   static FPGAPinnedAllocator * const allocator = getAllocator();
-   static uintptr_t const baseAddress = allocator->getBaseAddress();
-   static uintptr_t const baseAddressPhy = allocator->getBaseAddressPhy();
-   return baseAddressPhy + ( addr - baseAddress );
-}
-
 void FPGAProcessor::createTask( WD &wd, WD *parentWd ) {
    xtasks_stat status;
    xtasks_task_handle task;
@@ -123,7 +116,7 @@ void FPGAProcessor::setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutp
    argFlags |= XTASKS_ARG_FLAG_COPY_OUT & -( isOutput );
 
    if ( xtasksAddArg( argIdx, argFlags, argValue, task ) != XTASKS_SUCCESS ) {
-      fatal("Error adding argument to a task");
+      fatal( "Error adding argument to a task" );
    }
 
 }
@@ -138,8 +131,8 @@ void FPGAProcessor::submitTask( WD &wd ) {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
 
    if ( xtasksSubmitTask( task ) != XTASKS_SUCCESS ) {
-      //TODO: If error is XDMA_ENOMEM we can retry after a while
-      fatal("Error sending a task to the FPGA");
+      //TODO: If error is XTASKS_ENOMEM we can retry after a while
+      fatal( "Error sending a task to the FPGA" );
    }
 
 }

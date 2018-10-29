@@ -10,7 +10,7 @@
 #
 # LICENSE
 #
-#   Copyright 2017 Barcelona Supercomputing Center
+#   Copyright 2017-2018 Barcelona Supercomputing Center
 #
 #   This file is part of the NANOS++ library.
 #

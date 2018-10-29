@@ -94,18 +94,6 @@ namespace ext {
 #endif //NANOS_INSTRUMENTATION_ENABLED
    };
 
-   typedef enum {
-      NANOS_FPGA_NULL_EVENT = 0,      // 0
-      NANOS_FPGA_OPEN_EVENT,
-      NANOS_FPGA_CLOSE_EVENT,
-      NANOS_FPGA_REQ_CHANNEL_EVENT,
-      NANOS_FPGA_REL_CHANNEL_EVENT,
-      NANOS_FPGA_SUBMIT_IN_DMA_EVENT,    // 5
-      NANOS_FPGA_SUBMIT_OUT_DMA_EVENT,
-      NANOS_FPGA_WAIT_INPUT_DMA_EVENT,
-      NANOS_FPGA_WAIT_OUTPUT_DMA_EVENT
-   } in_xdma_event_value;
-
 } // namespace ext
 } // namespace nanos
 #endif
