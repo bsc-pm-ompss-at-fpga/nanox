@@ -90,18 +90,17 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
    return th;
 }
 
-uintptr_t FPGAProcessor::getPhyAddr( const uintptr_t addr ) {
-   static FPGAPinnedAllocator * const allocator = getAllocator();
-   static uintptr_t const baseAddress = allocator->getBaseAddress();
-   static uintptr_t const baseAddressPhy = allocator->getBaseAddressPhy();
-   return baseAddressPhy + ( addr - baseAddress );
-}
-
 void FPGAProcessor::createTask( WD &wd, WD *parentWd ) {
    xtasks_stat status;
-   xtasks_task_handle task;
+   xtasks_task_handle task, parentTask = NULL;
 
-   status = xtasksCreateTask( (uintptr_t)&wd, _fpgaProcessorInfo.getHandle(), XTASKS_COMPUTE_ENABLE, &task );
+   if ( parentWd != NULL ) {
+      FPGADD &dd = ( FPGADD & )( parentWd->getActiveDevice() );
+      parentTask = ( xtasks_task_handle )( dd.getHandle() );
+   }
+
+   status = xtasksCreateTask( ( uintptr_t )( &wd ), _fpgaProcessorInfo.getHandle(), parentTask,
+      XTASKS_COMPUTE_ENABLE, &task );
    if ( status != XTASKS_SUCCESS ) {
       //TODO: If status == XTASKS_ENOMEM, block and wait untill mem is available
       fatal( "Cannot initialize FPGA task info (accId: " <<
@@ -117,30 +116,30 @@ void FPGAProcessor::setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutp
    xtasks_task_handle task;
 
    FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
-   task = (xtasks_task_handle)dd.getHandle();
+   task = ( xtasks_task_handle )( dd.getHandle() );
 
    xtasks_arg_flags argFlags = XTASKS_ARG_FLAG_GLOBAL;
    argFlags |= XTASKS_ARG_FLAG_COPY_IN & -( isInput );
    argFlags |= XTASKS_ARG_FLAG_COPY_OUT & -( isOutput );
 
    if ( xtasksAddArg( argIdx, argFlags, argValue, task ) != XTASKS_SUCCESS ) {
-      fatal("Error adding argument to a task");
+      fatal( "Error adding argument to a task" );
    }
 
 }
 
 void FPGAProcessor::submitTask( WD &wd ) {
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
+
    //xtasks_stat status;
    xtasks_task_handle task;
 
    FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
-   task = ( xtasks_task_handle )dd.getHandle();
-
-   NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
+   task = ( xtasks_task_handle )( dd.getHandle() );
 
    if ( xtasksSubmitTask( task ) != XTASKS_SUCCESS ) {
-      //TODO: If error is XDMA_ENOMEM we can retry after a while
-      fatal("Error sending a task to the FPGA");
+      //TODO: If error is XTASKS_ENOMEM we can retry after a while
+      fatal( "Error sending a task to the FPGA" );
    }
 
 }

@@ -62,8 +62,6 @@ namespace ext {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          void readInstrCounters( WD * const wd, xtasks_task_handle & task );
 #endif
-         uintptr_t getPhyAddr( const uintptr_t addr );
-
       public:
 
          FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpaceId, Device const * arch );
@@ -96,7 +94,7 @@ namespace ext {
 
          FPGATasksQueue_t & getReadyTasks() { return _readyTasks; }
          FPGATasksQueue_t & getWaitInTasks() { return _waitInTasks; }
-         
+
          void setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue );
 
          virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {

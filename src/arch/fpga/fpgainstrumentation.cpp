@@ -1,15 +1,20 @@
 #include "fpgainstrumentation.hpp"
 #include "fpgaconfig.hpp"
-#include "libxdma_wrapper.hpp"
+#include "libxtasks_wrapper.hpp"
 
 using namespace nanos;
 using namespace nanos::ext;
 
 nanos_event_time_t FPGAInstrumentation::getDeviceTime() const {
    uint64_t time;
-   //TODO error checking
-   xdmaGetDeviceTime(&time);
-   debug0( "Init device time "  << time );
+#ifdef NANOS_DEBUG_ENABLED
+   ensure0( _deviceInfo != NULL, "Cannot execute FPGAInstrumentation::getDeviceTime when _deviceInfo is NULL" );
+   xtasks_stat stat = xtasksGetAccCurrentTime( _deviceInfo->getHandle(), &time );
+   ensure0( stat == XTASKS_SUCCESS, "Error executing xtasksGetAccCurrentTime (error code: " << stat << ")" );
+   debug0( "Initial FPGA device time: "  << time );
+#else
+   xtasksGetAccCurrentTime( _deviceInfo->getHandle(), &time );
+#endif //NANOS_DEBUG_ENABLED
    return ( nanos_event_time_t )( time );
 }
 

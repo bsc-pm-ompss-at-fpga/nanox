@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2019-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -22,6 +21,7 @@
 #include "fpgadevice.hpp"
 #include "fpgaconfig.hpp"
 #include "deviceops.hpp"
+#include "simpleallocator.hpp"
 #include "fpgapinnedallocator.hpp"
 #include "instrumentation_decl.hpp"
 
@@ -37,8 +37,10 @@ void FPGADevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
    reg_t hostRegionId )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "cache-copy-data-in", wd->getId() ) );
+   FPGAPinnedAllocator *allocator = (FPGAPinnedAllocator *) mem.getSpecificData();
    //NOTE: Copies are synchronous so we don't need to register them in the DeviceOps
-   copyData( (void *)devAddr, (void *)hostAddr, len );
+   size_t offset = devAddr - allocator->getBaseAddress();
+   fpgaCopyDataToFPGA( allocator->getBufferHandle(), offset, len, (void *)hostAddr );
 }
 
 void FPGADevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
@@ -46,15 +48,17 @@ void FPGADevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
    WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "cache-copy-data-out", wd->getId() ) );
+   FPGAPinnedAllocator *allocator = (FPGAPinnedAllocator *) mem.getSpecificData();
    //NOTE: Copies are synchronous so we don't need to register them in the DeviceOps
-   copyData( (void *)hostAddr, (void *)devAddr, len );
+   size_t offset = devAddr - allocator->getBaseAddress();
+   fpgaCopyDataFromFPGA( allocator->getBufferHandle(), offset, len, (void *)hostAddr );
 }
 
 bool FPGADevice::_copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std::size_t len,
    SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig, DeviceOps *ops,
    WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId )
 {
-   copyData( (void *)devDestAddr, (void *)devOrigAddr, len );
+   fatal("FPGADevice::_copyDevToDev not implemented yet");
    return true;
 }
 
@@ -63,8 +67,9 @@ void FPGADevice::_copyInStrided1D( uint64_t devAddr, uint64_t hostAddr, std::siz
    DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "cache-copy-data-in", wd->getId() ) );
+   fatal("FPGADevice::_copyInStrided1D not implemented yet");
    for ( std::size_t count = 0; count < numChunks; count += 1) {
-      copyData( ((char *) devAddr) + count * ld, ((char *) hostAddr) + count * ld, len );
+      //copyData( ((char *) devAddr) + count * ld, ((char *) hostAddr) + count * ld, len );
    }
 }
 
@@ -73,8 +78,9 @@ void FPGADevice::_copyOutStrided1D( uint64_t hostAddr, uint64_t devAddr, std::si
    DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "cache-copy-data-out", wd->getId() ) );
+   fatal("FPGADevice::_copyOutStrided1D not implemented yet");
    for ( std::size_t count = 0; count < numChunks; count += 1) {
-      copyData( ((char *) hostAddr) + count * ld, ((char *) devAddr) + count * ld, len );
+      //copyData( ((char *) hostAddr) + count * ld, ((char *) devAddr) + count * ld, len );
    }
 }
 
@@ -83,17 +89,11 @@ bool FPGADevice::_copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigA
    SeparateMemoryAddressSpace &memOrig, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
    reg_t hostRegionId )
 {
+   fatal("FPGADevice::_copyDevToDevStrided1D not implemented yet");
    for ( std::size_t count = 0; count < numChunks; count += 1) {
-      copyData( ((char *) devDestAddr) + count * ld, ((char *) devOrigAddr) + count * ld, len );
+      //copyData( ((char *) devDestAddr) + count * ld, ((char *) devOrigAddr) + count * ld, len );
    }
    return true;
-}
-
-void FPGADevice::copyData( void* dst, void* src, size_t len )
-{
-   //verbose( "FPGADevice copy data (" << len << " bytes) from " << std::hex << src <<
-   //         " to " << std::hex << dst );
-   std::memcpy( dst, src, len );
 }
 
 void *FPGADevice::memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem,
@@ -127,6 +127,7 @@ void FPGADevice::_canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *siz
    SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
    allocator->canAllocate( sizes, numChunks, remainingSizes );
 }
+
 void FPGADevice::_getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem,
    SimpleAllocator::ChunkList &list )
 {

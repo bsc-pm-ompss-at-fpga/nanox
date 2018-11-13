@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2017 Barcelona Supercomputing Center                               */
+/*      Copyright 2017-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -30,7 +30,6 @@
 #include "fpgaworker.hpp"
 #include "fpgalistener.hpp"
 #include "fpgapinnedallocator.hpp"
-#include "libxdma_wrapper.hpp"
 #include "libxtasks_wrapper.hpp"
 
 namespace nanos {
@@ -44,6 +43,7 @@ class FPGAPlugin : public ArchPlugin
       std::vector< FPGAListener* >   _fpgaListeners;
       FPGADeviceMap                  _fpgaDevices;
       std::string                    _executionSummary;
+      FPGACreateWDListener           _createWDListener;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -96,28 +96,17 @@ class FPGAPlugin : public ArchPlugin
          if ( FPGAConfig::isEnabled() ) {
             debug0( "FPGA Arch support required. Initializing structures..." );
 
-            //Init the DMA lib before any operation using it is performed
-            xdma_status sxd = xdmaOpen();
-            if ( sxd != XDMA_SUCCESS ) {
-               //Abort if dma library failed to initialize
-               fatal0( "Error initializing DMA library (status: " << sxd << ")." <<
-                  ( sxd == XDMA_ENOENT ? " Check if xdma device exist in the system." : "" ) <<
-                  ( sxd == XDMA_EACCES ? " Current user cannot access xdma device." : "" )
-               );
-            }
-
 #if NANOS_INSTRUMENTATION_ENABLED
             //Init the instrumentation
-            sxd = xdmaInitHWInstrumentation(); //not sure if this is really needed
-            if ( sxd != XDMA_SUCCESS ) {
+            sxt = xtasksInitHWIns(FPGAConfig::getNumInstrEvents());
+            if ( sxt != XTASKS_SUCCESS ) {
                FPGAConfig::forceDisableInstr();
-               warning0( " Error initializing the FPGA instrumentation support (status: " << sxd << ")." <<
-                  ( sxd == XDMA_ENOENT ? " Check if xdma_instr device exist in the system." : "" ) <<
-                  ( sxd == XDMA_EACCES ? " Current user cannot access xdma_instr device." : "" )
+               warning0( " Error initializing the FPGA instrumentation support (status: " << sxt << ")." <<
+                  ( sxt == XTASKS_ENOENTRY ? " Check if xdma_instr device exist in the system." : "" ) <<
+                  ( sxt == XTASKS_EFILE ? " Current user cannot access xdma_instr device." : "" )
                );
                warning0( " Disabling all events generated using the FPGA instrumentation timer." );
             }
-            xtasksInitHWIns(FPGAConfig::getNumInstrEvents());
 #endif //NANOS_INSTRUMENTATION_ENABLED
 
             //Create the FPGAPinnedAllocator and set the global shared variable that points to it
@@ -187,7 +176,7 @@ class FPGAPlugin : public ArchPlugin
        */
       void finalize() {
          if ( FPGAConfig::isEnabled() ) { //cleanup only if we have initialized
-            int status;
+            xtasks_stat sxt;
 
             // Generate the execution summary before deleting the information
             //NOTE: It will be later retrieved using the getExecutionSummary
@@ -221,27 +210,18 @@ class FPGAPlugin : public ArchPlugin
 #if NANOS_INSTRUMENTATION_ENABLED
             if ( !FPGAConfig::isInstrDisabled() ) {
                //Finalize the HW instrumentation
-               status = xdmaFiniHWInstrumentation();
-               if (status) {
-                  warning( " Error uninitializing the instrumentation support in the DMA library" <<
-                     " (status: " << status << ")" );
+               sxt = xtasksFiniHWIns();
+               if (sxt != XTASKS_SUCCESS) {
+                  warning( " Error uninitializing the instrumentation support in the xTasks library" <<
+                     " (status: " << sxt << ")" );
                }
             }
 #endif //NANOS_INSTRUMENTATION_ENABLED
 
-            /*
-             * After the plugin is unloaded, no more operations regarding the DMA
-             * library nor the FPGA device will be performed so it's time to close the dma lib
-             */
-            status = xdmaClose();
-            if ( status ) {
-               warning( "Error uninitializing xdma core library: " << status );
-            }
-
             //Finalize the xTasks library
-            xtasks_stat xst = xtasksFini();
-            if ( xst != XTASKS_SUCCESS ) {
-               warning( "Error uninitializing xTasks library, returned status: " << status );
+            sxt = xtasksFini();
+            if ( sxt != XTASKS_SUCCESS ) {
+               warning( "Error uninitializing xTasks library, returned status: " << sxt );
             }
          }
       }
@@ -308,6 +288,7 @@ class FPGAPlugin : public ArchPlugin
             //When the parent thread enters in a team, all sub-threads also enter the team
             workers.insert( std::make_pair( fpgaHelper->getId(), fpgaHelper ) );
          }
+         sys.getEventDispatcher().addListenerAtIdle( _createWDListener );
       }
 
       virtual ProcessingElement * createPE( unsigned id , unsigned uid ) {

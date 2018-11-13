@@ -3,34 +3,39 @@
 
 #include "simpleallocator_decl.hpp"
 
-#include "libxdma_wrapper.hpp"
+#include "libxtasks_wrapper.hpp"
 
 namespace nanos {
 namespace ext {
 
-
    class FPGAPinnedAllocator : public SimpleAllocator
    {
       private:
-         xdma_buf_handle   _xdmaHandle;   //!< Memory chunk handler for xdma library
+         xtasks_mem_handle   _handle;   //!< Memory chunk handler for xTasks library
 
       public:
          FPGAPinnedAllocator( size_t size );
          ~FPGAPinnedAllocator();
 
-         /* \brief Returns the XDMA library buffer handle for the memory region that is being managed
+         /* \brief Returns the xTasks library handle for the memory region that is being managed
           */
-         xdma_buf_handle getBufferHandle();
-
-         /* \brief Returns the physical address of the memory region that is being managed
-          */
-         uint64_t getBaseAddressPhy() const;
+         xtasks_mem_handle getBufferHandle();
    };
 
    //! \brief Pointer to the fpgaAllocator instance
    extern FPGAPinnedAllocator    *fpgaAllocator;
 
+   /*! \brief Copies data from the user memory to the FPGA device memory
+    *         fpgaAllocator[offset .. offset+len] = ptr[0 .. len]
+    */
+   void fpgaCopyDataToFPGA(xtasks_mem_handle handle, size_t offset, size_t len, void *ptr);
+
+   /*! \brief Copies data from the FPGA device memory to the user memory
+    *         ptr[offset .. offset+len] = fpgaAllocator[0 .. len]
+    */
+   void fpgaCopyDataFromFPGA(xtasks_mem_handle handle, size_t offset, size_t len, void *ptr);
+
 } // namespace ext
 } // namespace nanos
 
-#endif //_NANOS_PINNED_ALLOCATOR
+#endif //_NANOS_FPGA_PINNED_ALLOCATOR

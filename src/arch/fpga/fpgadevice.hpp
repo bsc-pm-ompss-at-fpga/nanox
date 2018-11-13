@@ -44,11 +44,6 @@ namespace ext {
    class FPGADevice : private FPGADeviceName, public Device
    {
       private:
-         /*!
-          * Copy memory from src to dst where one of them can be a pinned FPGA memory region
-          */
-         static void copyData( void* dst, void* src, size_t len );
-
          FPGADeviceType const    _fpgaType; ///< Type information
 
       public:
