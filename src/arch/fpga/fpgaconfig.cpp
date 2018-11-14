@@ -50,7 +50,7 @@ std::size_t FPGAConfig::_allocatorPoolSize = 64*1024*1024; //Def. 64MB
 std::size_t FPGAConfig::_allocAlign = 16;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    bool FPGAConfig::_disableInst = false;
-   size_t FPGAConfig::_numEvents;
+   size_t FPGAConfig::_numEvents = 4096/24; //Number of events that fit in a page
 #endif //NANOS_INSTRUMENTATION_ENABLED
 
 void FPGAConfig::prepare( Config &config )
