@@ -30,11 +30,11 @@ extern "C" {
 
     typedef struct {
         void (*outline) (void *);
-        int acc_num;
+        unsigned int acc_num;
     } nanos_fpga_args_t;
 
     typedef struct {
-        int acc_num;
+        unsigned int acc_num;
         bool check_free;
         bool lock_pe;
     } nanos_find_fpga_args_t;
