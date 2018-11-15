@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -113,7 +112,7 @@ void FPGAConfig::prepare( Config &config )
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    config.registerConfigOption( "fpga_max_instr_events", NEW Config::SizeVar( _numEvents ),
-         "Maximum number of events to be saved from a FPGA task");
+         "Maximum number of events to be saved from a FPGA task (def: 170)");
    config.registerEnvOption( "fpga_max_instr_events", "FPGA_MAX_INSTR_EVENTS" );
    config.registerArgOption( "fpga_max_instr_events", "fpga-max-instr-events" );
 #endif //NANOS_INSTRUMENTATION_ENABLED
