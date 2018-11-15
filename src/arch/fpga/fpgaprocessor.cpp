@@ -25,6 +25,7 @@
 #include "fpgaworker.hpp"
 #include "fpgaprocessorinfo.hpp"
 #include "instrumentationmodule_decl.hpp"
+#include "instrumentation.hpp"
 #include "smpprocessor.hpp"
 #include "fpgapinnedallocator.hpp"
 #include "fpgainstrumentation.hpp"
@@ -91,9 +92,15 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
 
 void FPGAProcessor::createTask( WD &wd, WD *parentWd ) {
    xtasks_stat status;
-   xtasks_task_handle task;
+   xtasks_task_handle task, parentTask = NULL;
 
-   status = xtasksCreateTask( (uintptr_t)&wd, _fpgaProcessorInfo.getHandle(), XTASKS_COMPUTE_ENABLE, &task );
+   if ( parentWd != NULL ) {
+      FPGADD &dd = ( FPGADD & )( parentWd->getActiveDevice() );
+      parentTask = ( xtasks_task_handle )( dd.getHandle() );
+   }
+
+   status = xtasksCreateTask( ( uintptr_t )( &wd ), _fpgaProcessorInfo.getHandle(), parentTask,
+      XTASKS_COMPUTE_ENABLE, &task );
    if ( status != XTASKS_SUCCESS ) {
       //TODO: If status == XTASKS_ENOMEM, block and wait untill mem is available
       fatal( "Cannot initialize FPGA task info (accId: " <<
@@ -109,7 +116,7 @@ void FPGAProcessor::setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutp
    xtasks_task_handle task;
 
    FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
-   task = (xtasks_task_handle)dd.getHandle();
+   task = ( xtasks_task_handle )( dd.getHandle() );
 
    xtasks_arg_flags argFlags = XTASKS_ARG_FLAG_GLOBAL;
    argFlags |= XTASKS_ARG_FLAG_COPY_IN & -( isInput );
@@ -122,13 +129,13 @@ void FPGAProcessor::setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutp
 }
 
 void FPGAProcessor::submitTask( WD &wd ) {
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
+
    //xtasks_stat status;
    xtasks_task_handle task;
 
    FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
-   task = ( xtasks_task_handle )dd.getHandle();
-
-   NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
+   task = ( xtasks_task_handle )( dd.getHandle() );
 
    if ( xtasksSubmitTask( task ) != XTASKS_SUCCESS ) {
       //TODO: If error is XTASKS_ENOMEM we can retry after a while
@@ -142,19 +149,39 @@ void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task 
    if ( FPGAConfig::isInstrDisabled() ) return;
 
    static Instrumentation * ins     = sys.getInstrumentation();
-   static nanos_event_key_t inKey   = ins->getInstrumentationDictionary()->getEventKey( "device-copy-in" );
-   static nanos_event_key_t execKey = ins->getInstrumentationDictionary()->getEventKey( "device-task-execution" );
-   static nanos_event_key_t outKey  = ins->getInstrumentationDictionary()->getEventKey( "device-copy-out" );
-   nanos_event_value_t val = ( nanos_event_value_t )( wd->getId() );
+   size_t maxEvents = FPGAConfig::getNumInstrEvents();
+   xtasks_ins_event *events = NEW xtasks_ins_event[maxEvents];
+   Instrumentation::DeviceEvent *deviceEvents = NEW Instrumentation::DeviceEvent[maxEvents];
 
-   //Get the counters
-   xtasks_ins_times * counters;
-   xtasksGetInstrumentData( task, &counters );
+   xtasksGetInstrumentData( task, events, maxEvents );
 
-   //Raise the events
-   ins->raiseDeviceBurstEvent( _devInstr, inKey,   val, counters->start,       counters->inTransfer  );
-   ins->raiseDeviceBurstEvent( _devInstr, execKey, val, counters->inTransfer,  counters->computation );
-   ins->raiseDeviceBurstEvent( _devInstr, outKey,  val, counters->computation, counters->outTransfer );
+   unsigned int readEv;
+   for ( readEv = 0;
+           readEv < maxEvents && events[readEv].eventType != XTASKS_EVENT_TYPE_LAST;
+           readEv++ )
+   {
+      //Emit extrae events
+      xtasks_ins_event &event = events[readEv];
+      switch ( event.eventType ) {
+         case XTASKS_EVENT_TYPE_BURST_OPEN:
+            ins->createDeviceBurstEvent( &deviceEvents[readEv],
+                  event.eventId, event.value, event.timestamp );
+            break;
+         case XTASKS_EVENT_TYPE_BURST_CLOSE:
+            ins->closeDeviceBurstEvent( &deviceEvents[readEv],
+                  event.eventId, event.value, event.timestamp );
+            break;
+         case XTASKS_EVENT_TYPE_POINT:
+            ins->createDevicePointEvent( &deviceEvents[readEv],
+                  event.eventId, event.value, event.timestamp );
+            break;
+         default:
+            warning("Ignoring unknown fpga event type");
+      }
+   }
+   ins->addDeviceEventList( _devInstr, readEv, deviceEvents );
+   delete[] events;
+   delete[] deviceEvents;
 }
 #endif
 

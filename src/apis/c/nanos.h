@@ -132,6 +132,8 @@
  *   - 7: Including int nanos_omp_get_num_threads_next_parallel ( int threads_requested )
  * - nanos interface family: instrumentation_api
  *   - 1000: Instrumentation API interface family created
+ *   - 1001: Add cuda instrumentation API calls
+ *   - 1002: Add burst creation using event/value id and raise point API call
  *
  */
 
@@ -349,6 +351,8 @@ NANOS_API_DECL(void, nanos_handle_error, ( nanos_err_t err ));
 
 /* instrumentation interface */
 NANOS_API_DECL(nanos_err_t, nanos_instrument_register_key, ( nanos_event_key_t *event_key, const char *key, const char *description, bool abort_when_registered ));
+NANOS_API_DECL(nanos_err_t, nanos_instrument_register_key_with_key, ( nanos_event_key_t event_key, const char *key, const char *description, bool abort_when_registered ) );
+
 NANOS_API_DECL(nanos_err_t, nanos_instrument_register_value, ( nanos_event_value_t *event_value, const char *key, const char *value, const char *description, bool abort_when_registered ));
 
 NANOS_API_DECL(nanos_err_t, nanos_instrument_register_value_with_val, ( nanos_event_value_t val, const char *key, const char *value, const char *description, bool abort_when_registered ));
@@ -380,6 +384,14 @@ NANOS_API_DECL(nanos_err_t, nanos_instrument_begin_burst, (nanos_string_t key, n
 NANOS_API_DECL(nanos_err_t, nanos_instrument_end_burst, (nanos_string_t key, nanos_string_t value));
 NANOS_API_DECL(nanos_err_t, nanos_instrument_begin_burst_with_val, (nanos_string_t key, nanos_string_t key_descr, nanos_event_value_t *val));
 NANOS_API_DECL(nanos_err_t, nanos_instrument_end_burst_with_val, (nanos_string_t key, nanos_event_value_t *val));
+
+NANOS_API_DECL(nanos_err_t, nanos_instrument_burst_begin,
+      (nanos_event_key_t key, nanos_event_value_t value) );
+NANOS_API_DECL(nanos_err_t, nanos_instrument_burst_end,
+      (nanos_event_key_t key, nanos_event_value_t value) );
+
+NANOS_API_DECL(nanos_err_t, nanos_instrument_point_event,
+      ( nanos_event_key_t key, nanos_event_value_t value ) );
 
 #ifdef _MF03
 NANOS_API_DECL(nanos_err_t, nanos_memcpy, (void *dest, const void *src, ptrdiff_t n));

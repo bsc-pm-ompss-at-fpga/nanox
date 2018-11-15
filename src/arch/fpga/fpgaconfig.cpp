@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -50,6 +49,7 @@ std::size_t FPGAConfig::_allocatorPoolSize = 64*1024*1024; //Def. 64MB
 std::size_t FPGAConfig::_allocAlign = 16;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    bool FPGAConfig::_disableInst = false;
+   size_t FPGAConfig::_numEvents = 4096/24; //Number of events that fit in a page
 #endif //NANOS_INSTRUMENTATION_ENABLED
 
 void FPGAConfig::prepare( Config &config )
@@ -109,6 +109,13 @@ void FPGAConfig::prepare( Config &config )
          "FPGA allocation alignment (def: 16)" );
    config.registerEnvOption( "fpga_alloc_align", "NX_FPGA_ALLOC_ALIGN" );
    config.registerArgOption( "fpga_alloc_align", "fpga-alloc-align" );
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   config.registerConfigOption( "fpga_max_instr_events", NEW Config::SizeVar( _numEvents ),
+         "Maximum number of events to be saved from a FPGA task (def: 170)");
+   config.registerEnvOption( "fpga_max_instr_events", "FPGA_MAX_INSTR_EVENTS" );
+   config.registerArgOption( "fpga_max_instr_events", "fpga-max-instr-events" );
+#endif //NANOS_INSTRUMENTATION_ENABLED
 }
 
 void FPGAConfig::apply()

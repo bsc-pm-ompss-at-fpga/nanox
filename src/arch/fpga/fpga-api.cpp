@@ -28,8 +28,7 @@ using namespace nanos;
 NANOS_API_DEF( void *, nanos_fpga_factory, ( void *args ) )
 {
    nanos_fpga_args_t *fpga = ( nanos_fpga_args_t * ) args;
-   // FIXME: acc_num have to be converted into an string
-   return ( void * ) NEW ext::FPGADD( fpga->outline, fpga->acc_num );
+   return ( void * ) NEW ext::FPGADD( fpga->outline, fpga->type );
 }
 
 NANOS_API_DEF( void *, nanos_fpga_alloc_dma_mem, ( size_t len ) )
@@ -66,7 +65,7 @@ NANOS_API_DEF( nanos_err_t, nanos_find_fpga_pe, ( void *req, nanos_pe_t * pe ) )
    for (size_t i = 0; i < nanos::ext::fpgaPEs->size(); i++) {
       nanos::ext::FPGAProcessor * fpgaPE = nanos::ext::fpgaPEs->at(i);
       nanos::ext::FPGADevice * fpgaDev = ( nanos::ext::FPGADevice * )( fpgaPE->getActiveDevice() );
-      if ( ( fpgaDev->getFPGAType() == opts->acc_num ) &&
+      if ( ( fpgaDev->getFPGAType() == opts->type ) &&
            ( !opts->check_free || !fpgaPE->isExecLockAcquired() ) &&
            ( !opts->lock_pe || fpgaPE->tryAcquireExecLock() ) )
       {

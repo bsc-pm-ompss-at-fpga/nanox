@@ -50,6 +50,15 @@ class FPGAListener : public EventListener {
       void callback( BaseThread * thread );
 };
 
+class FPGACreateWDListener : public EventListener {
+   private:
+      Atomic<int>             _count;     //!< Counter of threads in the listener instance
+   public:
+      FPGACreateWDListener();
+      ~FPGACreateWDListener();
+      void callback( BaseThread * thread );
+};
+
 FPGAListener::FPGAListener( FPGAProcessor * pe, const bool onwsPE ) : _count( 0 )
 {
    union { FPGAProcessor * p; intptr_t i; } u = { pe };
@@ -80,6 +89,12 @@ inline FPGAProcessor * FPGAListener::getFPGAProcessor()
    u.i &= ((~(intptr_t)0) << 1);
    return u.p;
 }
+
+FPGACreateWDListener::FPGACreateWDListener() : _count( 0 )
+{}
+
+FPGACreateWDListener::~FPGACreateWDListener()
+{}
 
 } /* namespace ext */
 } /* namespace nanos */

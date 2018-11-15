@@ -43,6 +43,7 @@ class FPGAPlugin : public ArchPlugin
       std::vector< FPGAListener* >   _fpgaListeners;
       FPGADeviceMap                  _fpgaDevices;
       std::string                    _executionSummary;
+      FPGACreateWDListener           _createWDListener;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -73,6 +74,8 @@ class FPGAPlugin : public ArchPlugin
          if ( sxt != XTASKS_SUCCESS ) {
             fatal0( "Error initializing xTasks library, returned status: " << sxt );
          }
+         //FIXME: initialize  adefault instrumentation anyway in order not to crash when instrumentation is not enabled
+         xtasksInitHWIns(1);
 
          //Check the number of accelerators in the system
          size_t numAccel;
@@ -95,15 +98,15 @@ class FPGAPlugin : public ArchPlugin
 
 #if NANOS_INSTRUMENTATION_ENABLED
             //Init the instrumentation
-            // sxt = xtasksInitHWIns();
-            // if ( sxt != XTASKS_SUCCESS ) {
-            //    FPGAConfig::forceDisableInstr();
-            //    warning0( " Error initializing the FPGA instrumentation support (status: " << sxt << ")." <<
-            //       ( sxd == XDMA_ENOENT ? " Check if xdma_instr device exist in the system." : "" ) <<
-            //       ( sxd == XDMA_EACCES ? " Current user cannot access xdma_instr device." : "" )
-            //    );
-            //    warning0( " Disabling all events generated using the FPGA instrumentation timer." );
-            // }
+            sxt = xtasksInitHWIns(FPGAConfig::getNumInstrEvents());
+            if ( sxt != XTASKS_SUCCESS ) {
+               FPGAConfig::forceDisableInstr();
+               warning0( " Error initializing the FPGA instrumentation support (status: " << sxt << ")." <<
+                  ( sxt == XTASKS_ENOENTRY ? " Check if xdma_instr device exist in the system." : "" ) <<
+                  ( sxt == XTASKS_EFILE ? " Current user cannot access xdma_instr device." : "" )
+               );
+               warning0( " Disabling all events generated using the FPGA instrumentation timer." );
+            }
 #endif //NANOS_INSTRUMENTATION_ENABLED
 
             //Create the FPGAPinnedAllocator and set the global shared variable that points to it
@@ -205,14 +208,14 @@ class FPGAPlugin : public ArchPlugin
             }
 
 #if NANOS_INSTRUMENTATION_ENABLED
-            // if ( !FPGAConfig::isInstrDisabled() ) {
-            //    //Finalize the HW instrumentation
-            //    sxt = xtasksFiniHWIns();
-            //    if (sxt != XTASKS_SUCCESS) {
-            //       warning( " Error uninitializing the instrumentation support in the xTasks library" <<
-            //          " (status: " << sxt << ")" );
-            //    }
-            // }
+            if ( !FPGAConfig::isInstrDisabled() ) {
+               //Finalize the HW instrumentation
+               sxt = xtasksFiniHWIns();
+               if (sxt != XTASKS_SUCCESS) {
+                  warning( " Error uninitializing the instrumentation support in the xTasks library" <<
+                     " (status: " << sxt << ")" );
+               }
+            }
 #endif //NANOS_INSTRUMENTATION_ENABLED
 
             //Finalize the xTasks library
@@ -285,6 +288,7 @@ class FPGAPlugin : public ArchPlugin
             //When the parent thread enters in a team, all sub-threads also enter the team
             workers.insert( std::make_pair( fpgaHelper->getId(), fpgaHelper ) );
          }
+         sys.getEventDispatcher().addListenerAtIdle( _createWDListener );
       }
 
       virtual ProcessingElement * createPE( unsigned id , unsigned uid ) {

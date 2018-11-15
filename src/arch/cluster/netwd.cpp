@@ -39,7 +39,7 @@ void * local_nanos_fpga_factory( void *args );
 void * local_nanos_fpga_factory( void *args )
 {
    nanos_fpga_args_t *fpga = ( nanos_fpga_args_t * ) args;
-   return ( void * )new ext::FPGADD( fpga->outline, fpga->acc_num );
+   return ( void * )new ext::FPGADD( fpga->outline, fpga->type );
 }
 #endif
 
@@ -118,7 +118,7 @@ void SerializedWDFields::setup( WD const &wd, std::size_t expectedData, unsigned
          FPGADevice const * fpga = it->second;
          if ( wdDevice == *fpga ) {
             _clusterArchId = archCode;
-            _archExtra = ( int )( fpga->getFPGAType() );
+            _archExtra = ( unsigned int )( fpga->getFPGAType() );
             break;
          }
          archCode++;
@@ -161,7 +161,7 @@ unsigned int SerializedWDFields::getArchId() const {
    return _clusterArchId;
 }
 
-int SerializedWDFields::getArchExtraInfo() const {
+unsigned int SerializedWDFields::getArchExtraInfo() const {
    return _archExtra;
 }
 
@@ -275,7 +275,7 @@ Net2WD::Net2WD( char *buffer, std::size_t buffer_size, RemoteWorkDescriptor **rw
          dev.factory = local_nanos_fpga_factory;
          //NOTE: Replace the arg option as FPGA uses its own args type
          fpga_args.outline = swd->getOutline();
-         fpga_args.acc_num = swd->getArchExtraInfo();
+         fpga_args.type = swd->getArchExtraInfo();
          dev.arg = (void *) &fpga_args;
          break;
 #else

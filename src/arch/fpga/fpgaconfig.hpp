@@ -36,6 +36,7 @@ namespace ext {
          static bool                      _forceDisableFPGA; //! Force disable all FPGA support
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          static bool                      _disableInst; //! Disable FPGA instrumentation using HW timer
+         static size_t                    _numEvents; //! Max fpga events
 #endif //NANOS_INSTRUMENTATION_ENABLED
 
          static int                       _numAccelerators; //! Number of accelerators used in the execution
@@ -91,6 +92,9 @@ namespace ext {
 
          //! \brief Set the disable instrumentation flag to true
          static void forceDisableInstr();
+
+         //! \brief Retuns number of maximum instrumentation events to be read from fpga
+         static int getNumInstrEvents() { return _numEvents; }
 #endif //NANOS_INSTRUMENTATION_ENABLED
    };
 
