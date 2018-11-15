@@ -1,6 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2010 Barcelona Supercomputing Center                               */
-/*      Copyright 2009 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -30,11 +29,11 @@ extern "C" {
 
     typedef struct {
         void (*outline) (void *);
-        unsigned int acc_num;
+        unsigned int type;
     } nanos_fpga_args_t;
 
     typedef struct {
-        unsigned int acc_num;
+        unsigned int type;
         bool check_free;
         bool lock_pe;
     } nanos_find_fpga_args_t;

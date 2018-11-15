@@ -105,7 +105,7 @@ void FPGACreateWDListener::callback( BaseThread* self )
          WD * createdWd = NULL;
          WD * parentWd = ( WD * )( ( uintptr_t )task->parentId );
          void *data = NULL;
-         nanos_fpga_args_t fpgaDeviceArgs = { .outline = &fpgaFakeOutline, .acc_num = ( int )( task->typeInfo ) };
+         nanos_fpga_args_t fpgaDeviceArgs = { .outline = &fpgaFakeOutline, .type = ( unsigned int )( task->typeInfo ) };
          nanos_device_t devicesInfo = { .factory = &nanos_fpga_factory, .arg = &fpgaDeviceArgs };
          // nanos_wd_props_t props = { .mandatory_creation = 1, .tied = 0, .clear_chunk = 0,
          //    .reserved0 = 0, .reserved1 = 0, .reserved2 = 0, .reserved3 = 0, .reserved4 = 0 };
