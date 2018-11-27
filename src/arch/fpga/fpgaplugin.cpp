@@ -74,8 +74,6 @@ class FPGAPlugin : public ArchPlugin
          if ( sxt != XTASKS_SUCCESS ) {
             fatal0( "Error initializing xTasks library, returned status: " << sxt );
          }
-         //FIXME: initialize  adefault instrumentation anyway in order not to crash when instrumentation is not enabled
-         xtasksInitHWIns(1);
 
          //Check the number of accelerators in the system
          size_t numAccel;
