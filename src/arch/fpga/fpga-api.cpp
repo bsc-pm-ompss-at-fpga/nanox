@@ -92,40 +92,40 @@ NANOS_API_DEF( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_wd_t wd, size_t arg
    return NANOS_OK;
 }
 
-NANOS_API_DEF( nanos_fpga_alloc_t, nanos_fpga_malloc, ( size_t len ) )
+NANOS_API_DEF( void *, nanos_fpga_malloc, ( size_t len ) )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_malloc" ); );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
       "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    nanos::ext::fpgaAllocator->lock();
-   nanos_fpga_alloc_t handle = ( uintptr_t )( nanos::ext::fpgaAllocator->allocate( len ) );
+   void * ptr = nanos::ext::fpgaAllocator->allocate( len );
    nanos::ext::fpgaAllocator->unlock();
-   return handle;
+   return ptr;
 }
 
-NANOS_API_DEF( void, nanos_fpga_free, ( nanos_fpga_alloc_t handle ) )
+NANOS_API_DEF( void, nanos_fpga_free, ( void * fpgaPtr ) )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_free" ); );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
       "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    nanos::ext::fpgaAllocator->lock();
-   nanos::ext::fpgaAllocator->free( ( void * )( handle ) );
+   nanos::ext::fpgaAllocator->free( fpgaPtr );
    nanos::ext::fpgaAllocator->unlock();
 }
 
-NANOS_API_DEF( void, nanos_fpga_memcpy, ( nanos_fpga_alloc_t handle, size_t offset, void * ptr, size_t len,
+NANOS_API_DEF( void, nanos_fpga_memcpy, ( void *fpgaPtr, void * hostPtr, size_t len,
    nanos_fpga_memcpy_kind_t kind ) )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_memcpy" ); );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
       "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
-   size_t realOffset = ( handle - nanos::ext::fpgaAllocator->getBaseAddress() ) + offset;
+   size_t offset = ((uintptr_t)fpgaPtr) - nanos::ext::fpgaAllocator->getBaseAddress();
    if ( kind == NANOS_COPY_HOST_TO_FPGA ) {
-      nanos::ext::fpgaCopyDataToFPGA( nanos::ext::fpgaAllocator->getBufferHandle(), realOffset, len, ptr );
+      nanos::ext::fpgaCopyDataToFPGA( nanos::ext::fpgaAllocator->getBufferHandle(), offset, len, hostPtr );
    } else if ( kind == NANOS_COPY_FPGA_TO_HOST ) {
-      nanos::ext::fpgaCopyDataFromFPGA( nanos::ext::fpgaAllocator->getBufferHandle(), realOffset, len, ptr );
+      nanos::ext::fpgaCopyDataFromFPGA( nanos::ext::fpgaAllocator->getBufferHandle(), offset, len, hostPtr );
    }
 }

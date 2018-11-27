@@ -38,8 +38,6 @@ extern "C" {
         bool lock_pe;
     } nanos_find_fpga_args_t;
 
-    typedef uint64_t nanos_fpga_alloc_t;
-
     typedef enum {
         NANOS_COPY_HOST_TO_FPGA,
         NANOS_COPY_FPGA_TO_HOST
@@ -51,9 +49,9 @@ NANOS_API_DECL( void, nanos_fpga_free_dma_mem, ( void * address ) );
 NANOS_API_DECL( nanos_err_t, nanos_find_fpga_pe, ( void *req, nanos_pe_t * pe ) );
 NANOS_API_DECL( void *, nanos_fpga_get_phy_address, ( void * address ) );
 NANOS_API_DECL( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_wd_t wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue ) );
-NANOS_API_DECL( nanos_fpga_alloc_t, nanos_fpga_malloc, ( size_t len ) );
-NANOS_API_DECL( void, nanos_fpga_free, ( nanos_fpga_alloc_t handle ) );
-NANOS_API_DECL( void, nanos_fpga_memcpy, ( nanos_fpga_alloc_t handle, size_t offset, void * ptr, size_t len, nanos_fpga_memcpy_kind_t kind ) );
+NANOS_API_DECL( void *, nanos_fpga_malloc, ( size_t len ) );
+NANOS_API_DECL( void, nanos_fpga_free, ( void * fpgaPtr ) );
+NANOS_API_DECL( void, nanos_fpga_memcpy, ( void * fpgaPtr, void * hostPtr, size_t len, nanos_fpga_memcpy_kind_t kind ) );
 
 #ifdef __cplusplus
 }
