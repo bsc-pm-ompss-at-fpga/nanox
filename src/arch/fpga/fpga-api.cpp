@@ -129,3 +129,14 @@ NANOS_API_DEF( void, nanos_fpga_memcpy, ( void *fpgaPtr, void * hostPtr, size_t 
       nanos::ext::fpgaCopyDataFromFPGA( nanos::ext::fpgaAllocator->getBufferHandle(), offset, len, hostPtr );
    }
 }
+
+NANOS_API_DEF( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type, uint16_t numArgs,
+   uint64_t * args, uint8_t * argsFlags ) )
+{
+   fatal( "The API nanos_fpga_create_wd_async can only be called from a FPGA device" );
+}
+
+NANOS_API_DEF( void, nanos_fpga_wg_wait_completion, () )
+{
+   fatal( "The API nanos_fpga_wg_wait_completion can only be called from a FPGA device" );
+}

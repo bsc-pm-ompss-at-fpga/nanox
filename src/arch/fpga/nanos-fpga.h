@@ -43,6 +43,14 @@ extern "C" {
         NANOS_COPY_FPGA_TO_HOST
     } nanos_fpga_memcpy_kind_t;
 
+    typedef enum {
+        ARGFLAG_DEP_IN   = 0x08,
+        ARGFLAG_DEP_OUT  = 0x04,
+        ARGFLAG_COPY_IN  = 0x02,
+        ARGFLAG_COPY_OUT = 0x01,
+        ARGFLAG_NONE     = 0x00
+    } nanos_fpga_argflag_t;
+
 NANOS_API_DECL( void *, nanos_fpga_factory, ( void *args ) );
 NANOS_API_DECL( void *, nanos_fpga_alloc_dma_mem, ( size_t len) );
 NANOS_API_DECL( void, nanos_fpga_free_dma_mem, ( void * address ) );
@@ -52,6 +60,8 @@ NANOS_API_DECL( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_wd_t wd, size_t ar
 NANOS_API_DECL( void *, nanos_fpga_malloc, ( size_t len ) );
 NANOS_API_DECL( void, nanos_fpga_free, ( void * fpgaPtr ) );
 NANOS_API_DECL( void, nanos_fpga_memcpy, ( void * fpgaPtr, void * hostPtr, size_t len, nanos_fpga_memcpy_kind_t kind ) );
+NANOS_API_DECL( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type, uint16_t numArgs, uint64_t * args, uint8_t * argsFlags ) );
+NANOS_API_DECL( void, nanos_fpga_wg_wait_completion, () );
 
 #ifdef __cplusplus
 }
