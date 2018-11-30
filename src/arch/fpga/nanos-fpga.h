@@ -61,7 +61,6 @@ NANOS_API_DECL( void *, nanos_fpga_malloc, ( size_t len ) );
 NANOS_API_DECL( void, nanos_fpga_free, ( void * fpgaPtr ) );
 NANOS_API_DECL( void, nanos_fpga_memcpy, ( void * fpgaPtr, void * hostPtr, size_t len, nanos_fpga_memcpy_kind_t kind ) );
 NANOS_API_DECL( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type, uint16_t numArgs, uint64_t * args, uint8_t * argsFlags ) );
-NANOS_API_DECL( void, nanos_fpga_wg_wait_completion, () );
 
 #ifdef __cplusplus
 }
