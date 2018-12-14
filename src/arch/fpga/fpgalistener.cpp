@@ -54,15 +54,25 @@ void FPGAListener::callback( BaseThread* self )
 }
 
 static void fpgaFakeOutline( void * ptr ) {
-   uint64_t * args = (uint64_t *)(ptr);
+   uint64_t * args = ( uint64_t * )( ptr );
    nanos_wd_t wd = myThread->getCurrentWD();
    //NOTE: First element is the number of following arguments
-   for (uint64_t i = 0; i < args[0]; ++i) {
+   for ( uint64_t i = 0; i < args[0]; ++i ) {
 #if NANOS_DEBUG_ENABLED
       nanos_err_t err =
 #endif
          nanos_fpga_set_task_arg(wd, i, 1/*isInput?*/, 1/*isOutput?*/, args[i + 1]);
       ensure( err == NANOS_OK, "Error setting argument in FPGA task" );
+   }
+}
+
+static void fpgaFakeTranslateArg( void * const args_ptr, void * wd_ptr ) {
+   uint64_t * args = ( uint64_t * )( args_ptr );
+   WD * wd = ( WD * )( wd_ptr );
+   //NOTE: First element is the number of following arguments
+   ensure( args[0] /*num_args*/ == wd->getNumCopies(), "fpgaFakeTranslateArg only supports tasks which arguments are all copies" );
+   for ( uint64_t i = 0; i < args[0]; ++i ) {
+      args[i + 1] = wd->_mcontrol.getAddress( i );
    }
 }
 
@@ -80,25 +90,17 @@ void FPGACreateWDListener::callback( BaseThread* self )
       unsigned int cnt = 0;
       xtasks_newtask *task = NULL;
 
-      //Info to undo the arguments translation
-      //static uintptr_t const baseAddressVirt = fpgaAllocator->getBaseAddress();
-      //static uintptr_t const baseAddressPhy = fpgaAllocator->getBaseAddressPhy();
-
       //TODO: Check if throttole policy allows the task creation
       while ( cnt++ < maxCreatedWD && xtasksTryGetNewTask( &task ) == XTASKS_SUCCESS ) {
+         //NOTE: The first elements in the arguments list is used by fpgaFakeOutline to know
+         //      the number of following arguments.
          uint64_t args[1 /*Numer of following arguments*/ + task->numArgs];
-         size_t numCopies = 0,
+         size_t numCopies = task->numCopies,
                 numDeps = 0;
 
          args[0] = task->numArgs;
          for ( size_t i = 0; i < task->numArgs; ++i ) {
-            numCopies += task->args[i].isInputCopy || task->args[i].isOutputCopy;
             numDeps += task->args[i].isInputDep || task->args[i].isOutputDep;
-
-            //Undo the translation done in FPGAProcessor::createAndSubmitTask
-            //Kernel physical address --> Kernel virtual address
-            //uintptr_t argVirt = ( uintptr_t )( task->args[i].value ) - baseAddressPhy + baseAddressVirt;
-            //args[i] = ( void * )( argVirt );
             args[i + 1] = ( uintptr_t )( task->args[i].value );
          }
 
@@ -112,7 +114,7 @@ void FPGACreateWDListener::callback( BaseThread* self )
          // nanos_wd_dyn_props_t dynProps = { .tie_to = 0, .priority = 0, .flags = { .is_final = 0, .is_implicit = 0, .is_recover = 0 } };
          nanos_copy_data_t *copies = NULL;
          nanos_region_dimension_internal_t *copiesDimensions = NULL;
-         nanos_translate_args_t translator = NULL; //TODO: Obtain this field
+         nanos_translate_args_t translator = numCopies > 0 ? &fpgaFakeTranslateArg : NULL; //TODO: Obtain this field
          nanos_data_access_internal_t dependences[numDeps];
          nanos_region_dimension_t depsDimensions[numDeps]; //< 1 dimension per dependence
          ensure( translator != NULL || numCopies == 0, " If the WD has copies, the translate_args cannot be NULL" );
@@ -125,28 +127,14 @@ void FPGACreateWDListener::callback( BaseThread* self )
          //Set the WD input data
          memcpy(data, &args[0], (1/*args count*/ + task->numArgs)*sizeof(void *));
 
-         //Set the copies and dependencies information
-         for ( size_t aIdx = 0, cIdx = 0, dIdx = 0; aIdx < task->numArgs; ++aIdx ) {
-            if (task->args[aIdx].isInputCopy || task->args[aIdx].isOutputCopy) {
-               copiesDimensions[cIdx].size = 0; //TODO: Obtain this field
-               copiesDimensions[cIdx].lower_bound = 0;
-               copiesDimensions[cIdx].accessed_length = 0; //TODO: Obtain this field
-
-               copies[cIdx].sharing = NANOS_SHARED;
-               copies[cIdx].address = task->args[aIdx].value;
-               copies[cIdx].flags.input = task->args[aIdx].isInputCopy;
-               copies[cIdx].flags.output = task->args[aIdx].isOutputCopy;
-               copies[cIdx].dimension_count = 1;
-               copies[cIdx].dimensions = &copiesDimensions[cIdx];
-               copies[cIdx].offset = 0;
-               ++cIdx;
-            }
+         //Set the dependencies information
+         for ( size_t aIdx = 0, dIdx = 0; aIdx < task->numArgs; ++aIdx ) {
             if (task->args[aIdx].isInputDep || task->args[aIdx].isOutputDep) {
                depsDimensions[dIdx].size = 0; //TODO: Obtain this field
                depsDimensions[dIdx].lower_bound = 0;
                depsDimensions[dIdx].accessed_length = 0; //TODO: Obtain this field
 
-               dependences[dIdx].address = task->args[aIdx].value;
+               dependences[dIdx].address = ( void * )( ( uintptr_t )( task->args[aIdx].value ) );
                dependences[dIdx].offset = 0;
                dependences[dIdx].dimensions = &depsDimensions[dIdx];
                dependences[dIdx].flags.input = task->args[aIdx].isInputDep;
@@ -157,6 +145,22 @@ void FPGACreateWDListener::callback( BaseThread* self )
                dependences[dIdx].dimension_count = 1;
                ++dIdx;
             }
+         }
+
+         //Set the copies information
+         for ( size_t cIdx = 0; cIdx < task->numCopies; ++cIdx ) {
+            copiesDimensions[cIdx].size = task->copies[cIdx].size;
+            copiesDimensions[cIdx].lower_bound = task->copies[cIdx].offset;
+            copiesDimensions[cIdx].accessed_length = task->copies[cIdx].accessedLen;
+
+            copies[cIdx].sharing = NANOS_SHARED;
+            copies[cIdx].address = task->copies[cIdx].address;
+            copies[cIdx].flags.input = task->copies[cIdx].isInputCopy;
+            copies[cIdx].flags.output = task->copies[cIdx].isOutputCopy;
+            ensure( copies[cIdx].flags.input || copies[cIdx].flags.output, "Creating a copy which is not input nor output" );
+            copies[cIdx].dimension_count = 1;
+            copies[cIdx].dimensions = &copiesDimensions[cIdx];
+            copies[cIdx].offset = 0;
          }
 
          sys.setupWD( *createdWd, parentWd );
