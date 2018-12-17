@@ -59,11 +59,10 @@ extern "C" {
         uint32_t accessed_length;
     } nanos_fpga_copyinfo_t;
 
-    typedef enum {
-        NANOS_FPGA_ARCH_UNKNOWN = 0x000000,
-        NANOS_FPGA_ARCH_SMP     = 0x800000,
-        NANOS_FPGA_ARCH_FPGA    = 0x400000
-    } nanos_fpga_arch_t;
+    enum {
+       NANOS_FPGA_ARCH_SMP  = 0x800000,
+       NANOS_FPGA_ARCH_FPGA = 0x400000
+    };
 
 NANOS_API_DECL( void *, nanos_fpga_factory, ( void *args ) );
 NANOS_API_DECL( void *, nanos_fpga_alloc_dma_mem, ( size_t len) );
@@ -74,7 +73,7 @@ NANOS_API_DECL( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_wd_t wd, size_t ar
 NANOS_API_DECL( void *, nanos_fpga_malloc, ( size_t len ) );
 NANOS_API_DECL( void, nanos_fpga_free, ( void * fpgaPtr ) );
 NANOS_API_DECL( void, nanos_fpga_memcpy, ( void * fpgaPtr, void * hostPtr, size_t len, nanos_fpga_memcpy_kind_t kind ) );
-NANOS_API_DECL( void, nanos_fpga_create_wd_async, ( nanos_fpga_arch_t archMask, uint64_t type, uint16_t numArgs, uint64_t * args, \
+NANOS_API_DECL( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type, uint16_t numArgs, uint64_t * args, \
   uint8_t * argsFlags, uint16_t numCopies, nanos_fpga_copyinfo_t * copies ) );
 
 #ifdef __cplusplus
