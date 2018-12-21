@@ -143,9 +143,9 @@ NANOS_API_DEF( nanos_err_t, nanos_fpga_register_wd_info, ( uint64_t type, size_t
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_register_wd_info" ) );
 
    if ( nanos::ext::FPGACreateWDListener::_registeredTasks->count(type) == 0 ) {
+      verbose( "Registering WD info: " << type << " with " << num_devices << " devices." );
       ( *nanos::ext::FPGACreateWDListener::_registeredTasks )[type] =
          new nanos::ext::FPGACreateWDListener::FPGARegisteredTask( num_devices, devices, translate );
-      std::cout << "Registering task: " << type << " with " << num_devices << " devices." << std::endl;
       return NANOS_OK;
    }
 
