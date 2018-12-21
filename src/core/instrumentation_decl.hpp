@@ -460,6 +460,7 @@ namespace nanos {
             registerEventValue("api","nanos_fpga_malloc","nanos_fpga_malloc()");
             registerEventValue("api","nanos_fpga_memcpy","nanos_fpga_memcpy()");
             registerEventValue("api","nanos_fpga_free","nanos_fpga_free()");
+            registerEventValue("api","nanos_fpga_register_wd_info","nanos_fpga_register_wd_info()");
 
             /* 02 */ registerEventKey("wd-id","Work Descriptor id:", true, EVENT_DEVELOPER, true);
 
@@ -720,7 +721,7 @@ namespace nanos {
           */
          nanos_event_key_t registerEventKey ( const char *key, const char *description="", bool abort_when_registered=true, nanos_event_level_t level=EVENT_ENABLED, bool stacked=false );
 
-         
+
          /*! \brief Inserts an event with a given event ID into the keymap
           */
          inline nanos_event_key_t registerEventKey (

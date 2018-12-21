@@ -21,6 +21,9 @@
 #include "fpgaprocessor.hpp"
 #include "fpgaconfig.hpp"
 #include "fpgaworker.hpp"
+#include "compatibility.hpp"
+
+#include "nanos-fpga.h"
 
 namespace nanos {
 namespace ext {
@@ -51,6 +54,39 @@ class FPGAListener : public EventListener {
 };
 
 class FPGACreateWDListener : public EventListener {
+   public:
+      typedef struct FPGARegisteredTask {
+         size_t                 numDevices;
+         nanos_device_t *       devices;
+         nanos_translate_args_t translate;
+
+         FPGARegisteredTask(size_t _numDevices, nanos_device_t * _devices, nanos_translate_args_t _translate) {
+            this->translate = _translate;
+            this->numDevices = _numDevices;
+
+            //NOTE: Using nanos_fpga_args_t as it is the largest device argument struct
+            size_t allocSize = sizeof( nanos_device_t )*this->numDevices + sizeof( nanos_fpga_args_t )*this->numDevices;
+            this->devices = ( nanos_device_t * )( malloc( allocSize ) );
+            ensure( this->devices != NULL, "Cannot allocate memory for FPGARegisteredTask structure" );
+            std::memcpy( this->devices, _devices, sizeof(nanos_device_t)*this->numDevices );
+
+            //Update the argument pointer of each device
+            nanos_fpga_args_t *args = ( nanos_fpga_args_t * )( this->devices + this->numDevices );
+            for ( size_t i = 0; i < this->numDevices; ++i ) {
+               this->devices[i].arg = ( void * )( args + i );
+               std::memcpy( this->devices[i].arg, _devices[i].arg, sizeof( nanos_fpga_args_t ) );
+            }
+         }
+
+         ~FPGARegisteredTask() {
+            free( this->devices );
+         }
+      } FPGARegisteredTask;
+
+      typedef TR1::unordered_map<uint64_t, FPGARegisteredTask *> FPGARegisteredTasksMap;
+
+      static FPGARegisteredTasksMap *_registeredTasks;
+
    private:
       Atomic<int>             _count;     //!< Counter of threads in the listener instance
    public:

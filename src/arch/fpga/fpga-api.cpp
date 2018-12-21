@@ -21,6 +21,7 @@
 #include "fpgadd.hpp"
 #include "fpgapinnedallocator.hpp"
 #include "fpgaprocessor.hpp"
+#include "fpgalistener.hpp"
 #include "simpleallocator.hpp"
 
 using namespace nanos;
@@ -134,4 +135,19 @@ NANOS_API_DEF( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t t
    uint64_t * args, uint8_t * argsFlags, uint16_t numCopies, nanos_fpga_copyinfo_t * copies ) )
 {
    fatal( "The API nanos_fpga_create_wd_async can only be called from a FPGA device" );
+}
+
+NANOS_API_DEF( nanos_err_t, nanos_fpga_register_wd_info, ( uint64_t type, size_t num_devices,
+  nanos_device_t * devices, nanos_translate_args_t translate ) )
+{
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_register_wd_info" ) );
+
+   if ( nanos::ext::FPGACreateWDListener::_registeredTasks->count(type) == 0 ) {
+      ( *nanos::ext::FPGACreateWDListener::_registeredTasks )[type] =
+         new nanos::ext::FPGACreateWDListener::FPGARegisteredTask( num_devices, devices, translate );
+      std::cout << "Registering task: " << type << " with " << num_devices << " devices." << std::endl;
+      return NANOS_OK;
+   }
+
+   return NANOS_INVALID_REQUEST;
 }

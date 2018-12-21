@@ -26,6 +26,8 @@
 using namespace nanos;
 using namespace ext;
 
+FPGACreateWDListener::FPGARegisteredTasksMap * FPGACreateWDListener::_registeredTasks = NULL;
+
 void FPGAListener::callback( BaseThread* self )
 {
    static int maxThreads = FPGAConfig::getMaxThreadsIdleCallback();
@@ -53,29 +55,6 @@ void FPGAListener::callback( BaseThread* self )
    --_count;
 }
 
-static void fpgaFakeOutline( void * ptr ) {
-   uint64_t * args = ( uint64_t * )( ptr );
-   nanos_wd_t wd = myThread->getCurrentWD();
-   //NOTE: First element is the number of following arguments
-   for ( uint64_t i = 0; i < args[0]; ++i ) {
-#if NANOS_DEBUG_ENABLED
-      nanos_err_t err =
-#endif
-         nanos_fpga_set_task_arg(wd, i, 1/*isInput?*/, 1/*isOutput?*/, args[i + 1]);
-      ensure( err == NANOS_OK, "Error setting argument in FPGA task" );
-   }
-}
-
-static void fpgaFakeTranslateArg( void * const args_ptr, void * wd_ptr ) {
-   uint64_t * args = ( uint64_t * )( args_ptr );
-   WD * wd = ( WD * )( wd_ptr );
-   //NOTE: First element is the number of following arguments
-   ensure( args[0] /*num_args*/ == wd->getNumCopies(), "fpgaFakeTranslateArg only supports tasks which arguments are all copies" );
-   for ( uint64_t i = 0; i < args[0]; ++i ) {
-      args[i + 1] = wd->_mcontrol.getAddress( i );
-   }
-}
-
 void FPGACreateWDListener::callback( BaseThread* self )
 {
    static int maxThreads = 1; //NOTE: The task creation order for the same accelerator must be ensured
@@ -92,40 +71,38 @@ void FPGACreateWDListener::callback( BaseThread* self )
 
       //TODO: Check if throttole policy allows the task creation
       while ( cnt++ < maxCreatedWD && xtasksTryGetNewTask( &task ) == XTASKS_SUCCESS ) {
-         //NOTE: The first elements in the arguments list is used by fpgaFakeOutline to know
-         //      the number of following arguments.
-         uint64_t args[1 /*Numer of following arguments*/ + task->numArgs];
+         uint64_t args[task->numArgs];
          size_t numCopies = task->numCopies,
                 numDeps = 0;
 
-         args[0] = task->numArgs;
          for ( size_t i = 0; i < task->numArgs; ++i ) {
             numDeps += task->args[i].isInputDep || task->args[i].isOutputDep;
-            args[i + 1] = ( uintptr_t )( task->args[i].value );
+            args[i] = ( uintptr_t )( task->args[i].value );
          }
 
          WD * createdWd = NULL;
          WD * parentWd = ( WD * )( ( uintptr_t )task->parentId );
-         void *data = NULL;
-         nanos_fpga_args_t fpgaDeviceArgs = { .outline = &fpgaFakeOutline, .type = ( unsigned int )( task->typeInfo ) };
-         nanos_device_t devicesInfo = { .factory = &nanos_fpga_factory, .arg = &fpgaDeviceArgs };
+         void * data = NULL;
+         FPGARegisteredTasksMap::const_iterator infoIt = _registeredTasks->find( task->typeInfo );
+         ensure( infoIt != _registeredTasks->end(), " FPGA device trying to create an unregistered task" );
+         FPGARegisteredTask * info = infoIt->second;
          // nanos_wd_props_t props = { .mandatory_creation = 1, .tied = 0, .clear_chunk = 0,
          //    .reserved0 = 0, .reserved1 = 0, .reserved2 = 0, .reserved3 = 0, .reserved4 = 0 };
          // nanos_wd_dyn_props_t dynProps = { .tie_to = 0, .priority = 0, .flags = { .is_final = 0, .is_implicit = 0, .is_recover = 0 } };
          nanos_copy_data_t *copies = NULL;
          nanos_region_dimension_internal_t *copiesDimensions = NULL;
-         nanos_translate_args_t translator = numCopies > 0 ? &fpgaFakeTranslateArg : NULL; //TODO: Obtain this field
+         nanos_translate_args_t translator = info->translate;
          nanos_data_access_internal_t dependences[numDeps];
          nanos_region_dimension_t depsDimensions[numDeps]; //< 1 dimension per dependence
          ensure( translator != NULL || numCopies == 0, " If the WD has copies, the translate_args cannot be NULL" );
-         sys.createWD( &createdWd, 1 /*num_devices*/, &devicesInfo, (1/*args count*/ + task->numArgs)*sizeof(void *), __alignof__(void *), &data,
+         sys.createWD( &createdWd, info->numDevices, info->devices, task->numArgs*sizeof(void *), __alignof__(void *), &data,
             parentWd, NULL /*props*/, NULL /*dyn_props*/, numCopies, numCopies > 0 ? &copies : NULL /*copies*/,
             numCopies /*1 dimension per copy*/, numCopies > 0 ? &copiesDimensions: NULL /*dimensions*/,
             translator, NULL /*description*/, NULL /*slicer*/ );
          ensure( createdWd != NULL, " Cannot create a WD in FPGACreateWDListener" );
 
          //Set the WD input data
-         memcpy(data, &args[0], (1/*args count*/ + task->numArgs)*sizeof(void *));
+         memcpy( data, &args[0], task->numArgs*sizeof( void * ) );
 
          //Set the dependencies information
          for ( size_t aIdx = 0, dIdx = 0; aIdx < task->numArgs; ++aIdx ) {

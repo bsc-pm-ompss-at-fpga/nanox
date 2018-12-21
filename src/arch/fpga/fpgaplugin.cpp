@@ -44,6 +44,7 @@ class FPGAPlugin : public ArchPlugin
       FPGADeviceMap                  _fpgaDevices;
       std::string                    _executionSummary;
       FPGACreateWDListener           _createWDListener;
+      FPGACreateWDListener::FPGARegisteredTasksMap _registeredTasks;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -62,6 +63,7 @@ class FPGAPlugin : public ArchPlugin
          //Forward these initializations as they have to be done regardless fpga support is enabled.
          FPGADD::init( &_fpgaDevices );
          fpgaPEs = NEW std::vector< FPGAProcessor * >();
+         FPGACreateWDListener::_registeredTasks = &_registeredTasks;
 
          //Check if the plugin has to be initialized
          if ( FPGAConfig::isDisabled() ) {
