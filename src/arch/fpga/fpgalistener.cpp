@@ -76,7 +76,7 @@ void FPGACreateWDListener::callback( BaseThread* self )
                 numDeps = 0;
 
          for ( size_t i = 0; i < task->numArgs; ++i ) {
-            numDeps += task->args[i].isInputDep || task->args[i].isOutputDep;
+            numDeps += ( task->args[i].flags != NANOS_ARGFLAG_NONE );
             args[i] = ( uintptr_t )( task->args[i].value );
          }
 
@@ -106,7 +106,7 @@ void FPGACreateWDListener::callback( BaseThread* self )
 
          //Set the dependencies information
          for ( size_t aIdx = 0, dIdx = 0; aIdx < task->numArgs; ++aIdx ) {
-            if (task->args[aIdx].isInputDep || task->args[aIdx].isOutputDep) {
+            if ( task->args[aIdx].flags != NANOS_ARGFLAG_NONE ) {
                depsDimensions[dIdx].size = 0; //TODO: Obtain this field
                depsDimensions[dIdx].lower_bound = 0;
                depsDimensions[dIdx].accessed_length = 0; //TODO: Obtain this field
@@ -114,8 +114,8 @@ void FPGACreateWDListener::callback( BaseThread* self )
                dependences[dIdx].address = ( void * )( ( uintptr_t )( task->args[aIdx].value ) );
                dependences[dIdx].offset = 0;
                dependences[dIdx].dimensions = &depsDimensions[dIdx];
-               dependences[dIdx].flags.input = task->args[aIdx].isInputDep;
-               dependences[dIdx].flags.output = task->args[aIdx].isOutputDep;
+               dependences[dIdx].flags.input = task->args[aIdx].flags & NANOS_ARGFLAG_DEP_IN;
+               dependences[dIdx].flags.output = task->args[aIdx].flags & NANOS_ARGFLAG_DEP_OUT;
                dependences[dIdx].flags.can_rename = 0;
                dependences[dIdx].flags.concurrent = 0;
                dependences[dIdx].flags.commutative = 0;
@@ -132,9 +132,9 @@ void FPGACreateWDListener::callback( BaseThread* self )
 
             copies[cIdx].sharing = NANOS_SHARED;
             copies[cIdx].address = task->copies[cIdx].address;
-            copies[cIdx].flags.input = task->copies[cIdx].isInputCopy;
-            copies[cIdx].flags.output = task->copies[cIdx].isOutputCopy;
-            ensure( copies[cIdx].flags.input || copies[cIdx].flags.output, "Creating a copy which is not input nor output" );
+            copies[cIdx].flags.input = task->copies[cIdx].flags & NANOS_ARGFLAG_COPY_IN;
+            copies[cIdx].flags.output = task->copies[cIdx].flags & NANOS_ARGFLAG_COPY_OUT;
+            ensure( copies[cIdx].flags.input || copies[cIdx].flags.output, " Creating a copy which is not input nor output" );
             copies[cIdx].dimension_count = 1;
             copies[cIdx].dimensions = &copiesDimensions[cIdx];
             copies[cIdx].offset = 0;
