@@ -56,6 +56,14 @@ void * FPGAPinnedAllocator::allocate( size_t size ) {
    return ret;
 }
 
+size_t FPGAPinnedAllocator::free( void *address ) {
+   size_t ret;
+   lock();
+   ret = SimpleAllocator::free( address );
+   unlock();
+   return ret;
+}
+
 xtasks_mem_handle FPGAPinnedAllocator::getBufferHandle()
 {
    return _handle;

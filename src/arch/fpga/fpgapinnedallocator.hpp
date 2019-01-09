@@ -19,6 +19,8 @@ namespace ext {
          ~FPGAPinnedAllocator();
 
          void * allocate( size_t size );
+         size_t free( void *address );
+
 
          /* \brief Returns the xTasks library handle for the memory region that is being managed
           */

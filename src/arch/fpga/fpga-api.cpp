@@ -108,9 +108,7 @@ NANOS_API_DEF( void, nanos_fpga_free, ( void * fpgaPtr ) )
 
    ensure( nanos::ext::fpgaAllocator != NULL,
       "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
-   nanos::ext::fpgaAllocator->lock();
    nanos::ext::fpgaAllocator->free( fpgaPtr );
-   nanos::ext::fpgaAllocator->unlock();
 }
 
 NANOS_API_DEF( void, nanos_fpga_memcpy, ( void *fpgaPtr, void * hostPtr, size_t len,
