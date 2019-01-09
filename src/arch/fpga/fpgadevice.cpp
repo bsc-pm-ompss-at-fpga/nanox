@@ -19,7 +19,6 @@
 #include "fpgaprocessor.hpp"
 #include "fpgaprocessorinfo.hpp"
 #include "fpgadevice.hpp"
-#include "fpgaconfig.hpp"
 #include "deviceops.hpp"
 #include "simpleallocator.hpp"
 #include "fpgapinnedallocator.hpp"
@@ -37,7 +36,7 @@ void FPGADevice::_copyIn( uint64_t devAddr, uint64_t hostAddr, std::size_t len,
    reg_t hostRegionId )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "cache-copy-data-in", wd->getId() ) );
-   FPGAPinnedAllocator *allocator = (FPGAPinnedAllocator *) mem.getSpecificData();
+   FPGAPinnedAllocator *allocator = ( FPGAPinnedAllocator * )( mem.getSpecificData() );
    //NOTE: Copies are synchronous so we don't need to register them in the DeviceOps
    size_t offset = devAddr - allocator->getBaseAddress();
    fpgaCopyDataToFPGA( allocator->getBufferHandle(), offset, len, (void *)hostAddr );
@@ -48,7 +47,7 @@ void FPGADevice::_copyOut( uint64_t hostAddr, uint64_t devAddr, std::size_t len,
    WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "cache-copy-data-out", wd->getId() ) );
-   FPGAPinnedAllocator *allocator = (FPGAPinnedAllocator *) mem.getSpecificData();
+   FPGAPinnedAllocator *allocator = ( FPGAPinnedAllocator * )( mem.getSpecificData() );
    //NOTE: Copies are synchronous so we don't need to register them in the DeviceOps
    size_t offset = devAddr - allocator->getBaseAddress();
    fpgaCopyDataFromFPGA( allocator->getBufferHandle(), offset, len, (void *)hostAddr );
@@ -58,7 +57,7 @@ bool FPGADevice::_copyDevToDev( uint64_t devDestAddr, uint64_t devOrigAddr, std:
    SeparateMemoryAddressSpace &memDest, SeparateMemoryAddressSpace &memorig, DeviceOps *ops,
    WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId )
 {
-   fatal("FPGADevice::_copyDevToDev not implemented yet");
+   fatal( "FPGADevice::_copyDevToDev not implemented yet" );
    return true;
 }
 
@@ -67,7 +66,7 @@ void FPGADevice::_copyInStrided1D( uint64_t devAddr, uint64_t hostAddr, std::siz
    DeviceOps *ops, WorkDescriptor const *wd, void *hostObject, reg_t hostRegionId )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "cache-copy-data-in", wd->getId() ) );
-   fatal("FPGADevice::_copyInStrided1D not implemented yet");
+   fatal( "FPGADevice::_copyInStrided1D not implemented yet" );
    for ( std::size_t count = 0; count < numChunks; count += 1) {
       //copyData( ((char *) devAddr) + count * ld, ((char *) hostAddr) + count * ld, len );
    }
@@ -78,7 +77,7 @@ void FPGADevice::_copyOutStrided1D( uint64_t hostAddr, uint64_t devAddr, std::si
    DeviceOps *ops, WD const *wd, void *hostObject, reg_t hostRegionId )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "cache-copy-data-out", wd->getId() ) );
-   fatal("FPGADevice::_copyOutStrided1D not implemented yet");
+   fatal( "FPGADevice::_copyOutStrided1D not implemented yet" );
    for ( std::size_t count = 0; count < numChunks; count += 1) {
       //copyData( ((char *) hostAddr) + count * ld, ((char *) devAddr) + count * ld, len );
    }
@@ -89,7 +88,7 @@ bool FPGADevice::_copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigA
    SeparateMemoryAddressSpace &memOrig, DeviceOps *ops, WorkDescriptor const *wd, void *hostObject,
    reg_t hostRegionId )
 {
-   fatal("FPGADevice::_copyDevToDevStrided1D not implemented yet");
+   fatal( "FPGADevice::_copyDevToDevStrided1D not implemented yet" );
    for ( std::size_t count = 0; count < numChunks; count += 1) {
       //copyData( ((char *) devDestAddr) + count * ld, ((char *) devOrigAddr) + count * ld, len );
    }
@@ -99,44 +98,35 @@ bool FPGADevice::_copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigA
 void *FPGADevice::memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem,
    WorkDescriptor const *wd, unsigned int copyIdx )
 {
-   SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
+   FPGAPinnedAllocator *allocator = ( FPGAPinnedAllocator * )( mem.getSpecificData() );
    //verbose( "FPGADevice allocate memory:\t " << size << " bytes in allocator " << allocator );
-   static const std::size_t align = FPGAConfig::getAllocAlign();
-
-   allocator->lock();
-   //Force the allocated sizes to be multiples of align
-   //This prevents allocation of unaligned chunks
-   void * ret = allocator->allocate( ( size + align - 1 ) & ( ~( align - 1 ) ) );
-   allocator->unlock();
-   return ret;
+   return allocator->allocate( size );
 }
 
 void FPGADevice::memFree( uint64_t addr, SeparateMemoryAddressSpace &mem )
 {
    void * ptr = ( void * )( addr );
-   SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
+   FPGAPinnedAllocator *allocator = ( FPGAPinnedAllocator * )( mem.getSpecificData() );
    //verbose( "FPGADevice free memory:\t " << ptr << " in allocator " << allocator );
-   allocator->lock();
    allocator->free( ptr );
-   allocator->unlock();
 }
 
 void FPGADevice::_canAllocate( SeparateMemoryAddressSpace &mem, std::size_t *sizes,
    unsigned int numChunks, std::size_t *remainingSizes )
 {
-   SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
+   SimpleAllocator *allocator = ( SimpleAllocator * )( mem.getSpecificData() );
    allocator->canAllocate( sizes, numChunks, remainingSizes );
 }
 
 void FPGADevice::_getFreeMemoryChunksList( SeparateMemoryAddressSpace &mem,
    SimpleAllocator::ChunkList &list )
 {
-   SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
+   SimpleAllocator *allocator = ( SimpleAllocator * )( mem.getSpecificData() );
    allocator->getFreeChunksList( list );
 }
 
 std::size_t FPGADevice::getMemCapacity( SeparateMemoryAddressSpace &mem )
 {
-   SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
+   SimpleAllocator *allocator = ( SimpleAllocator * )( mem.getSpecificData() );
    return allocator->getCapacity();
 }
