@@ -19,7 +19,6 @@
 #include "fpgaprocessor.hpp"
 #include "fpgaprocessorinfo.hpp"
 #include "fpgadevice.hpp"
-#include "fpgaconfig.hpp"
 #include "deviceops.hpp"
 #include "simpleallocator.hpp"
 #include "fpgapinnedallocator.hpp"
@@ -99,16 +98,9 @@ bool FPGADevice::_copyDevToDevStrided1D( uint64_t devDestAddr, uint64_t devOrigA
 void *FPGADevice::memAllocate( std::size_t size, SeparateMemoryAddressSpace &mem,
    WorkDescriptor const *wd, unsigned int copyIdx )
 {
-   SimpleAllocator *allocator = (SimpleAllocator *) mem.getSpecificData();
+   FPGAPinnedAllocator *allocator = (FPGAPinnedAllocator *) mem.getSpecificData();
    //verbose( "FPGADevice allocate memory:\t " << size << " bytes in allocator " << allocator );
-   static const std::size_t align = FPGAConfig::getAllocAlign();
-
-   allocator->lock();
-   //Force the allocated sizes to be multiples of align
-   //This prevents allocation of unaligned chunks
-   void * ret = allocator->allocate( ( size + align - 1 ) & ( ~( align - 1 ) ) );
-   allocator->unlock();
-   return ret;
+    return allocator->allocate( size );
 }
 
 void FPGADevice::memFree( uint64_t addr, SeparateMemoryAddressSpace &mem )

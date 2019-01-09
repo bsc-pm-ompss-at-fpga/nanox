@@ -45,6 +45,17 @@ FPGAPinnedAllocator::~FPGAPinnedAllocator()
    xtasksFree( _handle );
 }
 
+void * FPGAPinnedAllocator::allocate( size_t size ) {
+   static const std::size_t align = FPGAConfig::getAllocAlign();
+
+   lock();
+   //Force the allocated sizes to be multiples of align
+   //This prevents allocation of unaligned chunks
+   void * ret = SimpleAllocator::allocate( ( size + align - 1 ) & ( ~( align - 1 ) ) );
+   unlock();
+   return ret;
+}
+
 xtasks_mem_handle FPGAPinnedAllocator::getBufferHandle()
 {
    return _handle;

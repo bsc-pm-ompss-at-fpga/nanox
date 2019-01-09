@@ -2,6 +2,7 @@
 #define _NANOS_FPGA_PINNED_ALLOCATOR
 
 #include "simpleallocator_decl.hpp"
+#include "fpgaconfig.hpp"
 
 #include "libxtasks_wrapper.hpp"
 
@@ -16,6 +17,8 @@ namespace ext {
       public:
          FPGAPinnedAllocator( size_t size );
          ~FPGAPinnedAllocator();
+
+         void * allocate( size_t size );
 
          /* \brief Returns the xTasks library handle for the memory region that is being managed
           */
@@ -34,6 +37,8 @@ namespace ext {
     *         ptr[offset .. offset+len] = fpgaAllocator[0 .. len]
     */
    void fpgaCopyDataFromFPGA(xtasks_mem_handle handle, size_t offset, size_t len, void *ptr);
+
+
 
 } // namespace ext
 } // namespace nanos
