@@ -71,6 +71,12 @@ xtasks_mem_handle FPGAPinnedAllocator::getBufferHandle()
 
 void nanos::ext::fpgaCopyDataToFPGA(xtasks_mem_handle handle, size_t offset, size_t len, void *ptr)
 {
+#if defined(NANOS_DEBUG_ENABLED)
+   //Check that the copy is aligned
+   static const std::size_t align = FPGAConfig::getAllocAlign();
+   ensure( ( offset & ( align - 1 ) ) == 0, "Unaligned copy into FPGA memory not supported" );
+#endif //defined(NANOS_DEBUG_ENABLED)
+
    xtasks_stat stat = xtasksMemcpy( handle, offset, len, ptr, XTASKS_HOST_TO_ACC );
    if ( stat != XTASKS_SUCCESS ) {
       //NOTE: Cannot put the ensure directly, as compiler will claim about unused stat var in performance
@@ -80,6 +86,12 @@ void nanos::ext::fpgaCopyDataToFPGA(xtasks_mem_handle handle, size_t offset, siz
 
 void nanos::ext::fpgaCopyDataFromFPGA(xtasks_mem_handle handle, size_t offset, size_t len, void *ptr)
 {
+#if defined(NANOS_DEBUG_ENABLED)
+   //Check that the copy is aligned
+   static const std::size_t align = FPGAConfig::getAllocAlign();
+   ensure( ( offset & ( align - 1 ) ) == 0, "Unaligned copy from FPGA memory not supported" );
+#endif //defined(NANOS_DEBUG_ENABLED)
+
    xtasks_stat stat = xtasksMemcpy( handle, offset, len, ptr, XTASKS_ACC_TO_HOST );
    if ( stat != XTASKS_SUCCESS ) {
       //NOTE: Cannot put the ensure directly, as compiler will claim about unused stat var in performance
