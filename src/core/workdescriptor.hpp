@@ -198,6 +198,8 @@ inline size_t WorkDescriptor::getDataSize () const { return _data_size; }
 
 inline size_t WorkDescriptor::getDataAlignment () const { return _data_align; }
 
+inline int WorkDescriptor::getNumComponents () const { return _components.value(); }
+
 inline void WorkDescriptor::setTotalSize ( size_t size ) { _totalSize = size; }
 
 inline WorkDescriptor * WorkDescriptor::getParent() const { return _parent!=NULL?_parent:_forcedParent ; }

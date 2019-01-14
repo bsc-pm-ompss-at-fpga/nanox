@@ -362,6 +362,14 @@ typedef std::set<const Device *>  DeviceList;
           */
          size_t getDataAlignment () const;
 
+         /*! \brief Get number of components
+          *
+          *  This function returns the number of alive children tasks in the WD context
+          *
+          *  \return number of components
+          */
+         int getNumComponents () const;
+
          WorkDescriptor * getParent() const;
 
          void forceParent ( WorkDescriptor * p );

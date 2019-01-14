@@ -80,7 +80,7 @@ WorkDescriptor & FPGAProcessor::getWorkerWD () const
 
 WD & FPGAProcessor::getMasterWD () const
 {
-   fatal("Attempting to create a FPGA master thread");
+   fatal( "Attempting to create a FPGA master thread" );
 }
 
 BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThread *parent )
@@ -176,7 +176,7 @@ void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task 
                   event.eventId, event.value, event.timestamp );
             break;
          default:
-            warning("Ignoring unknown fpga event type");
+            warning( "Ignoring unknown fpga event type" );
       }
    }
    ins->addDeviceEventList( _devInstr, readEv, deviceEvents );
@@ -249,6 +249,7 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
       xStat = xtasksTryGetFinishedTaskAccel( _fpgaProcessorInfo.getHandle(), &xHandle, &xId );
       if ( xStat == XTASKS_SUCCESS ) {
          WD * wd = (WD *)xId;
+         ensure( wd->getNumComponents() == 0, "Executing postOutlineWork for a FPGA task with alive children not supported. Should be fixed with a taskwait." );
          ret = true;
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
