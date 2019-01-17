@@ -8,9 +8,9 @@ using namespace nanos::ext;
 nanos_event_time_t FPGAInstrumentation::getDeviceTime() const {
    uint64_t time;
 #ifdef NANOS_DEBUG_ENABLED
-   ensure0( _deviceInfo != NULL, "Cannot execute FPGAInstrumentation::getDeviceTime when _deviceInfo is NULL" );
+   ensure0( _deviceInfo != NULL, " Cannot execute FPGAInstrumentation::getDeviceTime when _deviceInfo is NULL" );
    xtasks_stat stat = xtasksGetAccCurrentTime( _deviceInfo->getHandle(), &time );
-   ensure0( stat == XTASKS_SUCCESS, "Error executing xtasksGetAccCurrentTime (error code: " << stat << ")" );
+   ensure0( stat == XTASKS_SUCCESS, " Error executing xtasksGetAccCurrentTime (error code: " << stat << ")" );
    debug0( "Initial FPGA device time: "  << time );
 #else
    xtasksGetAccCurrentTime( _deviceInfo->getHandle(), &time );

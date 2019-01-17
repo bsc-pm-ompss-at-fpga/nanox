@@ -116,7 +116,7 @@ class FPGAPlugin : public ArchPlugin
             size_t count, maxFpgasCount = FPGAConfig::getFPGACount();
             xtasks_acc_handle accels[maxFpgasCount];
             sxt = xtasksGetAccs( maxFpgasCount, &accels[0], &count );
-            ensure( count == maxFpgasCount, "Cannot retrieve accelerators information" );
+            ensure( count == maxFpgasCount, " Cannot retrieve accelerators information" );
             if ( sxt != XTASKS_SUCCESS ) {
                fatal0( "Error getting accelerators information, returned status" << sxt );
             }

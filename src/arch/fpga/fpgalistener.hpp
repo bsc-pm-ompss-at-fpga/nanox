@@ -67,7 +67,7 @@ class FPGACreateWDListener : public EventListener {
             //NOTE: Using nanos_fpga_args_t as it is the largest device argument struct
             size_t allocSize = sizeof( nanos_device_t )*this->numDevices + sizeof( nanos_fpga_args_t )*this->numDevices;
             this->devices = ( nanos_device_t * )( malloc( allocSize ) );
-            ensure( this->devices != NULL, "Cannot allocate memory for FPGARegisteredTask structure" );
+            ensure( this->devices != NULL, " Cannot allocate memory for FPGARegisteredTask structure" );
             std::memcpy( this->devices, _devices, sizeof(nanos_device_t)*this->numDevices );
 
             //Update the argument pointer of each device

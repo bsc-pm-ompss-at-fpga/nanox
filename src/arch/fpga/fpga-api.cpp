@@ -38,7 +38,7 @@ NANOS_API_DEF( void *, nanos_fpga_alloc_dma_mem, ( size_t len ) )
    fatal( "The API nanos_fpga_alloc_dma_mem is no longer supported" );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
-      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+      " FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    nanos::ext::fpgaAllocator->lock();
    void * ret = nanos::ext::fpgaAllocator->allocate( len );
    nanos::ext::fpgaAllocator->unlock();
@@ -51,7 +51,7 @@ NANOS_API_DEF( void, nanos_fpga_free_dma_mem, ( void * buffer ) )
    fatal( "The API nanos_fpga_free_dma_mem is no longer supported" );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
-      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+      " FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    nanos::ext::fpgaAllocator->lock();
    nanos::ext::fpgaAllocator->free( buffer );
    nanos::ext::fpgaAllocator->unlock();
@@ -98,7 +98,7 @@ NANOS_API_DEF( void *, nanos_fpga_malloc, ( size_t len ) )
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_malloc" ); );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
-      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+      " FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    nanos::ext::fpgaAllocator->lock();
    void * ptr = nanos::ext::fpgaAllocator->allocate( len );
    nanos::ext::fpgaAllocator->unlock();
@@ -110,7 +110,7 @@ NANOS_API_DEF( void, nanos_fpga_free, ( void * fpgaPtr ) )
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_free" ); );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
-      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+      " FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    nanos::ext::fpgaAllocator->lock();
    nanos::ext::fpgaAllocator->free( fpgaPtr );
    nanos::ext::fpgaAllocator->unlock();
@@ -122,7 +122,7 @@ NANOS_API_DEF( void, nanos_fpga_memcpy, ( void *fpgaPtr, void * hostPtr, size_t 
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_memcpy" ); );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
-      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+      " FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    size_t offset = ((uintptr_t)fpgaPtr) - nanos::ext::fpgaAllocator->getBaseAddress();
    if ( kind == NANOS_COPY_HOST_TO_FPGA ) {
       nanos::ext::fpgaCopyDataToFPGA( nanos::ext::fpgaAllocator->getBufferHandle(), offset, len, hostPtr );
