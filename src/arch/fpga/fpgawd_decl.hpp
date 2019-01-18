@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2018 Barcelona Supercomputing Center                               */
+/*      Copyright 2019 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,19 +17,22 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef _NANOS_FPGA_LIBXTASKS_WRAPPER
-#define _NANOS_FPGA_LIBXTASKS_WRAPPER
+#ifndef _NANOS_FPGA_WD_DECL
+#define _NANOS_FPGA_WD_DECL
 
-#include "libxtasks.h"
-#include "libxtasks_version.h"
+#include "workdescriptor_decl.hpp"
 
-//! Check that libxtasks version is compatible
-#define LIBXTASKS_MIN_MAJOR 6
-#define LIBXTASKS_MIN_MINOR 3
-#if !defined(LIBXTASKS_VERSION_MAJOR) || !defined(LIBXTASKS_VERSION_MINOR) || \
-    LIBXTASKS_VERSION_MAJOR < LIBXTASKS_MIN_MAJOR || \
-    (LIBXTASKS_VERSION_MAJOR == LIBXTASKS_MIN_MAJOR && LIBXTASKS_VERSION_MINOR < LIBXTASKS_MIN_MINOR)
-# error Installed libxtasks is not supported (use >= 6.3)
-#endif
+namespace nanos {
 
-#endif //_NANOS_FPGA_PROCESSOR_INFO
+   class FPGAWD : public WorkDescriptor
+   {
+      public:
+         FPGAWD ( int ndevices, DeviceData **devs, size_t data_size = 0, size_t data_align = 1, void *wdata = 0,
+                  size_t numCopies = 0, CopyData *copies = NULL, nanos_translate_args_t translate_args = NULL, const char *description = NULL );
+
+         virtual void notifyParent();
+   };
+
+} // namespace nanos
+
+#endif //_NANOS_FPGA_WD

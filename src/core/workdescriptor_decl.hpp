@@ -530,6 +530,11 @@ typedef std::set<const Device *>  DeviceList;
 
          void done ();
 
+         /*! \brief Notifies parent WD that this WD is exiting
+          *         Caller must ensure that this WD has a valid parent
+          */
+         virtual void notifyParent();
+
          void clear ();
 
          /*! \brief returns the number of CopyData elements in the WorkDescriptor

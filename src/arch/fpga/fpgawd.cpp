@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2018 Barcelona Supercomputing Center                               */
+/*      Copyright 2019 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,19 +17,28 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef _NANOS_FPGA_LIBXTASKS_WRAPPER
-#define _NANOS_FPGA_LIBXTASKS_WRAPPER
+#include "fpgawd_decl.hpp"
+#include "libxtasks_wrapper.hpp"
+#include "fpgadd.hpp"
+#include "workdescriptor.hpp"
 
-#include "libxtasks.h"
-#include "libxtasks_version.h"
+using namespace nanos;
 
-//! Check that libxtasks version is compatible
-#define LIBXTASKS_MIN_MAJOR 6
-#define LIBXTASKS_MIN_MINOR 3
-#if !defined(LIBXTASKS_VERSION_MAJOR) || !defined(LIBXTASKS_VERSION_MINOR) || \
-    LIBXTASKS_VERSION_MAJOR < LIBXTASKS_MIN_MAJOR || \
-    (LIBXTASKS_VERSION_MAJOR == LIBXTASKS_MIN_MAJOR && LIBXTASKS_VERSION_MINOR < LIBXTASKS_MIN_MINOR)
-# error Installed libxtasks is not supported (use >= 6.3)
-#endif
+FPGAWD::FPGAWD ( int ndevices, DeviceData **devs, size_t data_size, size_t data_align, void *wdata,
+   size_t numCopies, CopyData *copies, nanos_translate_args_t translate_args, const char *description )
+   : WorkDescriptor( ndevices, devs, data_size, data_align, wdata, numCopies, copies, translate_args, description )
+{}
 
-#endif //_NANOS_FPGA_PROCESSOR_INFO
+void FPGAWD::notifyParent() {
+   //NOTE: FPGA WD are internally handled, do not notify about its finalization
+   if ( dynamic_cast<const ext::FPGADD *>( &getActiveDevice() ) == NULL ) {
+      ext::FPGADD &dd = ( ext::FPGADD & )( getParent()->getActiveDevice() );
+      xtasks_task_handle parentTask = ( xtasks_task_handle )( dd.getHandle() );
+      xtasks_stat status = xtasksNotifyFinishedTask( parentTask, 1 /*num finished tasks*/ );
+      if ( status != XTASKS_SUCCESS ) {
+         ensure( status == XTASKS_SUCCESS, " Error notifing FPGA about remote finished task" );
+      }
+   }
+
+   WorkDescriptor::notifyParent();
+}

@@ -322,15 +322,7 @@ void WorkDescriptor::done ()
 
    // Notifying parent about current WD finalization
    if ( _parent != NULL ) {
-      _parent->exitWork(*this);
-#if 0
-      NANOS_INSTRUMENT ( if ( !_parent->isReady()) { )
-      NANOS_INSTRUMENT ( nanos_event_id_t id = ( ((nanos_event_id_t) getId()) << 32 ) + _parent->getId(); )
-      NANOS_INSTRUMENT ( instr->raiseOpenPtPEvent ( NANOS_WAIT, id, 0, 0 );)
-      NANOS_INSTRUMENT ( instr->createDeferredPtPEnd ( *_parent, NANOS_WAIT, id, 0, 0 ); )
-      NANOS_INSTRUMENT ( } )
-#endif
-      _parent = NULL;
+      notifyParent();
    }
 
    #ifdef NANOX_TASK_CALLBACK
@@ -338,6 +330,12 @@ void WorkDescriptor::done ()
    notify_t notify = (notify_t) _callback;
    if (notify ) notify(_arguments);
    #endif
+}
+
+void WorkDescriptor::notifyParent()
+{
+   _parent->exitWork(*this);
+   _parent = NULL;
 }
 
 void WorkDescriptor::prepareCopies()

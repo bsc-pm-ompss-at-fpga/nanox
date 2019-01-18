@@ -22,6 +22,7 @@
 #include "libxtasks_wrapper.hpp"
 #include "nanos-fpga.h"
 #include "queue.hpp"
+#include "fpgawd_decl.hpp"
 
 using namespace nanos;
 using namespace ext;
@@ -71,57 +72,79 @@ void FPGACreateWDListener::callback( BaseThread* self )
 
       //TODO: Check if throttole policy allows the task creation
       while ( cnt++ < maxCreatedWD && xtasksTryGetNewTask( &task ) == XTASKS_SUCCESS ) {
-         uint64_t args[task->numArgs];
-         size_t numCopies = task->numCopies,
-                numDeps = 0;
-
-         for ( size_t i = 0; i < task->numArgs; ++i ) {
-            numDeps += ( task->args[i].flags != NANOS_ARGFLAG_NONE );
-            args[i] = ( uintptr_t )( task->args[i].value );
-         }
-
-         WD * createdWd = NULL;
-         WD * parentWd = ( WD * )( ( uintptr_t )task->parentId );
-         void * data = NULL;
          FPGARegisteredTasksMap::const_iterator infoIt = _registeredTasks->find( task->typeInfo );
          ensure( infoIt != _registeredTasks->end(), " FPGA device trying to create an unregistered task" );
          FPGARegisteredTask * info = infoIt->second;
-         // nanos_wd_props_t props = { .mandatory_creation = 1, .tied = 0, .clear_chunk = 0,
-         //    .reserved0 = 0, .reserved1 = 0, .reserved2 = 0, .reserved3 = 0, .reserved4 = 0 };
-         // nanos_wd_dyn_props_t dynProps = { .tie_to = 0, .priority = 0, .flags = { .is_final = 0, .is_implicit = 0, .is_recover = 0 } };
-         nanos_copy_data_t *copies = NULL;
-         nanos_region_dimension_internal_t *copiesDimensions = NULL;
-         nanos_translate_args_t translator = info->translate;
-         nanos_data_access_internal_t dependences[numDeps];
-         nanos_region_dimension_t depsDimensions[numDeps]; //< 1 dimension per dependence
-         ensure( translator != NULL || numCopies == 0, " If the WD has copies, the translate_args cannot be NULL" );
-         sys.createWD( &createdWd, info->numDevices, info->devices, task->numArgs*sizeof(void *), __alignof__(void *), &data,
-            parentWd, NULL /*props*/, NULL /*dyn_props*/, numCopies, numCopies > 0 ? &copies : NULL /*copies*/,
-            numCopies /*1 dimension per copy*/, numCopies > 0 ? &copiesDimensions: NULL /*dimensions*/,
-            translator, NULL /*description*/, NULL /*slicer*/ );
-         ensure( createdWd != NULL, " Cannot create a WD in FPGACreateWDListener" );
+         ensure( info->translate != NULL || task->numCopies == 0, " If the WD has copies, the translate_args cannot be NULL" );
 
-         //Set the WD input data
-         memcpy( data, &args[0], task->numArgs*sizeof( void * ) );
+         size_t sizeData, alignData, offsetData, sizeDPtrs, offsetDPtrs, sizeCopies, sizeDimensions, offsetCopies,
+            offsetDimensions, offsetPMD, offsetSched, totalSize;
+         static size_t sizePMD = sys.getPMInterface().getInternalDataSize();
+         static size_t sizeSched = sys.getDefaultSchedulePolicy()->getWDDataSize();
 
-         //Set the dependencies information
-         for ( size_t aIdx = 0, dIdx = 0; aIdx < task->numArgs; ++aIdx ) {
-            if ( task->args[aIdx].flags != NANOS_ARGFLAG_NONE ) {
-               depsDimensions[dIdx].size = 0; //TODO: Obtain this field
-               depsDimensions[dIdx].lower_bound = 0;
-               depsDimensions[dIdx].accessed_length = 0; //TODO: Obtain this field
+         sizeData = sizeof( uint64_t )*task->numArgs;
+         alignData = __alignof__(uint64_t);
+         offsetData = NANOS_ALIGNED_MEMORY_OFFSET( 0, sizeof( FPGAWD ), alignData );
+         sizeDPtrs = sizeof( DD * )*info->numDevices;
+         offsetDPtrs = NANOS_ALIGNED_MEMORY_OFFSET( offsetData, sizeData, __alignof__( DD * ) );
+         if ( task->numCopies != 0 ) {
+            sizeCopies = sizeof( CopyData )*task->numCopies;
+            offsetCopies = NANOS_ALIGNED_MEMORY_OFFSET( offsetDPtrs, sizeDPtrs, __alignof__( nanos_copy_data_t ) );
+            sizeDimensions = sizeof( nanos_region_dimension_internal_t )*task->numCopies; //< 1 dimension x copy
+            offsetDimensions = NANOS_ALIGNED_MEMORY_OFFSET( offsetCopies, sizeCopies, __alignof__( nanos_region_dimension_internal_t ) );
+         } else {
+            sizeCopies = sizeDimensions = 0;
+            offsetCopies =  offsetDimensions = NANOS_ALIGNED_MEMORY_OFFSET( offsetDPtrs, sizeDPtrs, 1 );
+         }
+         if ( sizePMD != 0 ) {
+            static size_t alignPMD = sys.getPMInterface().getInternalDataAlignment();
+            offsetPMD = NANOS_ALIGNED_MEMORY_OFFSET( offsetDimensions, sizeDimensions, alignPMD );
+         } else {
+            offsetPMD = offsetDimensions;
+            sizePMD = sizeDimensions;
+         }
+         if ( sizeSched != 0 )
+         {
+            static size_t alignSched = sys.getDefaultSchedulePolicy()->getWDDataAlignment();
+            offsetSched = NANOS_ALIGNED_MEMORY_OFFSET( offsetPMD, sizePMD, alignSched );
+            totalSize = NANOS_ALIGNED_MEMORY_OFFSET( offsetSched, sizeSched, 1 );
+         } else {
+            offsetSched = offsetPMD; // Needed by compiler unused variable error
+            totalSize = NANOS_ALIGNED_MEMORY_OFFSET( offsetPMD, sizePMD, 1);
+         }
 
-               dependences[dIdx].address = ( void * )( ( uintptr_t )( task->args[aIdx].value ) );
-               dependences[dIdx].offset = 0;
-               dependences[dIdx].dimensions = &depsDimensions[dIdx];
-               dependences[dIdx].flags.input = task->args[aIdx].flags & NANOS_ARGFLAG_DEP_IN;
-               dependences[dIdx].flags.output = task->args[aIdx].flags & NANOS_ARGFLAG_DEP_OUT;
-               dependences[dIdx].flags.can_rename = 0;
-               dependences[dIdx].flags.concurrent = 0;
-               dependences[dIdx].flags.commutative = 0;
-               dependences[dIdx].dimension_count = 1;
-               ++dIdx;
-            }
+         char * chunk = NEW char[totalSize];
+         WD * uwd = ( WD * )( chunk );
+         uint64_t * data = ( uint64_t * )( chunk + offsetData );
+
+         DD **devPtrs = ( DD ** )( chunk + offsetDPtrs );
+         for ( size_t i = 0; i < info->numDevices; i++ ) {
+            devPtrs[i] = ( DD * )( info->devices[i].factory( info->devices[i].arg ) );
+         }
+
+         CopyData * copies = ( CopyData * )( chunk + offsetCopies );
+         ::bzero( copies, sizeCopies );
+         nanos_region_dimension_internal_t * copiesDimensions =
+            ( nanos_region_dimension_internal_t * )( chunk + offsetDimensions );
+
+         FPGAWD * createdWd = new (uwd) FPGAWD( info->numDevices, devPtrs, sizeData, alignData, data,
+            task->numCopies, ( task->numCopies > 0 ? copies : NULL ), info->translate, NULL /*description*/ );
+
+         createdWd->setTotalSize( totalSize );
+         createdWd->setVersionGroupId( ( unsigned long )( info->numDevices ) );
+         if ( sizePMD > 0 ) {
+            sys.getPMInterface().initInternalData( chunk + offsetPMD );
+            createdWd->setInternalData( chunk + offsetPMD );
+         }
+         if ( sizeSched > 0 ){
+            sys.getDefaultSchedulePolicy()->initWDData( chunk + offsetSched );
+            ScheduleWDData * schedData = reinterpret_cast<ScheduleWDData*>( chunk + offsetSched );
+            createdWd->setSchedulerData( schedData, /*ownedByWD*/ false );
+         }
+
+         WD * parentWd = ( WD * )( ( uintptr_t )task->parentId );
+         if ( parentWd != NULL ) {
+            parentWd->addWork( *createdWd );
          }
 
          //Set the copies information
@@ -141,10 +164,37 @@ void FPGACreateWDListener::callback( BaseThread* self )
          }
 
          sys.setupWD( *createdWd, parentWd );
-         if ( numDeps > 0 ) {
-            //NOTE: Cannot call system method as the task has to be submitted into parent WD not current WD
-            //sys.submitWithDependencies( *createdWd, numDeps, ( DataAccess * )( dependences ) );
 
+         //Set the WD input data
+         size_t numDeps = 0;
+         for ( size_t i = 0; i < task->numArgs; ++i ) {
+            numDeps += ( task->args[i].flags != NANOS_ARGFLAG_NONE );
+            data[i] = ( uintptr_t )( task->args[i].value );
+         }
+
+         if ( numDeps > 0 ) {
+            //Set the dependencies information
+            nanos_data_access_internal_t dependences[numDeps];
+            nanos_region_dimension_t depsDimensions[numDeps]; //< 1 dimension per dependence
+            for ( size_t aIdx = 0, dIdx = 0; aIdx < task->numArgs; ++aIdx ) {
+               if ( task->args[aIdx].flags != NANOS_ARGFLAG_NONE ) {
+                  depsDimensions[dIdx].size = 0; //TODO: Obtain this field
+                  depsDimensions[dIdx].lower_bound = 0;
+                  depsDimensions[dIdx].accessed_length = 0; //TODO: Obtain this field
+
+                  dependences[dIdx].address = ( void * )( ( uintptr_t )( task->args[aIdx].value ) );
+                  dependences[dIdx].offset = 0;
+                  dependences[dIdx].dimensions = &depsDimensions[dIdx];
+                  dependences[dIdx].flags.input = task->args[aIdx].flags & NANOS_ARGFLAG_DEP_IN;
+                  dependences[dIdx].flags.output = task->args[aIdx].flags & NANOS_ARGFLAG_DEP_OUT;
+                  dependences[dIdx].flags.can_rename = 0;
+                  dependences[dIdx].flags.concurrent = 0;
+                  dependences[dIdx].flags.commutative = 0;
+                  dependences[dIdx].dimension_count = 1;
+                  ++dIdx;
+               }
+            }
+            //NOTE: Cannot call system method as the task has to be submitted into parent WD not current WD
             SchedulePolicy* policy = sys.getDefaultSchedulePolicy();
             policy->onSystemSubmit( *createdWd, SchedulePolicy::SYS_SUBMIT_WITH_DEPENDENCIES );
 
