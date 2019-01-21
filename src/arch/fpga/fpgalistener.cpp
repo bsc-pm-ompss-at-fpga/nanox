@@ -59,7 +59,6 @@ void FPGAListener::callback( BaseThread* self )
 void FPGACreateWDListener::callback( BaseThread* self )
 {
    static int maxThreads = 1; //NOTE: The task creation order for the same accelerator must be ensured
-   static unsigned int maxCreatedWD = 32; //TODO: Get the value from the FPGAConfig
 
    /*!
     * Try to atomically reserve an slot
@@ -67,11 +66,16 @@ void FPGACreateWDListener::callback( BaseThread* self )
     *       the value coherent after the descrease.
     */
    if ( _count.fetchAndAdd() < maxThreads || maxThreads == -1 ) {
-      unsigned int cnt = 0;
       xtasks_newtask *task = NULL;
 
-      //TODO: Check if throttole policy allows the task creation
-      while ( cnt++ < maxCreatedWD && xtasksTryGetNewTask( &task ) == XTASKS_SUCCESS ) {
+      while ( sys.throttleTaskIn() ) {
+         if ( xtasksTryGetNewTask( &task ) != XTASKS_SUCCESS ) {
+            //NOTE: Keep the throttle policy coherent as we finally did not created a task
+            sys.throttleTaskOut();
+            free(task);
+            break;
+         }
+
          FPGARegisteredTasksMap::const_iterator infoIt = _registeredTasks->find( task->typeInfo );
          ensure( infoIt != _registeredTasks->end(), " FPGA device trying to create an unregistered task" );
          FPGARegisteredTask * info = infoIt->second;
@@ -203,7 +207,6 @@ void FPGACreateWDListener::callback( BaseThread* self )
             sys.submit( *createdWd );
          }
       }
-      free(task);
    }
    --_count;
 }
