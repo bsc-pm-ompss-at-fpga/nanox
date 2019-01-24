@@ -73,8 +73,8 @@ NANOS_API_DECL( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_wd_t wd, size_t ar
 NANOS_API_DECL( void *, nanos_fpga_malloc, ( size_t len ) );
 NANOS_API_DECL( void, nanos_fpga_free, ( void * fpgaPtr ) );
 NANOS_API_DECL( void, nanos_fpga_memcpy, ( void * fpgaPtr, void * hostPtr, size_t len, nanos_fpga_memcpy_kind_t kind ) );
-NANOS_API_DECL( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type, uint16_t numArgs, uint64_t * args, \
-  uint8_t * argsFlags, uint16_t numCopies, nanos_fpga_copyinfo_t * copies ) );
+NANOS_API_DECL( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type, uint16_t numDeps, uint16_t numArgs, \
+  uint64_t * args, uint8_t * argsFlags, uint16_t numCopies, nanos_fpga_copyinfo_t * copies ) );
 NANOS_API_DECL( nanos_err_t, nanos_fpga_register_wd_info, ( uint64_t type, size_t num_devices, \
   nanos_device_t * devices, nanos_translate_args_t translate ) );
 

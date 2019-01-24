@@ -131,8 +131,8 @@ NANOS_API_DEF( void, nanos_fpga_memcpy, ( void *fpgaPtr, void * hostPtr, size_t 
    }
 }
 
-NANOS_API_DEF( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type, uint16_t numArgs,
-   uint64_t * args, uint8_t * argsFlags, uint16_t numCopies, nanos_fpga_copyinfo_t * copies ) )
+NANOS_API_DEF( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type, uint16_t numDeps,
+   uint16_t numArgs, uint64_t * args, uint8_t * argsFlags, uint16_t numCopies, nanos_fpga_copyinfo_t * copies ) )
 {
    fatal( "The API nanos_fpga_create_wd_async can only be called from a FPGA device" );
 }
