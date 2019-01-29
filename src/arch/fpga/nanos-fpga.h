@@ -44,10 +44,10 @@ extern "C" {
     } nanos_fpga_memcpy_kind_t;
 
     typedef enum {
-        NANOS_ARGFLAG_DEP_IN   = 0x08,
-        NANOS_ARGFLAG_DEP_OUT  = 0x04,
-        NANOS_ARGFLAG_COPY_IN  = 0x02,
-        NANOS_ARGFLAG_COPY_OUT = 0x01,
+        NANOS_ARGFLAG_DEP_OUT  = 0x08,
+        NANOS_ARGFLAG_DEP_IN   = 0x04,
+        NANOS_ARGFLAG_COPY_OUT = 0x02,
+        NANOS_ARGFLAG_COPY_IN  = 0x01,
         NANOS_ARGFLAG_NONE     = 0x00
     } nanos_fpga_argflag_t;
 
