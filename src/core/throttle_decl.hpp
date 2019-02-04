@@ -40,6 +40,10 @@ namespace nanos {
 
          virtual bool throttleIn( void )  = 0 ;
          virtual void throttleOut( void ) { /* empty function */ }
+
+         /*! \brief Test (it will not block) the expected result of calling throttleIn
+          */
+         virtual bool testThrottleIn( void ) { return throttleIn(); }
    };
 } // namespace nanos
 

@@ -72,13 +72,12 @@ void FPGACreateWDListener::callback( BaseThread* self )
       NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-listener", "create-wd" ) );
 
       xtasks_newtask *task = NULL;
-      while ( sys.throttleTaskIn() ) {
+      while ( sys.testThrottleTaskIn() ) {
          if ( xtasksTryGetNewTask( &task ) != XTASKS_SUCCESS ) {
-            //NOTE: Keep the throttle policy coherent as we finally did not created a task
-            sys.throttleTaskOut();
             free(task);
             break;
          }
+         sys.throttleTaskIn(); //TODO: If this call returns false, the thread should block at this point
 
          FPGARegisteredTasksMap::const_iterator infoIt = _registeredTasks->find( task->typeInfo );
          ensure( infoIt != _registeredTasks->end(), " FPGA device trying to create an unregistered task" );
