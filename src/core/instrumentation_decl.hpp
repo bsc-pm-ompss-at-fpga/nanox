@@ -702,6 +702,10 @@ namespace nanos {
             /* 79 */ registerEventKey("device-copy-out", "Device is copying to host the output data of a WD", true, EVENT_USER);
             /* 80 */ registerEventKey("device-task-execution", "Device is executing a WD", true, EVENT_USER);
 
+            /* 81 */ registerEventKey("fpga-listener", "Thread is executing a FPGA listener callback", true, EVENT_DEVELOPER);
+            registerEventValue("fpga-listener", "outline", "Thread is executing the FPGA outline callback" ); /* 1 */
+            registerEventValue("fpga-listener", "create-wd", "Thread is executing the create WD callback"); /* 2 */
+
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }
 

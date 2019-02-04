@@ -39,6 +39,8 @@ void FPGAListener::callback( BaseThread* self )
     *       the value coherent after the descrease.
     */
    if ( _count.fetchAndAdd() < maxThreads || maxThreads == -1 ) {
+      NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-listener", "outline" ) );
+
       PE * const selfPE = self->runningOn();
       WD * const selfWD = self->getCurrentWD();
       FPGAProcessor * const fpga = getFPGAProcessor();
@@ -66,8 +68,9 @@ void FPGACreateWDListener::callback( BaseThread* self )
     *       the value coherent after the descrease.
     */
    if ( _count.fetchAndAdd() < maxThreads || maxThreads == -1 ) {
-      xtasks_newtask *task = NULL;
+      NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-listener", "create-wd" ) );
 
+      xtasks_newtask *task = NULL;
       while ( sys.throttleTaskIn() ) {
          if ( xtasksTryGetNewTask( &task ) != XTASKS_SUCCESS ) {
             //NOTE: Keep the throttle policy coherent as we finally did not created a task
