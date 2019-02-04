@@ -46,6 +46,8 @@ namespace ext {
          static int                       _maxPendingWD;
          static int                       _finishWDBurst;
          static bool                      _idleCallback;
+         static bool                      _createCallbackRegistered; //! Idle callback for fpga creation has been already registered
+         static bool                      _disableIdleCreateCallback; //! Must Idle callback for fpga creation be disabled
          static int                       _maxThreadsIdleCallback;
          static std::size_t               _allocatorPoolSize;
          static std::size_t               _allocAlign;
@@ -76,6 +78,8 @@ namespace ext {
          static int getMaxPendingWD() { return  _maxPendingWD; }
          static int getFinishWDBurst() { return _finishWDBurst; }
          static bool getIdleCallbackEnabled() { return _idleCallback; }
+         static bool isIdleCreateCallbackRegistered() { return _createCallbackRegistered; }
+         static bool forceDisableIdleCreateCallback() { return _disableIdleCreateCallback; }
          static int getMaxThreadsIdleCallback() { return _maxThreadsIdleCallback; }
 
          //! \brief Returns FPGA Allocator size in MB
@@ -83,6 +87,9 @@ namespace ext {
 
          //! \brief Sets the number of FPGAs
          static void setFPGASystemCount ( int numFPGAs );
+
+         //! \brief Set that the fpga callback for task creation has been registered
+         static void setIdleCreateCallbackRegistered();
 
          static int getAllocAlign() { return _allocAlign; }
 

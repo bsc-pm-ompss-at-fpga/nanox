@@ -28,7 +28,8 @@
 namespace nanos {
 namespace ext {
 
-class FPGAListener : public EventListener {
+class FPGAListener : public EventListener
+{
    private:
       /*!
        * FPGAProcessor that has to be represented when the callback is executed
@@ -53,7 +54,9 @@ class FPGAListener : public EventListener {
       void callback( BaseThread * thread );
 };
 
-class FPGACreateWDListener : public EventListener {
+class FPGACreateWDListener : public EventListener
+{
+   friend class FPGAPlugin;
    public:
       typedef struct FPGARegisteredTask {
          size_t                 numDevices;
@@ -85,10 +88,29 @@ class FPGACreateWDListener : public EventListener {
 
       typedef TR1::unordered_map<uint64_t, FPGARegisteredTask *> FPGARegisteredTasksMap;
 
-      static FPGARegisteredTasksMap *_registeredTasks;
+      static FPGARegisteredTasksMap *_registeredTasks; //!< Map of registered tasks
+      static FPGACreateWDListener   *_listener; //!< Pointer to the listener to be registered
 
    private:
       Atomic<int>             _count;     //!< Counter of threads in the listener instance
+
+   protected:
+      /*! \brief Initializes the FPGARegisteredTasksMap
+       *         Must be called one time before the first access to _registeredTasks var
+       */
+      static void init( FPGARegisteredTasksMap * map, FPGACreateWDListener * listener ) {
+         ensure ( _registeredTasks == NULL, " Double initialization of FPGACreateWDListener static members" );
+         _registeredTasks = map;
+         _listener = listener;
+      }
+
+      /*! \breif Removes references to the FPGARegisteredTasksMap and FPGACreateWDListener
+      */
+      static void fini() {
+         _listener = NULL;
+         _registeredTasks = NULL;
+      }
+
    public:
       FPGACreateWDListener();
       ~FPGACreateWDListener();

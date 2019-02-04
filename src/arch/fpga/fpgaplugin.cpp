@@ -63,7 +63,7 @@ class FPGAPlugin : public ArchPlugin
          //Forward these initializations as they have to be done regardless fpga support is enabled.
          FPGADD::init( &_fpgaDevices );
          fpgaPEs = NEW std::vector< FPGAProcessor * >();
-         FPGACreateWDListener::_registeredTasks = &_registeredTasks;
+         FPGACreateWDListener::init( &_registeredTasks, &_createWDListener );
 
          //Check if the plugin has to be initialized
          if ( FPGAConfig::isDisabled() ) {
@@ -191,6 +191,7 @@ class FPGAPlugin : public ArchPlugin
             fpgaPEs = NULL;
 
             // Delete FPGADevices
+            FPGACreateWDListener::fini();
             FPGADD::fini();
             for ( FPGADeviceMap::const_iterator it = _fpgaDevices.begin();
                it != _fpgaDevices.end(); ++it )
@@ -288,7 +289,6 @@ class FPGAPlugin : public ArchPlugin
             //When the parent thread enters in a team, all sub-threads also enter the team
             workers.insert( std::make_pair( fpgaHelper->getId(), fpgaHelper ) );
          }
-         sys.getEventDispatcher().addListenerAtIdle( _createWDListener );
       }
 
       virtual ProcessingElement * createPE( unsigned id , unsigned uid ) {

@@ -22,6 +22,7 @@
 #include "fpgapinnedallocator.hpp"
 #include "fpgaprocessor.hpp"
 #include "fpgalistener.hpp"
+#include "fpgaconfig.hpp"
 #include "simpleallocator.hpp"
 
 using namespace nanos;
@@ -146,6 +147,12 @@ NANOS_API_DEF( nanos_err_t, nanos_fpga_register_wd_info, ( uint64_t type, size_t
       verbose( "Registering WD info: " << type << " with " << num_devices << " devices." );
       ( *nanos::ext::FPGACreateWDListener::_registeredTasks )[type] =
          new nanos::ext::FPGACreateWDListener::FPGARegisteredTask( num_devices, devices, translate );
+
+      //Enable the creation callback
+      if ( !nanos::ext::FPGAConfig::isIdleCreateCallbackRegistered() && !nanos::ext::FPGAConfig::forceDisableIdleCreateCallback() ) {
+         sys.getEventDispatcher().addListenerAtIdle( *nanos::ext::FPGACreateWDListener::_listener );
+         nanos::ext::FPGAConfig::setIdleCreateCallbackRegistered();
+      }
       return NANOS_OK;
    }
 

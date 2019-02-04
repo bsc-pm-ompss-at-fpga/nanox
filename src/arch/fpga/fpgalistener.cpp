@@ -28,6 +28,7 @@ using namespace nanos;
 using namespace ext;
 
 FPGACreateWDListener::FPGARegisteredTasksMap * FPGACreateWDListener::_registeredTasks = NULL;
+FPGACreateWDListener * FPGACreateWDListener::_listener = NULL;
 
 void FPGAListener::callback( BaseThread* self )
 {
