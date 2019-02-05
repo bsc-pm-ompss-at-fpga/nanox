@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
+/*      Copyright 2009-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -44,6 +44,7 @@ bool FPGAConfig::_hybridWorker = true;
 int FPGAConfig::_maxPendingWD = 4;
 int FPGAConfig::_finishWDBurst = 8;
 bool FPGAConfig::_idleCallback = true;
+bool FPGAConfig::_idleCreateCallback = true;
 bool FPGAConfig::_disableIdleCreateCallback = false;
 bool FPGAConfig::_createCallbackRegistered = false;
 int FPGAConfig::_maxThreadsIdleCallback = 1;
@@ -97,8 +98,12 @@ void FPGAConfig::prepare( Config &config )
       "Perform fpga operations using the IDLE event callback of Event Dispatcher (def: enabled)" );
    config.registerArgOption( "fpga_idle_callback", "fpga-idle-callback" );
 
+   config.registerConfigOption( "fpga_create_callback", NEW Config::FlagOption( _idleCreateCallback ),
+      "Register the task creation callback during the plugin initialization (def: false - automatically enabled when needed)" );
+   config.registerArgOption( "fpga_create_callback", "fpga-create-callback" );
+
    config.registerConfigOption( "fpga_create_callback_disable", NEW Config::FlagOption( _disableIdleCreateCallback ),
-      "Disable the idle callback of SMP threads to handle the creation of tasks inside the FPGA" );
+      "Disable the registration of the task creation callback to handle task creation from the FPGA (def: false)" );
    config.registerArgOption( "fpga_create_callback_disable", "fpga-create-callback-disable" );
 
    config.registerConfigOption( "fpga_max_threads_callback", NEW Config::IntegerVar( _maxThreadsIdleCallback ),
@@ -160,6 +165,12 @@ void FPGAConfig::apply()
       warning0( " Number of FPGA helper threads is larger than the number of FPGA accelerators." );
       //         << "Using one thread per accelerator (" << _numAccelerators << ")" );
       //_numFPGAThreads = _numAccelerators;
+   }
+
+   if ( _idleCreateCallback && _disableIdleCreateCallback ) {
+      warning0( " The task creation callback will not be registered during plugin initialization because " <<
+                " the disable task creation callback flag is also present." );
+      _idleCreateCallback = false;
    }
 
    if ( _numFPGAThreads > 0 && !_idleCallback && _hybridWorker ) {

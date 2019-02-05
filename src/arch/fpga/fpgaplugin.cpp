@@ -260,14 +260,21 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual void startSupportThreads () {
-         if ( !FPGAConfig::getIdleCallbackEnabled() ) return;
-         for ( std::vector<FPGAProcessor*>::const_iterator it = fpgaPEs->begin();
-               it != fpgaPEs->end(); it++ )
-         {
-            // Register Event Listener
-            FPGAListener* l = new FPGAListener( *it );
-            _fpgaListeners.push_back( l );
-            sys.getEventDispatcher().addListenerAtIdle( *l );
+         //Register the regular callback
+         if ( FPGAConfig::getIdleCallbackEnabled() ) {
+            for ( std::vector<FPGAProcessor*>::const_iterator it = fpgaPEs->begin();
+                  it != fpgaPEs->end(); it++ )
+            {
+               FPGAListener* l = new FPGAListener( *it );
+               _fpgaListeners.push_back( l );
+               sys.getEventDispatcher().addListenerAtIdle( *l );
+            }
+         }
+
+         //Register the creation callback
+         if ( nanos::ext::FPGAConfig::getIdleCreateCallbackEnabled() ) {
+            sys.getEventDispatcher().addListenerAtIdle( _createWDListener );
+            nanos::ext::FPGAConfig::setIdleCreateCallbackRegistered();
          }
       }
 
