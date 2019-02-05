@@ -62,10 +62,12 @@ class FPGACreateWDListener : public EventListener
          size_t                 numDevices;
          nanos_device_t *       devices;
          nanos_translate_args_t translate;
+         std::string            description;
 
-         FPGARegisteredTask(size_t _numDevices, nanos_device_t * _devices, nanos_translate_args_t _translate) {
+         FPGARegisteredTask(size_t _numDevices, nanos_device_t * _devices, nanos_translate_args_t _translate, std::string _description) {
             this->translate = _translate;
             this->numDevices = _numDevices;
+            this->description = _description;
 
             //NOTE: Using nanos_fpga_args_t as it is the largest device argument struct
             size_t allocSize = sizeof( nanos_device_t )*this->numDevices + sizeof( nanos_fpga_args_t )*this->numDevices;

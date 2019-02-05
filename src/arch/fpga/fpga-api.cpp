@@ -145,8 +145,10 @@ NANOS_API_DEF( nanos_err_t, nanos_fpga_register_wd_info, ( uint64_t type, size_t
 
    if ( nanos::ext::FPGACreateWDListener::_registeredTasks->count(type) == 0 ) {
       verbose( "Registering WD info: " << type << " with " << num_devices << " devices." );
+
+      std::string description = "fpga_created_task_" + toString( type );
       ( *nanos::ext::FPGACreateWDListener::_registeredTasks )[type] =
-         new nanos::ext::FPGACreateWDListener::FPGARegisteredTask( num_devices, devices, translate );
+         new nanos::ext::FPGACreateWDListener::FPGARegisteredTask( num_devices, devices, translate, description );
 
       //Enable the creation callback
       if ( !nanos::ext::FPGAConfig::isIdleCreateCallbackRegistered() && !nanos::ext::FPGAConfig::forceDisableIdleCreateCallback() ) {

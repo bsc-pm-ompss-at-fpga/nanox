@@ -135,7 +135,7 @@ void FPGACreateWDListener::callback( BaseThread* self )
             ( nanos_region_dimension_internal_t * )( chunk + offsetDimensions );
 
          FPGAWD * createdWd = new (uwd) FPGAWD( info->numDevices, devPtrs, sizeData, alignData, data,
-            task->numCopies, ( task->numCopies > 0 ? copies : NULL ), info->translate, NULL /*description*/ );
+            task->numCopies, ( task->numCopies > 0 ? copies : NULL ), info->translate, info->description.c_str() );
 
          createdWd->setTotalSize( totalSize );
          createdWd->setVersionGroupId( ( unsigned long )( info->numDevices ) );
