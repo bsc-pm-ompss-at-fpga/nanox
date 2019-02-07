@@ -286,7 +286,10 @@ class FPGAPlugin : public ArchPlugin
             //When the parent thread enters in a team, all sub-threads also enter the team
             workers.insert( std::make_pair( fpgaHelper->getId(), fpgaHelper ) );
          }
+//NOTE: Disabling some features for release 1.2.2
+#if 0
          sys.getEventDispatcher().addListenerAtIdle( _createWDListener );
+#endif
       }
 
       virtual ProcessingElement * createPE( unsigned id , unsigned uid ) {

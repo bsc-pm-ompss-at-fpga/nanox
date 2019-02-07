@@ -53,6 +53,8 @@ void FPGAListener::callback( BaseThread* self )
    --_count;
 }
 
+//NOTE: Disabling some features for release 1.2.2
+#if 0
 static void fpgaFakeOutline( void * ptr ) {
    uint64_t * args = (uint64_t *)(ptr);
    nanos_wd_t wd = myThread->getCurrentWD();
@@ -65,6 +67,7 @@ static void fpgaFakeOutline( void * ptr ) {
       ensure( err == NANOS_OK, "Error setting argument in FPGA task" );
    }
 }
+#endif
 
 void FPGACreateWDListener::callback( BaseThread* self )
 {
@@ -86,10 +89,12 @@ void FPGACreateWDListener::callback( BaseThread* self )
 
       //TODO: Check if throttole policy allows the task creation
       while ( cnt++ < maxCreatedWD && xtasksTryGetNewTask( &task ) == XTASKS_SUCCESS ) {
+	 fatal( "The task creation support has been temporally removed and will be enabled again the the following release" );
+//NOTE: Disabling some features for release 1.2.2
+#if 0
          uint64_t args[1 /*Numer of following arguments*/ + task->numArgs];
          size_t numCopies = 0,
                 numDeps = 0;
-
          args[0] = task->numArgs;
          for ( size_t i = 0; i < task->numArgs; ++i ) {
             numCopies += task->args[i].isInputCopy || task->args[i].isOutputCopy;
@@ -171,6 +176,7 @@ void FPGACreateWDListener::callback( BaseThread* self )
          } else {
             sys.submit( *createdWd );
          }
+#endif
       }
       free(task);
    }
