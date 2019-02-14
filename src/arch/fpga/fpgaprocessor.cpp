@@ -179,8 +179,10 @@ void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task 
             warning( "Ignoring unknown fpga event type" );
       }
    }
-   if (events[readEv].value != 0) {
-       warning("HW Instrument buffer overflow. " << events[readEv].value << " events lost");
+   if (readEv == maxEvents) {
+       fatal( "Last HW instrumentation event has an invalid type (" << events[maxEvents - 1].eventType << ")" );
+   } else if (events[readEv].value != 0) {
+       warning( "HW Instrument buffer overflow. " << events[readEv].value << " events lost" );
    }
    ins->addDeviceEventList( _devInstr, readEv, deviceEvents );
    delete[] events;
