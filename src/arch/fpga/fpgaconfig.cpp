@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
+/*      Copyright 2009-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -44,6 +44,9 @@ bool FPGAConfig::_hybridWorker = true;
 int FPGAConfig::_maxPendingWD = 4;
 int FPGAConfig::_finishWDBurst = 8;
 bool FPGAConfig::_idleCallback = true;
+bool FPGAConfig::_idleCreateCallback = true;
+bool FPGAConfig::_disableIdleCreateCallback = false;
+bool FPGAConfig::_createCallbackRegistered = false;
 int FPGAConfig::_maxThreadsIdleCallback = 1;
 std::size_t FPGAConfig::_allocatorPoolSize = 64*1024*1024; //Def. 64MB
 std::size_t FPGAConfig::_allocAlign = 16;
@@ -94,6 +97,14 @@ void FPGAConfig::prepare( Config &config )
    config.registerConfigOption( "fpga_idle_callback", NEW Config::FlagOption( _idleCallback ),
       "Perform fpga operations using the IDLE event callback of Event Dispatcher (def: enabled)" );
    config.registerArgOption( "fpga_idle_callback", "fpga-idle-callback" );
+
+   config.registerConfigOption( "fpga_create_callback", NEW Config::FlagOption( _idleCreateCallback ),
+      "Register the task creation callback during the plugin initialization (def: false - automatically enabled when needed)" );
+   config.registerArgOption( "fpga_create_callback", "fpga-create-callback" );
+
+   config.registerConfigOption( "fpga_create_callback_disable", NEW Config::FlagOption( _disableIdleCreateCallback ),
+      "Disable the registration of the task creation callback to handle task creation from the FPGA (def: false)" );
+   config.registerArgOption( "fpga_create_callback_disable", "fpga-create-callback-disable" );
 
    config.registerConfigOption( "fpga_max_threads_callback", NEW Config::IntegerVar( _maxThreadsIdleCallback ),
       "Max. number of threads concurrently working in the FPGA IDLE callback (def: 1)" );
@@ -156,6 +167,12 @@ void FPGAConfig::apply()
       //_numFPGAThreads = _numAccelerators;
    }
 
+   if ( _idleCreateCallback && _disableIdleCreateCallback ) {
+      warning0( " The task creation callback will not be registered during plugin initialization because " <<
+                " the disable task creation callback flag is also present." );
+      _idleCreateCallback = false;
+   }
+
    if ( _numFPGAThreads > 0 && !_idleCallback && _hybridWorker ) {
       warning0( " The use of FPGA idle callback is disabled, execution could have unexpected " <<
                 " behaviour and can ever hang if there is task nesting." );
@@ -170,6 +187,11 @@ void FPGAConfig::setFPGASystemCount ( int numFPGAs )
 bool FPGAConfig::isDisabled ()
 {
    return _forceDisableFPGA || !( _enableFPGA || nanos_needs_fpga_fun );
+}
+
+void FPGAConfig::setIdleCreateCallbackRegistered ()
+{
+   _createCallbackRegistered = true;
 }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED

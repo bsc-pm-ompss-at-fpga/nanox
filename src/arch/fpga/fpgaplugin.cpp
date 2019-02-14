@@ -44,6 +44,7 @@ class FPGAPlugin : public ArchPlugin
       FPGADeviceMap                  _fpgaDevices;
       std::string                    _executionSummary;
       FPGACreateWDListener           _createWDListener;
+      FPGACreateWDListener::FPGARegisteredTasksMap _registeredTasks;
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -62,6 +63,7 @@ class FPGAPlugin : public ArchPlugin
          //Forward these initializations as they have to be done regardless fpga support is enabled.
          FPGADD::init( &_fpgaDevices );
          fpgaPEs = NEW std::vector< FPGAProcessor * >();
+         FPGACreateWDListener::init( &_registeredTasks, &_createWDListener );
 
          //Check if the plugin has to be initialized
          if ( FPGAConfig::isDisabled() ) {
@@ -114,7 +116,7 @@ class FPGAPlugin : public ArchPlugin
             size_t count, maxFpgasCount = FPGAConfig::getFPGACount();
             xtasks_acc_handle accels[maxFpgasCount];
             sxt = xtasksGetAccs( maxFpgasCount, &accels[0], &count );
-            ensure( count == maxFpgasCount, "Cannot retrieve accelerators information" );
+            ensure( count == maxFpgasCount, " Cannot retrieve accelerators information" );
             if ( sxt != XTASKS_SUCCESS ) {
                fatal0( "Error getting accelerators information, returned status" << sxt );
             }
@@ -189,6 +191,7 @@ class FPGAPlugin : public ArchPlugin
             fpgaPEs = NULL;
 
             // Delete FPGADevices
+            FPGACreateWDListener::fini();
             FPGADD::fini();
             for ( FPGADeviceMap::const_iterator it = _fpgaDevices.begin();
                it != _fpgaDevices.end(); ++it )
@@ -257,14 +260,21 @@ class FPGAPlugin : public ArchPlugin
       }
 
       virtual void startSupportThreads () {
-         if ( !FPGAConfig::getIdleCallbackEnabled() ) return;
-         for ( std::vector<FPGAProcessor*>::const_iterator it = fpgaPEs->begin();
-               it != fpgaPEs->end(); it++ )
-         {
-            // Register Event Listener
-            FPGAListener* l = new FPGAListener( *it );
-            _fpgaListeners.push_back( l );
-            sys.getEventDispatcher().addListenerAtIdle( *l );
+         //Register the regular callback
+         if ( FPGAConfig::getIdleCallbackEnabled() ) {
+            for ( std::vector<FPGAProcessor*>::const_iterator it = fpgaPEs->begin();
+                  it != fpgaPEs->end(); it++ )
+            {
+               FPGAListener* l = new FPGAListener( *it );
+               _fpgaListeners.push_back( l );
+               sys.getEventDispatcher().addListenerAtIdle( *l );
+            }
+         }
+
+         //Register the creation callback
+         if ( nanos::ext::FPGAConfig::getIdleCreateCallbackEnabled() ) {
+            sys.getEventDispatcher().addListenerAtIdle( _createWDListener );
+            nanos::ext::FPGAConfig::setIdleCreateCallbackRegistered();
          }
       }
 
@@ -286,7 +296,6 @@ class FPGAPlugin : public ArchPlugin
             //When the parent thread enters in a team, all sub-threads also enter the team
             workers.insert( std::make_pair( fpgaHelper->getId(), fpgaHelper ) );
          }
-         sys.getEventDispatcher().addListenerAtIdle( _createWDListener );
       }
 
       virtual ProcessingElement * createPE( unsigned id , unsigned uid ) {

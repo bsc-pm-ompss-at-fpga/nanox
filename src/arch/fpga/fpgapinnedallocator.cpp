@@ -32,7 +32,7 @@ FPGAPinnedAllocator::FPGAPinnedAllocator( size_t size )
    uint64_t addr = 0;
    if ( status == XTASKS_SUCCESS ) {
       status = xtasksGetAccAddress( _handle, &addr );
-      ensure( status == XTASKS_SUCCESS, "Error getting the FPGA device address for the FPGAPinnedAllocator" );
+      ensure( status == XTASKS_SUCCESS, " Error getting the FPGA device address for the FPGAPinnedAllocator" );
    }
    init( addr, size );
 
@@ -80,7 +80,7 @@ void nanos::ext::fpgaCopyDataToFPGA(xtasks_mem_handle handle, size_t offset, siz
    xtasks_stat stat = xtasksMemcpy( handle, offset, len, ptr, XTASKS_HOST_TO_ACC );
    if ( stat != XTASKS_SUCCESS ) {
       //NOTE: Cannot put the ensure directly, as compiler will claim about unused stat var in performance
-      ensure( false, "Error in xtasksMemcpy of FPGADevice::_copyIn" );
+      ensure( false, " Error in xtasksMemcpy of FPGADevice::_copyIn" );
    }
 }
 
@@ -95,6 +95,6 @@ void nanos::ext::fpgaCopyDataFromFPGA(xtasks_mem_handle handle, size_t offset, s
    xtasks_stat stat = xtasksMemcpy( handle, offset, len, ptr, XTASKS_ACC_TO_HOST );
    if ( stat != XTASKS_SUCCESS ) {
       //NOTE: Cannot put the ensure directly, as compiler will claim about unused stat var in performance
-      ensure( false, "Error in xtasksMemcpy of FPGADevice::_copyOut" );
+      ensure( false, " Error in xtasksMemcpy of FPGADevice::_copyOut" );
    }
 }

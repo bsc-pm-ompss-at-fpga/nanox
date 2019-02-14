@@ -479,6 +479,7 @@ namespace nanos {
 
          bool throttleTaskIn( void ) const;
          void throttleTaskOut( void ) const;
+         bool testThrottleTaskIn( void ) const;
 
          const std::string & getDefaultSchedule() const;
 

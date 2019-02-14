@@ -490,6 +490,7 @@ void Scheduler::waitOnCondition (GenericSyncCond *condition)
             //! Finally coming back to our Thread's WD (idle task)
             if ( !next && supportULT && sys.getSchedulerConf().getSchedulerEnabled() ) {
                next = &(thread->getThreadWD());
+               ensure( current != next, " Trying to wait on a condition over the implicit WD of a thread" );
             if ( next != NULL ) {
                 verbose("Got wd through getThreadWD");
             }

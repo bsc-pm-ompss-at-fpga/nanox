@@ -21,6 +21,8 @@
 #include "fpgadd.hpp"
 #include "fpgapinnedallocator.hpp"
 #include "fpgaprocessor.hpp"
+#include "fpgalistener.hpp"
+#include "fpgaconfig.hpp"
 #include "simpleallocator.hpp"
 
 using namespace nanos;
@@ -37,7 +39,7 @@ NANOS_API_DEF( void *, nanos_fpga_alloc_dma_mem, ( size_t len ) )
    fatal( "The API nanos_fpga_alloc_dma_mem is no longer supported" );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
-      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+      " FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    nanos::ext::fpgaAllocator->lock();
    void * ret = nanos::ext::fpgaAllocator->allocate( len );
    nanos::ext::fpgaAllocator->unlock();
@@ -50,7 +52,7 @@ NANOS_API_DEF( void, nanos_fpga_free_dma_mem, ( void * buffer ) )
    fatal( "The API nanos_fpga_free_dma_mem is no longer supported" );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
-      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+      " FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    nanos::ext::fpgaAllocator->lock();
    nanos::ext::fpgaAllocator->free( buffer );
    nanos::ext::fpgaAllocator->unlock();
@@ -97,7 +99,7 @@ NANOS_API_DEF( void *, nanos_fpga_malloc, ( size_t len ) )
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_malloc" ); );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
-      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+      " FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    void * ptr = nanos::ext::fpgaAllocator->allocate( len );
    return ptr;
 }
@@ -107,7 +109,7 @@ NANOS_API_DEF( void, nanos_fpga_free, ( void * fpgaPtr ) )
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_free" ); );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
-      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+      " FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    nanos::ext::fpgaAllocator->free( fpgaPtr );
 }
 
@@ -117,11 +119,40 @@ NANOS_API_DEF( void, nanos_fpga_memcpy, ( void *fpgaPtr, void * hostPtr, size_t 
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_memcpy" ); );
 
    ensure( nanos::ext::fpgaAllocator != NULL,
-      "FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
+      " FPGA allocator is not available. Try to force the FPGA support initialization with '--fpga-enable'" );
    size_t offset = ((uintptr_t)fpgaPtr) - nanos::ext::fpgaAllocator->getBaseAddress();
    if ( kind == NANOS_COPY_HOST_TO_FPGA ) {
       nanos::ext::fpgaCopyDataToFPGA( nanos::ext::fpgaAllocator->getBufferHandle(), offset, len, hostPtr );
    } else if ( kind == NANOS_COPY_FPGA_TO_HOST ) {
       nanos::ext::fpgaCopyDataFromFPGA( nanos::ext::fpgaAllocator->getBufferHandle(), offset, len, hostPtr );
    }
+}
+
+NANOS_API_DEF( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type, uint16_t numDeps,
+   uint16_t numArgs, uint64_t * args, uint8_t * argsFlags, uint16_t numCopies, nanos_fpga_copyinfo_t * copies ) )
+{
+   fatal( "The API nanos_fpga_create_wd_async can only be called from a FPGA device" );
+}
+
+NANOS_API_DEF( nanos_err_t, nanos_fpga_register_wd_info, ( uint64_t type, size_t num_devices,
+  nanos_device_t * devices, nanos_translate_args_t translate ) )
+{
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_register_wd_info" ) );
+
+   if ( nanos::ext::FPGACreateWDListener::_registeredTasks->count(type) == 0 ) {
+      verbose( "Registering WD info: " << type << " with " << num_devices << " devices." );
+
+      std::string description = "fpga_created_task_" + toString( type );
+      ( *nanos::ext::FPGACreateWDListener::_registeredTasks )[type] =
+         new nanos::ext::FPGACreateWDListener::FPGARegisteredTask( num_devices, devices, translate, description );
+
+      //Enable the creation callback
+      if ( !nanos::ext::FPGAConfig::isIdleCreateCallbackRegistered() && !nanos::ext::FPGAConfig::forceDisableIdleCreateCallback() ) {
+         sys.getEventDispatcher().addListenerAtIdle( *nanos::ext::FPGACreateWDListener::_listener );
+         nanos::ext::FPGAConfig::setIdleCreateCallbackRegistered();
+      }
+      return NANOS_OK;
+   }
+
+   return NANOS_INVALID_REQUEST;
 }

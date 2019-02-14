@@ -65,9 +65,9 @@ FPGAProcessor::FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpace
 
 FPGAProcessor::~FPGAProcessor()
 {
-   ensure( _runningTasks.value() == 0, "There are running task in one FPGAProcessor" );
-   ensure( _readyTasks.empty(), "Queue of FPGA ready tasks is not empty in one FPGAProcessor" );
-   ensure( _waitInTasks.empty(), "Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
+   ensure( _runningTasks.value() == 0, " There are running task in one FPGAProcessor" );
+   ensure( _readyTasks.empty(), " Queue of FPGA ready tasks is not empty in one FPGAProcessor" );
+   ensure( _waitInTasks.empty(), " Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
 }
 
 WorkDescriptor & FPGAProcessor::getWorkerWD () const
@@ -80,12 +80,12 @@ WorkDescriptor & FPGAProcessor::getWorkerWD () const
 
 WD & FPGAProcessor::getMasterWD () const
 {
-   fatal("Attempting to create a FPGA master thread");
+   fatal( "Attempting to create a FPGA master thread" );
 }
 
 BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThread *parent )
 {
-   ensure( helper.canRunIn( getSMPDevice() ), "Incompatible worker thread" );
+   ensure( helper.canRunIn( getSMPDevice() ), " Incompatible worker thread" );
    FPGAThread  &th = *NEW FPGAThread( helper, this, parent );
    return th;
 }
@@ -176,11 +176,13 @@ void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task 
                   event.eventId, event.value, event.timestamp );
             break;
          default:
-            warning("Ignoring unknown fpga event type");
+            warning( "Ignoring unknown fpga event type" );
       }
    }
-   if (events[readEv].value != 0) {
-       warning("HW Instrument buffer overflow. " << events[readEv].value << " events lost");
+   if (readEv == maxEvents) {
+       fatal( "Last HW instrumentation event has an invalid type (" << events[maxEvents - 1].eventType << ")" );
+   } else if (events[readEv].value != 0) {
+       warning( "HW Instrument buffer overflow. " << events[readEv].value << " events lost" );
    }
    ins->addDeviceEventList( _devInstr, readEv, deviceEvents );
    delete[] events;
@@ -252,6 +254,8 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
       xStat = xtasksTryGetFinishedTaskAccel( _fpgaProcessorInfo.getHandle(), &xHandle, &xId );
       if ( xStat == XTASKS_SUCCESS ) {
          WD * wd = (WD *)xId;
+         ensure( wd->getNumComponents() == 0,
+            " Executing postOutlineWork for a FPGA task with alive children not supported. Should be fixed with a taskwait." );
          ret = true;
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
@@ -271,7 +275,7 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
             wd->setDone();
          }
       } else {
-         ensure( xStat == XTASKS_PENDING, "Error trying to get a finished FPGA task" );
+         ensure( xStat == XTASKS_PENDING, " Error trying to get a finished FPGA task" );
          break;
       }
    }

@@ -432,6 +432,7 @@ inline PinnedAllocator& System::getPinnedAllocatorCUDA() { return _pinnedMemoryC
 
 inline bool System::throttleTaskIn ( void ) const { return _throttlePolicy->throttleIn(); }
 inline void System::throttleTaskOut ( void ) const { _throttlePolicy->throttleOut(); }
+inline bool System::testThrottleTaskIn ( void ) const { return _throttlePolicy->testThrottleIn(); }
 
 inline void System::threadReady()
 {

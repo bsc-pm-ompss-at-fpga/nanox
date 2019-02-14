@@ -40,7 +40,7 @@ namespace ext {
           *         Must be called one time before the first FPGADD creation
           */
          static void init( FPGADeviceMap * map ) {
-            ensure ( _accDevices == NULL, "Double initialization of FPGADD static members" );
+            ensure ( _accDevices == NULL, " Double initialization of FPGADD static members" );
             _accDevices = map;
          }
 

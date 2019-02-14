@@ -46,7 +46,7 @@ namespace ext {
          {
             xtasks_stat sxt = xtasksGetAccInfo( _handle, &_info );
             if ( sxt != XTASKS_SUCCESS ) {
-               ensure0( sxt == XTASKS_SUCCESS, "Cannot retrieve accelerator information" );
+               ensure0( sxt == XTASKS_SUCCESS, " Cannot retrieve accelerator information" );
             }
          }
 

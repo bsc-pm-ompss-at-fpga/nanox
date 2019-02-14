@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2019 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,34 +17,22 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef __NANOS_THROTTLE_POLICY_DECL_H
-#define __NANOS_THROTTLE_POLICY_DECL_H
+#ifndef _NANOS_FPGA_WD_DECL
+#define _NANOS_FPGA_WD_DECL
+
+#include "workdescriptor_decl.hpp"
 
 namespace nanos {
-   class ThrottlePolicy
+
+   class FPGAWD : public WorkDescriptor
    {
-      private:
-         /*! \brief ThrottlePolicy copy constructor (private)
-          */
-         ThrottlePolicy( const ThrottlePolicy & );
-         /*! \brief ThrottlePolicy copy assignment opeator (private)
-          */
-         const ThrottlePolicy & operator=( const ThrottlePolicy & );
       public:
-         /*! \brief ThrottlePolicy default constructor
-          */
-         ThrottlePolicy() {};
-         /*! \brief ThrottlePolicy destructor
-          */
-         virtual ~ThrottlePolicy() {}
+         FPGAWD ( int ndevices, DeviceData **devs, size_t data_size = 0, size_t data_align = 1, void *wdata = 0,
+                  size_t numCopies = 0, CopyData *copies = NULL, nanos_translate_args_t translate_args = NULL, const char *description = NULL );
 
-         virtual bool throttleIn( void )  = 0 ;
-         virtual void throttleOut( void ) { /* empty function */ }
-
-         /*! \brief Test (it will not block) the expected result of calling throttleIn
-          */
-         virtual bool testThrottleIn( void ) { return throttleIn(); }
+         virtual void notifyParent();
    };
+
 } // namespace nanos
 
-#endif
+#endif //_NANOS_FPGA_WD

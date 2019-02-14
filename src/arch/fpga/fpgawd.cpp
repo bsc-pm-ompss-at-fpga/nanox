@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2019 Barcelona Supercomputing Center                               */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -17,34 +17,28 @@
 /*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
 /*************************************************************************************/
 
-#ifndef __NANOS_THROTTLE_POLICY_DECL_H
-#define __NANOS_THROTTLE_POLICY_DECL_H
+#include "fpgawd_decl.hpp"
+#include "libxtasks_wrapper.hpp"
+#include "fpgadd.hpp"
+#include "workdescriptor.hpp"
 
-namespace nanos {
-   class ThrottlePolicy
-   {
-      private:
-         /*! \brief ThrottlePolicy copy constructor (private)
-          */
-         ThrottlePolicy( const ThrottlePolicy & );
-         /*! \brief ThrottlePolicy copy assignment opeator (private)
-          */
-         const ThrottlePolicy & operator=( const ThrottlePolicy & );
-      public:
-         /*! \brief ThrottlePolicy default constructor
-          */
-         ThrottlePolicy() {};
-         /*! \brief ThrottlePolicy destructor
-          */
-         virtual ~ThrottlePolicy() {}
+using namespace nanos;
 
-         virtual bool throttleIn( void )  = 0 ;
-         virtual void throttleOut( void ) { /* empty function */ }
+FPGAWD::FPGAWD ( int ndevices, DeviceData **devs, size_t data_size, size_t data_align, void *wdata,
+   size_t numCopies, CopyData *copies, nanos_translate_args_t translate_args, const char *description )
+   : WorkDescriptor( ndevices, devs, data_size, data_align, wdata, numCopies, copies, translate_args, description )
+{}
 
-         /*! \brief Test (it will not block) the expected result of calling throttleIn
-          */
-         virtual bool testThrottleIn( void ) { return throttleIn(); }
-   };
-} // namespace nanos
+void FPGAWD::notifyParent() {
+   //NOTE: FPGA WD are internally handled, do not notify about its finalization
+   if ( dynamic_cast<const ext::FPGADD *>( &getActiveDevice() ) == NULL ) {
+      ext::FPGADD &dd = ( ext::FPGADD & )( getParent()->getActiveDevice() );
+      xtasks_task_handle parentTask = ( xtasks_task_handle )( dd.getHandle() );
+      xtasks_stat status = xtasksNotifyFinishedTask( parentTask, 1 /*num finished tasks*/ );
+      if ( status != XTASKS_SUCCESS ) {
+         ensure( status == XTASKS_SUCCESS, " Error notifing FPGA about remote finished task" );
+      }
+   }
 
-#endif
+   WorkDescriptor::notifyParent();
+}

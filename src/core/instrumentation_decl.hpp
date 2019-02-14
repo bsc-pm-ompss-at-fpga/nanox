@@ -460,6 +460,7 @@ namespace nanos {
             registerEventValue("api","nanos_fpga_malloc","nanos_fpga_malloc()");
             registerEventValue("api","nanos_fpga_memcpy","nanos_fpga_memcpy()");
             registerEventValue("api","nanos_fpga_free","nanos_fpga_free()");
+            registerEventValue("api","nanos_fpga_register_wd_info","nanos_fpga_register_wd_info()");
 
             /* 02 */ registerEventKey("wd-id","Work Descriptor id:", true, EVENT_DEVELOPER, true);
 
@@ -701,6 +702,10 @@ namespace nanos {
             /* 79 */ registerEventKey("device-copy-out", "Device is copying to host the output data of a WD", true, EVENT_USER);
             /* 80 */ registerEventKey("device-task-execution", "Device is executing a WD", true, EVENT_USER);
 
+            /* 81 */ registerEventKey("fpga-listener", "Thread is executing a FPGA listener callback", true, EVENT_DEVELOPER);
+            registerEventValue("fpga-listener", "outline", "Thread is executing the FPGA outline callback" ); /* 1 */
+            registerEventValue("fpga-listener", "create-wd", "Thread is executing the create WD callback"); /* 2 */
+
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }
 
@@ -720,7 +725,7 @@ namespace nanos {
           */
          nanos_event_key_t registerEventKey ( const char *key, const char *description="", bool abort_when_registered=true, nanos_event_level_t level=EVENT_ENABLED, bool stacked=false );
 
-         
+
          /*! \brief Inserts an event with a given event ID into the keymap
           */
          inline nanos_event_key_t registerEventKey (
