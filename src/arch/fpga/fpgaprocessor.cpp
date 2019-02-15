@@ -179,7 +179,11 @@ void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task 
             warning("Ignoring unknown fpga event type");
       }
    }
-   if (events[readEv].value != 0) {
+   //FIXME: Prevents from displaying bogus warnings when bitstream is not instrumented
+   if (events[readEv].eventType != XTASKS_EVENT_TYPE_LAST)
+   {
+       warning("Bitstream instrumentation may not be enabled");
+   } else if (events[readEv].value != 0) {
        warning("HW Instrument buffer overflow. " << events[readEv].value << " events lost");
    }
    ins->addDeviceEventList( _devInstr, readEv, deviceEvents );
