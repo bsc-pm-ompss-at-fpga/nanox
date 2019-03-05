@@ -23,16 +23,24 @@
 #include "workdescriptor_decl.hpp"
 
 namespace nanos {
+namespace ext {
 
    class FPGAWD : public WorkDescriptor
    {
+      private:
+         // \brief Stores the addresses of copies received from the FPGA. Used to copy the data back
+         std::vector<uint64_t> _origFpgaCopiesAddrs;
+
       public:
          FPGAWD ( int ndevices, DeviceData **devs, size_t data_size = 0, size_t data_align = 1, void *wdata = 0,
                   size_t numCopies = 0, CopyData *copies = NULL, nanos_translate_args_t translate_args = NULL, const char *description = NULL );
 
+         void setOrigFpgaCopyAddr(const size_t idx, const uint64_t addr) { _origFpgaCopiesAddrs[idx] = addr; }
+
          virtual void notifyParent();
    };
 
+} // namespace ext
 } // namespace nanos
 
 #endif //_NANOS_FPGA_WD
