@@ -20,16 +20,37 @@
 #include "fpgawd_decl.hpp"
 #include "libxtasks_wrapper.hpp"
 #include "fpgadd.hpp"
+#include "fpgapinnedallocator.hpp"
 #include "workdescriptor.hpp"
+#include "simpleallocator.hpp"
 
 using namespace nanos;
+using namespace nanos::ext;
 
 FPGAWD::FPGAWD ( int ndevices, DeviceData **devs, size_t data_size, size_t data_align, void *wdata,
    size_t numCopies, CopyData *copies, nanos_translate_args_t translate_args, const char *description )
-   : WorkDescriptor( ndevices, devs, data_size, data_align, wdata, numCopies, copies, translate_args, description )
+   : WorkDescriptor( ndevices, devs, data_size, data_align, wdata, numCopies, copies, translate_args, description ),
+   _origFpgaCopiesAddrs( numCopies, 0 )
 {}
 
 void FPGAWD::notifyParent() {
+   //FIXME: The copy data may not be in copies[].address as it may be moved into another address space.
+   //       In addition, the directory entry for copies[].address must be removed as it probably will
+   //       be used again in a future task.
+
+   //Copy the data back to the FPGA memory before doing the notification
+   CopyData const * copies = getCopies();
+   for ( size_t cIdx = 0; cIdx < getNumCopies(); ++cIdx ) {
+      void * hostAddr = copies[cIdx].address;
+      if ( copies[cIdx].flags.output ) {
+         const uint64_t devAddr = _origFpgaCopiesAddrs[cIdx];
+         fpgaCopyDataToFPGA( fpgaAllocator->getBufferHandle(),
+            devAddr - fpgaAllocator->getBaseAddress(), copies[cIdx].dimensions[0].size,
+            hostAddr );
+      }
+      free(hostAddr);
+   }
+
    //NOTE: FPGA WD are internally handled, do not notify about its finalization
    if ( dynamic_cast<const ext::FPGADD *>( &getActiveDevice() ) == NULL ) {
       ext::FPGADD &dd = ( ext::FPGADD & )( getParent()->getActiveDevice() );

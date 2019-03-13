@@ -156,18 +156,31 @@ void FPGACreateWDListener::callback( BaseThread* self )
 
          //Set the copies information
          for ( size_t cIdx = 0; cIdx < task->numCopies; ++cIdx ) {
+            //Allocate a buffer in the host to handle the data during the task execution
+            //NOTE: Not reusing storage between tasks
+            void * hostAddr = malloc( task->copies[cIdx].size );
+
             copiesDimensions[cIdx].size = task->copies[cIdx].size;
             copiesDimensions[cIdx].lower_bound = task->copies[cIdx].offset;
             copiesDimensions[cIdx].accessed_length = task->copies[cIdx].accessedLen;
 
             copies[cIdx].sharing = NANOS_SHARED;
-            copies[cIdx].address = task->copies[cIdx].address;
+            copies[cIdx].address = hostAddr;
             copies[cIdx].flags.input = task->copies[cIdx].flags & NANOS_ARGFLAG_COPY_IN;
             copies[cIdx].flags.output = task->copies[cIdx].flags & NANOS_ARGFLAG_COPY_OUT;
             ensure( copies[cIdx].flags.input || copies[cIdx].flags.output, " Creating a copy which is not input nor output" );
             copies[cIdx].dimension_count = 1;
             copies[cIdx].dimensions = &copiesDimensions[cIdx];
             copies[cIdx].offset = 0;
+
+            const uint64_t devAddr = ( uintptr_t )( task->copies[cIdx].address );
+            createdWd->setOrigFpgaCopyAddr( cIdx, devAddr );
+            if ( copies[cIdx].flags.input ) {
+               //Copy the data from the FPGA. It will be copied back before the finalization notification
+               fpgaCopyDataFromFPGA( fpgaAllocator->getBufferHandle(),
+                  devAddr - fpgaAllocator->getBaseAddress(), copiesDimensions[cIdx].size,
+                  hostAddr );
+            }
          }
 
          sys.setupWD( *createdWd, parentWd );
