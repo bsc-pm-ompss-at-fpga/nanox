@@ -89,8 +89,10 @@ void FPGACreateWDListener::callback( BaseThread* self )
          static size_t sizePMD = sys.getPMInterface().getInternalDataSize();
          static size_t sizeSched = sys.getDefaultSchedulePolicy()->getWDDataSize();
 
-         sizeData = sizeof( uint64_t )*task->numArgs;
-         alignData = __alignof__(uint64_t);
+         ensure( sizeof( unsigned long long int ) == sizeof( uint64_t ),
+            " Unsupported width of unsinged long long int type, it is expected to be 8 bytes" );
+         sizeData = sizeof( unsigned long long int )*task->numArgs;
+         alignData = __alignof__(unsigned long long int);
          offsetData = NANOS_ALIGNED_MEMORY_OFFSET( 0, sizeof( FPGAWD ), alignData );
          sizeDPtrs = sizeof( DD * )*info->numDevices;
          offsetDPtrs = NANOS_ALIGNED_MEMORY_OFFSET( offsetData, sizeData, __alignof__( DD * ) );
@@ -122,7 +124,7 @@ void FPGACreateWDListener::callback( BaseThread* self )
 
          char * chunk = NEW char[totalSize];
          WD * uwd = ( WD * )( chunk );
-         uint64_t * data = ( uint64_t * )( chunk + offsetData );
+         unsigned long long int * data = ( unsigned long long int * )( chunk + offsetData );
 
          DD **devPtrs = ( DD ** )( chunk + offsetDPtrs );
          for ( size_t i = 0; i < info->numDevices; i++ ) {
@@ -189,7 +191,7 @@ void FPGACreateWDListener::callback( BaseThread* self )
          size_t numDeps = 0;
          for ( size_t i = 0; i < task->numArgs; ++i ) {
             numDeps += ( task->args[i].flags != NANOS_ARGFLAG_NONE );
-            data[i] = ( uintptr_t )( task->args[i].value );
+            data[i] = task->args[i].value;
          }
 
          if ( numDeps > 0 ) {
