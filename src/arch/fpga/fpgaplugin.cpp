@@ -98,7 +98,7 @@ class FPGAPlugin : public ArchPlugin
 
 #if NANOS_INSTRUMENTATION_ENABLED
             //Init the instrumentation
-            sxt = xtasksInitHWIns(FPGAConfig::getNumInstrEvents());
+            sxt = xtasksInitHWIns( FPGAConfig::getNumInstrEvents() );
             if ( sxt != XTASKS_SUCCESS ) {
                FPGAConfig::forceDisableInstr();
                warning0( " Error initializing the FPGA instrumentation support (status: " << sxt << ")." <<

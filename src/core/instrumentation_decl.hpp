@@ -706,6 +706,8 @@ namespace nanos {
             registerEventValue("fpga-listener", "outline", "Thread is executing the FPGA outline callback" ); /* 1 */
             registerEventValue("fpga-listener", "create-wd", "Thread is executing the create WD callback"); /* 2 */
 
+            /* 82 */ registerEventKey("fpga-ev-lost", "Number of FPGA instrumentation events lost", true, EVENT_USER);
+
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }
 

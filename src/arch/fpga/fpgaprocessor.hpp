@@ -52,16 +52,12 @@ namespace ext {
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          FPGAInstrumentation           _devInstr;
-         bool                          _dmaSubmitWarnShown; //!< Defines if the warning has already been shown
          static Atomic<size_t>         _totalRunningTasks;  //!< Global tasks counter between all processors
 #endif
 
          // AUX functions
          void createTask( WD &wd, WD *parentWd );
          void submitTask( WD &wd );
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-         void readInstrCounters( WD * const wd, xtasks_task_handle & task );
-#endif
       public:
 
          FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpaceId, Device const * arch );
@@ -117,6 +113,9 @@ namespace ext {
          size_t getNumTasks() const {
             return _totalTasks.value();
          }
+#endif
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+         void handleInstrumentation();
 #endif
    };
 

@@ -51,9 +51,6 @@ FPGAProcessor::FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpace
 #ifdef NANOS_DEBUG_ENABLED
    , _totalTasks( 0 )
 #endif
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-   , _dmaSubmitWarnShown( false )
-#endif
 {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    if ( !FPGAConfig::isInstrDisabled() ) {
@@ -145,19 +142,19 @@ void FPGAProcessor::submitTask( WD &wd ) {
 }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task ) {
+void FPGAProcessor::handleInstrumentation() {
    if ( FPGAConfig::isInstrDisabled() ) return;
 
-   static Instrumentation * ins     = sys.getInstrumentation();
+   static Instrumentation * ins = sys.getInstrumentation();
    size_t maxEvents = FPGAConfig::getNumInstrEvents();
    xtasks_ins_event *events = NEW xtasks_ins_event[maxEvents];
    Instrumentation::DeviceEvent *deviceEvents = NEW Instrumentation::DeviceEvent[maxEvents];
 
-   xtasksGetInstrumentData( task, events, maxEvents );
+   xtasksGetInstrumentData( getFPGAProcessorInfo().getHandle(), events, maxEvents );
 
    unsigned int readEv;
    for ( readEv = 0;
-           readEv < maxEvents && events[readEv].eventType != XTASKS_EVENT_TYPE_LAST;
+           readEv < maxEvents && events[readEv].eventType != XTASKS_EVENT_TYPE_INVALID;
            readEv++ )
    {
       //Emit extrae events
@@ -179,12 +176,11 @@ void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task 
             warning( "Ignoring unknown fpga event type" );
       }
    }
-   if (readEv == maxEvents) {
-       fatal( "Last HW instrumentation event has an invalid type (" << events[maxEvents - 1].eventType << ")" );
-   } else if (events[readEv].value != 0) {
-       warning( "HW Instrument buffer overflow. " << events[readEv].value << " events lost" );
+
+   if (readEv > 0) {
+      ins->addDeviceEventList( _devInstr, readEv, deviceEvents );
    }
-   ins->addDeviceEventList( _devInstr, readEv, deviceEvents );
+
    delete[] events;
    delete[] deviceEvents;
 }
@@ -262,7 +258,7 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
          --_totalRunningTasks;
          instrumentPoint( "fpga-run-tasks", _totalRunningTasks.value() );
          InstrumentBurst instBurst( "fpga-finish-task", wd->getId() );
-         readInstrCounters( wd, xHandle );
+         handleInstrumentation();
 #endif
          xtasksDeleteTask( &xHandle );
          --_runningTasks;
