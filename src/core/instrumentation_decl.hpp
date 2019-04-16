@@ -687,9 +687,9 @@ namespace nanos {
             /* 69 */ registerEventKey("reduction", "Reduction support", true, EVENT_DEVELOPER);
             registerEventValue("reduction", "RED_REQUEST_NEW_STORAGE", "Allocating private storage" ); /* 1 */
             registerEventValue("reduction", "RED_COMMIT_ALL", "Reducing private storages" );           /* 2 */
-            /* 70 */ registerEventKey("network-transfer", "Network transfer to node ", false, EVENT_ADVANCED);
-            /* 71 */ registerEventKey("cache-evict", "Cache eviction", false, EVENT_ADVANCED);
-            /* 72 */ registerEventKey("copy-data-alloc","Cache allocation", false, EVENT_ADVANCED);
+            /* 70 */ registerEventKey("network-transfer-2", "Network transfer to node ", true, EVENT_DISABLED);
+            /* 71 */ registerEventKey("cache-evict", "Cache eviction", true, EVENT_ADVANCED);
+            /* 72 */ registerEventKey("copy-data-alloc","Cache allocation", true, EVENT_ADVANCED);
 
             /* 73 */ registerEventKey("fpga-finish-task", "Finished FPGA task ID that is being processed", true, EVENT_ADVANCED);
             /* 74 */ registerEventKey("fpga-run-tasks", "Number of FPGA tasks submitted to the accels", true, EVENT_ADVANCED);
