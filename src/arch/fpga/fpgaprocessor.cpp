@@ -259,6 +259,8 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
          instrumentPoint( "fpga-run-tasks", _totalRunningTasks.value() );
          InstrumentBurst instBurst( "fpga-finish-task", wd->getId() );
          handleInstrumentation();
+         //NOTE: Temporaly handling the instrumentation twice just in case the data is split into 2 parts of the circular buffer
+         handleInstrumentation();
 #endif
          xtasksDeleteTask( &xHandle );
          --_runningTasks;
