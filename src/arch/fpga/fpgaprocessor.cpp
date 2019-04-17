@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2017 Barcelona Supercomputing Center                               */
+/*      Copyright 2017-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -258,9 +258,6 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
          --_totalRunningTasks;
          instrumentPoint( "fpga-run-tasks", _totalRunningTasks.value() );
          InstrumentBurst instBurst( "fpga-finish-task", wd->getId() );
-         handleInstrumentation();
-         //NOTE: Temporaly handling the instrumentation twice just in case the data is split into 2 parts of the circular buffer
-         handleInstrumentation();
 #endif
          xtasksDeleteTask( &xHandle );
          --_runningTasks;

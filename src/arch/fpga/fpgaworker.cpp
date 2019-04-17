@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2017 Barcelona Supercomputing Center                               */
+/*      Copyright 2017-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -163,6 +163,15 @@ void FPGAWorker::FPGAWorkerLoop() {
              //idle if we do not yield
              currentThread->idle(false);
          }
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+         SMPMultiThread *parentM = ( SMPMultiThread * ) parent;
+         for ( unsigned int i = 0; i < parentM->getNumThreads(); i += 1 ) {
+            BaseThread *insThread = parentM->getThreadVector()[ i ];
+            FPGAProcessor * insFpga = ( FPGAProcessor * )( insThread->runningOn() );
+            insFpga->handleInstrumentation();
+         }
+#endif //NANOS_INSTRUMENTATION_ENABLED
       }
 
       currentThread = parent->getNextThread();
@@ -174,6 +183,13 @@ void FPGAWorker::FPGAWorkerLoop() {
    SMPMultiThread *parentM = ( SMPMultiThread * ) parent;
    for ( unsigned int i = 0; i < parentM->getNumThreads(); i += 1 ) {
       myThread = parentM->getThreadVector()[ i ];
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+      //Handle possbile remaining instrumentation events
+      FPGAProcessor * insFpga = ( FPGAProcessor * )( myThread->runningOn() );
+      insFpga->handleInstrumentation();
+#endif //NANOS_INSTRUMENTATION_ENABLED
+
       myThread->joined();
    }
    myThread = parent;

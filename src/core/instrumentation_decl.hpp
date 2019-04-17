@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2015-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -705,6 +705,7 @@ namespace nanos {
             /* 81 */ registerEventKey("fpga-listener", "Thread is executing a FPGA listener callback", true, EVENT_DEVELOPER);
             registerEventValue("fpga-listener", "outline", "Thread is executing the FPGA outline callback" ); /* 1 */
             registerEventValue("fpga-listener", "create-wd", "Thread is executing the create WD callback"); /* 2 */
+            registerEventValue("fpga-listener", "instrumentation", "Thread is executing the instrumentation callback"); /* 3 */
 
             /* 82 */ registerEventKey("fpga-ev-lost", "Number of FPGA instrumentation events lost", true, EVENT_USER);
 

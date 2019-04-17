@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2017 Barcelona Supercomputing Center                               */
+/*      Copyright 2017-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -119,6 +119,31 @@ class FPGACreateWDListener : public EventListener
       void callback( BaseThread * thread );
 };
 
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+class FPGAInstrumentationListener : public EventListener
+{
+   public:
+      typedef std::vector<FPGAProcessor *> FPGAPEsVector;
+
+   private:
+      FPGAPEsVector         *_fpgas;      //!< Vector of FPGAProcessors to handle
+      Atomic<int>            _count;      //!< Counter of threads in the listener instance
+
+   public:
+      /*!
+       * \brief Default constructor
+       */
+      FPGAInstrumentationListener();
+      ~FPGAInstrumentationListener();
+      /*!
+       * \brief Setter of FPGA PEs vector
+       * \param [in] pe          Pointer to the vector of PEs that the callback handles
+       */
+      void setFPGAPEsVector( FPGAPEsVector *pes );
+      void callback( BaseThread * thread );
+};
+#endif //NANOS_INSTRUMENTATION_ENABLED
+
 FPGAListener::FPGAListener( FPGAProcessor * pe, const bool onwsPE ) : _count( 0 )
 {
    union { FPGAProcessor * p; intptr_t i; } u = { pe };
@@ -155,6 +180,18 @@ FPGACreateWDListener::FPGACreateWDListener() : _count( 0 )
 
 FPGACreateWDListener::~FPGACreateWDListener()
 {}
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+FPGAInstrumentationListener::FPGAInstrumentationListener() : _fpgas( NULL ), _count( 0 )
+{}
+
+FPGAInstrumentationListener::~FPGAInstrumentationListener()
+{}
+
+void FPGAInstrumentationListener::setFPGAPEsVector( std::vector<FPGAProcessor *> *pes ) {
+   _fpgas = pes;
+}
+#endif //NANOS_INSTRUMENTATION_ENABLED
 
 } /* namespace ext */
 } /* namespace nanos */

@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2018 Barcelona Supercomputing Center                               */
+/*      Copyright 2018-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -228,3 +228,23 @@ void FPGACreateWDListener::callback( BaseThread* self )
    }
    --_count;
 }
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+void FPGAInstrumentationListener::callback( BaseThread* self )
+{
+   static int maxThreads = 1; //< Should be enough, throughput is not important here
+
+   /*!
+    * Try to atomically reserve an slot
+    */
+   if ( _count.fetchAndAdd() < maxThreads && _fpgas != NULL) {
+      NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-listener", "instrumentation" ) );
+
+      for ( FPGAPEsVector::iterator it = _fpgas->begin(); it != _fpgas->end(); it++ ) {
+         FPGAProcessor * fpga = *it;
+         fpga->handleInstrumentation();
+      }
+   }
+   --_count;
+}
+#endif //NANOS_INSTRUMENTATION_ENABLED

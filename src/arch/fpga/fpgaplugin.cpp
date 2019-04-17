@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2017-2018 Barcelona Supercomputing Center                          */
+/*      Copyright 2017-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -45,6 +45,9 @@ class FPGAPlugin : public ArchPlugin
       std::string                    _executionSummary;
       FPGACreateWDListener           _createWDListener;
       FPGACreateWDListener::FPGARegisteredTasksMap _registeredTasks;
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+      FPGAInstrumentationListener    _instrumentationListener;
+#endif //NANOS_INSTRUMENTATION_ENABLED
 
    public:
       FPGAPlugin() : ArchPlugin( "FPGA PE Plugin", 1 ) {}
@@ -276,6 +279,14 @@ class FPGAPlugin : public ArchPlugin
             sys.getEventDispatcher().addListenerAtIdle( _createWDListener );
             nanos::ext::FPGAConfig::setIdleCreateCallbackRegistered();
          }
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+         //Register the instrumentation callback
+         if ( nanos::ext::FPGAConfig::getInstrumentationCallbackEnabled() ) {
+            _instrumentationListener.setFPGAPEsVector( fpgaPEs );
+            sys.getEventDispatcher().addListenerAtIdle( _instrumentationListener );
+         }
+#endif //NANOS_INSTRUMENTATION_ENABLED
       }
 
       virtual void startWorkerThreads( std::map<unsigned int, BaseThread*> &workers ) {
