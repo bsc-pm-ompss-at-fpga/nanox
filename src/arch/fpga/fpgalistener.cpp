@@ -188,39 +188,32 @@ void FPGACreateWDListener::callback( BaseThread* self )
          sys.setupWD( *createdWd, parentWd );
 
          //Set the WD input data
-         size_t numDeps = 0;
-         for ( size_t i = 0; i < task->numArgs; ++i ) {
-            numDeps += ( task->args[i].flags != NANOS_ARGFLAG_NONE );
-            data[i] = task->args[i].value;
-         }
+         memcpy(data, task->args, sizeof(unsigned long long int)*task->numArgs);
 
-         if ( numDeps > 0 ) {
+         if ( task->numDeps > 0 ) {
             //Set the dependencies information
-            nanos_data_access_internal_t dependences[numDeps];
-            nanos_region_dimension_t depsDimensions[numDeps]; //< 1 dimension per dependence
-            for ( size_t aIdx = 0, dIdx = 0; aIdx < task->numArgs; ++aIdx ) {
-               if ( task->args[aIdx].flags != NANOS_ARGFLAG_NONE ) {
-                  depsDimensions[dIdx].size = 0; //TODO: Obtain this field
-                  depsDimensions[dIdx].lower_bound = 0;
-                  depsDimensions[dIdx].accessed_length = 0; //TODO: Obtain this field
+            nanos_data_access_internal_t dependences[task->numDeps];
+            nanos_region_dimension_t depsDimensions[task->numDeps]; //< 1 dimension per dependence
+            for ( size_t dIdx = 0; dIdx < task->numDeps; ++dIdx ) {
+               depsDimensions[dIdx].size = 0; //TODO: Obtain this field
+               depsDimensions[dIdx].lower_bound = 0;
+               depsDimensions[dIdx].accessed_length = 0; //TODO: Obtain this field
 
-                  dependences[dIdx].address = ( void * )( ( uintptr_t )( task->args[aIdx].value ) );
-                  dependences[dIdx].offset = 0;
-                  dependences[dIdx].dimensions = &depsDimensions[dIdx];
-                  dependences[dIdx].flags.input = task->args[aIdx].flags & NANOS_ARGFLAG_DEP_IN;
-                  dependences[dIdx].flags.output = task->args[aIdx].flags & NANOS_ARGFLAG_DEP_OUT;
-                  dependences[dIdx].flags.can_rename = 0;
-                  dependences[dIdx].flags.concurrent = 0;
-                  dependences[dIdx].flags.commutative = 0;
-                  dependences[dIdx].dimension_count = 1;
-                  ++dIdx;
-               }
+               dependences[dIdx].address = ( void * )( ( uintptr_t )( task->deps[dIdx].address ) );
+               dependences[dIdx].offset = 0;
+               dependences[dIdx].dimensions = &depsDimensions[dIdx];
+               dependences[dIdx].flags.input = task->deps[dIdx].flags & NANOS_ARGFLAG_DEP_IN;
+               dependences[dIdx].flags.output = task->deps[dIdx].flags & NANOS_ARGFLAG_DEP_OUT;
+               dependences[dIdx].flags.can_rename = 0;
+               dependences[dIdx].flags.concurrent = 0;
+               dependences[dIdx].flags.commutative = 0;
+               dependences[dIdx].dimension_count = 1;
             }
             //NOTE: Cannot call system method as the task has to be submitted into parent WD not current WD
             SchedulePolicy* policy = sys.getDefaultSchedulePolicy();
             policy->onSystemSubmit( *createdWd, SchedulePolicy::SYS_SUBMIT_WITH_DEPENDENCIES );
 
-            parentWd->submitWithDependencies( *createdWd, numDeps , ( DataAccess * )( dependences ) );
+            parentWd->submitWithDependencies( *createdWd, task->numDeps , ( DataAccess * )( dependences ) );
          } else {
             sys.submit( *createdWd );
          }

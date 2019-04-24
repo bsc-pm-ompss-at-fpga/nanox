@@ -7,4 +7,4 @@ openmp=8
 instrumentation_api=1002
 resiliency=1000
 opencl=1003
-fpga=6
+fpga=7
