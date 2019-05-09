@@ -44,7 +44,7 @@ class FPGAPlugin : public ArchPlugin
       FPGADeviceMap                  _fpgaDevices;
       std::string                    _executionSummary;
       FPGACreateWDListener           _createWDListener;
-      FPGACreateWDListener::FPGARegisteredTasksMap _registeredTasks;
+      FPGAWorker::FPGARegisteredTasksMap _registeredTasks;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
       FPGAInstrumentationListener    _instrumentationListener;
 #endif //NANOS_INSTRUMENTATION_ENABLED
@@ -66,7 +66,7 @@ class FPGAPlugin : public ArchPlugin
          //Forward these initializations as they have to be done regardless fpga support is enabled.
          FPGADD::init( &_fpgaDevices );
          fpgaPEs = NEW std::vector< FPGAProcessor * >();
-         FPGACreateWDListener::init( &_registeredTasks, &_createWDListener );
+         FPGAWorker::initRegisteredTasksMap( &_registeredTasks, &_createWDListener );
 
          //Check if the plugin has to be initialized
          if ( FPGAConfig::isDisabled() ) {
@@ -194,7 +194,7 @@ class FPGAPlugin : public ArchPlugin
             fpgaPEs = NULL;
 
             // Delete FPGADevices
-            FPGACreateWDListener::fini();
+            FPGAWorker::finiRegisteredTasksMap();
             FPGADD::fini();
             for ( FPGADeviceMap::const_iterator it = _fpgaDevices.begin();
                it != _fpgaDevices.end(); ++it )

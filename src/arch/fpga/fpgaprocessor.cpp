@@ -152,8 +152,8 @@ void FPGAProcessor::handleInstrumentation() {
 
    xtasksGetInstrumentData( getFPGAProcessorInfo().getHandle(), events, maxEvents );
 
-   unsigned int readEv;
-   for ( readEv = 0;
+   unsigned int writeEv = 0;
+   for ( unsigned int readEv = 0;
            readEv < maxEvents && events[readEv].eventType != XTASKS_EVENT_TYPE_INVALID;
            readEv++ )
    {
@@ -161,24 +161,24 @@ void FPGAProcessor::handleInstrumentation() {
       xtasks_ins_event &event = events[readEv];
       switch ( event.eventType ) {
          case XTASKS_EVENT_TYPE_BURST_OPEN:
-            ins->createDeviceBurstEvent( &deviceEvents[readEv],
+            ins->createDeviceBurstEvent( &deviceEvents[writeEv++],
                   event.eventId, event.value, event.timestamp );
             break;
          case XTASKS_EVENT_TYPE_BURST_CLOSE:
-            ins->closeDeviceBurstEvent( &deviceEvents[readEv],
+            ins->closeDeviceBurstEvent( &deviceEvents[writeEv++],
                   event.eventId, event.value, event.timestamp );
             break;
          case XTASKS_EVENT_TYPE_POINT:
-            ins->createDevicePointEvent( &deviceEvents[readEv],
+            ins->createDevicePointEvent( &deviceEvents[writeEv++],
                   event.eventId, event.value, event.timestamp );
             break;
          default:
-            warning( "Ignoring unknown fpga event type" );
+            warning( "Ignoring unknown fpga event type: " << event.eventType );
       }
    }
 
-   if (readEv > 0) {
-      ins->addDeviceEventList( _devInstr, readEv, deviceEvents );
+   if (writeEv > 0) {
+      ins->addDeviceEventList( _devInstr, writeEv, deviceEvents );
    }
 
    delete[] events;

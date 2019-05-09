@@ -173,8 +173,8 @@ void FPGAConfig::apply()
    }
 
    if ( _idleCreateCallback && _disableIdleCreateCallback ) {
-      warning0( " The task creation callback will not be registered during plugin initialization because " <<
-                " the disable task creation callback flag is also present." );
+      warning0( " The FPGA task creation callback will not be registered during plugin initialization because " <<
+                " the disable task creation callback flag present." );
       _idleCreateCallback = false;
    }
 

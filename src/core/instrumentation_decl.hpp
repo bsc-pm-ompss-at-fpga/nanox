@@ -708,6 +708,8 @@ namespace nanos {
             registerEventValue("fpga-listener", "instrumentation", "Thread is executing the instrumentation callback"); /* 3 */
 
             /* 82 */ registerEventKey("fpga-ev-lost", "Number of FPGA instrumentation events lost", true, EVENT_USER);
+            /* 83 */ registerEventKey("fpga-create-task", "Task ID of parent task which children is being handled in the host runtime", true, EVENT_DEVELOPER);
+            /* 83 */ registerEventKey("fpga-notify-task", "Task ID of parent task which children finalization is being notified", true, EVENT_DEVELOPER);
 
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }

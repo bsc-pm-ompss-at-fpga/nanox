@@ -56,62 +56,8 @@ class FPGAListener : public EventListener
 
 class FPGACreateWDListener : public EventListener
 {
-   friend class FPGAPlugin;
-   public:
-      typedef struct FPGARegisteredTask {
-         size_t                 numDevices;
-         nanos_device_t *       devices;
-         nanos_translate_args_t translate;
-         std::string            description;
-
-         FPGARegisteredTask(size_t _numDevices, nanos_device_t * _devices, nanos_translate_args_t _translate, std::string _description) {
-            this->translate = _translate;
-            this->numDevices = _numDevices;
-            this->description = _description;
-
-            //NOTE: Using nanos_fpga_args_t as it is the largest device argument struct
-            size_t allocSize = sizeof( nanos_device_t )*this->numDevices + sizeof( nanos_fpga_args_t )*this->numDevices;
-            this->devices = ( nanos_device_t * )( malloc( allocSize ) );
-            ensure( this->devices != NULL, " Cannot allocate memory for FPGARegisteredTask structure" );
-            std::memcpy( this->devices, _devices, sizeof(nanos_device_t)*this->numDevices );
-
-            //Update the argument pointer of each device
-            nanos_fpga_args_t *args = ( nanos_fpga_args_t * )( this->devices + this->numDevices );
-            for ( size_t i = 0; i < this->numDevices; ++i ) {
-               this->devices[i].arg = ( void * )( args + i );
-               std::memcpy( this->devices[i].arg, _devices[i].arg, sizeof( nanos_fpga_args_t ) );
-            }
-         }
-
-         ~FPGARegisteredTask() {
-            free( this->devices );
-         }
-      } FPGARegisteredTask;
-
-      typedef TR1::unordered_map<uint64_t, FPGARegisteredTask *> FPGARegisteredTasksMap;
-
-      static FPGARegisteredTasksMap *_registeredTasks; //!< Map of registered tasks
-      static FPGACreateWDListener   *_listener; //!< Pointer to the listener to be registered
-
    private:
       Atomic<int>             _count;     //!< Counter of threads in the listener instance
-
-   protected:
-      /*! \brief Initializes the FPGARegisteredTasksMap
-       *         Must be called one time before the first access to _registeredTasks var
-       */
-      static void init( FPGARegisteredTasksMap * map, FPGACreateWDListener * listener ) {
-         ensure ( _registeredTasks == NULL, " Double initialization of FPGACreateWDListener static members" );
-         _registeredTasks = map;
-         _listener = listener;
-      }
-
-      /*! \breif Removes references to the FPGARegisteredTasksMap and FPGACreateWDListener
-      */
-      static void fini() {
-         _listener = NULL;
-         _registeredTasks = NULL;
-      }
 
    public:
       FPGACreateWDListener();

@@ -38,6 +38,8 @@ void FPGAWD::notifyParent() {
    //       In addition, the directory entry for copies[].address must be removed as it probably will
    //       be used again in a future task.
 
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-notify-task", getParent()->getId() ) );
+
    //Copy the data back to the FPGA memory before doing the notification
    CopyData const * copies = getCopies();
    for ( size_t cIdx = 0; cIdx < getNumCopies(); ++cIdx ) {
