@@ -8,8 +8,10 @@ using namespace nanos::ext;
 
 FPGAPinnedAllocator *nanos::ext::fpgaAllocator;
 
-FPGAPinnedAllocator::FPGAPinnedAllocator( size_t size )
+FPGAPinnedAllocator::FPGAPinnedAllocator()
 {
+   const size_t userRequestedSize = FPGAConfig::getAllocatorPoolSize();
+   size_t size = userRequestedSize > 0 ? userRequestedSize : FPGAConfig::getDefaultAllocatorPoolSize();
    xtasks_stat status;
    status = xtasksMalloc( size, &_handle );
    if ( status != XTASKS_SUCCESS ) {
@@ -20,14 +22,15 @@ FPGAPinnedAllocator::FPGAPinnedAllocator( size_t size )
       } while ( status != XTASKS_SUCCESS && size > 32768 /* 32KB */ );
 
       // Emit a warning with the allocation result
-      if ( status == XTASKS_SUCCESS ) {
-         warning0( "Could not allocate requested amount of FPGA device memory. Only " <<
-                   size << " bytes have been allocated." );
-      } else {
+      if ( status == XTASKS_SUCCESS && userRequestedSize > 0 ) {
+         warning0( "Could not allocate requested amount of FPGA device memory (" << userRequestedSize <<
+                   " bytes). Only " << size << " bytes have been allocated." );
+      } else if ( status != XTASKS_SUCCESS ) {
          warning0( "Could not allocate FPGA device memory for the FPGAPinnedAllocator" );
          size = 0;
       }
    }
+   verbose0( "Allocated " << size << " bytes of FPGA device memory for the FPGAPinnedAllocator" );
 
    uint64_t addr = 0;
    if ( status == XTASKS_SUCCESS ) {

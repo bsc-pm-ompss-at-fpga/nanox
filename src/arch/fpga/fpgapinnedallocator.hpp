@@ -15,7 +15,7 @@ namespace ext {
          xtasks_mem_handle   _handle;   //!< Memory chunk handler for xTasks library
 
       public:
-         FPGAPinnedAllocator( size_t size );
+         FPGAPinnedAllocator();
          ~FPGAPinnedAllocator();
 
          void * allocate( size_t size );
