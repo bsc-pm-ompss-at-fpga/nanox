@@ -110,7 +110,7 @@ class FPGAPlugin : public ArchPlugin
 #endif //NANOS_INSTRUMENTATION_ENABLED
 
             //Create the FPGAPinnedAllocator and set the global shared variable that points to it
-            fpgaAllocator = NEW FPGAPinnedAllocator( FPGAConfig::getAllocatorPoolSize() );
+            fpgaAllocator = NEW FPGAPinnedAllocator();
 
             //Get the accelerators information array
             size_t count, maxFpgasCount = FPGAConfig::getFPGACount();

@@ -83,8 +83,9 @@ namespace ext {
          static bool forceDisableIdleCreateCallback() { return _disableIdleCreateCallback; }
          static int getMaxThreadsIdleCallback() { return _maxThreadsIdleCallback; }
 
-         //! \brief Returns FPGA Allocator size in MB
+         //! \brief Returns FPGA Allocator size requested by user in bytes
          static std::size_t getAllocatorPoolSize() { return _allocatorPoolSize; }
+         static std::size_t getDefaultAllocatorPoolSize() { return 512*1024*1024; }
 
          //! \brief Sets the number of FPGAs
          static void setFPGASystemCount ( int numFPGAs );

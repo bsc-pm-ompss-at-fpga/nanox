@@ -48,7 +48,7 @@ bool FPGAConfig::_idleCreateCallback = true;
 bool FPGAConfig::_disableIdleCreateCallback = false;
 bool FPGAConfig::_createCallbackRegistered = false;
 int FPGAConfig::_maxThreadsIdleCallback = 1;
-std::size_t FPGAConfig::_allocatorPoolSize = 64*1024*1024; //Def. 64MB
+std::size_t FPGAConfig::_allocatorPoolSize = 0;
 std::size_t FPGAConfig::_allocAlign = 16;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    bool FPGAConfig::_disableInst = false;
@@ -112,7 +112,7 @@ void FPGAConfig::prepare( Config &config )
    config.registerArgOption( "fpga_max_threads_callback", "fpga-max-threads-callback" );
 
    config.registerConfigOption( "fpga_alloc_pool_size", NEW Config::SizeVar( _allocatorPoolSize ),
-      "FPGA device memory pool size (def: 64MB)" );
+      "FPGA device memory pool size (def: 512MB)" );
    config.registerEnvOption( "fpga_alloc_pool_size", "NX_FPGA_ALLOC_POOL_SIZE" );
    config.registerArgOption( "fpga_alloc_pool_size", "fpga-alloc-pool-size" );
 
