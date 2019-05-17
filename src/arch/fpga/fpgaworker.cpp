@@ -24,6 +24,7 @@
 #include "system.hpp"
 #include "os.hpp"
 #include "queue.hpp"
+#include "simpleallocator.hpp"
 #include "fpgawd_decl.hpp"
 
 using namespace nanos;
