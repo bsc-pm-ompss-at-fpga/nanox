@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2015-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -687,9 +687,9 @@ namespace nanos {
             /* 69 */ registerEventKey("reduction", "Reduction support", true, EVENT_DEVELOPER);
             registerEventValue("reduction", "RED_REQUEST_NEW_STORAGE", "Allocating private storage" ); /* 1 */
             registerEventValue("reduction", "RED_COMMIT_ALL", "Reducing private storages" );           /* 2 */
-            /* 70 */ registerEventKey("network-transfer", "Network transfer to node ", false, EVENT_ADVANCED);
-            /* 71 */ registerEventKey("cache-evict", "Cache eviction", false, EVENT_ADVANCED);
-            /* 72 */ registerEventKey("copy-data-alloc","Cache allocation", false, EVENT_ADVANCED);
+            /* 70 */ registerEventKey("network-transfer-2", "Network transfer to node ", true, EVENT_DISABLED);
+            /* 71 */ registerEventKey("cache-evict", "Cache eviction", true, EVENT_ADVANCED);
+            /* 72 */ registerEventKey("copy-data-alloc","Cache allocation", true, EVENT_ADVANCED);
 
             /* 73 */ registerEventKey("fpga-finish-task", "Finished FPGA task ID that is being processed", true, EVENT_ADVANCED);
             /* 74 */ registerEventKey("fpga-run-tasks", "Number of FPGA tasks submitted to the accels", true, EVENT_ADVANCED);
@@ -705,6 +705,11 @@ namespace nanos {
             /* 81 */ registerEventKey("fpga-listener", "Thread is executing a FPGA listener callback", true, EVENT_DEVELOPER);
             registerEventValue("fpga-listener", "outline", "Thread is executing the FPGA outline callback" ); /* 1 */
             registerEventValue("fpga-listener", "create-wd", "Thread is executing the create WD callback"); /* 2 */
+            registerEventValue("fpga-listener", "instrumentation", "Thread is executing the instrumentation callback"); /* 3 */
+
+            /* 82 */ registerEventKey("fpga-ev-lost", "Number of FPGA instrumentation events lost", true, EVENT_USER);
+            /* 83 */ registerEventKey("fpga-create-task", "Task ID of parent task which children is being handled in the host runtime", true, EVENT_DEVELOPER);
+            /* 83 */ registerEventKey("fpga-notify-task", "Task ID of parent task which children finalization is being notified", true, EVENT_DEVELOPER);
 
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }

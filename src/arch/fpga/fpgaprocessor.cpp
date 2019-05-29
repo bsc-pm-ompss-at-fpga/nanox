@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2017 Barcelona Supercomputing Center                               */
+/*      Copyright 2017-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -50,9 +50,6 @@ FPGAProcessor::FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpace
    _runningTasks( 0 ), _readyTasks( ), _waitInTasks( )
 #ifdef NANOS_DEBUG_ENABLED
    , _totalTasks( 0 )
-#endif
-#ifdef NANOS_INSTRUMENTATION_ENABLED
-   , _dmaSubmitWarnShown( false )
 #endif
 {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
@@ -145,46 +142,45 @@ void FPGAProcessor::submitTask( WD &wd ) {
 }
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-void FPGAProcessor::readInstrCounters( WD * const wd, xtasks_task_handle & task ) {
+void FPGAProcessor::handleInstrumentation() {
    if ( FPGAConfig::isInstrDisabled() ) return;
 
-   static Instrumentation * ins     = sys.getInstrumentation();
+   static Instrumentation * ins = sys.getInstrumentation();
    size_t maxEvents = FPGAConfig::getNumInstrEvents();
    xtasks_ins_event *events = NEW xtasks_ins_event[maxEvents];
    Instrumentation::DeviceEvent *deviceEvents = NEW Instrumentation::DeviceEvent[maxEvents];
 
-   xtasksGetInstrumentData( task, events, maxEvents );
+   xtasksGetInstrumentData( getFPGAProcessorInfo().getHandle(), events, maxEvents );
 
-   unsigned int readEv;
-   for ( readEv = 0;
-           readEv < maxEvents && events[readEv].eventType != XTASKS_EVENT_TYPE_LAST;
+   unsigned int writeEv = 0;
+   for ( unsigned int readEv = 0;
+           readEv < maxEvents && events[readEv].eventType != XTASKS_EVENT_TYPE_INVALID;
            readEv++ )
    {
       //Emit extrae events
       xtasks_ins_event &event = events[readEv];
       switch ( event.eventType ) {
          case XTASKS_EVENT_TYPE_BURST_OPEN:
-            ins->createDeviceBurstEvent( &deviceEvents[readEv],
+            ins->createDeviceBurstEvent( &deviceEvents[writeEv++],
                   event.eventId, event.value, event.timestamp );
             break;
          case XTASKS_EVENT_TYPE_BURST_CLOSE:
-            ins->closeDeviceBurstEvent( &deviceEvents[readEv],
+            ins->closeDeviceBurstEvent( &deviceEvents[writeEv++],
                   event.eventId, event.value, event.timestamp );
             break;
          case XTASKS_EVENT_TYPE_POINT:
-            ins->createDevicePointEvent( &deviceEvents[readEv],
+            ins->createDevicePointEvent( &deviceEvents[writeEv++],
                   event.eventId, event.value, event.timestamp );
             break;
          default:
-            warning( "Ignoring unknown fpga event type" );
+            warning( "Ignoring unknown fpga event type: " << event.eventType );
       }
    }
-   if (readEv == maxEvents) {
-       fatal( "Last HW instrumentation event has an invalid type (" << events[maxEvents - 1].eventType << ")" );
-   } else if (events[readEv].value != 0) {
-       warning( "HW Instrument buffer overflow. " << events[readEv].value << " events lost" );
+
+   if (writeEv > 0) {
+      ins->addDeviceEventList( _devInstr, writeEv, deviceEvents );
    }
-   ins->addDeviceEventList( _devInstr, readEv, deviceEvents );
+
    delete[] events;
    delete[] deviceEvents;
 }
@@ -262,7 +258,6 @@ bool FPGAProcessor::tryPostOutlineTasks( size_t max )
          --_totalRunningTasks;
          instrumentPoint( "fpga-run-tasks", _totalRunningTasks.value() );
          InstrumentBurst instBurst( "fpga-finish-task", wd->getId() );
-         readInstrCounters( wd, xHandle );
 #endif
          xtasksDeleteTask( &xHandle );
          --_runningTasks;

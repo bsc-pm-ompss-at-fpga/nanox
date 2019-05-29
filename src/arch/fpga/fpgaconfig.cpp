@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009-2019 Barcelona Supercomputing Center                          */
+/*      Copyright 2017-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -53,6 +53,7 @@ std::size_t FPGAConfig::_allocAlign = 16;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
    bool FPGAConfig::_disableInst = false;
    size_t FPGAConfig::_numEvents = 4096/24; //Number of events that fit in a page
+   bool FPGAConfig::_insCallback = true;
 #endif //NANOS_INSTRUMENTATION_ENABLED
 
 void FPGAConfig::prepare( Config &config )
@@ -126,6 +127,10 @@ void FPGAConfig::prepare( Config &config )
          "Maximum number of events to be saved from a FPGA task (def: 170)");
    config.registerEnvOption( "fpga_max_instr_events", "FPGA_MAX_INSTR_EVENTS" );
    config.registerArgOption( "fpga_max_instr_events", "fpga-max-instr-events" );
+
+   config.registerConfigOption( "fpga_ins_callback", NEW Config::FlagOption( _insCallback ),
+      "Handle the FPGA instrumentation using the IDLE event callback of Event Dispatcher (def: enabled)" );
+   config.registerArgOption( "fpga_ins_callback", "fpga-instrumentation-callback" );
 #endif //NANOS_INSTRUMENTATION_ENABLED
 }
 
@@ -168,8 +173,8 @@ void FPGAConfig::apply()
    }
 
    if ( _idleCreateCallback && _disableIdleCreateCallback ) {
-      warning0( " The task creation callback will not be registered during plugin initialization because " <<
-                " the disable task creation callback flag is also present." );
+      warning0( " The FPGA task creation callback will not be registered during plugin initialization because " <<
+                " the disable task creation callback flag present." );
       _idleCreateCallback = false;
    }
 

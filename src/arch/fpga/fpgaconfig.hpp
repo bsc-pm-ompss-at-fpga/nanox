@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2019-2019 Barcelona Supercomputing Center                          */
+/*      Copyright 2017-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -36,6 +36,7 @@ namespace ext {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
          static bool                      _disableInst; //! Disable FPGA instrumentation using HW timer
          static size_t                    _numEvents; //! Max fpga events
+         static bool                      _insCallback; //! Idle callback for FPGA instrumentation handling
 #endif //NANOS_INSTRUMENTATION_ENABLED
 
          static int                       _numAccelerators; //! Number of accelerators used in the execution
@@ -104,6 +105,9 @@ namespace ext {
 
          //! \brief Retuns number of maximum instrumentation events to be read from fpga
          static int getNumInstrEvents() { return _numEvents; }
+
+         //! \brief Retuns whether the FPGA instrumentation callback must be enabled or not
+         static bool getInstrumentationCallbackEnabled() { return _insCallback; }
 #endif //NANOS_INSTRUMENTATION_ENABLED
    };
 

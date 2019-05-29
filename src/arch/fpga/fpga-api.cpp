@@ -20,8 +20,8 @@
 #include "nanos-fpga.h"
 #include "fpgadd.hpp"
 #include "fpgapinnedallocator.hpp"
+#include "fpgaworker.hpp"
 #include "fpgaprocessor.hpp"
-#include "fpgalistener.hpp"
 #include "fpgaconfig.hpp"
 #include "simpleallocator.hpp"
 
@@ -128,8 +128,9 @@ NANOS_API_DEF( void, nanos_fpga_memcpy, ( void *fpgaPtr, void * hostPtr, size_t 
    }
 }
 
-NANOS_API_DEF( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type, uint16_t numDeps,
-   uint16_t numArgs, uint64_t * args, uint8_t * argsFlags, uint16_t numCopies, nanos_fpga_copyinfo_t * copies ) )
+NANOS_API_DEF( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type,
+   uint8_t numArgs, uint64_t * args, uint8_t numDeps, uint64_t * deps, uint8_t * depsFlags,
+   uint8_t numCopies, nanos_fpga_copyinfo_t * copies ) )
 {
    fatal( "The API nanos_fpga_create_wd_async can only be called from a FPGA device" );
 }
@@ -139,16 +140,16 @@ NANOS_API_DEF( nanos_err_t, nanos_fpga_register_wd_info, ( uint64_t type, size_t
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_register_wd_info" ) );
 
-   if ( nanos::ext::FPGACreateWDListener::_registeredTasks->count(type) == 0 ) {
+   if ( nanos::ext::FPGAWorker::_registeredTasks->count(type) == 0 ) {
       verbose( "Registering WD info: " << type << " with " << num_devices << " devices." );
 
       std::string description = "fpga_created_task_" + toString( type );
-      ( *nanos::ext::FPGACreateWDListener::_registeredTasks )[type] =
-         new nanos::ext::FPGACreateWDListener::FPGARegisteredTask( num_devices, devices, translate, description );
+      ( *nanos::ext::FPGAWorker::_registeredTasks )[type] =
+         new nanos::ext::FPGAWorker::FPGARegisteredTask( num_devices, devices, translate, description );
 
       //Enable the creation callback
       if ( !nanos::ext::FPGAConfig::isIdleCreateCallbackRegistered() && !nanos::ext::FPGAConfig::forceDisableIdleCreateCallback() ) {
-         sys.getEventDispatcher().addListenerAtIdle( *nanos::ext::FPGACreateWDListener::_listener );
+         sys.getEventDispatcher().addListenerAtIdle( *nanos::ext::FPGAWorker::_createWdListener );
          nanos::ext::FPGAConfig::setIdleCreateCallbackRegistered();
       }
       return NANOS_OK;
