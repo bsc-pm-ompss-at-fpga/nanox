@@ -98,8 +98,10 @@ void FPGAWorker::handleFPGACreatedTasks() {
 
    xtasks_newtask *task = NULL;
    while ( sys.testThrottleTaskIn() ) {
-      if ( xtasksTryGetNewTask( &task ) != XTASKS_SUCCESS ) {
+      xtasks_stat stat = xtasksTryGetNewTask( &task );
+      if ( stat != XTASKS_SUCCESS ) {
          free(task);
+         ensure( stat == XTASKS_PENDING, " Error trying to get a new task from FPGA" );
          break;
       }
       sys.throttleTaskIn(); //TODO: If this call returns false, the thread should block at this point
