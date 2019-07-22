@@ -53,15 +53,18 @@ void FPGAWD::notifyParent() {
       free(hostAddr);
    }
 
+   //NOTE: Before sending the notification to the FPGA, free the host runtime resources.
+   //      Otherwise, another thread may pick the parent task finalization message before we
+   //      update the host runtime status. This will lead to a finalization of a WD with components.
+   ext::FPGADD &parentDD = ( ext::FPGADD & )( getParent()->getActiveDevice() );
+   xtasks_task_handle parentTask = ( xtasks_task_handle )( parentDD.getHandle() );
+   WorkDescriptor::notifyParent();
+
    //NOTE: FPGA WD are internally handled, do not notify about its finalization
    if ( dynamic_cast<const ext::FPGADD *>( &getActiveDevice() ) == NULL ) {
-      ext::FPGADD &dd = ( ext::FPGADD & )( getParent()->getActiveDevice() );
-      xtasks_task_handle parentTask = ( xtasks_task_handle )( dd.getHandle() );
       xtasks_stat status = xtasksNotifyFinishedTask( parentTask, 1 /*num finished tasks*/ );
       if ( status != XTASKS_SUCCESS ) {
          ensure( status == XTASKS_SUCCESS, " Error notifing FPGA about remote finished task" );
       }
    }
-
-   WorkDescriptor::notifyParent();
 }
