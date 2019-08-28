@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 /*
@@ -30,6 +30,7 @@
 #include <cstdlib>
 #include <assert.h>
 #include "cpuset.hpp"
+#include "os.hpp"
 #include <iostream>
 
 using namespace nanos;
@@ -57,6 +58,7 @@ int main(int argc, char *argv[])
    assert((set1 + set2).size()==4);    /* 1111 */
    assert((set1 & set2).size()==1);    /* 0001 */
    assert((set1 * set2).size()==1);    /* 0001 */
+   assert((set1 - set2).size()==2);    /* 0110 */
 
    // Compound assignment operators
    set2 = set1;   /* 0111 */
@@ -81,40 +83,43 @@ int main(int argc, char *argv[])
    assert(empty_set.isSubsetOf(empty_set));
    assert(empty_set.isSupersetOf(empty_set));
 
-   // First and last methods
-   CpuSet set3;   /* 0000 */
-   assert(set3.first()==0);
-   assert(set3.last()==0);
-   set3.set(0);   /* 0001 */
-   assert(set3.first()==0);
-   assert(set3.last()==1);
-   set3.set(1);   /* 0011 */
-   assert(set3.first()==0);
-   assert(set3.last()==2);
-   set3.set(3);   /* 1011 */
-   assert(set3.first()==0);
-   assert(set3.last()==4);
-   set3.clear(0); /* 1010 */
-   assert(set3.first()==1);
-   assert(set3.last()==4);
+   // Iterators tests need at least 4 CPUs
+   if (OS::getMaxProcessors() >= 4) {
+      // First and last methods
+      CpuSet set3;   /* 0000 */
+      assert(set3.first()==0);
+      assert(set3.last()==0);
+      set3.set(0);   /* 0001 */
+      assert(set3.first()==0);
+      assert(set3.last()==1);
+      set3.set(1);   /* 0011 */
+      assert(set3.first()==0);
+      assert(set3.last()==2);
+      set3.set(3);   /* 1011 */
+      assert(set3.first()==0);
+      assert(set3.last()==4);
+      set3.clear(0); /* 1010 */
+      assert(set3.first()==1);
+      assert(set3.last()==4);
 
-   // Iterators
-   CpuSet::const_iterator it = set3.begin();
-   assert( *it == 1 );
-   ++it;
-   assert( *it == 3 );
-   ++it;
-   assert( it == set3.end() );
-   ++it;
-   assert( it == set3.end() );
-   --it;
-   assert( *it == 3 );
-   --it;
-   assert( *it == 1 );
-   assert( it == set3.begin() );
-   --it;
-   assert( *it == 1 );
-   assert( it == set3.begin() );
+      // Iterators
+      CpuSet::const_iterator it = set3.begin();
+      assert( *it == 1 );
+      ++it;
+      assert( *it == 3 );
+      ++it;
+      assert( it == set3.end() );
+      ++it;
+      assert( it == set3.end() );
+      --it;
+      assert( *it == 3 );
+      --it;
+      assert( *it == 1 );
+      assert( it == set3.begin() );
+      --it;
+      assert( *it == 1 );
+      assert( it == set3.begin() );
+   }
 
    return EXIT_SUCCESS;
 }

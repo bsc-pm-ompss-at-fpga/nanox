@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #include "plugin.hpp"
@@ -61,17 +61,23 @@ class GPUPlugin : public ArchPlugin
             ext::GPUMemorySpace *gpuMemSpace = NEW ext::GPUMemorySpace();
             gpuMemory.setSpecificData( gpuMemSpace );
 
-            int node = getNumaNodeOfGPU( gpuC );
+            unsigned int node = getNumaNodeOfGPU( gpuC );
 
             ext::SMPProcessor *core = sys.getSMPPlugin()->getFreeSMPProcessorByNUMAnodeAndReserve(node);
             if ( core == NULL ) {
                core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
                if ( core == NULL ) {
-                  fatal0("Unable to get a core to run the GPU thread.");
+                  core = sys.getSMPPlugin()->getLastSMPProcessor();
+                  if ( core == NULL ) {
+                     fatal0("Unable to get a core to run the GPU thread.");
+                  }
+                  warning0("Unable to get an exclusive cpu to run the CPU thread. The thread will run on PE " << core->getId() << " and share the cpu");
                }
-               warning0("Unable to get a cpu on numa node " << node << " to run the CPU thread. Will run on numa node "<< core->getNumaNode());
+               if (node != core->getNumaNode()) {
+                  warning0("Unable to get a cpu on numa node " << node << " to run the CPU thread. Will run on numa node "<< core->getNumaNode());
+               }
             }
-            core->setNumFutureThreads( 1 );
+            core->setNumFutureThreads( core->getNumFutureThreads() + 1 );
             
             //bool reserved;
             //unsigned pe = sys.reservePE( numa, node, reserved );

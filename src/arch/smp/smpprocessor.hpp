@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #ifndef _NANOS_SMP_PROCESSOR
@@ -44,6 +44,7 @@ namespace ext {
          static size_t _cacheDefaultSize;
          static System::CachePolicyType _cachePolicy;
          unsigned int _bindingId;
+         CpuSet _bindingList;
          bool _reserved;
          bool _active;
          unsigned int _futureThreads;
@@ -55,9 +56,11 @@ namespace ext {
 
       public:
          // constructors
-         SMPProcessor( int bindingId, memory_space_id_t numMemId, bool active, unsigned int numaNode, unsigned int socket );
+         SMPProcessor( int bindingId, const CpuSet& bindingList, memory_space_id_t numMemId,
+               bool active, unsigned int numaNode, unsigned int socket );
 
          unsigned int getBindingId() const { return _bindingId; }
+         const CpuSet& getBindingList() const { return _bindingList; }
 
          virtual ~SMPProcessor() {}
 

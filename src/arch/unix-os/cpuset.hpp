@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #ifndef CPUSET_HPP
@@ -67,6 +67,8 @@ class CpuSet
       // Default constructor
       CpuSet(): _mask() {}
 
+      CpuSet( int cpuid ): _mask() { set(cpuid); }
+
       // Destructor
       ~CpuSet() {}
 
@@ -105,6 +107,7 @@ class CpuSet
       friend CpuSet operator&( const CpuSet& lhs, const CpuSet& rhs );
       friend CpuSet operator+( const CpuSet& lhs, const CpuSet& rhs );
       friend CpuSet operator*( const CpuSet& lhs, const CpuSet& rhs );
+      friend CpuSet operator-( const CpuSet& lhs, const CpuSet& rhs );
       friend bool operator==( const CpuSet& lhs, const CpuSet& rhs );
       friend bool operator!=( const CpuSet& lhs, const CpuSet& rhs );
 
@@ -233,6 +236,14 @@ inline CpuSet operator+( const CpuSet& lhs, const CpuSet& rhs )
 inline CpuSet operator*( const CpuSet& lhs, const CpuSet& rhs )
 {
    return lhs & rhs;
+}
+
+inline CpuSet operator-( const CpuSet& lhs, const CpuSet& rhs )
+{
+   CpuSet result;
+   CPU_XOR( &result._mask, &lhs._mask, &rhs._mask );
+   CPU_AND( &result._mask, &lhs._mask, &result._mask );
+   return result;
 }
 
 inline bool operator==( const CpuSet& lhs, const CpuSet& rhs )

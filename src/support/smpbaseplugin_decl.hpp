@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #ifndef _NANOS_SMPBASEPLUGIN_DECL
@@ -66,7 +66,7 @@ class SMPBasePlugin : public ArchPlugin {
       virtual int getRequestedWorkers() const = 0;
       virtual unsigned int getMaxWorkers() const = 0;
       virtual void createWorker( std::map<unsigned int, BaseThread *> &workers ) = 0;
-      virtual std::string getBindingMaskString() const = 0;
+      virtual std::pair<std::string, std::string> getBindingStrings() const = 0;
       virtual bool asyncTransfersEnabled() const = 0;
 };
 

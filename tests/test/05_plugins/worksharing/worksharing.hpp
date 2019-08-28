@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2018 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #ifndef WORKSHARING_HPP
@@ -50,7 +50,6 @@ void print_vector();
 
 static int I[VECTOR_SIZE+2*VECTOR_MARGIN] = {0};
 static int *A = &I[VECTOR_MARGIN];
-static int error = 0;
 
 void execute(nanos_omp_sched_t sched, int lower, int upper, int offset, int step, int chunk)
 {
@@ -134,7 +133,7 @@ int ws_test(nanos_omp_sched_t sched, const char *desc, int step, int chunk)
    int error = 0;
 
    execute(sched, 0, VECTOR_SIZE, 0, +step, chunk);
-   error += check(desc, "0", "+", "+0000",+ step, chunk);
+   error += check(desc, "0", "+", "+0000", +step, chunk);
    execute(sched, VECTOR_SIZE-1, -1, 0, -step, chunk);
    error += check(desc, "+", "0", "+0000", -step, chunk);
    execute(sched, 0, VECTOR_SIZE, -VECTOR_SIZE, +step, chunk);

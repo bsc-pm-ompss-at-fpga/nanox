@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #ifndef _NANOS_SMP_PLUGIN
@@ -71,7 +71,7 @@ class SMPPlugin : public SMPBasePlugin
    int                          _currentCPUs;
    int                          _requestedWorkers;
    std::vector<SMPProcessor *> *_cpus;
-   std::vector<SMPProcessor *> *_cpusByCpuId;
+   std::map<int,SMPProcessor*> *_cpusByCpuId;
    std::vector<SMPThread *>     _workers;
    int                          _bindingStart;
    int                          _bindingStride;
@@ -81,6 +81,7 @@ class SMPPlugin : public SMPBasePlugin
    int                          _smpHostCpus;
    std::size_t                  _smpPrivateMemorySize;
    bool                         _workersCreated;
+   int                          _threadsPerCore;
 
    // Nanos++ scheduling domain
    CpuSet                       _cpuSystemMask;   /*!< \brief system's default cpu_set */
@@ -226,11 +227,7 @@ class SMPPlugin : public SMPBasePlugin
     */
    void createWorker( std::map<unsigned int, BaseThread *> &workers );
 
-   /*! \brief returns a human readable string containing information about the binding mask, detecting ranks.
-    *       format e.g.,
-    *           active[ i-j, m, o-p, ] - inactive[ k-l, n, ]
-    */
-   virtual std::string getBindingMaskString() const;
+   virtual std::pair<std::string, std::string> getBindingStrings() const;
 
 protected:
 

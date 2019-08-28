@@ -1,4 +1,4 @@
-AC_INIT([nanox], [0.15a], [pm-tools@bsc.es])
+AC_INIT([nanox], [0.16a], [pm-tools@bsc.es])
 AC_LANG([C++])
 AC_CONFIG_SRCDIR([src/core/system.cpp])
 AC_DEFINE_UNQUOTED([NANOX_CONFIGURE_ARGS], ["$0 $@"], [Configure line])
@@ -126,6 +126,13 @@ AC_C_CONST
 
 # Compiler dependent Configuration flags
 AX_CONFIG_CC
+
+# --------------------------------
+# Python for lit check
+# --------------------------------
+AM_PATH_PYTHON
+AX_COMPARE_VERSION([$PYTHON_VERSION], [ge], [2.7], [lit=yes], [lit=no])
+AM_CONDITIONAL([LIT_SUPPORT], [test "x$lit" = xyes])
 
 ## -----------------------
 ## Check host architecture

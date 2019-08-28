@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #include <iostream>
@@ -98,13 +98,14 @@ int main( int argc, char *argv[] )
 
    pid_t pid = getpid();
 
-   const CpuSet& cpu_set = do_all ? sys.getCpuProcessMask() : sys.getCpuActiveMask();
-
    char hostname[HOST_NAME_MAX];
    gethostname( hostname, HOST_NAME_MAX );
 
    std::cout << "Nanos++: " << hostname << "::" << pid
-      << " [ " << cpu_set.toString() << " ]" << std::endl;
+      << " [ " << ( do_all ?
+                     sys.getCpuProcessMask().toString() :
+                     sys.getSMPPlugin()->getBindingStrings().first )
+      << " ]" << std::endl;
 
    exit( EXIT_SUCCESS );
 }

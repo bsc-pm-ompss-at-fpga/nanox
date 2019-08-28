@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #ifndef _NANOS_OMP_H_
@@ -45,7 +45,7 @@ NANOS_API_DECL(nanos_err_t, nanos_omp_set_implicit, ( nanos_wd_t uwd ));
 NANOS_API_DECL(int, nanos_omp_get_max_threads, ( void ));
 NANOS_API_DECL(int, nanos_omp_get_num_threads, ( void ));
 NANOS_API_DECL(int, nanos_omp_get_thread_num, ( void ));
-NANOS_API_DECL(int, nanos_omp_set_num_threads, ( int nthreads ));
+NANOS_API_DECL(void, nanos_omp_set_num_threads, ( int nthreads ));
 
 NANOS_API_DECL(nanos_ws_t, nanos_omp_find_worksharing, ( nanos_omp_sched_t kind ));
 NANOS_API_DECL(nanos_err_t, nanos_omp_get_schedule, ( nanos_omp_sched_t *kind, int *modifier ));

@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #include "plugin.hpp"
@@ -64,9 +64,13 @@ namespace ext {
 
          ext::SMPProcessor *core = sys.getSMPPlugin()->getLastFreeSMPProcessorAndReserve();
          if ( core == NULL ) {
-            fatal0("Unable to get a core to run the GPU thread.");
+            core = sys.getSMPPlugin()->getLastSMPProcessor();
+            if ( core == NULL ) {
+               fatal0("Unable to get a core to run the OpenCL host thread.");
+            }
+            warning0("Unable to get an exclusive cpu to run the OpenCL thread. The thread will run on PE " << core->getId() << " and share the cpu");
          }
-         core->setNumFutureThreads( 1 );
+         core->setNumFutureThreads( core->getNumFutureThreads() + 1 );
 
          _opencls.push_back( NEW nanos::ext::OpenCLProcessor( openclC, id, core, oclmemory ) );
       }
