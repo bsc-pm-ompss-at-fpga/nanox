@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #include <assert.h>
@@ -481,6 +481,7 @@ void System::start ()
    //Setup MainWD
    WD &mainWD = *myThread->getCurrentWD();
    mainWD._mcontrol.setMainWD();
+   mainWD.setImplicit(true);
 
    if ( _pmInterface->getInternalDataSize() > 0 ) {
       char *data = NEW char[_pmInterface->getInternalDataSize()];
@@ -1348,10 +1349,9 @@ ThreadTeam * System::createTeam ( unsigned nthreads, void *constraints, bool reu
 
    //! \note Getting rest of the members
    while ( remaining_threads > 0 ) {
-
       BaseThread *thread = getUnassignedWorker();
       // Check if we don't have a worker because it needs to be created
-      if ( !thread && _workers.size() < nthreads ) {
+      if ( !thread ) {
          _smpPlugin->createWorker( _workers );
          continue;
       }
@@ -1437,6 +1437,10 @@ void System::environmentSummary()
          break;
    }
 
+   std::pair<std::string, std::string> bindings = _smpPlugin->getBindingStrings();
+   std::string system_cpus =
+      "active[ " + bindings.first + " ] - inactive[ " + bindings.second + " ]";
+
    std::ostringstream output;
    output << "Nanos++ Initial Environment Summary" << std::endl;
    output << "==========================================================" << std::endl;
@@ -1444,7 +1448,7 @@ void System::environmentSummary()
    output << "=== Nanos++ version:     " << PACKAGE_VERSION << std::endl;
    output << "=== PID:                 " << getpid() << std::endl;
    output << "=== Num. worker threads: " << _workers.size() << std::endl;
-   output << "=== System CPUs:         " << _smpPlugin->getBindingMaskString() << std::endl;
+   output << "=== System CPUs:         " << system_cpus << std::endl;
    output << "=== Binding:             " << std::boolalpha << _smpPlugin->getBinding() << std::endl;
    output << "=== Prog. Model:         " << prog_model << std::endl;
    output << "=== Priorities:          " << (getPrioritiesNeeded() ? "Needed" : "Not needed")

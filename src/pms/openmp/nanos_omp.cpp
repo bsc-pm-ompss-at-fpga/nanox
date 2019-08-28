@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #include "nanos.h"
@@ -116,8 +116,11 @@ NANOS_API_DEF(nanos_err_t, nanos_omp_barrier, ( void ))
    NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","omp_barrier",NANOS_SYNCHRONIZATION) );
 
    try {
+      if ( sys.getPMInterface().isOmpSs() ) {
+         return NANOS_UNIMPLEMENTED;
+      }
+
       WD &wd = *myThread->getCurrentWD();
-    
       wd.waitCompletion();
       if ( wd.isImplicit() ) {
          myThread->getTeam()->barrier();

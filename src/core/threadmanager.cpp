@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #include "threadmanager_decl.hpp"
@@ -65,10 +65,16 @@ void ThreadManager::init()
 
 #ifdef DLB
    if ( _useDLB ) {
-      DLB_Init( 0, &_cpuProcessMask, NULL );
-      sys.getPMInterface().registerCallbacks();
-      _maxThreads = OS::getMaxProcessors();
-   } else {
+      int err = DLB_Init( 0, &_cpuProcessMask, NULL );
+      if (err == DLB_SUCCESS) {
+         sys.getPMInterface().registerCallbacks();
+         _maxThreads = OS::getMaxProcessors();
+      } else {
+         warning0( "DLB Init failed: " << DLB_Strerror(err) );
+         _useDLB = false;
+      }
+   }
+   if ( !_useDLB ) {
 #endif
       _maxThreads = sys.getSMPPlugin()->getRequestedWorkers();
 #ifdef DLB
@@ -219,7 +225,8 @@ void ThreadManager::unblockThread( BaseThread* thread )
              * in both cases we continue as if DLB were not involved
              */
          } else {
-            warning( "DLB returned error: " << DLB_Strerror(dlb_err) );
+            warning( "DLB returned error: " << DLB_Strerror(dlb_err) << " for cpuid " << cpuid );
+
          }
       }
    }
@@ -423,6 +430,9 @@ void ThreadManager::waitForCpuAvailability()
          /* CPU is not yet available */
          OS::nanosleep( ThreadManagerConf::DEFAULT_SLEEP_NS );
          sched_yield();
+      } else if ( dlb_err == DLB_NOUPDT ) {
+         /* CPU is not reclaimed, ask again */
+         DLB_AcquireCpu( my_cpu );
       }
    }
 #endif

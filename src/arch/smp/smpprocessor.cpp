@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #include "smpprocessor.hpp"
@@ -32,9 +32,11 @@ size_t SMPProcessor::_threadsStackSize = 0;
 System::CachePolicyType SMPProcessor::_cachePolicy = System::DEFAULT;
 size_t SMPProcessor::_cacheDefaultSize = 1048580;
 
-SMPProcessor::SMPProcessor( int bindingId, memory_space_id_t memId, bool active, unsigned int numaNode, unsigned int socket ) :
+SMPProcessor::SMPProcessor( int bindingId, const CpuSet& bindingList,
+      memory_space_id_t memId, bool active, unsigned int numaNode, unsigned int socket ) :
    PE( &getSMPDevice(), memId, 0 /* always local node */, numaNode, true, socket, true ),
-   _bindingId( bindingId ), _reserved( false ), _active( active ), _futureThreads( 0 ) {}
+   _bindingId( bindingId ), _bindingList( bindingList ),
+   _reserved( false ), _active( active ), _futureThreads( 0 ) {}
 
 void SMPProcessor::prepareConfig ( Config &config )
 {

@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,15 +14,13 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #include "plugin.hpp"
 #include "system.hpp"
 #include "instrumentation.hpp"
 #include "instrumentationcontext_decl.hpp"
-#include <extrae_types.h>
-#include <mpitrace_user_events.h>
 #include "debug.hpp"
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -38,6 +36,10 @@
 #include "os.hpp"
 #include "errno.h"
 #include <unistd.h>
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+#include <extrae_types.h>
+#include <mpitrace_user_events.h>
 
 #define extrae_size_t unsigned int
 
@@ -63,6 +65,7 @@ extern "C" {
    }
 #endif //EXTRAE_DEVICE_TRACING
 }
+#endif
 
 namespace nanos {
 
@@ -298,6 +301,7 @@ class InstrumentationExtrae: public Instrumentation
 
         /* Keep current number of threads */
         _maxThreads = sys.getSMPPlugin()->getNumThreads();
+        Extrae_change_num_threads( _maxThreads );
 
 #ifdef EXTRAE_DEVICE_TRACING
         /* Register the devices */

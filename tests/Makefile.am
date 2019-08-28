@@ -1,5 +1,5 @@
 #####################################################################################
-#      Copyright 2015 Barcelona Supercomputing Center                               #
+#      Copyright 2009-2018 Barcelona Supercomputing Center                          #
 #                                                                                   #
 #      This file is part of the NANOS++ library.                                    #
 #                                                                                   #
@@ -14,16 +14,29 @@
 #      GNU Lesser General Public License for more details.                          #
 #                                                                                   #
 #      You should have received a copy of the GNU Lesser General Public License     #
-#      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             #
+#      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            #
 #####################################################################################
 
-CLEANFILES=
+CLEANFILES = tests.log tests.log.xml
 
-CLEANFILES+=tests.log
+EXTRA_DIST = gens/config.py \
+	     lit.site.cfg \
+	     litsupport/__init__.py \
+	     litsupport/bets.py
 
-EXTRA_DIST = gens/config.py
+if LIT_SUPPORT
+check-local: lit-check
+else
+check-local: bets-check
+endif
 
-check-local: $(top_srcdir)/scripts/bets
+LIT_OPTIONS = --xunit-xml-output=tests.log.xml -sv --threads=$(shell nproc)
+LIT = PYTHONPATH=$(top_srcdir)/tests $(top_srcdir)/scripts/lit/lit.py $(LIT_OPTIONS)
+
+lit-check:
+	$(LIT) $(srcdir)/test
+
+bets-check: $(top_srcdir)/scripts/bets
 	$(top_srcdir)/scripts/bets $(BETS_OPTIONS) -o tests.log $(srcdir)/test
 
 dist-hook:

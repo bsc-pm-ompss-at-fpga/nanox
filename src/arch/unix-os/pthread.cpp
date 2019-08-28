@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #include "pthread.hpp"
@@ -113,12 +113,9 @@ void PThread::join ()
 
 void PThread::bind()
 {
-   int cpu_id = _core->getBindingId();
-   cpu_set_t cpu_set;
-   CPU_ZERO( &cpu_set );
-   CPU_SET( cpu_id, &cpu_set );
-   verbose( "Binding thread " << getMyThreadSafe()->getId() << " to cpu " << cpu_id );
-   pthread_setaffinity_np( _pth, sizeof(cpu_set_t), &cpu_set );
+   const CpuSet& binding = _core->getBindingList();
+   verbose( "Binding thread " << getMyThreadSafe()->getId() << " to cpus [" << binding << "]" );
+   pthread_setaffinity_np( _pth, sizeof(cpu_set_t), binding.get_cpu_set_pointer() );
 
    NANOS_INSTRUMENT ( static InstrumentationDictionary *ID = sys.getInstrumentation()->getInstrumentationDictionary(); )
    NANOS_INSTRUMENT ( static nanos_event_key_t cpuid_key = ID->getEventKey("cpuid"); )
@@ -129,7 +126,7 @@ void PThread::bind()
    NANOS_INSTRUMENT ( keys[1] = numa_key )
    
    NANOS_INSTRUMENT ( nanos_event_value_t values[2]; )
-   NANOS_INSTRUMENT ( values[0] = (nanos_event_value_t) cpu_id + 1; )
+   NANOS_INSTRUMENT ( values[0] = (nanos_event_value_t) _core->getBindingId() + 1; )
    NANOS_INSTRUMENT ( values[1] = (nanos_event_value_t) _core->getNumaNode() + 1; )
    NANOS_INSTRUMENT ( sys.getInstrumentation()->raisePointEvents(2, keys, values); )
 }

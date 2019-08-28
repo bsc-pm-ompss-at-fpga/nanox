@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2015 Barcelona Supercomputing Center                               */
+/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -14,7 +14,7 @@
 /*      GNU Lesser General Public License for more details.                          */
 /*                                                                                   */
 /*      You should have received a copy of the GNU Lesser General Public License     */
-/*      along with NANOS++.  If not, see <http://www.gnu.org/licenses/>.             */
+/*      along with NANOS++.  If not, see <https://www.gnu.org/licenses/>.            */
 /*************************************************************************************/
 
 #include "basethread.hpp"
@@ -56,13 +56,17 @@ extern "C"
       omp_set_num_threads(*nthreads);
    }
 
-   int nanos_omp_set_num_threads ( int nthreads ) __attribute__ ((alias ("omp_set_num_threads")));
-   int nanos_omp_set_num_threads_ ( int nthreads ) __attribute__ ((alias ("omp_set_num_threads")));
+   void nanos_omp_set_num_threads ( int nthreads ) __attribute__ ((alias ("omp_set_num_threads")));
+   void nanos_omp_set_num_threads_ ( int nthreads ) __attribute__ ((alias ("omp_set_num_threads")));
 
    NANOS_API_DEF(int, omp_get_thread_num, ( void ))
    {
       //! \todo check if master always gets a 0 -> ensure condition ?
-      return myThread->getTeamData()->getId();
+      if (myThread && myThread->getTeamData()) {
+         return myThread->getTeamData()->getId();
+      } else {
+         return -1;
+      }
    }
 
    int nanos_omp_get_thread_num ( void ) __attribute__ ((alias ("omp_get_thread_num")));
