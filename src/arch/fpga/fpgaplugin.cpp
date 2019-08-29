@@ -314,7 +314,7 @@ class FPGAPlugin : public ArchPlugin
       }
 
       void generateExecutionSummary() {
-#ifdef NANOS_DEBUG_ENABLED
+#if defined(NANOS_DEBUG_ENABLED) || defined(NANOS_INSTRUMENTATION_ENABLED)
          for ( std::vector<FPGAProcessor*>::const_iterator it = fpgaPEs->begin();
                it != fpgaPEs->end(); it++ )
          {

@@ -48,7 +48,7 @@ std::vector< FPGAProcessor* > *nanos::ext::fpgaPEs;
 FPGAProcessor::FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpaceId, Device const * arch ) :
    ProcessingElement( arch, memSpaceId, 0, 0, false, 0, false ), _fpgaProcessorInfo( info ),
    _runningTasks( 0 ), _readyTasks( ), _waitInTasks( )
-#ifdef NANOS_DEBUG_ENABLED
+#if defined(NANOS_DEBUG_ENABLED) || defined(NANOS_INSTRUMENTATION_ENABLED)
    , _totalTasks( 0 )
 #endif
 {
@@ -193,7 +193,7 @@ int FPGAProcessor::getPendingWDs() const {
 bool FPGAProcessor::inlineWorkDependent( WD &wd )
 {
    wd.start( WD::IsNotAUserLevelThread );
-#ifdef NANOS_DEBUG_ENABLED
+#if defined(NANOS_DEBUG_ENABLED) || defined(NANOS_INSTRUMENTATION_ENABLED)
    ++_totalTasks;
 #endif
 
@@ -217,7 +217,7 @@ void FPGAProcessor::preOutlineWorkDependent ( WD &wd ) {
    }
 
    wd.preStart(WorkDescriptor::IsNotAUserLevelThread);
-#ifdef NANOS_DEBUG_ENABLED
+#if defined(NANOS_DEBUG_ENABLED) || defined(NANOS_INSTRUMENTATION_ENABLED)
    ++_totalTasks;
 #endif
 }
