@@ -46,7 +46,7 @@ namespace ext {
          Atomic<size_t>                _runningTasks;       //!< Tasks in the accelerator (running)
          FPGATasksQueue_t              _readyTasks;         //!< Tasks that are ready but are waiting for device memory
          FPGATasksQueue_t              _waitInTasks;        //!< Tasks that are ready but are waiting for input copies
-#ifdef NANOS_DEBUG_ENABLED
+#if defined(NANOS_DEBUG_ENABLED) || defined(NANOS_INSTRUMENTATION_ENABLED)
          Atomic<size_t>                _totalTasks;         //!< Total (acumulative) tasks executed in the accelerator
 #endif
 
@@ -108,7 +108,7 @@ namespace ext {
          virtual void releaseExecLock();
          bool isExecLockAcquired();
 
-#ifdef NANOS_DEBUG_ENABLED
+#if defined(NANOS_DEBUG_ENABLED) || defined(NANOS_INSTRUMENTATION_ENABLED)
          //! \breif Returns the number of tasks executed in the accelerator
          size_t getNumTasks() const {
             return _totalTasks.value();

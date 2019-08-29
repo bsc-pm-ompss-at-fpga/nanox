@@ -75,7 +75,7 @@ namespace nanos {
   /*! \class NewDirectory
    *  \brief Stores copy accesses controls their versions and if they are dirty in any cache
    */
-   typedef std::list< std::pair< reg_t, reg_t > > NewLocationInfoList; 
+   typedef std::list< std::pair< reg_t, reg_t > > NewLocationInfoList;
    class RegionDirectory
    {
       private:
@@ -144,11 +144,11 @@ namespace nanos {
 
       private:
 
-         /*! \brief NewDirectory copy constructor (private) 
+         /*! \brief NewDirectory copy constructor (private)
           */
          RegionDirectory( const RegionDirectory &dir );
 
-         /*! \brief NewDirectory copy assignment operator (private) 
+         /*! \brief NewDirectory copy assignment operator (private)
           */
          const RegionDirectory & operator= ( const RegionDirectory &dir );
 
@@ -167,9 +167,9 @@ namespace nanos {
          RegionDirectoryKey getRegionDirectoryKey( CopyData const &cd );
          RegionDirectoryKey getRegionDirectoryKey( uint64_t addr );
          RegionDirectoryKey getRegionDirectoryKeyRegisterIfNeeded( CopyData const &cd, WD const *wd );
-         void synchronize( WD &wd );
-         void synchronize( WD &wd, void *addr );
-         void synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data );
+         void synchronize( WD &wd, const bool forceUnregister = false );
+         void synchronize( WD &wd, void *addr, const bool forceUnregister = false );
+         void synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data, const bool forceUnregister = false );
 
          /*! \brief NewDirectory default constructor
           */

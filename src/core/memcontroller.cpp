@@ -561,7 +561,7 @@ void MemController::setMainWD() {
 
 
 void MemController::synchronize( std::size_t numDataAccesses, DataAccess *data ) {
-   sys.getHostMemory().synchronize( *_wd, numDataAccesses, data );
+   sys.getHostMemory().synchronize( *_wd, numDataAccesses );
 }
 void MemController::synchronize() {
    sys.getHostMemory().synchronize( *_wd );

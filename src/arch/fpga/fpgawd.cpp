@@ -34,15 +34,21 @@ FPGAWD::FPGAWD ( int ndevices, DeviceData **devs, size_t data_size, size_t data_
 {}
 
 void FPGAWD::notifyParent() {
-   //FIXME: The copy data may not be in copies[].address as it may be moved into another address space.
-   //       In addition, the directory entry for copies[].address must be removed as it probably will
-   //       be used again in a future task.
-
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-notify-task", getParent()->getId() ) );
+   //FIXME: The current WD may not have a parent task
 
    //Copy the data back to the FPGA memory before doing the notification
+   //NOTE: First the WD cache must be updated to get the data back into the host addressspace
    CopyData const * copies = getCopies();
-   for ( size_t cIdx = 0; cIdx < getNumCopies(); ++cIdx ) {
+   const size_t numCopies = getNumCopies();
+   DataAccess * regions = ( DataAccess * )( calloc( numCopies, sizeof( DataAccess ) ) );
+   for ( size_t cIdx = 0; cIdx < numCopies; ++cIdx ) {
+      //NOTE: Only setting the used fields
+      new (regions + cIdx) DataAccess( copies[cIdx].address, copies[cIdx].flags.input, copies[cIdx].flags.output,
+         0 /*canRename*/, 0 /*concurrent*/, 0 /*commutative*/, 0 /*dimCount*/, NULL, 0 );
+   }
+   sys.getHostMemory().synchronize( *getParent(), numCopies, regions, true /*forceUnregister*/ );
+   for ( size_t cIdx = 0; cIdx < numCopies; ++cIdx ) {
       void * hostAddr = copies[cIdx].address;
       if ( copies[cIdx].flags.output ) {
          const uint64_t devAddr = _origFpgaCopiesAddrs[cIdx];

@@ -53,7 +53,7 @@ inline TransferListEntry::TransferListEntry( global_reg_t reg, unsigned int vers
    _reg( reg ), _version( version ), _ops( ops ), _destinationChunk( destinationChunk ), _sourceChunk( sourceChunk ), _srcAddress( srcAddr ), _copyIndex( copyIdx ) {
 }
 
-inline TransferListEntry::TransferListEntry( TransferListEntry const &t ) : 
+inline TransferListEntry::TransferListEntry( TransferListEntry const &t ) :
    _reg( t._reg ), _version( t._version ), _ops( t._ops ), _destinationChunk( t._destinationChunk ), _sourceChunk( t._sourceChunk ), _srcAddress( t._srcAddress ), _copyIndex( t._copyIndex ) {
 }
 
@@ -109,9 +109,9 @@ class HostAddressSpace {
    void getRegion( CopyData const &cd, global_reg_t &reg, WD const *wd );
    void failToLock( MemSpace< SeparateAddressSpace > &from, global_reg_t const &reg, unsigned int version );
 
-   void synchronize( WD &wd );
-   void synchronize( WD &wd, void *addr );
-   void synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data );
+   void synchronize( WD &wd, const bool forceUnregister = false );
+   void synchronize( WD &wd, void *addr, const bool forceUnregister = false );
+   void synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data, const bool forceUnregister = false );
    memory_space_id_t getMemorySpaceId() const;
    reg_t getLocalRegionId( void *hostObject, reg_t hostRegionId );
    RegionDirectory::RegionDirectoryKey getRegionDirectoryKey( uint64_t addr );
@@ -127,7 +127,7 @@ class SeparateAddressSpace {
    unsigned int _acceleratorNumber;
    bool         _isAccelerator;
    void        *_sdata;
-   
+
    public:
    SeparateAddressSpace( memory_space_id_t memorySpaceId, Device &arch, bool allocWide, std::size_t slabSize );
 
@@ -141,7 +141,7 @@ class SeparateAddressSpace {
    void releaseRegions( MemCacheCopy *memCopies, unsigned int numCopies, WD const &wd );
    //void releaseRegion( global_reg_t const &reg, WD const &wd, unsigned int copyIdx, enum RegionCache::CachePolicy policy );
    uint64_t getDeviceAddress( global_reg_t const &reg, uint64_t baseAddress, AllocatedChunk *chunk ) const;
-   
+
    bool prepareRegions( MemCacheCopy *memCopies, unsigned int numCopies, WD const &wd );
    void setRegionVersion( global_reg_t const &reg, AllocatedChunk *chunk, unsigned int version, WD const &wd, unsigned int copyIdx );
    unsigned int getCurrentVersion( global_reg_t const &reg, WD const &wd, unsigned int copyIdx );
