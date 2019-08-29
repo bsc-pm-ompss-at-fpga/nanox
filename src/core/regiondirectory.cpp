@@ -359,7 +359,7 @@ void RegionDirectory::_unregisterObjects( std::map< uint64_t, MemoryMap< Object 
    }
 }
 
-void RegionDirectory::synchronize( WD &wd, void *addr ) {
+void RegionDirectory::synchronize( WD &wd, void *addr, const bool forceUnregister ) {
    //std::ostream &o = (*myThread->_file);
    //o << "++++ WaitOn synchronize, w addr " << addr << std::endl;
    uint64_t objectAddr = (uint64_t) addr;
@@ -448,7 +448,7 @@ void RegionDirectory::synchronize( WD &wd, void *addr ) {
    while ( !outOps.isDataReady( wd ) ) { myThread->processTransfers(); }
    //sys.setVerboseDevOps( orig_verbose_devops );
 
-   if ( wd.getDepth() == 0 ) {
+   if ( wd.getDepth() == 0 || forceUnregister ) {
       // invalidate data on devices
       _invalidateObjectsFromDevices( objects_to_clear );
 
@@ -463,7 +463,7 @@ void RegionDirectory::synchronize( WD &wd, void *addr ) {
    //o << "++++ DONE ++++ WaitOn synchronize, w addr " << addr << std::endl;
 }
 
-void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data )
+void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data, const bool forceUnregister )
 {
    SeparateAddressSpaceOutOps outOps( myThread->runningOn(), true, false );
 
@@ -540,7 +540,7 @@ void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAcce
    outOps.issue( &wd );
    while ( !outOps.isDataReady( wd ) ) { myThread->processTransfers(); }
 
-   if ( wd.getDepth() == 0 ) {
+   if ( wd.getDepth() == 0 || forceUnregister ) {
       // invalidate data on devices
       _invalidateObjectsFromDevices( objects_to_clear );
 
@@ -554,7 +554,7 @@ void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAcce
    }
 }
 
-void RegionDirectory::synchronize( WD &wd ) {
+void RegionDirectory::synchronize( WD &wd, const bool forceUnregister ) {
    std::ostream &o = (*myThread->_file);
    //o << "++++ WaitOn synchronize ALL" << std::endl;
    //*myThread->_file << "SYNC DIR with wd " << wd.getId() << std::endl;
@@ -612,7 +612,7 @@ void RegionDirectory::synchronize( WD &wd ) {
          hb._lock.release();
       }
 
-      if ( wd.getDepth() == 0 ) {
+      if ( wd.getDepth() == 0 || forceUnregister ) {
          _unregisterObjects( objects_to_clear );
       }
       return;

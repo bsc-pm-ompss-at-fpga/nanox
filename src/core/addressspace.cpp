@@ -44,16 +44,16 @@ void HostAddressSpace::failToLock( SeparateMemoryAddressSpace &from, global_reg_
    std::cerr << __FUNCTION__ << " @ " << __FILE__ << " : " << __LINE__ << " unimplemented" << std::endl;
 }
 
-void HostAddressSpace::synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data ) {
-   _directory.synchronize( wd, numDataAccesses, data ); //needs wd
+void HostAddressSpace::synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data, const bool forceUnregister ) {
+   _directory.synchronize( wd, numDataAccesses, data, forceUnregister ); //needs wd
 }
 
-void HostAddressSpace::synchronize( WD &wd, void *addr ) {
-   _directory.synchronize( wd, addr ); //needs wd
+void HostAddressSpace::synchronize( WD &wd, void *addr, const bool forceUnregister ) {
+   _directory.synchronize( wd, addr, forceUnregister ); //needs wd
 }
 
-void HostAddressSpace::synchronize( WD &wd ) {
-   _directory.synchronize( wd );
+void HostAddressSpace::synchronize( WD &wd, const bool forceUnregister ) {
+   _directory.synchronize( wd, forceUnregister );
 }
 
 memory_space_id_t HostAddressSpace::getMemorySpaceId() const {
