@@ -337,4 +337,6 @@ paraver_config_files = \
      paraver_configs/general/sanity_checks/Equivalent_CPUs.cfg\
      paraver_configs/general/2dp_WhereMyNextTaskWasGenerated.cfg\
      paraver_configs/cluster/network_transfers_and_bw.cfg\
+     paraver_configs/ompss/fpga/number_tasks_in_acc.cfg\
+     paraver_configs/ompss/fpga/smp_and_fpga_tasks.cfg\
      $(END)
