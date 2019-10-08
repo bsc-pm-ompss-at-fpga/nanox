@@ -88,8 +88,6 @@ namespace ext {
          static bool tryOutlineTask( BaseThread * thread );
          static void handleFPGACreatedTasks();
          static WD * getFPGAWD( BaseThread *thread );
-      private:
-
    };
 
 } // namespace ext
