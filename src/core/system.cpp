@@ -1111,10 +1111,10 @@ void System::duplicateWD ( WD **uwd, WD *wd)
 
 void System::setupWD ( WD &work, WD *parent )
 {
-   work.setDepth( parent->getDepth() +1 );
-
-   // Inherit priority
+   // Inherit parent properties
    if ( parent != NULL ){
+      work.setDepth( parent->getDepth() + 1 );
+
       // Add the specified priority to its parent's
       work.setPriority( work.getPriority() + parent->getPriority() );
    }
