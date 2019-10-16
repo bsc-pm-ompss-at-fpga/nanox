@@ -32,6 +32,7 @@ using namespace ext;
 
 FPGAWorker::FPGARegisteredTasksMap * FPGAWorker::_registeredTasks = NULL;
 EventListener * FPGAWorker::_createWdListener = NULL;
+WD * FPGAWorker::_fpgaSpawnContextWd = NULL;
 
 bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
    static int const maxPendingWD = FPGAConfig::getMaxPendingWD();
@@ -95,8 +96,6 @@ void FPGAWorker::handleFPGACreatedTasks() {
    //FIXME: Delete the lock when the FPGA outs ready tasks instead of new tasks
    static Lock handleLock;
    if ( !handleLock.tryAcquire() ) return;
-
-   static WD contextWd( 0 /*numDevices*/, NULL );
 
    xtasks_newtask *task = NULL;
    while ( sys.testThrottleTaskIn() ) {
@@ -183,7 +182,7 @@ void FPGAWorker::handleFPGACreatedTasks() {
          createdWd->setSchedulerData( schedData, /*ownedByWD*/ false );
       }
 
-      contextWd.addWork( *createdWd );
+      _fpgaSpawnContextWd->addWork( *createdWd );
 
       //Set the copies information
       for ( size_t cIdx = 0; cIdx < task->numCopies; ++cIdx ) {
@@ -214,7 +213,7 @@ void FPGAWorker::handleFPGACreatedTasks() {
          }
       }
 
-      sys.setupWD( *createdWd, NULL );
+      sys.setupWD( *createdWd, _fpgaSpawnContextWd );
 
       //Set the WD input data
       memcpy(data, task->args, sizeof(unsigned long long int)*task->numArgs);
@@ -242,7 +241,7 @@ void FPGAWorker::handleFPGACreatedTasks() {
          SchedulePolicy* policy = sys.getDefaultSchedulePolicy();
          policy->onSystemSubmit( *createdWd, SchedulePolicy::SYS_SUBMIT_WITH_DEPENDENCIES );
 
-         contextWd.submitWithDependencies( *createdWd, task->numDeps , ( DataAccess * )( dependences ) );
+         _fpgaSpawnContextWd->submitWithDependencies( *createdWd, task->numDeps , ( DataAccess * )( dependences ) );
       } else {
          sys.submit( *createdWd );
       }

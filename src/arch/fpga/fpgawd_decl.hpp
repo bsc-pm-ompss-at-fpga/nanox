@@ -45,6 +45,14 @@ namespace ext {
             _hwRuntimeTaskId = task;
          }
 
+         xtasks_task_id getHwRuntimeTaskId() const {
+            return _hwRuntimeTaskId;
+         }
+
+         xtasks_task_id getHwRuntimeParentId() const {
+            return _hwRuntimeParentId;
+         }
+
          virtual void notifyParent();
    };
 

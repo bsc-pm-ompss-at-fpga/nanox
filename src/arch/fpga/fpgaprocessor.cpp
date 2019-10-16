@@ -28,6 +28,7 @@
 #include "instrumentation.hpp"
 #include "smpprocessor.hpp"
 #include "fpgapinnedallocator.hpp"
+#include "fpgawd_decl.hpp"
 #include "fpgainstrumentation.hpp"
 #include "simpleallocator.hpp"
 #include "libxtasks_wrapper.hpp"
@@ -89,11 +90,14 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
 
 void FPGAProcessor::createTask( WD &wd, WD *parentWd ) {
    xtasks_stat status;
-   xtasks_task_handle task, parentTask = NULL;
+   xtasks_task_handle task;
+   xtasks_task_id parentTask = 0;
 
-   if ( parentWd != NULL ) {
-      FPGADD &dd = ( FPGADD & )( parentWd->getActiveDevice() );
-      parentTask = ( xtasks_task_handle )( dd.getHandle() );
+   const FPGAWD * fpgaWd = dynamic_cast<const ext::FPGAWD *>( &wd );
+   if ( fpgaWd != NULL ) {
+      //NOTE: This wd is an FPGA spawned task. The right parentId has to be sent as
+      //      the finalization message is internally handled.
+      parentTask = fpgaWd->getHwRuntimeParentId();
    }
 
    status = xtasksCreateTask( ( uintptr_t )( &wd ), _fpgaProcessorInfo.getHandle(), parentTask,
