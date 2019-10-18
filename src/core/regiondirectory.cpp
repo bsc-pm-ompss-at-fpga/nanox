@@ -108,7 +108,8 @@ uint64_t RegionDirectory::_getKey( uint64_t addr ) const {
 }
 
 GlobalRegionDictionary *RegionDirectory::getRegionDictionaryRegisterIfNeeded( CopyData const &cd, WD const *wd ) {
-   uint64_t objectAddr = ( cd.getHostBaseAddress() == 0 ? ( uint64_t ) cd.getBaseAddress() : cd.getHostBaseAddress() );
+   //NOTE: Avoid a promotion of cd.baseAddress before it is casted to an unsigned type
+   uint64_t objectAddr = ( cd.getHostBaseAddress() == 0 ? ( uintptr_t )( cd.getBaseAddress() ) : cd.getHostBaseAddress() );
    std::size_t objectSize = cd.getMaxSize();
 #if 0
    unsigned int key = ( jen_hash( objectAddr ) & (HASH_BUCKETS-1) );
@@ -168,7 +169,8 @@ GlobalRegionDictionary *RegionDirectory::getRegionDictionaryRegisterIfNeeded( Co
 }
 
 GlobalRegionDictionary *RegionDirectory::getRegionDictionary( CopyData const &cd ) {
-   uint64_t objectAddr = ( cd.getHostBaseAddress() == 0 ? ( uint64_t ) cd.getBaseAddress() : cd.getHostBaseAddress() );
+   //NOTE: Avoid a promotion of cd.baseAddress before it is casted to an unsigned type
+   uint64_t objectAddr = ( cd.getHostBaseAddress() == 0 ? ( uintptr_t )( cd.getBaseAddress() ) : cd.getHostBaseAddress() );
    return getRegionDictionary( objectAddr, false );
 }
 
@@ -312,10 +314,10 @@ GlobalRegionDictionary &RegionDirectory::getDictionary( CopyData const &cd ) {
    return *getRegionDictionary( cd );
 }
 
-void RegionDirectory::_invalidateObjectsFromDevices( std::map< uint64_t, MemoryMap< Object > * > &objects ) {
-   for ( std::map< uint64_t, MemoryMap< Object > * >::iterator it = objects.begin(); it != objects.end(); it++ ) {
+void RegionDirectory::_invalidateObjectsFromDevices( std::map< uint64_t, HashBucket * > &objects ) {
+   for ( std::map< uint64_t, HashBucket * >::iterator it = objects.begin(); it != objects.end(); it++ ) {
       for ( memory_space_id_t id = 1; id <= sys.getSeparateMemoryAddressSpacesCount(); id++ ) {
-         Object *o = it->second->getExactByAddress(it->first);
+         Object *o = it->second->_bobjects->getExactByAddress(it->first);
          sys.getSeparateMemory( id ).invalidate( global_reg_t( 1, o->getGlobalRegionDictionary() ) );
       }
    }
@@ -328,15 +330,16 @@ RegionDirectory::~RegionDirectory() {
    }
 }
 
-void RegionDirectory::_unregisterObjects( std::map< uint64_t, MemoryMap< Object > * > &objects ) {
-   for ( std::map< uint64_t, MemoryMap< Object > * >::iterator it = objects.begin(); it != objects.end(); it++ ) {
-      Object *o = it->second->getExactByAddress(it->first);
+void RegionDirectory::_unregisterObjects( std::map< uint64_t, HashBucket * > &objects ) {
+   for ( std::map< uint64_t, HashBucket * >::iterator it = objects.begin(); it != objects.end(); it++ ) {
+      Object *o = it->second->_bobjects->getExactByAddress(it->first);
       sys.getNetwork()->deleteDirectoryObject( o->getGlobalRegionDictionary() );
-      it->second->eraseByAddress( it->first );
+      it->second->_bobjects->eraseByAddress( it->first );
       if ( o->getRegisteredObject() != NULL ) {
          o->resetGlobalRegionDictionary();
          CopyData *cd = o->getRegisteredObject();
-         Object **dict_o = it->second->getExactInsertIfNotFound( (uint64_t) cd->getBaseAddress(), cd->getMaxSize() );
+         //NOTE: Avoid a promotion of cd.baseAddress before it is casted to an unsigned type
+         Object **dict_o = it->second->_bobjects->getExactInsertIfNotFound( ( uintptr_t )( cd->getBaseAddress() ), cd->getMaxSize() );
          if ( dict_o != NULL ) {
             if ( *dict_o == NULL ) {
                *dict_o = o;
@@ -360,15 +363,18 @@ void RegionDirectory::_unregisterObjects( std::map< uint64_t, MemoryMap< Object 
 }
 
 void RegionDirectory::synchronize( WD &wd, void *addr, const bool forceUnregister ) {
-   //std::ostream &o = (*myThread->_file);
+   std::ostream &o = (*myThread->_file);
    //o << "++++ WaitOn synchronize, w addr " << addr << std::endl;
+   if ( sys.getVerboseCopies() )  {
+      o << "Synchronize address " << addr << " from WD " << wd.getId() << " [" << ( ( wd.getDescription() != NULL) ? wd.getDescription() : "n/a" ) << "]" << std::endl;
+   }
    uint64_t objectAddr = (uint64_t) addr;
 
    GlobalRegionDictionary *dict = getRegionDictionary( objectAddr, true );
    if ( dict == NULL ) {
       return;
    }
-   std::map< uint64_t, MemoryMap< Object > * > objects_to_clear;
+   std::map< uint64_t, HashBucket * > objects_to_clear;
 
    std::list< std::pair< reg_t, reg_t > > missingParts;
    unsigned int version = 0;
@@ -376,7 +382,8 @@ void RegionDirectory::synchronize( WD &wd, void *addr, const bool forceUnregiste
    uint64_t key = jen_hash( this->_getKey( objectAddr ) ) & (HASH_BUCKETS-1);
    HashBucket &hb = _objects[ key ];
    ensure( hb._bobjects != NULL, "null dictionary");
-   objects_to_clear.insert( std::make_pair( objectAddr, hb._bobjects ) );
+
+   objects_to_clear.insert( std::make_pair( objectAddr, &hb ) );
    SeparateAddressSpaceOutOps outOps( myThread->runningOn(), true, false );
 
    for ( std::list< std::pair< reg_t, reg_t > >::iterator mit = missingParts.begin(); mit != missingParts.end(); mit++ ) {
@@ -442,6 +449,7 @@ void RegionDirectory::synchronize( WD &wd, void *addr, const bool forceUnregiste
          }
       }
    }
+
    //bool orig_verbose_devops = sys.getVerboseDevOps();
    //sys.setVerboseDevOps( true );
    outOps.issue( &wd );
@@ -455,7 +463,7 @@ void RegionDirectory::synchronize( WD &wd, void *addr, const bool forceUnregiste
       //clear objects from directory
       _unregisterObjects( objects_to_clear );
       if ( sys.usingCluster() ) {
-         for ( std::map< uint64_t, MemoryMap< Object > * >::iterator it = objects_to_clear.begin(); it != objects_to_clear.end(); it++ ) {
+         for ( std::map< uint64_t, HashBucket * >::iterator it = objects_to_clear.begin(); it != objects_to_clear.end(); it++ ) {
             sys.getNetwork()->synchronizeDirectory( (void *) it->first );
          }
       }
@@ -465,13 +473,19 @@ void RegionDirectory::synchronize( WD &wd, void *addr, const bool forceUnregiste
 
 void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAccess *data, const bool forceUnregister )
 {
+   std::ostream &o = (*myThread->_file);
+   if ( sys.getVerboseCopies() )  {
+      o << "Synchronize " << numDataAccesses << " data accesses from WD " << wd.getId() << " [" << ( ( wd.getDescription() != NULL) ? wd.getDescription() : "n/a" ) << "]" << std::endl;
+   }
+
    SeparateAddressSpaceOutOps outOps( myThread->runningOn(), true, false );
 
-   std::map< uint64_t, MemoryMap< Object > * > objects_to_clear;
+   std::map< uint64_t, HashBucket * > objects_to_clear;
 
    for ( std::size_t idx = 0; idx < numDataAccesses; idx += 1 ) {
 
-      uint64_t objectAddr = (uint64_t) data[idx].getDepAddress(); //NOTE: Using the region base address in the host
+      //NOTE: Avoid a promotion of depAddress before it is casted to an unsigned type
+      uint64_t objectAddr = ( uintptr_t )( data[idx].getDepAddress() ); //NOTE: Using the region base address in the host
       GlobalRegionDictionary *dict = getRegionDictionary( objectAddr, true );
       if ( dict == NULL ) continue;
 
@@ -482,7 +496,7 @@ void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAcce
       HashBucket &hb = _objects[ key ];
       ensure( hb._bobjects != NULL, "null dictionary");
 
-      if ( data[idx].isOutput() )  objects_to_clear.insert( std::make_pair( objectAddr, hb._bobjects ) );
+      if ( data[idx].isOutput() )  objects_to_clear.insert( std::make_pair( objectAddr, &hb ) );
 
       for ( std::list< std::pair< reg_t, reg_t > >::iterator mit = missingParts.begin(); mit != missingParts.end(); mit++ ) {
          if ( mit->first == mit->second ) {
@@ -547,7 +561,7 @@ void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAcce
       //clear objects from directory
       _unregisterObjects( objects_to_clear );
       if ( sys.usingCluster() ) {
-         for ( std::map< uint64_t, MemoryMap< Object > * >::iterator it = objects_to_clear.begin(); it != objects_to_clear.end(); it++ ) {
+         for ( std::map< uint64_t, HashBucket * >::iterator it = objects_to_clear.begin(); it != objects_to_clear.end(); it++ ) {
             sys.getNetwork()->synchronizeDirectory( (void *) it->first );
          }
       }
@@ -566,7 +580,7 @@ void RegionDirectory::synchronize( WD &wd, const bool forceUnregister ) {
    }
    if ( sys.getSeparateMemoryAddressSpacesCount() == 0 ) {
 
-      std::map< uint64_t, MemoryMap< Object > * > objects_to_clear;
+      std::map< uint64_t, HashBucket * > objects_to_clear;
 
       for ( std::vector< HashBucket >::iterator bit = _objects.begin(); bit != _objects.end(); bit++ ) {
          HashBucket &hb = *bit;
@@ -590,7 +604,7 @@ void RegionDirectory::synchronize( WD &wd, const bool forceUnregister ) {
                unsigned int version = 0;
                //double tini = OS::getMonotonicTime();
                /*reg_t lol =*/ dict->registerRegion(1, missingParts, version);
-               objects_to_clear.insert( std::make_pair( objectAddr, hb._bobjects ) );
+               objects_to_clear.insert( std::make_pair( objectAddr, &hb ) );
 
                for ( std::list< std::pair< reg_t, reg_t > >::iterator mit = missingParts.begin(); mit != missingParts.end(); mit++ ) {
                   //*myThread->_file << "sync region " << mit->first << " : "<< ( void * ) dict->getRegionData( mit->first ) <<" with second reg " << mit->second << " : " << ( void * ) dict->getRegionData( mit->second )<< std::endl;
@@ -621,7 +635,7 @@ void RegionDirectory::synchronize( WD &wd, const bool forceUnregister ) {
    SeparateAddressSpaceOutOps outOps( myThread->runningOn(), true, false );
    std::map< GlobalRegionDictionary *, std::set< memory_space_id_t > > locations;
    //std::map< uint64_t, std::map< uint64_t, Object > * > objects_to_clear;
-   std::map< uint64_t, MemoryMap< Object > * > objects_to_clear;
+   std::map< uint64_t, HashBucket * > objects_to_clear;
 
    for ( std::vector< HashBucket >::iterator bit = _objects.begin(); bit != _objects.end(); bit++ ) {
       HashBucket &hb = *bit;
@@ -664,7 +678,7 @@ void RegionDirectory::synchronize( WD &wd, const bool forceUnregister ) {
                //}
                //*myThread->_file << "}"<<std::endl;
 
-               objects_to_clear.insert( std::make_pair( objectAddr, hb._bobjects ) );
+               objects_to_clear.insert( std::make_pair( objectAddr, &hb ) );
 
                for ( std::list< std::pair< reg_t, reg_t > >::iterator mit = missingParts.begin(); mit != missingParts.end(); mit++ ) {
                   //*myThread->_file << "sync region " << mit->first << " : "<< ( void * ) dict->getRegionData( mit->first ) <<" with second reg " << mit->second << " : " << ( void * ) dict->getRegionData( mit->second )<< std::endl;
@@ -694,7 +708,7 @@ void RegionDirectory::synchronize( WD &wd, const bool forceUnregister ) {
                         // aggregate the locations, later, we will invalidate the full object from those locations
                         locations[dict].insert(reg.getLocations().begin(), reg.getLocations().end()); //this requires delayedCommit = yes in the ops object!! FIXME
                      } else {
-                        //objects_to_clear.insert( std::make_pair( objectAddr, &hb._bobjects ) ); //FIXME: objects may be added later
+                        //objects_to_clear.insert( std::make_pair( objectAddr, &hb ) ); //FIXME: objects may be added later
                         objects_to_clear.erase( objectAddr );
                      }
                   } else {
@@ -788,7 +802,8 @@ void RegionDirectory::registerObject(nanos_copy_data_internal_t *obj) {
       obj->flags.input, obj->flags.output, obj->dimension_count, dimensions,
       obj->offset, 0, 0 );
 
-   uint64_t objectAddr = (uint64_t)cd->getBaseAddress();
+   //NOTE: Avoid a promotion of cd.baseAddress before it is casted to an unsigned type
+   uint64_t objectAddr = ( uintptr_t )( cd->getBaseAddress() );
    std::size_t objectSize = cd->getMaxSize();
 #if 0
    unsigned int key = ( jen_hash( objectAddr ) & (HASH_BUCKETS-1) );

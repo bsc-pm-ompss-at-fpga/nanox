@@ -32,6 +32,7 @@ using namespace ext;
 
 FPGAWorker::FPGARegisteredTasksMap * FPGAWorker::_registeredTasks = NULL;
 EventListener * FPGAWorker::_createWdListener = NULL;
+WD * FPGAWorker::_fpgaSpawnContextWd = NULL;
 
 bool FPGAWorker::tryOutlineTask( BaseThread * thread ) {
    static int const maxPendingWD = FPGAConfig::getMaxPendingWD();
@@ -110,9 +111,8 @@ void FPGAWorker::handleFPGACreatedTasks() {
       ensure( infoIt != _registeredTasks->end(), " FPGA device trying to create an unregistered task" );
       FPGARegisteredTask * info = infoIt->second;
       ensure( info->translate != NULL || task->numCopies == 0, " If the WD has copies, the translate_args cannot be NULL" );
-      WD * parentWd = ( WD * )( ( uintptr_t )task->parentId );
 
-      NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-create-task", parentWd != NULL ? parentWd->getId() : -1 ) );
+      NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-create-task", task->parentId ) );
 
       size_t sizeData, alignData, offsetData, sizeDPtrs, offsetDPtrs, sizeCopies, sizeDimensions, offsetCopies,
          offsetDimensions, offsetPMD, offsetSched, totalSize;
@@ -169,6 +169,7 @@ void FPGAWorker::handleFPGACreatedTasks() {
       FPGAWD * createdWd = new (uwd) FPGAWD( info->numDevices, devPtrs, sizeData, alignData, data,
          task->numCopies, ( task->numCopies > 0 ? copies : NULL ), info->translate, info->description.c_str() );
 
+      createdWd->setHwRuntimeIds( task->parentId, task->taskId );
       createdWd->setTotalSize( totalSize );
       createdWd->setVersionGroupId( ( unsigned long )( info->numDevices ) );
       if ( sizePMD > 0 ) {
@@ -181,9 +182,7 @@ void FPGAWorker::handleFPGACreatedTasks() {
          createdWd->setSchedulerData( schedData, /*ownedByWD*/ false );
       }
 
-      if ( parentWd != NULL ) {
-         parentWd->addWork( *createdWd );
-      }
+      _fpgaSpawnContextWd->addWork( *createdWd );
 
       //Set the copies information
       for ( size_t cIdx = 0; cIdx < task->numCopies; ++cIdx ) {
@@ -214,7 +213,7 @@ void FPGAWorker::handleFPGACreatedTasks() {
          }
       }
 
-      sys.setupWD( *createdWd, parentWd );
+      sys.setupWD( *createdWd, _fpgaSpawnContextWd );
 
       //Set the WD input data
       memcpy(data, task->args, sizeof(unsigned long long int)*task->numArgs);
@@ -242,7 +241,7 @@ void FPGAWorker::handleFPGACreatedTasks() {
          SchedulePolicy* policy = sys.getDefaultSchedulePolicy();
          policy->onSystemSubmit( *createdWd, SchedulePolicy::SYS_SUBMIT_WITH_DEPENDENCIES );
 
-         parentWd->submitWithDependencies( *createdWd, task->numDeps , ( DataAccess * )( dependences ) );
+         _fpgaSpawnContextWd->submitWithDependencies( *createdWd, task->numDeps , ( DataAccess * )( dependences ) );
       } else {
          sys.submit( *createdWd );
       }

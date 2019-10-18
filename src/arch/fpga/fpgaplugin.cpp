@@ -45,6 +45,7 @@ class FPGAPlugin : public ArchPlugin
       std::string                    _executionSummary;
       FPGACreateWDListener           _createWDListener;
       FPGAWorker::FPGARegisteredTasksMap _registeredTasks;
+      WD *                           _fpgaSpawnContextWd;
 #ifdef NANOS_INSTRUMENTATION_ENABLED
       FPGAInstrumentationListener    _instrumentationListener;
 #endif //NANOS_INSTRUMENTATION_ENABLED
@@ -185,6 +186,9 @@ class FPGAPlugin : public ArchPlugin
             //NOTE: It will be later retrieved using the getExecutionSummary
             generateExecutionSummary();
 
+            //Delete the context WD
+            delete _fpgaSpawnContextWd;
+
             // Join and delete FPGA Helper threads
             //NOTE: As they are in the workers list, they are deleted during the System::finish()
 
@@ -287,6 +291,15 @@ class FPGAPlugin : public ArchPlugin
             sys.getEventDispatcher().addListenerAtIdle( _instrumentationListener );
          }
 #endif //NANOS_INSTRUMENTATION_ENABLED
+
+         //Create the context WD for FPGA spawned tasks
+         const size_t wdSize = sizeof( WD ) + sys.getPMInterface().getInternalDataSize();
+         char * chunk = NEW char[NANOS_ALIGNED_MEMORY_OFFSET( 0, wdSize, sizeof( WD * ) )];
+         WD * uwd = ( WD * )( chunk );
+         _fpgaSpawnContextWd = new (uwd) WD( 0 /*numDevices*/, NULL );
+         sys.getPMInterface().initInternalData( uwd + 1 );
+         _fpgaSpawnContextWd->setInternalData( uwd + 1, false );
+         FPGAWorker::initContextWd( _fpgaSpawnContextWd );
       }
 
       virtual void startWorkerThreads( std::map<unsigned int, BaseThread*> &workers ) {

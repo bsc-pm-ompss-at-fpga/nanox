@@ -434,8 +434,8 @@ template < template <class> class Sparsity>
 RegionDictionary< Sparsity >::RegionDictionary( CopyData const &cd ) : 
       Sparsity< RegionVectorEntry >( cd ), Version( 1 ),
       _intersects( cd.getNumDimensions(), MemoryMap< std::set< reg_t > >() ),
-      _keyBaseAddress( cd.getHostBaseAddress() == 0 ? ( (uint64_t) cd.getBaseAddress() ) : cd.getHostBaseAddress() ),
-      _realBaseAddress( (uint64_t) cd.getBaseAddress() ), _lock() {
+      _keyBaseAddress( cd.getHostBaseAddress() == 0 ? ( (uintptr_t) cd.getBaseAddress() ) : cd.getHostBaseAddress() ),
+      _realBaseAddress( (uintptr_t) cd.getBaseAddress() ), _lock() {
    //std::cerr << "CREATING MASTER DICT: tree: " << (void *) &_tree << std::endl;
    nanos_region_dimension_internal_t dims[ cd.getNumDimensions() ];
    for ( unsigned int idx = 0; idx < cd.getNumDimensions(); idx++ ) {

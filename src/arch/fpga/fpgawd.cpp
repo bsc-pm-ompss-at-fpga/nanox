@@ -30,11 +30,11 @@ using namespace nanos::ext;
 FPGAWD::FPGAWD ( int ndevices, DeviceData **devs, size_t data_size, size_t data_align, void *wdata,
    size_t numCopies, CopyData *copies, nanos_translate_args_t translate_args, const char *description )
    : WorkDescriptor( ndevices, devs, data_size, data_align, wdata, numCopies, copies, translate_args, description ),
-   _origFpgaCopiesAddrs( numCopies, 0 )
+   _origFpgaCopiesAddrs( numCopies, 0 ), _hwRuntimeTaskId( 0 ), _hwRuntimeParentId( -1 )
 {}
 
 void FPGAWD::notifyParent() {
-   NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-notify-task", getParent()->getId() ) );
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-notify-task", _hwRuntimeParentId ) );
    //FIXME: The current WD may not have a parent task
 
    //Copy the data back to the FPGA memory before doing the notification
@@ -62,13 +62,11 @@ void FPGAWD::notifyParent() {
    //NOTE: Before sending the notification to the FPGA, free the host runtime resources.
    //      Otherwise, another thread may pick the parent task finalization message before we
    //      update the host runtime status. This will lead to a finalization of a WD with components.
-   ext::FPGADD &parentDD = ( ext::FPGADD & )( getParent()->getActiveDevice() );
-   xtasks_task_handle parentTask = ( xtasks_task_handle )( parentDD.getHandle() );
    WorkDescriptor::notifyParent();
 
    //NOTE: FPGA WD are internally handled, do not notify about its finalization
    if ( dynamic_cast<const ext::FPGADD *>( &getActiveDevice() ) == NULL ) {
-      xtasks_stat status = xtasksNotifyFinishedTask( parentTask, 1 /*num finished tasks*/ );
+      xtasks_stat status = xtasksNotifyFinishedTask( _hwRuntimeParentId, _hwRuntimeTaskId );
       if ( status != XTASKS_SUCCESS ) {
          ensure( status == XTASKS_SUCCESS, " Error notifing FPGA about remote finished task" );
       }

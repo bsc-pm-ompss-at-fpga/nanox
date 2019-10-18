@@ -64,6 +64,7 @@ namespace ext {
 
          static FPGARegisteredTasksMap *_registeredTasks; //!< Map of registered tasks
          static EventListener          *_createWdListener; //!< Pointer to the listener to be registered
+         static WD                     *_fpgaSpawnContextWd; //!< Fake parent WD for FPGA spawned tasks
 
       protected:
          /*! \brief Initializes the FPGARegisteredTasksMap
@@ -82,14 +83,19 @@ namespace ext {
             _createWdListener = NULL;
          }
 
+         /*! \brief Initializes the context WD pointer for FPGA spawned tasks
+          */
+         static void initContextWd( WD * wd ) {
+            ensure ( _fpgaSpawnContextWd == NULL, " Double call to initContextWd" );
+            _fpgaSpawnContextWd = wd;
+         }
+
       public:
          //We should add some methods for configuration
          static void FPGAWorkerLoop();
          static bool tryOutlineTask( BaseThread * thread );
          static void handleFPGACreatedTasks();
          static WD * getFPGAWD( BaseThread *thread );
-      private:
-
    };
 
 } // namespace ext

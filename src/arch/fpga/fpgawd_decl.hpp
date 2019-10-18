@@ -21,6 +21,7 @@
 #define _NANOS_FPGA_WD_DECL
 
 #include "workdescriptor_decl.hpp"
+#include "libxtasks_wrapper.hpp"
 
 namespace nanos {
 namespace ext {
@@ -30,12 +31,27 @@ namespace ext {
       private:
          // \brief Stores the addresses of copies received from the FPGA. Used to copy the data back
          std::vector<uint64_t> _origFpgaCopiesAddrs;
+         xtasks_task_id        _hwRuntimeTaskId;
+         xtasks_task_id        _hwRuntimeParentId;
 
       public:
          FPGAWD ( int ndevices, DeviceData **devs, size_t data_size = 0, size_t data_align = 1, void *wdata = 0,
                   size_t numCopies = 0, CopyData *copies = NULL, nanos_translate_args_t translate_args = NULL, const char *description = NULL );
 
          void setOrigFpgaCopyAddr(const size_t idx, const uint64_t addr) { _origFpgaCopiesAddrs[idx] = addr; }
+
+         void setHwRuntimeIds(const xtasks_task_id parent, const xtasks_task_id task) {
+            _hwRuntimeParentId = parent;
+            _hwRuntimeTaskId = task;
+         }
+
+         xtasks_task_id getHwRuntimeTaskId() const {
+            return _hwRuntimeTaskId;
+         }
+
+         xtasks_task_id getHwRuntimeParentId() const {
+            return _hwRuntimeParentId;
+         }
 
          virtual void notifyParent();
    };
