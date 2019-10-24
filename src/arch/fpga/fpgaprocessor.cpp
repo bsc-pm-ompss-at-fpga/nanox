@@ -175,6 +175,11 @@ void FPGAProcessor::handleInstrumentation() {
          case XTASKS_EVENT_TYPE_POINT:
             ins->createDevicePointEvent( &deviceEvents[writeEv++],
                   event.eventId, event.value, event.timestamp );
+            static nanos_event_key_t keyEventsLost = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("fpga-ev-lost");
+            if (event.eventId == keyEventsLost) {
+               warning( "Some FPGA instrumentation events (" << event.value << ") have been lost."
+                  << " Consider increasing the buffer size with --fpga-instr-buffer-size option" );
+            }
             break;
          default:
             warning( "Ignoring unknown fpga event type: " << event.eventType );
