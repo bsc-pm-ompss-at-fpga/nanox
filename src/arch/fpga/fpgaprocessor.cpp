@@ -177,8 +177,8 @@ void FPGAProcessor::handleInstrumentation() {
                   event.eventId, event.value, event.timestamp );
             static nanos_event_key_t keyEventsLost = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("fpga-ev-lost");
             if (event.eventId == keyEventsLost) {
-               warning( "Some FPGA instrumentation events (" << event.value << ") have been lost."
-                  << " Consider increasing the buffer size with --fpga-instr-buffer-size option" );
+               warning( " Some FPGA instrumentation events (" << event.value << ") have been lost." <<
+                        " Consider increasing the buffer size with --fpga-instr-buffer-size option" );
             }
             break;
          default:

@@ -123,10 +123,10 @@ void FPGAConfig::prepare( Config &config )
    config.registerArgOption( "fpga_alloc_align", "fpga-alloc-align" );
 
 #ifdef NANOS_INSTRUMENTATION_ENABLED
-   config.registerConfigOption( "fpga_max_instr_events", NEW Config::SizeVar( _numEvents ),
+   config.registerConfigOption( "fpga_ins_buff_size", NEW Config::SizeVar( _numEvents ),
          "Maximum number of events to be saved from a FPGA task (def: 170)");
-   config.registerEnvOption( "fpga_max_instr_events", "FPGA_MAX_INSTR_EVENTS" );
-   config.registerArgOption( "fpga_max_instr_events", "fpga-max-instr-events" );
+   config.registerEnvOption( "fpga_ins_buff_size", "NX_FPGA_INSTRUMENTATION_BUFFER_SIZE" );
+   config.registerArgOption( "fpga_ins_buff_size", "fpga-instrumentation-buffer-size" );
 
    config.registerConfigOption( "fpga_ins_callback", NEW Config::FlagOption( _insCallback ),
       "Handle the FPGA instrumentation using the IDLE event callback of Event Dispatcher (def: enabled)" );
@@ -182,6 +182,13 @@ void FPGAConfig::apply()
       warning0( " The use of FPGA idle callback is disabled, execution could have unexpected " <<
                 " behaviour and can ever hang if there is task nesting." );
    }
+
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   if ( _numEvents > 65536 /*2^16*/ ) {
+      warning0( " The FPGA instrumentation buffer size exceeds the maximum value (65536)." <<
+                " Using 65536 instead." );
+   }
+#endif //NANOS_INSTRUMENTATION_ENABLED
 }
 
 void FPGAConfig::setFPGASystemCount ( int numFPGAs )
