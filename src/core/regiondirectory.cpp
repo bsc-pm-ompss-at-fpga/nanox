@@ -496,7 +496,8 @@ void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAcce
       HashBucket &hb = _objects[ key ];
       ensure( hb._bobjects != NULL, "null dictionary");
 
-      if ( data[idx].isOutput() )  objects_to_clear.insert( std::make_pair( objectAddr, &hb ) );
+      //FIXME: The other synchronize functions unconditionally insert the object in the objects_to_clear list
+      if ( data[idx].isOutput() || forceUnregister )  objects_to_clear.insert( std::make_pair( objectAddr, &hb ) );
 
       for ( std::list< std::pair< reg_t, reg_t > >::iterator mit = missingParts.begin(); mit != missingParts.end(); mit++ ) {
          if ( mit->first == mit->second ) {

@@ -340,4 +340,5 @@ paraver_config_files = \
      paraver_configs/ompss/fpga/handling_fpga_created_tasks.cfg\
      paraver_configs/ompss/fpga/number_tasks_in_acc.cfg\
      paraver_configs/ompss/fpga/smp_and_fpga_tasks.cfg\
+     paraver_configs/ompss/fpga/lost_fpga_events.cfg\
      $(END)

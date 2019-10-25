@@ -64,11 +64,8 @@ void FPGAWD::notifyParent() {
    //      update the host runtime status. This will lead to a finalization of a WD with components.
    WorkDescriptor::notifyParent();
 
-   //NOTE: FPGA WD are internally handled, do not notify about its finalization
-   if ( dynamic_cast<const ext::FPGADD *>( &getActiveDevice() ) == NULL ) {
-      xtasks_stat status = xtasksNotifyFinishedTask( _hwRuntimeParentId, _hwRuntimeTaskId );
-      if ( status != XTASKS_SUCCESS ) {
-         ensure( status == XTASKS_SUCCESS, " Error notifing FPGA about remote finished task" );
-      }
+   xtasks_stat status = xtasksNotifyFinishedTask( _hwRuntimeParentId, _hwRuntimeTaskId );
+   if ( status != XTASKS_SUCCESS ) {
+      ensure( status == XTASKS_SUCCESS, " Error notifing FPGA about remote finished task" );
    }
 }
