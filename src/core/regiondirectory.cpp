@@ -332,6 +332,9 @@ RegionDirectory::~RegionDirectory() {
 
 void RegionDirectory::_unregisterObjects( std::map< uint64_t, HashBucket * > &objects ) {
    for ( std::map< uint64_t, HashBucket * >::iterator it = objects.begin(); it != objects.end(); it++ ) {
+      while ( !it->second->_lock.tryAcquire() ) {
+         myThread->processTransfers();
+      }
       Object *o = it->second->_bobjects->getExactByAddress(it->first);
       sys.getNetwork()->deleteDirectoryObject( o->getGlobalRegionDictionary() );
       it->second->_bobjects->eraseByAddress( it->first );
@@ -359,6 +362,7 @@ void RegionDirectory::_unregisterObjects( std::map< uint64_t, HashBucket * > &ob
          _keys.eraseByAddress( it->first );
          delete o;
       }
+      it->second->_lock.release();
    }
 }
 
@@ -495,6 +499,9 @@ void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAcce
       uint64_t key = jen_hash( this->_getKey( objectAddr ) ) & (HASH_BUCKETS-1);
       HashBucket &hb = _objects[ key ];
       ensure( hb._bobjects != NULL, "null dictionary");
+      while ( !hb._lock.tryAcquire() ) {
+         myThread->processTransfers();
+      }
 
       //FIXME: The other synchronize functions unconditionally insert the object in the objects_to_clear list
       if ( data[idx].isOutput() || forceUnregister )  objects_to_clear.insert( std::make_pair( objectAddr, &hb ) );
@@ -550,6 +557,7 @@ void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAcce
             }
          }
       }
+      hb._lock.release();
    } // end of iterate DataAccesses
 
    outOps.issue( &wd );
