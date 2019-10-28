@@ -128,9 +128,10 @@ NANOS_API_DEF( void, nanos_fpga_memcpy, ( void *fpgaPtr, void * hostPtr, size_t 
    }
 }
 
-NANOS_API_DEF( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type,
-   uint8_t numArgs, uint64_t * args, uint8_t numDeps, uint64_t * deps, uint8_t * depsFlags,
-   uint8_t numCopies, nanos_fpga_copyinfo_t * copies ) )
+NANOS_API_DEF( void, nanos_fpga_create_wd_async, ( const unsigned int archMask, const unsigned long long int type,
+   const unsigned char numArgs, const unsigned long long int * args,
+   const unsigned char numDeps, const unsigned long long int * deps, const unsigned char * depsFlags,
+   const unsigned char numCopies, const nanos_fpga_copyinfo_t * copies ) )
 {
    fatal( "The API nanos_fpga_create_wd_async can only be called from a FPGA device" );
 }
@@ -156,4 +157,14 @@ NANOS_API_DEF( nanos_err_t, nanos_fpga_register_wd_info, ( uint64_t type, size_t
    }
 
    return NANOS_INVALID_REQUEST;
+}
+
+NANOS_API_DEF( unsigned long long int, nanos_fpga_current_wd, ( void ) )
+{
+   fatal( "The API nanos_fpga_current_wd can only be called from a FPGA device" );
+}
+
+NANOS_API_DEF( nanos_err_t, nanos_fpga_wg_wait_completion, ( unsigned long long int uwg, unsigned char avoid_flush ) )
+{
+   fatal( "The API nanos_fpga_wg_wait_completion can only be called from a FPGA device" );
 }

@@ -52,13 +52,13 @@ extern "C" {
     } nanos_fpga_argflag_t;
 
     typedef struct __attribute__ ((__packed__)) {
-        uint64_t address;
-        uint8_t  flags;
-        uint8_t  arg_idx;
-        uint16_t _padding;
-        uint32_t size;
-        uint32_t offset;
-        uint32_t accessed_length;
+        unsigned long long int address;
+        unsigned char flags;
+        unsigned char arg_idx;
+        unsigned short _padding;
+        unsigned int size;
+        unsigned int offset;
+        unsigned int accessed_length;
     } nanos_fpga_copyinfo_t;
 
     enum {
@@ -67,7 +67,7 @@ extern "C" {
     };
 
 NANOS_API_DECL( void *, nanos_fpga_factory, ( void *args ) );
-NANOS_API_DECL( void *, nanos_fpga_alloc_dma_mem, ( size_t len) );
+NANOS_API_DECL( void *, nanos_fpga_alloc_dma_mem, ( size_t len ) );
 NANOS_API_DECL( void, nanos_fpga_free_dma_mem, ( void * address ) );
 NANOS_API_DECL( nanos_err_t, nanos_find_fpga_pe, ( void *req, nanos_pe_t * pe ) );
 NANOS_API_DECL( void *, nanos_fpga_get_phy_address, ( void * address ) );
@@ -77,11 +77,14 @@ NANOS_API_DECL( void *, nanos_fpga_malloc, ( size_t len ) );
 NANOS_API_DECL( void, nanos_fpga_free, ( void * fpgaPtr ) );
 NANOS_API_DECL( void, nanos_fpga_memcpy, ( void * fpgaPtr, void * hostPtr, size_t len, \
    nanos_fpga_memcpy_kind_t kind ) );
-NANOS_API_DECL( void, nanos_fpga_create_wd_async, ( uint32_t archMask, uint64_t type, \
-  uint8_t numArgs, uint64_t * args, uint8_t numDeps, uint64_t * deps, uint8_t * depsFlags, \
-  uint8_t numCopies, nanos_fpga_copyinfo_t * copies ) );
+NANOS_API_DECL( void, nanos_fpga_create_wd_async, ( const unsigned int archMask, const unsigned long long int type, \
+  const unsigned char numArgs, const unsigned long long int * args, \
+  const unsigned char numDeps, const unsigned long long int * deps, const unsigned char * depsFlags, \
+  const unsigned char numCopies, const nanos_fpga_copyinfo_t * copies ) );
 NANOS_API_DECL( nanos_err_t, nanos_fpga_register_wd_info, ( uint64_t type, size_t num_devices, \
   nanos_device_t * devices, nanos_translate_args_t translate ) );
+NANOS_API_DECL( unsigned long long int, nanos_fpga_current_wd, ( void ) );
+NANOS_API_DECL( nanos_err_t, nanos_fpga_wg_wait_completion, ( unsigned long long int uwg, unsigned char avoid_flush ) );
 
 #ifdef __cplusplus
 }
