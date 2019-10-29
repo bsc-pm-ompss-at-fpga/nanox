@@ -332,9 +332,19 @@ RegionDirectory::~RegionDirectory() {
 
 void RegionDirectory::_unregisterObjects( std::map< uint64_t, HashBucket * > &objects ) {
    for ( std::map< uint64_t, HashBucket * >::iterator it = objects.begin(); it != objects.end(); it++ ) {
-      Object *o = it->second->_bobjects->getExactByAddress(it->first);
+      while ( !it->second->_lock.tryAcquire() ) {
+         myThread->processTransfers();
+      }
+      Object *o = it->second->_bobjects->getExactByAddress( it->first );
       sys.getNetwork()->deleteDirectoryObject( o->getGlobalRegionDictionary() );
       it->second->_bobjects->eraseByAddress( it->first );
+      if ( sys.getVerboseCopies() ) {
+         *myThread->_file << "Erased object: ";
+         o->getGlobalRegionDictionary()->printRegion(*myThread->_file, 1);
+         *myThread->_file << std::endl;
+      }
+      it->second->_lock.release();
+
       if ( o->getRegisteredObject() != NULL ) {
          o->resetGlobalRegionDictionary();
          CopyData *cd = o->getRegisteredObject();
@@ -356,7 +366,11 @@ void RegionDirectory::_unregisterObjects( std::map< uint64_t, HashBucket * > &ob
             fatal("Dictionary error.");
          }
       } else {
+         while ( !_keysLock.tryAcquire() ) {
+            myThread->processTransfers();
+         }
          _keys.eraseByAddress( it->first );
+         _keysLock.release();
          delete o;
       }
    }
@@ -494,7 +508,10 @@ void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAcce
       dict->registerRegion(1, missingParts, version );
       uint64_t key = jen_hash( this->_getKey( objectAddr ) ) & (HASH_BUCKETS-1);
       HashBucket &hb = _objects[ key ];
-      ensure( hb._bobjects != NULL, "null dictionary");
+      while ( !hb._lock.tryAcquire() ) {
+         myThread->processTransfers();
+      }
+      ensure( hb._bobjects != NULL, "null dictionary for addr: " << (void *)objectAddr );
 
       //FIXME: The other synchronize functions unconditionally insert the object in the objects_to_clear list
       if ( data[idx].isOutput() || forceUnregister )  objects_to_clear.insert( std::make_pair( objectAddr, &hb ) );
@@ -550,6 +567,7 @@ void RegionDirectory::synchronize( WD &wd, std::size_t numDataAccesses, DataAcce
             }
          }
       }
+      hb._lock.release();
    } // end of iterate DataAccesses
 
    outOps.issue( &wd );
