@@ -77,7 +77,7 @@ namespace nanos {
 
       bool HysteresisThrottle::throttleIn ( void )
       {
-         if ( testThrottleIn() ) _syncCond->wait();
+         if ( !testThrottleIn() ) _syncCond->wait();
          return true;
       }
 

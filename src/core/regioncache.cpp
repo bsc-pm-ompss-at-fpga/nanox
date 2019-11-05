@@ -1653,7 +1653,10 @@ void RegionCache::releaseRegions( MemCacheCopy *memCopies, unsigned int numCopie
       if ( released_regions.count( mcopy._reg /*allocatable_region*/ ) != 0 ) continue;
       released_regions.insert( mcopy._reg /*allocatable_region*/ );
 
-      AllocatedChunk *chunk = _getAllocatedChunk( mcopy._reg, true, false, wd, idx );
+      //jbosch: Not sure if the following two lines are equivalent. Adding an enusre for sanity check
+      //AllocatedChunk *chunk = _getAllocatedChunk( mcopy._reg, true, false, wd, idx );
+      AllocatedChunk *chunk = mcopy._chunk;
+      ensure( chunk == _getAllocatedChunk( mcopy._reg, true, false, wd, idx ), " Unexpected value in mcopy._chunk, original source code should be restored" );
       chunk->removeReference( wd ); //RegionCache::releaseRegions
       if ( chunk->getReferenceCount() == 0 && ( mcopy._policy == NO_CACHE ) ) {
          _chunks.removeChunks( chunk->getHostAddress(), chunk->getSize() );
@@ -1964,6 +1967,10 @@ void RegionCache::invalidateObject( global_reg_t const &reg ) {
    // *myThread->_file << "-----------------------vvvvvvvvvvvv inv reg " << reg.id << "vvvvvvvvvvvvvvvvvv--------------------" << std::endl;
    // reg.key->printRegion( *myThread->_file, reg.id );
    // *myThread->_file << std::endl;
+   while ( !_lock.tryAcquire() ) {
+      //myThread->idle();
+   }
+
    ConstChunkList results;
    _chunks.getChunk( reg.getRealFirstAddress(), reg.getBreadth(), results );
    std::set< AllocatedChunk * > removedChunks; //this is done for debugging purposes, there should not be any duplicates
@@ -1988,6 +1995,8 @@ void RegionCache::invalidateObject( global_reg_t const &reg ) {
       }
       _chunks.removeChunks( reg.getRealFirstAddress(), reg.getBreadth() );
    }
+
+   _lock.release();
    // *myThread->_file << "-----------------------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^--------------------" << std::endl;
 }
 
