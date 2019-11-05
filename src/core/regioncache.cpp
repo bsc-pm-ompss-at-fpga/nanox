@@ -1964,6 +1964,10 @@ void RegionCache::invalidateObject( global_reg_t const &reg ) {
    // *myThread->_file << "-----------------------vvvvvvvvvvvv inv reg " << reg.id << "vvvvvvvvvvvvvvvvvv--------------------" << std::endl;
    // reg.key->printRegion( *myThread->_file, reg.id );
    // *myThread->_file << std::endl;
+   while ( !_lock.tryAcquire() ) {
+      //myThread->idle();
+   }
+
    ConstChunkList results;
    _chunks.getChunk( reg.getRealFirstAddress(), reg.getBreadth(), results );
    std::set< AllocatedChunk * > removedChunks; //this is done for debugging purposes, there should not be any duplicates
@@ -1988,6 +1992,8 @@ void RegionCache::invalidateObject( global_reg_t const &reg ) {
       }
       _chunks.removeChunks( reg.getRealFirstAddress(), reg.getBreadth() );
    }
+
+   _lock.release();
    // *myThread->_file << "-----------------------^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^--------------------" << std::endl;
 }
 
