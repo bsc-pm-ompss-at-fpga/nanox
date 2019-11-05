@@ -157,7 +157,7 @@ namespace nanos {
          GlobalRegionDictionary *getRegionDictionary( uint64_t addr, bool canFail );
          static void addSubRegion( GlobalRegionDictionary &dict, std::list< std::pair< reg_t, reg_t > > &partsList, reg_t regionToInsert );
          uint64_t _getKey( uint64_t addr, std::size_t len, WD const *wd );
-         uint64_t _getKey( uint64_t addr ) const;
+         uint64_t _getKey( uint64_t addr );
          void _unregisterObjects( std::map< uint64_t, HashBucket * > &objects );
          void _invalidateObjectsFromDevices( std::map< uint64_t, HashBucket * > &objects );
 

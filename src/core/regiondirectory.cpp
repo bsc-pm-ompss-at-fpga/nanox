@@ -102,8 +102,12 @@ uint64_t RegionDirectory::_getKey( uint64_t addr, std::size_t len, WD const *wd 
    return key;
 }
 
-uint64_t RegionDirectory::_getKey( uint64_t addr ) const {
+uint64_t RegionDirectory::_getKey( uint64_t addr ) {
+   while ( !_keysLock.tryAcquire() ) {
+      myThread->processTransfers();
+   }
    uint64_t key = _keys.getExactByAddress( addr, 0 );
+   _keysLock.release();
    return key;
 }
 
@@ -316,10 +320,15 @@ GlobalRegionDictionary &RegionDirectory::getDictionary( CopyData const &cd ) {
 
 void RegionDirectory::_invalidateObjectsFromDevices( std::map< uint64_t, HashBucket * > &objects ) {
    for ( std::map< uint64_t, HashBucket * >::iterator it = objects.begin(); it != objects.end(); it++ ) {
+      while ( !it->second->_lock.tryAcquire() ) {
+         myThread->processTransfers();
+      }
       for ( memory_space_id_t id = 1; id <= sys.getSeparateMemoryAddressSpacesCount(); id++ ) {
          Object *o = it->second->_bobjects->getExactByAddress(it->first);
+         ensure( o != NULL, " null object for address: " << (void *)it->first );
          sys.getSeparateMemory( id ).invalidate( global_reg_t( 1, o->getGlobalRegionDictionary() ) );
       }
+      it->second->_lock.release();
    }
 }
 
@@ -343,7 +352,6 @@ void RegionDirectory::_unregisterObjects( std::map< uint64_t, HashBucket * > &ob
          o->getGlobalRegionDictionary()->printRegion(*myThread->_file, 1);
          *myThread->_file << std::endl;
       }
-      it->second->_lock.release();
 
       if ( o->getRegisteredObject() != NULL ) {
          o->resetGlobalRegionDictionary();
@@ -365,7 +373,9 @@ void RegionDirectory::_unregisterObjects( std::map< uint64_t, HashBucket * > &ob
              */
             fatal("Dictionary error.");
          }
+         it->second->_lock.release();
       } else {
+         it->second->_lock.release();
          while ( !_keysLock.tryAcquire() ) {
             myThread->processTransfers();
          }
