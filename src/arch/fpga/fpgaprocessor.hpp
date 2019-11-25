@@ -79,6 +79,7 @@ namespace ext {
          BaseThread & createMultiThread ( WorkDescriptor &wd, unsigned int numPEs, ProcessingElement **repPEs ) {
             fatal( "ClusterNode is not allowed to create FPGA MultiThreads" );
          }
+         virtual void stopAllThreads();
 
          virtual bool hasSeparatedMemorySpace() const { return true; }
          bool supportsUserLevelThreads () const { return false; }

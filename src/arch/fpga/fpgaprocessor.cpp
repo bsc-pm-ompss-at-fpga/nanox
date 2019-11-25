@@ -68,6 +68,14 @@ FPGAProcessor::~FPGAProcessor()
    ensure( _waitInTasks.empty(), " Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
 }
 
+void FPGAProcessor::stopAllThreads()
+{
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   FPGAProcessor::handleInstrumentation();
+#endif
+   ProcessingElement::stopAllThreads();
+}
+
 WorkDescriptor & FPGAProcessor::getWorkerWD () const
 {
    //SMPDD *dd = NEW SMPDD( ( SMPDD::work_fct )Scheduler::workerLoop );
