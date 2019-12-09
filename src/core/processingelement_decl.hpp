@@ -95,7 +95,7 @@ namespace ext {
                  DD::work_fct workerFun);
 
          void stopAll();
-         void stopAllThreads();
+         virtual void stopAllThreads();
 
          /* capabilitiy query functions */
          virtual bool supportsUserLevelThreads() const = 0;

@@ -68,6 +68,14 @@ FPGAProcessor::~FPGAProcessor()
    ensure( _waitInTasks.empty(), " Queue of FPGA input waiting tasks is not empty in one FPGAProcessor" );
 }
 
+void FPGAProcessor::stopAllThreads()
+{
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   FPGAProcessor::handleInstrumentation();
+#endif
+   ProcessingElement::stopAllThreads();
+}
+
 WorkDescriptor & FPGAProcessor::getWorkerWD () const
 {
    //SMPDD *dd = NEW SMPDD( ( SMPDD::work_fct )Scheduler::workerLoop );
@@ -152,7 +160,7 @@ void FPGAProcessor::handleInstrumentation() {
    static Instrumentation * ins = sys.getInstrumentation();
    size_t maxEvents = FPGAConfig::getNumInstrEvents();
    xtasks_ins_event *events = NEW xtasks_ins_event[maxEvents];
-   Instrumentation::DeviceEvent *deviceEvents = NEW Instrumentation::DeviceEvent[maxEvents];
+   Instrumentation::DeviceEvent *deviceEvents = NEW Instrumentation::DeviceEvent[maxEvents + 1];
 
    xtasksGetInstrumentData( getFPGAProcessorInfo().getHandle(), events, maxEvents );
 
@@ -178,11 +186,20 @@ void FPGAProcessor::handleInstrumentation() {
             static nanos_event_key_t keyEventsLost = sys.getInstrumentation()->getInstrumentationDictionary()->getEventKey("fpga-ev-lost");
             if (event.eventId == keyEventsLost) {
                warning( " Some FPGA instrumentation events (" << event.value << ") have been lost." <<
-                        " Consider increasing the buffer size with --fpga-instr-buffer-size option" );
+                        " Consider increasing the buffer size with --fpga-instrumentation-buffer-size option" );
+
+               //Add an extra event to restore the value to 0 after some arbitrary time (aka 10 cycles)
+               ins->createDevicePointEvent( &deviceEvents[writeEv++],
+                     event.eventId, 0, event.timestamp + 10 );
             }
             break;
          default:
             warning( "Ignoring unknown fpga event type: " << event.eventType );
+      }
+      if (writeEv == maxEvents + 1) {
+         //The temp buffer is full -> Flush the events now
+         ins->addDeviceEventList( _devInstr, writeEv, deviceEvents );
+         writeEv = 0;
       }
    }
 
