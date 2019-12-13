@@ -71,6 +71,8 @@ FPGAProcessor::~FPGAProcessor()
 void FPGAProcessor::stopAllThreads()
 {
 #ifdef NANOS_INSTRUMENTATION_ENABLED
+   //NOTE: Two calls to handleInstrumentation may be needed to process the queue tail and the queue head
+   FPGAProcessor::handleInstrumentation();
    FPGAProcessor::handleInstrumentation();
 #endif
    ProcessingElement::stopAllThreads();
