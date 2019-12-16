@@ -88,63 +88,6 @@ BaseThread & FPGAProcessor::createThread ( WorkDescriptor &helper, SMPMultiThrea
    return th;
 }
 
-void FPGAProcessor::createTask( WD &wd, WD *parentWd ) {
-   xtasks_stat status;
-   xtasks_task_handle task;
-   xtasks_task_id parentTask = 0;
-
-   const FPGAWD * fpgaWd = dynamic_cast<const ext::FPGAWD *>( &wd );
-   if ( fpgaWd != NULL ) {
-      //NOTE: This wd is an FPGA spawned task. The right parentId has to be sent as
-      //      the finalization message is internally handled.
-      parentTask = fpgaWd->getHwRuntimeParentId();
-   }
-
-   status = xtasksCreateTask( ( uintptr_t )( &wd ), _fpgaProcessorInfo.getHandle(), parentTask,
-      XTASKS_COMPUTE_ENABLE, &task );
-   if ( status != XTASKS_SUCCESS ) {
-      //TODO: If status == XTASKS_ENOMEM, block and wait untill mem is available
-      fatal( "Cannot initialize FPGA task info (accId: " <<
-             _fpgaProcessorInfo.getId() << "): " <<
-             ( status == XTASKS_ENOMEM ? "XTASKS_ENOMEM" : "XTASKS_ERROR" ) );
-   }
-
-   FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
-   dd.setHandle( task );
-}
-
-void FPGAProcessor::setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue ) {
-   xtasks_task_handle task;
-
-   FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
-   task = ( xtasks_task_handle )( dd.getHandle() );
-
-   xtasks_arg_flags argFlags = XTASKS_ARG_FLAG_GLOBAL;
-   argFlags |= XTASKS_ARG_FLAG_COPY_IN & -( isInput );
-   argFlags |= XTASKS_ARG_FLAG_COPY_OUT & -( isOutput );
-
-   if ( xtasksAddArg( argIdx, argFlags, argValue, task ) != XTASKS_SUCCESS ) {
-      fatal( "Error adding argument to a task" );
-   }
-
-}
-
-void FPGAProcessor::submitTask( WD &wd ) {
-   NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-accelerator-num", _fpgaProcessorInfo.getId() + 1 ) );
-
-   //xtasks_stat status;
-   xtasks_task_handle task;
-
-   FPGADD &dd = ( FPGADD & )( wd.getActiveDevice() );
-   task = ( xtasks_task_handle )( dd.getHandle() );
-
-   if ( xtasksSubmitTask( task ) != XTASKS_SUCCESS ) {
-      //TODO: If error is XTASKS_ENOMEM we can retry after a while
-      fatal( "Error sending a task to the FPGA" );
-   }
-
-}
-
 #ifdef NANOS_INSTRUMENTATION_ENABLED
 void FPGAProcessor::handleInstrumentation() {
    if ( FPGAConfig::isInstrDisabled() ) return;
@@ -233,10 +176,6 @@ void FPGAProcessor::preOutlineWorkDependent ( WD &wd ) {
 
 void FPGAProcessor::outlineWorkDependent ( WD &wd )
 {
-   //wd.start( WD::IsNotAUserLevelThread );
-   createTask( wd, wd.getParent() );
-
-   //set flag to allow new update
    FPGADD &dd = ( FPGADD & )wd.getActiveDevice();
    ( dd.getWorkFct() )( wd.getData() );
 
@@ -245,8 +184,6 @@ void FPGAProcessor::outlineWorkDependent ( WD &wd )
    ++_totalRunningTasks;
    instrumentPoint( "fpga-run-tasks", _totalRunningTasks.value() );
 #endif
-
-   submitTask( wd );
 }
 
 bool FPGAProcessor::tryPostOutlineTasks( size_t max )
