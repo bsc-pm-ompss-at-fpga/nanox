@@ -122,7 +122,35 @@ NANOS_API_DEF( nanos_err_t, nanos_fpga_create_task, ( nanos_fpga_task_t *utask, 
 NANOS_API_DEF( nanos_err_t, nanos_fpga_create_periodic_task, ( nanos_fpga_task_t *utask, nanos_wd_t uwd,
    const unsigned int period, const unsigned int num_reps ) )
 {
-   return NANOS_UNIMPLEMENTED;
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_create_periodic_task" ); );
+
+   WD * wd = ( WD * )( uwd );
+   const nanos::ext::FPGAWD * fpgaWd = dynamic_cast<const ext::FPGAWD *>( wd );
+   const nanos::ext::FPGAProcessorInfo & fpgaInfo =
+      ( ( nanos::ext::FPGAProcessor * )( myThread->runningOn() ) )->getFPGAProcessorInfo();
+   xtasks_task_id parentTask = 0;
+   xtasks_task_handle task;
+   xtasks_stat status;
+
+   if ( fpgaWd != NULL ) {
+      //NOTE: This wd is an FPGA spawned task
+      parentTask = fpgaWd->getHwRuntimeParentId();
+   }
+
+   status = xtasksCreatePeriodicTask( ( uintptr_t )( wd ), fpgaInfo.getHandle(), parentTask,
+      XTASKS_COMPUTE_ENABLE, num_reps, period, &task );
+   if ( status != XTASKS_SUCCESS ) {
+      //TODO: If status == XTASKS_ENOMEM, block and wait untill mem is available
+      fatal( "Cannot initialize FPGA periodic task info (accId: " <<
+             fpgaInfo.getId() << "): " <<
+             ( status == XTASKS_ENOMEM ? "XTASKS_ENOMEM" : "XTASKS_ERROR" ) );
+   }
+
+   nanos::ext::FPGADD &dd = ( nanos::ext::FPGADD & )( wd->getActiveDevice() );
+   dd.setHandle( task );
+   *utask = ( nanos_fpga_task_t )( task );
+
+   return NANOS_OK;
 }
 
 NANOS_API_DEF( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_fpga_task_t utask, size_t argIdx,

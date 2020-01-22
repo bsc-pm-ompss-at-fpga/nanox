@@ -24,12 +24,12 @@
 #include "libxtasks_version.h"
 
 //! Check that libxtasks version is compatible
-#define LIBXTASKS_MIN_MAJOR 7
-#define LIBXTASKS_MIN_MINOR 5
+#define LIBXTASKS_MIN_MAJOR 8
+#define LIBXTASKS_MIN_MINOR 0
 #if !defined(LIBXTASKS_VERSION_MAJOR) || !defined(LIBXTASKS_VERSION_MINOR) || \
     LIBXTASKS_VERSION_MAJOR < LIBXTASKS_MIN_MAJOR || \
     (LIBXTASKS_VERSION_MAJOR == LIBXTASKS_MIN_MAJOR && LIBXTASKS_VERSION_MINOR < LIBXTASKS_MIN_MINOR)
-# error Installed libxtasks is not supported (use >= 7.5)
+# error Installed libxtasks is not supported (use >= 8.0)
 #endif
 
 #endif //_NANOS_FPGA_PROCESSOR_INFO
