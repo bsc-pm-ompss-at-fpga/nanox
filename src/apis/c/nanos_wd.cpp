@@ -692,4 +692,15 @@ NANOS_API_DEF (nanos_err_t, nanos_task_reduction_get_thread_storage, ( void *ori
    }
    return NANOS_OK;
 }
+
+NANOS_API_DEF (unsigned int, nanos_get_periodic_task_repetition_num, ( void ) )
+{
+   NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","nanos_get_periodic_task_repetition_num",NANOS_RUNTIME) );
+   return 0;
+}
+
+NANOS_API_DEF (void, nanos_cancel_periodic_task, ( void ) )
+{
+   NANOS_INSTRUMENT( InstrumentStateAndBurst inst("api","nanos_cancel_periodic_task",NANOS_RUNTIME) );
+}
 //! \}
