@@ -461,6 +461,11 @@ namespace nanos {
             registerEventValue("api","nanos_fpga_memcpy","nanos_fpga_memcpy()");
             registerEventValue("api","nanos_fpga_free","nanos_fpga_free()");
             registerEventValue("api","nanos_fpga_register_wd_info","nanos_fpga_register_wd_info()");
+            registerEventValue("api","nanos_fpga_create_task","nanos_fpga_create_task()");
+            registerEventValue("api","nanos_fpga_create_periodic_task","nanos_fpga_create_periodic_task()");
+            registerEventValue("api","nanos_fpga_submit_task","nanos_fpga_submit_task()");
+            registerEventValue("api","nanos_get_periodic_task_repetition_num","nanos_get_periodic_task_repetition_num()");
+            registerEventValue("api","nanos_cancel_periodic_task","nanos_cancel_periodic_task()");
 
             /* 02 */ registerEventKey("wd-id","Work Descriptor id:", true, EVENT_DEVELOPER, true);
 

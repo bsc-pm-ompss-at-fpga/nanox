@@ -54,10 +54,6 @@ namespace ext {
          FPGAInstrumentation           _devInstr;
          static Atomic<size_t>         _totalRunningTasks;  //!< Global tasks counter between all processors
 #endif
-
-         // AUX functions
-         void createTask( WD &wd, WD *parentWd );
-         void submitTask( WD &wd );
       public:
 
          FPGAProcessor( FPGAProcessorInfo info, memory_space_id_t memSpaceId, Device const * arch );
@@ -91,8 +87,6 @@ namespace ext {
 
          FPGATasksQueue_t & getReadyTasks() { return _readyTasks; }
          FPGATasksQueue_t & getWaitInTasks() { return _waitInTasks; }
-
-         void setTaskArg( WD &wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue );
 
          virtual void switchHelperDependent( WD* oldWD, WD* newWD, void *arg ) {
             fatal("switchHelperDependent is not implemented in the FPGAProcessor");

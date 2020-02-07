@@ -117,6 +117,7 @@
  *   - 5030: Adding instrumentation support to wrap main function.
  *   - 5041: Adding mandatory taskwait to support devices tasks in final mode.
  *   - 5042: Adding APIs to find, lock and outline WDs to PEs instead of submiting them as usual.
+ *   - 5043: Adding periodic tasks APIs to get the repetition number and cancel the execution.
  * - nanos interface family: worksharing
  *   - 1000: First implementation of work-sharing services (create and next-item)
  * - nanos interface family: deps_api
@@ -204,6 +205,10 @@ NANOS_API_DECL(nanos_err_t, nanos_get_wd_description, ( const char **description
 
 NANOS_API_DECL( bool, nanos_try_lock_pe, ( nanos_pe_t pe ) );
 NANOS_API_DECL( void, nanos_unlock_pe, ( nanos_pe_t pe ) );
+
+/* Functions related to periodic tasks */
+NANOS_API_DECL(unsigned int, nanos_get_periodic_task_repetition_num, (void) );
+NANOS_API_DECL(void, nanos_cancel_periodic_task, (void) );
 
 /* Finder functions */
 NANOS_API_DECL(nanos_slicer_t, nanos_find_slicer, ( const char * slicer ));

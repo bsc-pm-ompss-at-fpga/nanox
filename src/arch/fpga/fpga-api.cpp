@@ -1,5 +1,5 @@
 /*************************************************************************************/
-/*      Copyright 2009-2018 Barcelona Supercomputing Center                          */
+/*      Copyright 2009-2019 Barcelona Supercomputing Center                          */
 /*                                                                                   */
 /*      This file is part of the NANOS++ library.                                    */
 /*                                                                                   */
@@ -23,6 +23,8 @@
 #include "fpgaworker.hpp"
 #include "fpgaprocessor.hpp"
 #include "fpgaconfig.hpp"
+#include "fpgawd_decl.hpp"
+#include "fpgaprocessorinfo.hpp"
 #include "simpleallocator.hpp"
 
 using namespace nanos;
@@ -84,12 +86,105 @@ NANOS_API_DEF( void *, nanos_fpga_get_phy_address, ( void * buffer ) )
    return buffer;
 }
 
-NANOS_API_DEF( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_wd_t wd, size_t argIdx, bool isInput, bool isOutput, uint64_t argValue ))
+NANOS_API_DEF( nanos_err_t, nanos_fpga_create_task, ( nanos_fpga_task_t *utask, nanos_wd_t uwd ) )
+{
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_create_task" ); );
+
+   WD * wd = ( WD * )( uwd );
+   const nanos::ext::FPGAWD * fpgaWd = dynamic_cast<const ext::FPGAWD *>( wd );
+   const nanos::ext::FPGAProcessorInfo & fpgaInfo =
+      ( ( nanos::ext::FPGAProcessor * )( myThread->runningOn() ) )->getFPGAProcessorInfo();
+   xtasks_task_id parentTask = 0;
+   xtasks_task_handle task;
+   xtasks_stat status;
+
+   if ( fpgaWd != NULL ) {
+      //NOTE: This wd is an FPGA spawned task
+      parentTask = fpgaWd->getHwRuntimeParentId();
+   }
+
+   status = xtasksCreateTask( ( uintptr_t )( wd ), fpgaInfo.getHandle(), parentTask,
+      XTASKS_COMPUTE_ENABLE, &task );
+   if ( status != XTASKS_SUCCESS ) {
+      //TODO: If status == XTASKS_ENOMEM, block and wait untill mem is available
+      fatal( "Cannot initialize FPGA task info (accId: " <<
+             fpgaInfo.getId() << "): " <<
+             ( status == XTASKS_ENOMEM ? "XTASKS_ENOMEM" : "XTASKS_ERROR" ) );
+   }
+
+   nanos::ext::FPGADD &dd = ( nanos::ext::FPGADD & )( wd->getActiveDevice() );
+   dd.setHandle( task );
+   *utask = ( nanos_fpga_task_t )( task );
+
+   return NANOS_OK;
+}
+
+NANOS_API_DEF( nanos_err_t, nanos_fpga_create_periodic_task, ( nanos_fpga_task_t *utask, nanos_wd_t uwd,
+   const unsigned int period, const unsigned int num_reps ) )
+{
+   NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_create_periodic_task" ); );
+
+   WD * wd = ( WD * )( uwd );
+   const nanos::ext::FPGAWD * fpgaWd = dynamic_cast<const ext::FPGAWD *>( wd );
+   const nanos::ext::FPGAProcessorInfo & fpgaInfo =
+      ( ( nanos::ext::FPGAProcessor * )( myThread->runningOn() ) )->getFPGAProcessorInfo();
+   xtasks_task_id parentTask = 0;
+   xtasks_task_handle task;
+   xtasks_stat status;
+
+   if ( fpgaWd != NULL ) {
+      //NOTE: This wd is an FPGA spawned task
+      parentTask = fpgaWd->getHwRuntimeParentId();
+   }
+
+   status = xtasksCreatePeriodicTask( ( uintptr_t )( wd ), fpgaInfo.getHandle(), parentTask,
+      XTASKS_COMPUTE_ENABLE, num_reps, period, &task );
+   if ( status != XTASKS_SUCCESS ) {
+      //TODO: If status == XTASKS_ENOMEM, block and wait untill mem is available
+      fatal( "Cannot initialize FPGA periodic task info (accId: " <<
+             fpgaInfo.getId() << "): " <<
+             ( status == XTASKS_ENOMEM ? "XTASKS_ENOMEM" : "XTASKS_ERROR" ) );
+   }
+
+   nanos::ext::FPGADD &dd = ( nanos::ext::FPGADD & )( wd->getActiveDevice() );
+   dd.setHandle( task );
+   *utask = ( nanos_fpga_task_t )( task );
+
+   return NANOS_OK;
+}
+
+NANOS_API_DEF( nanos_err_t, nanos_fpga_set_task_arg, ( nanos_fpga_task_t utask, size_t argIdx,
+   bool isInput, bool isOutput, uint64_t argValue ) )
 {
    NANOS_INSTRUMENT( InstrumentBurst instBurst( "api", "nanos_fpga_set_task_arg" ); );
+   xtasks_task_handle task = ( xtasks_task_handle )( utask );
 
-   nanos::ext::FPGAProcessor * fpgaPE = ( nanos::ext::FPGAProcessor * )myThread->runningOn();
-   fpgaPE->setTaskArg( *( WD * )wd, argIdx, isInput, isOutput, argValue );
+   xtasks_arg_flags argFlags = XTASKS_ARG_FLAG_GLOBAL;
+   argFlags |= XTASKS_ARG_FLAG_COPY_IN & -( isInput );
+   argFlags |= XTASKS_ARG_FLAG_COPY_OUT & -( isOutput );
+
+   if ( xtasksAddArg( argIdx, argFlags, argValue, task ) != XTASKS_SUCCESS ) {
+      return NANOS_UNKNOWN_ERR;
+   }
+
+   return NANOS_OK;
+}
+
+NANOS_API_DEF( nanos_err_t, nanos_fpga_submit_task, ( nanos_fpga_task_t utask ) )
+{
+#ifdef NANOS_INSTRUMENTATION_ENABLED
+   const nanos::ext::FPGAProcessorInfo & fpgaInfo =
+      ( ( nanos::ext::FPGAProcessor * )( myThread->runningOn() ) )->getFPGAProcessorInfo();
+   InstrumentBurst instBurst0( "api", "nanos_fpga_submit_task" );
+   InstrumentBurst instBurst1( "fpga-accelerator-num", fpgaInfo.getId() + 1 );
+#endif //NANOS_INSTRUMENTATION_ENABLED
+
+   xtasks_task_handle task = ( xtasks_task_handle )( utask );
+   if ( xtasksSubmitTask( task ) != XTASKS_SUCCESS ) {
+      //TODO: If error is XTASKS_ENOMEM we can retry after a while
+      fatal( "Error sending a task to the FPGA" );
+      return NANOS_UNKNOWN_ERR;
+   }
 
    return NANOS_OK;
 }
