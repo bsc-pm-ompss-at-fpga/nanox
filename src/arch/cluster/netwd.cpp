@@ -180,7 +180,7 @@ unsigned int SerializedWDFields::getArchId() const {
    return _clusterArchId;
 }
 
-unsigned int SerializedWDFields::getArchExtraInfo() const {
+unsigned long long int SerializedWDFields::getArchExtraInfo() const {
    return _archExtra;
 }
 

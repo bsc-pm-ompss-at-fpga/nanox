@@ -26,7 +26,7 @@
 namespace nanos {
 namespace ext {
 
-   typedef uint32_t        FPGADeviceType;
+   typedef uint64_t        FPGADeviceType;
    typedef xtasks_acc_id   FPGADeviceId;
 
    /*!

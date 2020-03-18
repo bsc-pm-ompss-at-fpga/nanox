@@ -152,7 +152,7 @@ class FPGAPlugin : public ArchPlugin
                }
 
                debug0( "New FPGAProcessor created with id: " << info.getId() << ", memSpaceId: " <<
-                       memSpaceId << ", fpgaType: " << fpgaType );
+                       memSpaceId << ", fpgaType: 0x" << std::hex << fpgaType << std::dec );
                FPGAProcessor *fpga = NEW FPGAProcessor( info, memSpaceId, fpgaDevice );
                fpgaPEs->push_back( fpga );
             }

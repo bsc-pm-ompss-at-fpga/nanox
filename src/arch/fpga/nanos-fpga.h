@@ -29,7 +29,7 @@ extern "C" {
 
     typedef struct {
         void (*outline) (void *);
-        unsigned int type;
+        unsigned long long int type;
     } nanos_fpga_args_t;
 
     typedef struct {
