@@ -61,10 +61,8 @@ extern "C" {
         unsigned int accessed_length;
     } nanos_fpga_copyinfo_t;
 
-    enum {
-       NANOS_FPGA_ARCH_SMP  = 0x800000,
-       NANOS_FPGA_ARCH_FPGA = 0x400000
-    };
+    const unsigned long long int NANOS_FPGA_TASK_TYPE_MASK_SMP  = 0x8000000000000000;
+    const unsigned long long int NANOS_FPGA_TASK_TYPE_MASK_FPGA = 0x4000000000000000;
 
     typedef void * nanos_fpga_task_t;
 
@@ -83,7 +81,7 @@ NANOS_API_DECL( void *, nanos_fpga_malloc, ( size_t len ) );
 NANOS_API_DECL( void, nanos_fpga_free, ( void * fpgaPtr ) );
 NANOS_API_DECL( void, nanos_fpga_memcpy, ( void * fpgaPtr, void * hostPtr, size_t len, \
    nanos_fpga_memcpy_kind_t kind ) );
-NANOS_API_DECL( void, nanos_fpga_create_wd_async, ( const unsigned int archMask, const unsigned long long int type, \
+NANOS_API_DECL( void, nanos_fpga_create_wd_async, ( const unsigned long long int type, \
   const unsigned char numArgs, const unsigned long long int * args, \
   const unsigned char numDeps, const unsigned long long int * deps, const unsigned char * depsFlags, \
   const unsigned char numCopies, const nanos_fpga_copyinfo_t * copies ) );
