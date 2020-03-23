@@ -27,7 +27,7 @@ namespace ext {
    class SerializedWDFields {
       unsigned int _wdId;
       int          _clusterArchId;
-      unsigned int _archExtra;
+      unsigned long long int _archExtra;
       void       (*_outline)(void *);
       void       (*_xlate)(void *, void*);
       std::size_t  _dataSize;
@@ -49,7 +49,7 @@ namespace ext {
       void (*getXlateFunc() const)(void *, void*);
       void (*getOutline() const)(void *);
       unsigned int getArchId() const;
-      unsigned int getArchExtraInfo() const;
+      unsigned long long int getArchExtraInfo() const;
       unsigned int getWDId() const;
       WD const *getWDAddr() const;
       unsigned int getNumCopies() const;
