@@ -61,9 +61,6 @@ extern "C" {
         unsigned int accessed_length;
     } nanos_fpga_copyinfo_t;
 
-    const unsigned long long int NANOS_FPGA_TASK_TYPE_MASK_SMP  = 0x8000000000000000;
-    const unsigned long long int NANOS_FPGA_TASK_TYPE_MASK_FPGA = 0x4000000000000000;
-
     typedef void * nanos_fpga_task_t;
 
 NANOS_API_DECL( void *, nanos_fpga_factory, ( void *args ) );
