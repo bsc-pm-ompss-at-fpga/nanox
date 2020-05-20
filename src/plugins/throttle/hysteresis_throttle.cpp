@@ -35,6 +35,7 @@ namespace nanos {
          private:
             int                                                  _upper;
             int                                                  _lower;
+            int                                                  _depth;
             std::string                                          _type;
             MultipleSyncCond<LessOrEqualConditionChecker<int> > *_syncCond;
             ntask_getter_t                                       _get_num_tasks;
@@ -43,9 +44,10 @@ namespace nanos {
             const HysteresisThrottle & operator= ( const HysteresisThrottle & );
 
          public:
-            HysteresisThrottle( int upper, int lower, std::string type )
+            HysteresisThrottle( int upper, int lower, int depth, std::string type )
             :  _upper( upper * sys.getNumThreads() ),
                _lower( lower * sys.getNumThreads() ),
+               _depth( depth ),
                _type ( type ),
                _syncCond( NULL )
             {
@@ -59,6 +61,7 @@ namespace nanos {
 
                verbose0( "Throttle hysteresis created");
                verbose0( "   type of tasks: " << _type );
+               verbose0( "   depth bound: " << depth );
                verbose0( "   lower bound: " << lower * sys.getNumThreads() );
                verbose0( "   upper bound: " << upper * sys.getNumThreads() );
             }
@@ -84,7 +87,7 @@ namespace nanos {
       bool HysteresisThrottle::testThrottleIn ( void )
       {
          // If it's OpenMP, first level tasks will have depth 1
-         unsigned maxDepth = ( sys.getPMInterface().getInterface() == PMInterface::OpenMP ) ? 2 : 1;
+         const unsigned int maxDepth = sys.getPMInterface().getInterface() == PMInterface::OpenMP ? ( _depth + 1 ) : _depth;
          // Only dealing with first level tasks
          return ( ( (myThread->getCurrentWD())->getDepth() < maxDepth ) && ( _get_num_tasks() > _upper ) ) ? false : true;
       }
@@ -99,11 +102,12 @@ namespace nanos {
          private:
             int         _lowerLimit;
             int         _upperLimit;
+            int         _depthLimit;
             std::string _type;
 
          public:
             HysteresisThrottlePlugin() : Plugin( "Hysteresis throttle plugin (Hysteresis in number of tasks per thread)",1 ),
-                                      _lowerLimit( 250 ), _upperLimit ( 500 ), _type("total") {}
+                                      _lowerLimit( 250 ), _upperLimit ( 500 ), _depthLimit( 1 ), _type("total") {}
 
             virtual void config( Config &cfg )
             {
@@ -117,14 +121,18 @@ namespace nanos {
                   "Defines the number of tasks (per thread) to re-active 1st level task creation (250 * nthreads)" );
                cfg.registerArgOption ( "throttle-lower", "throttle-lower" );
 
+               cfg.registerConfigOption ( "throttle-depth", NEW Config::PositiveVar( _depthLimit ),
+                  "Defines the levels to take into account (1 level)" );
+               cfg.registerArgOption ( "throttle-depth", "throttle-depth" );
+
                cfg.registerConfigOption ( "throttle-type", NEW Config::StringVar( _type ),
-                  "Defines the task's type (ready or total) we have to take into account to stop or re-active 1st level task creation (total)" );
+                  "Defines the task's type (ready or total) we have to take into account to stop or re-active N-th level task creation (total)" );
                cfg.registerArgOption ( "throttle-type", "throttle-type" );
 
             }
 
             virtual void init() {
-               sys.setThrottlePolicy( NEW HysteresisThrottle( _upperLimit, _lowerLimit, _type ) );
+               sys.setThrottlePolicy( NEW HysteresisThrottle( _upperLimit, _lowerLimit, _depthLimit, _type ) );
             }
       };
 
