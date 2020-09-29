@@ -714,7 +714,13 @@ namespace nanos {
 
             /* 82 */ registerEventKey("fpga-ev-lost", "Number of FPGA instrumentation events lost", true, EVENT_USER);
             /* 83 */ registerEventKey("fpga-create-task", "Task ID of parent task which children is being handled in the host runtime", true, EVENT_DEVELOPER);
-            /* 83 */ registerEventKey("fpga-notify-task", "Task ID of parent task which children finalization is being notified", true, EVENT_DEVELOPER);
+            /* 84 */ registerEventKey("fpga-notify-task", "Task ID of parent task which children finalization is being notified", true, EVENT_DEVELOPER);
+
+            /* 85 */ registerEventKey("fpga-api", "Calls to internal APIs in the FPGA task accelerators", true, EVENT_ADVANCED);
+            registerEventValue("fpga-api", "taswait", "FPGA task accelerator is waiting for spawned tasks" ); /* 1 */
+            registerEventValue("fpga-api", "lock", "FPGA task accelerator is acquiring a lock" ); /* 2 */
+            registerEventValue("fpga-api", "unlock", "FPGA task accelerator is releasing a lock" ); /* 3 */
+            registerEventValue("fpga-api", "trylock", "FPGA task accelerator is trying to acquiring a lock" ); /* 4 */
 
             /* ** */ registerEventKey("debug","Debug Key", true, EVENT_ADVANCED ); /* Keep this key as the last one */
          }
