@@ -86,6 +86,8 @@ NANOS_API_DECL( nanos_err_t, nanos_fpga_register_wd_info, ( uint64_t type, size_
   nanos_device_t * devices, nanos_translate_args_t translate ) );
 NANOS_API_DECL( unsigned long long int, nanos_fpga_current_wd, ( void ) );
 NANOS_API_DECL( nanos_err_t, nanos_fpga_wg_wait_completion, ( unsigned long long int uwg, unsigned char avoid_flush ) );
+NANOS_API_DECL( unsigned long long int, nanos_fpga_get_time_cycle, ( void ) );
+NANOS_API_DECL( unsigned long long int, nanos_fpga_get_time_us, ( void ) );
 
 #ifdef __cplusplus
 }
