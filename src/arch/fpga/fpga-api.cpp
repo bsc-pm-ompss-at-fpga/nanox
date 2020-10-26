@@ -263,3 +263,15 @@ NANOS_API_DEF( nanos_err_t, nanos_fpga_wg_wait_completion, ( unsigned long long 
 {
    fatal( "The API nanos_fpga_wg_wait_completion can only be called from a FPGA device" );
 }
+
+NANOS_API_DEF( unsigned long long int, nanos_fpga_get_time_cycle, ( void ) )
+{
+   fatal( "The API nanos_fpga_get_time_cycle can only be called from a FPGA device" );
+   return 0;
+}
+
+NANOS_API_DEF( unsigned long long int, nanos_fpga_get_time_us, ( void ) )
+{
+   fatal( "The API nanos_fpga_get_time_us can only be called from a FPGA device" );
+   return 0;
+}
