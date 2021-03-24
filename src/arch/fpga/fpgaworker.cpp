@@ -111,6 +111,7 @@ void FPGAWorker::handleFPGACreatedTasks() {
       ensure( infoIt != _registeredTasks->end(), " FPGA device trying to create an unregistered task" );
       FPGARegisteredTask * info = infoIt->second;
       ensure( info->translate != NULL || task->numCopies == 0, " If the WD has copies, the translate_args cannot be NULL" );
+      ensure( !(task->numCopies > 0 && task->numDeps > 0), " Reverse offloaded tasks cannot have copies and dependences at the same time" );
 
       NANOS_INSTRUMENT( InstrumentBurst instBurst( "fpga-create-task", task->parentId ) );
 

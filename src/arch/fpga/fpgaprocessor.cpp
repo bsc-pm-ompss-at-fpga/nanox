@@ -132,6 +132,11 @@ void FPGAProcessor::handleInstrumentation() {
             if (event.eventId == keyEventsLost) {
                warning( " Some FPGA instrumentation events (" << event.value << ") have been lost." <<
                         " Consider increasing the buffer size with --fpga-instrumentation-buffer-size option" );
+               if (writeEv == maxEvents + 1) {
+                  //The temp buffer is full -> Flush the events now
+                  ins->addDeviceEventList( _devInstr, writeEv, deviceEvents );
+                  writeEv = 0;
+               }
 
                //Add an extra event to restore the value to 0 after some arbitrary time (aka 10 cycles)
                ins->createDevicePointEvent( &deviceEvents[writeEv++],
