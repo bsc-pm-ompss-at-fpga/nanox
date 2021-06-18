@@ -275,3 +275,21 @@ NANOS_API_DEF( unsigned long long int, nanos_fpga_get_time_us, ( void ) )
    fatal( "The API nanos_fpga_get_time_us can only be called from a FPGA device" );
    return 0;
 }
+
+NANOS_API_DEF( unsigned long long int, nanos_fpga_get_raw_arg, ( const unsigned char idx ) )
+{
+   fatal( "The API nanos_fpga_get_raw_arg can only be called from a FPGA device" );
+   return 0;
+}
+
+template<typename T>
+void nanos_fpga_memcpy_wideport_in ( T * dst, const unsigned long long int addr, const unsigned int num_elems )
+{
+   fatal( "The API nanos_fpga_memcpy_wideport_in can only be called from a FPGA device" );
+}
+
+template<typename T>
+void nanos_fpga_memcpy_wideport_out ( const unsigned long long int addr, const T * src, const unsigned int num_elems )
+{
+   fatal( "The API nanos_fpga_memcpy_wideport_out can only be called from a FPGA device" );
+}

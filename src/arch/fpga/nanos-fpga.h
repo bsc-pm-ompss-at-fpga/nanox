@@ -88,9 +88,19 @@ NANOS_API_DECL( unsigned long long int, nanos_fpga_current_wd, ( void ) );
 NANOS_API_DECL( nanos_err_t, nanos_fpga_wg_wait_completion, ( unsigned long long int uwg, unsigned char avoid_flush ) );
 NANOS_API_DECL( unsigned long long int, nanos_fpga_get_time_cycle, ( void ) );
 NANOS_API_DECL( unsigned long long int, nanos_fpga_get_time_us, ( void ) );
+NANOS_API_DECL( unsigned long long int, nanos_fpga_get_raw_arg, ( unsigned char idx ) );
 
 #ifdef __cplusplus
 }
+
+template<typename T>
+extern void nanos_fpga_memcpy_wideport_in ( T * dst, const unsigned long long int addr,
+  const unsigned int num_elems );
+
+template<typename T>
+extern void nanos_fpga_memcpy_wideport_out ( const unsigned long long int addr, const T * src,
+  const unsigned int num_elems );
+
 #endif //__cplusplus
 
 #endif //_NANOS_FPGA_H
